@@ -18,4 +18,5 @@ class Program(using ee: ExecutionEngine) extends AbstractProgram {
 
   // TODO: also provide solve for multiple/all predicates, or return table so users can query over the derived DB
   def solve(rId: Int): Any = ee.solve(rId) // TODO: get rid of any
+  def solveNaive(rId: Int): Any = ee.solveNaive(rId) // TODO: get rid of any
 }

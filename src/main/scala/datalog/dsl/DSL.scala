@@ -27,7 +27,7 @@ trait Atom {
 // TODO: not using name for anything now, but in the future if relations are automatically derived from source, then the user needs to be able to refer to them by name
 case class Relation[T <: Constant](id: Int, name: String)(using ee: ExecutionEngine) {
   type RelTerm = T | Variable
-  ee.initRelation(id)
+  ee.initRelation(id, name)
 
   case class RelAtom(terms: IndexedSeq[RelTerm]) extends Atom { // extend Atom so :- can accept atom of any Relation
     // IDB tuple
@@ -46,4 +46,5 @@ case class Relation[T <: Constant](id: Int, name: String)(using ee: ExecutionEng
   }
 
   def solve(): Any = ee.solve(id)
+  def solveNaive(): Any = ee.solveNaive(id)
 }
