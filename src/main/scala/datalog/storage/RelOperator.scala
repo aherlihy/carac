@@ -1,24 +1,26 @@
-package datalog
+package datalog.storage
 
 import scala.collection.mutable.{ArrayBuffer, Map}
+import datalog.dsl.Constant
 
 // Indicates the end of the stream
 final val NilTuple: Option[Nothing] = None
 
-type Row2 = IndexedSeq[Any] // storageManager.EDBRow] TODO: get rid of Any
-
 trait RelOperator {
+  type edbRow = StorageManager#Row[StorageManager#StorageTerm]
   def open(): Unit
-  def next(): Option[Row2]
+  def next(): Option[edbRow]
   def close(): Unit
 
-  def toList(): ArrayBuffer[Row2] = { // TODO: fix this to use iterator override
-    val list = ArrayBuffer[Row2]()
+  def toList(): ArrayBuffer[edbRow] = { // TODO: fix this to use iterator override
+    val list = ArrayBuffer[edbRow]()
+    this.open()
     while(
       this.next() match {
         case Some(r) => { list.addOne(r); true }
         case _ => false
       }) {}
+    this.close()
     list
   }
 //  final override def iterator: Iterator[Row] =
@@ -56,23 +58,28 @@ trait RelOperator {
 // TODO: set op per relation?
 case class Scan(rId: Int)(using storageManager: StorageManager) extends RelOperator {
   private var currentId: Int = 0
-  private var length: Long = storageManager.edb(rId).length
+  private var length: Long = storageManager.edb(rId).size
   def open(): Unit = {}
-  def next(): Option[Row2] = {
+  def next(): Option[edbRow] = {
     if (currentId >= length) {
       NilTuple
     } else {
       currentId = currentId + 1
-      Option(storageManager.edb(rId)(currentId - 1))
+      //val x: StorageManager#StorageTerm = ??? : storageManager.StorageTerm
+      ???
+      //Option[storageManager.Row[StorageManager#StorageTerm]](storageManager.edb(rId)(currentId - 1))
     }
   }
   def close(): Unit = {}
 }
 
-// TODO: most likely will combine Scan+Filter
-case class Filter(input: RelOperator, cond: Row2 => Boolean) extends RelOperator {
+// TODO: most likely will combine Scan+Filter, or split out Join+Filter
+case class Filter(input: RelOperator)
+//                 (using val storageManager: StorageManager)
+                 //(cond: storageManager.Row[storageManager.StorageTerm] => Boolean) extends RelOperator {
+                 (cond: StorageManager#Row[StorageManager#StorageTerm] => Boolean) extends RelOperator {
   def open(): Unit = input.open()
-  override def next(): Option[Row2] = {
+  override def next(): Option[edbRow] = {
     var nextTuple = input.next()
     while (nextTuple match {
       case Some(n) => !cond(n)
@@ -85,9 +92,9 @@ case class Filter(input: RelOperator, cond: Row2 => Boolean) extends RelOperator
 
 case class Project(input: RelOperator, ixs: Seq[Int]) extends RelOperator {
   def open(): Unit = input.open()
-  override def next(): Option[Row2] = {
+  override def next(): Option[edbRow] = {
     input.next() match {
-      case Some(t) => Some(t.zipWithIndex.filter{ case (e, i) => ixs.contains(i) })
+      case Some(t) => Some(t.zipWithIndex.filter{ case (e, i) => ixs.contains(i) }.map(_._1))
       case _ => NilTuple
     }
   }
@@ -98,9 +105,9 @@ case class Join(left: RelOperator,
                 right: RelOperator,
                 variables: IndexedSeq[IndexedSeq[Int]],
                 constants: Map[Int, Constant]
-               ) extends RelOperator {
+               )extends RelOperator {
 
-  private var outputRelation: List[Row2] = List()
+  private var outputRelation: ArrayBuffer[edbRow] = ArrayBuffer()
   private var index = 0
 
   // TODO [NOW]: Figure out >2 key join
@@ -109,11 +116,19 @@ case class Join(left: RelOperator,
 
   def open(): Unit = {
     index = 0
-    outputRelation = List()
+    outputRelation = ArrayBuffer()
 
     // Nested loop join:
-    var outerTable: ArrayBuffer[Row2] = left.toList()
+    var outerTable: ArrayBuffer[edbRow] = left.toList()
     var innerTable = right.toList()
+
+    if (outerTable.isEmpty) {
+      innerTable.foreach(innerTuple => {
+        // TODO: handle constants, i.e. check here that tuples returned match the constant reqs
+        if (variables.isEmpty)
+        outputRelation.addOne(innerTuple)
+      })
+    }
 
     outerTable.foreach(outerTuple => {
       val outerValues = varKeysL.map(k => outerTuple(k)) // TODO [NOW]: handle constants
@@ -121,13 +136,13 @@ case class Join(left: RelOperator,
         val innerValues = varKeysR.map(k => innerTuple(k))
         if (outerValues.equals(innerValues)) { // TODO: handle free variables
           val joined = outerTuple ++ innerTuple
-          outputRelation :+ joined
+          outputRelation.addOne(joined)
         }
       })
     })
   }
 
-  def next(): Option[Row2] = {
+  def next(): Option[edbRow] = {
     if (index >= outputRelation.length)
       NilTuple
     else {
