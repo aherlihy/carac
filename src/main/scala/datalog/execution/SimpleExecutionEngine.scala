@@ -134,7 +134,7 @@ class SimpleExecutionEngine extends ExecutionEngine {
     var count = 0
 
 //    println("Starting DB:")
-    val res = evalRule(rId, pQueryId, prevQueryId)
+    val res = evalRule(rId, pQueryId, prevQueryId) // TODO: add filter here
     storageManager.resetDeltaEDB(rId, res, pQueryId)
     storageManager.resetIncrEDB(rId, res, pQueryId)
     storageManager.resetDeltaEDB(rId, res, prevQueryId)
