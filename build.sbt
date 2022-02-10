@@ -1,4 +1,5 @@
 name := "datalog"
+organization := "ch.epfl.lamp"
 
 version := "0.1"
 
