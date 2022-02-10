@@ -1,0 +1,20 @@
+# General
+*.DS_Store
+*.swp
+*~
+
+# Scala
+*.class
+*.tasty
+
+# sbt
+target/
+
+# IDEs
+.bsp
+.bloop
+.metals
+.vscode
+.idea
+.idea_modules
+/.worksheet/
