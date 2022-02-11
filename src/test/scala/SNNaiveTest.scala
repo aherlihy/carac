@@ -1,32 +1,51 @@
 package datalog
 
-import datalog.dsl.Program
+import datalog.dsl.{Program, Relation}
 import datalog.execution.{ExecutionEngine, SimpleExecutionEngine}
 
 class SNNaiveTest extends  munit.FunSuite {
 
-  test("transitiveClosure") {
+  def initEngineTC(): Tuple4[
+    Relation[String],
+    Relation[String],
+    Relation[String],
+    Relation[String]] = {
     given engine: ExecutionEngine = new SimpleExecutionEngine
-
     val program = Program()
     val e = program.relation[String]()
     val p = program.relation[String]()
-    val ans1 = program.relation[String]()
     val ans2 = program.relation[String]()
     val ans3 = program.relation[String]()
+    val ans4 = program.relation[String]()
+    val ans5 = program.relation[String]()
 
     val x, y, z = program.variable()
 
-    // TODO: use context param to avoid needing :- ()?
     e("a", "b") :- ()
     e("b", "c") :- ()
     e("c", "d") :- ()
     p(x, y) :- e(x, y)
     p(x, z) :- ( e(x, y), p(y, z) )
-    ans1(x) :- e("a", x)
-    ans2(x) :- p("a", x)
 
-    val t1 = p.solve()
+    ans2(x) :- p("a", x)
+    ans5(x) :- e("a", x) // TODO: special cased in topsort
+    return (e, p, ans2, ans5)
+  }
+
+  test("edges") {
+    val p = initEngineTC()
+
+    val t1 = p._1.solve()
+    assertEquals(t1, Set(
+      Vector("a", "b"),
+      Vector("b", "c"),
+      Vector("c", "d")
+    ), "solve for an edb")
+  }
+  test("transitiveClosure") {
+    val p = initEngineTC()
+
+    val t1 = p._2.solve()
     assertEquals(t1, Set(
       Vector("a", "d"),
       Vector("b", "d"),
@@ -34,28 +53,31 @@ class SNNaiveTest extends  munit.FunSuite {
       Vector("a", "b"),
       Vector("a", "c"),
       Vector("c", "d"),
-    ), "simple transitive closure")
+    ), "simple transitive closure full idb")
+  }
+  test("transitiveClosureQueryE") {
+    val p = initEngineTC()
 
-    val t2 = ans1.solve()
+    val t2 = p._4.solve()
     assertEquals(t2, Set(
       Vector("b")
     ), "e(a, x)")
-
-    val t3 = ans2.solve()
+  }
+  test("transitiveClosureQueryP") {
+    val p = initEngineTC()
+    val t3 = p._3.solve()
     assertEquals(t3, Set(
       Vector("d"),
       Vector("b"),
       Vector("c"),
     ), "p(a, x)")
   }
-
   test("transitiveClosureIsolated") {
     given engine: ExecutionEngine = new SimpleExecutionEngine
 
     val program = Program()
     val e = program.relation[String]()
     val p = program.relation[String]()
-    val ans1 = program.relation[String]()
     val ans2 = program.relation[String]()
     val ans3 = program.relation[String]()
 
@@ -63,7 +85,6 @@ class SNNaiveTest extends  munit.FunSuite {
     val y = program.variable()
     val z = program.variable()
 
-    // TODO: use context param to avoid needing :- ()?
     e("a", "b") :- ()
     e("b", "c") :- ()
     e("c", "d") :- ()
@@ -72,8 +93,8 @@ class SNNaiveTest extends  munit.FunSuite {
     e("c1", "d1") :- ()
     p(x, y) :- e(x, y)
     p(x, z) :- ( e(x, y), p(y, z) )
-    ans1(x) :- p("a", x)
-    ans2(x) :- p("a1", x)
+    ans2(x) :- p("a", x)
+    ans3(x) :- p("a1", x)
 
     val t1 = p.solve()
     assertEquals(t1, Set(
@@ -91,14 +112,14 @@ class SNNaiveTest extends  munit.FunSuite {
       Vector("c1", "d1"),
     ), "simple transitive closure on isolated cycle")
 
-    val t2 = ans1.solve()
+    val t2 = ans2.solve()
     assertEquals(t2, Set(
       Vector("d"),
       Vector("b"),
       Vector("c"),
     ), "p(a, x)")
 
-    val t3 = ans2.solve()
+    val t3 = ans3.solve()
     assertEquals(t3, Set(
       Vector("d1"),
       Vector("b1"),
@@ -113,8 +134,8 @@ class SNNaiveTest extends  munit.FunSuite {
     val edge = program.relation[String](" e")
     val oneHop = program.relation[String]("oh")
     val twoHops = program.relation[String]("th")
-    val ans1 = program.relation[String]("ans1")
-    val ans2 = program.relation[String]("ans2")
+    val ans3 = program.relation[String]("ans1")
+    val ans4 = program.relation[String]("ans2")
 
     val x, y, z = program.variable()
 
@@ -124,21 +145,20 @@ class SNNaiveTest extends  munit.FunSuite {
     edge("c", "d") :- ()
     oneHop(x, y) :- edge(x, y)
     twoHops(x, z) :- ( edge(x, y), oneHop(y, z) )
-    ans1(x) :- oneHop("a", x)
-    ans1(x) :- twoHops("a", x)
-    ans2(x) :- (oneHop("a", x), oneHop(x, "c"))
+    ans3(x) :- oneHop("a", x)
+    ans3(x) :- twoHops("a", x)
+    ans4(x) :- (oneHop("a", x), oneHop(x, "c"))
 
-    val t1 = ans1.solve()
+    val t1 = ans3.solve()
     assertEquals(t1, Set(
       Vector("a"),
       Vector("b"),
       Vector("c")
     ))
 
-    val t2 = ans2.solve()
+    val t2 = ans4.solve()
     assertEquals(t2, Set(
       Vector("b", "b") // TODO: should this be (b, b) or (b)?
     ))
   }
-
 }

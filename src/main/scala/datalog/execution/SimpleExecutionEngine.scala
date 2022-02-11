@@ -112,12 +112,12 @@ class SimpleExecutionEngine extends ExecutionEngine {
   }
 
   def evalSN(rId: Int, relations: Seq[Int], queryId: Int, prevQueryId: Int): Relation[StorageTerm] = {
-//    println("\tEVAL SN: rId=" + rId + " queryId=" + queryId + " prevQueryId=" + prevQueryId + " relations=" + relations)
+    println("\tEVAL SN: rId=" + rId + " queryId=" + queryId + " prevQueryId=" + prevQueryId + " relations=" + relations)
     relations.foreach(r => {
       val prev = storageManager.getIncrementDB(r, queryId)
       val res = evalRuleSN(r, queryId, prevQueryId)
-//      println("\t-->res = " + res.toSet)
-//      println(s"\t-->prv = ${prev.toSet}")
+      println("\t-->res = " + res.toSet)
+      println(s"\t-->prv = ${prev.toSet}")
       val diff = res diff prev
 //      val diff = prev.filterNot(res.toSet) ++ res.filterNot(prev.toSet)
 //      println("SET DIFF=" + diff)
@@ -128,18 +128,21 @@ class SimpleExecutionEngine extends ExecutionEngine {
   }
 
   def iterateSemiNaive(rId: Int): Relation[StorageTerm] = {
+    if (storageManager.edb(rId).nonEmpty) { // if just an edb predicate then return
+      return storageManager.edb(rId)
+    }
+
     val relations = precedenceGraph.getTopSort(rId).filter(r => storageManager.idb(r).nonEmpty) // TODO: put empty check elsewhere
     val pQueryId = storageManager.initEvaluation()
     val prevQueryId = storageManager.initEvaluation()
     var count = 0
 
-//    println("Starting DB:")
-    val res = evalRule(rId, pQueryId, prevQueryId) // TODO: add filter here
-    storageManager.resetDeltaEDB(rId, res, pQueryId)
-    storageManager.resetIncrEDB(rId, res, pQueryId)
-    storageManager.resetDeltaEDB(rId, res, prevQueryId)
-//    storageManager.printIncrementDB()
-//    storageManager.printDeltaDB()
+    println("START SN, rId=" + rId + " relations=" + relations +" (unsorted=" + precedenceGraph.getTopSort(rId) + ")")
+    val startRId = relations(0)
+    val res = evalRule(startRId, pQueryId, prevQueryId) // TODO: add filter here
+    storageManager.resetDeltaEDB(startRId, res, pQueryId)
+    storageManager.resetIncrEDB(startRId, res, pQueryId)
+    storageManager.resetDeltaEDB(startRId, res, prevQueryId)
 
     var setDiff = true
     while(setDiff) {

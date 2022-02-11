@@ -1,11 +1,10 @@
-import datalog.dsl.Program
+import datalog.dsl.{Program, Relation}
 import datalog.execution.{ExecutionEngine, SimpleExecutionEngine}
 
 class NaiveTest extends  munit.FunSuite {
 
-  test("transitiveClosure") {
+  def initEngine(): Tuple3[Relation[String], Relation[String], Relation[String]] = {
     given engine: ExecutionEngine = new SimpleExecutionEngine
-
     val program = Program()
     val e = program.relation[String]()
     val p = program.relation[String]()
@@ -15,16 +14,30 @@ class NaiveTest extends  munit.FunSuite {
 
     val x, y, z = program.variable()
 
-    // TODO: use context param to avoid needing :- ()?
     e("a", "b") :- ()
     e("b", "c") :- ()
     e("c", "d") :- ()
     p(x, y) :- e(x, y)
     p(x, z) :- ( e(x, y), p(y, z) )
+
     ans1(x) :- e("a", x)
     ans2(x) :- p("a", x)
+    return (p, ans1, ans2)
+  }
 
-    val t1 = p.solveNaive()
+  test("transitiveClosureQueryP") {
+    val p = initEngine()
+    val t3 = p._3.solveNaive()
+    assertEquals(t3, Set(
+      Vector("d"),
+      Vector("b"),
+      Vector("c"),
+    ), "p(a, x)")
+  }
+  test("transitiveClosure") {
+    val p = initEngine()
+
+    val t1 = p._1.solveNaive()
     assertEquals(t1, Set(
       Vector("a", "d"),
       Vector("b", "d"),
@@ -33,18 +46,14 @@ class NaiveTest extends  munit.FunSuite {
       Vector("a", "c"),
       Vector("c", "d"),
     ), "simple transitive closure")
+  }
+  test("transitiveClosureQueryE") {
+    val p = initEngine()
 
-    val t2 = ans1.solveNaive()
+    val t2 = p._2.solveNaive()
     assertEquals(t2, Set(
       Vector("b")
     ), "e(a, x)")
-
-    val t3 = ans2.solveNaive()
-    assertEquals(t3, Set(
-      Vector("d"),
-      Vector("b"),
-      Vector("c"),
-    ), "p(a, x)")
   }
 
   test("transitiveClosureIsolated") {
@@ -61,7 +70,6 @@ class NaiveTest extends  munit.FunSuite {
     val y = program.variable()
     val z = program.variable()
 
-    // TODO: use context param to avoid needing :- ()?
     e("a", "b") :- ()
     e("b", "c") :- ()
     e("c", "d") :- ()
