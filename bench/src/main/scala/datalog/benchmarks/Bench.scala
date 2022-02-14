@@ -8,7 +8,7 @@ import org.openjdk.jmh.infra.Blackhole
 import datalog.dsl.*
 import datalog.execution.{ExecutionEngine, SimpleExecutionEngine}
 
-@Fork(1)
+@Fork(1) // # of jvms that it will use
 @Warmup(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS)
 @Measurement(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS)
 @State(Scope.Thread)

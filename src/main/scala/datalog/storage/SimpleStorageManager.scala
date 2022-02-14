@@ -134,8 +134,6 @@ class SimpleStorageManager extends StorageManager {
    * @return
    */
   private def relationalSPJU(rId: Int, keys: Table[JoinIndexes], sourceQueryId: Int): Relation[StorageTerm] = {
-    debug("\t\t\tSPJU: relation=" + names(rId) + " src=" + sourceQueryId + " queries=" + planToString(keys) + " keys=" + keys)
-    print("SOURCE "); printIncrementDB(sourceQueryId)
     import relOps.*
 
     val plan = Union(
@@ -152,10 +150,6 @@ class SimpleStorageManager extends StorageManager {
   }
 
   private def semiNaiveRelationalSPJU(rId: Int, keys: Table[JoinIndexes], sourceQueryId: Int): Relation[StorageTerm] = {
-    debug("\t\t\tSN SPJU: relation=" + names(rId) + " src=" + sourceQueryId + " keys=" + keys)
-    debug("QU-SN: "  + snPlanToString(keys))
-    print("SOURCE "); printIncrementDB(sourceQueryId)
-    print("DIFF "); printDeltaDB(sourceQueryId)
     import relOps.*
 
     val plan = Union(
@@ -189,12 +183,17 @@ class SimpleStorageManager extends StorageManager {
    * @param keys
    * @return
    */
-//  def iterativeSPJU(rId: Int, keys: Table[JoinIndexes]): ArrayBuffer[Row[StorageTerm]] = {
-//
-//  }
+  def iterativeSPJU(rId: Int, keys: Table[JoinIndexes], sourceQueryId: Int): ArrayBuffer[Row[StorageTerm]] = {
+    debug("SN SPJU: relation=" + names(rId) + " src=" + sourceQueryId + " keys=" + keys)
+    debug("QU-SN: "  + snPlanToString(keys))
+    print("SOURCE "); printIncrementDB(sourceQueryId)
+    print("DIFF "); printDeltaDB(sourceQueryId)
+    null
+  }
 
   def spju(rId: Int, keys: Table[JoinIndexes], sourceQueryId: Int): Relation[StorageTerm] = {
     relationalSPJU(rId, keys, sourceQueryId)
+//    iterativeSPJU(rId, keys, sourceQueryId)
   }
 
   def spjuSN(rId: Int, keys: Table[JoinIndexes], sourceQueryId: Int): Relation[StorageTerm] = {

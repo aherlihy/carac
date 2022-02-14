@@ -69,7 +69,6 @@ class SimpleExecutionEngine extends ExecutionEngine {
   }
 
   def evalRule(rId: Int, queryId: Int, prevQueryId: Int): Relation[StorageTerm] = {
-    println("\t\tEVAL-RULE r=" + rId)
     val keys = storageManager.idbs(rId).filter(r => !r.isEmpty).map(r => getOperatorKeys(r))
     storageManager.spju(rId, keys, prevQueryId)
   }
@@ -78,10 +77,8 @@ class SimpleExecutionEngine extends ExecutionEngine {
    * Take the union of each evalRule for each IDB predicate
    */
   def eval(rId: Int, relations: Seq[Int], queryId: Int, prevQueryId: Int): Relation[StorageTerm] = {
-    println("\tEVAL: rId=" + rId + " queryId=" + queryId + " prevQueryId=" + prevQueryId + " relations=" + relations)
     relations.map(r => {
       val res = evalRule(r, queryId, prevQueryId)
-      println("\t-->res = " + res)
       storageManager.resetIncrEDB(r, res, queryId)
     })
     storageManager.getIncrementDB(rId, queryId)
@@ -95,7 +92,6 @@ class SimpleExecutionEngine extends ExecutionEngine {
 
     var setDiff = true
     while (setDiff) {
-      println("========\nNAIVE LOOP #" + count + "| CURRENT=" + pQueryId)
       count += 1
       val p = eval(rId, relations, pQueryId, prevQueryId)
 
@@ -106,21 +102,15 @@ class SimpleExecutionEngine extends ExecutionEngine {
   }
 
   def evalRuleSN(rId: Int, queryId: Int, prevQueryId: Int): Relation[StorageTerm] = {
-    println("\t\tEVAL-RULE SN r=" + rId)
     val keys = storageManager.idbs(rId).filter(r => !r.isEmpty).map(r => getOperatorKeys(r))
     storageManager.spjuSN(rId, keys, prevQueryId)
   }
 
   def evalSN(rId: Int, relations: Seq[Int], queryId: Int, prevQueryId: Int): Relation[StorageTerm] = {
-    println("\tEVAL SN: rId=" + rId + " queryId=" + queryId + " prevQueryId=" + prevQueryId + " relations=" + relations)
     relations.foreach(r => {
       val prev = storageManager.getIncrementDB(r, queryId)
       val res = evalRuleSN(r, queryId, prevQueryId)
-      println("\t-->res = " + res.toSet)
-      println(s"\t-->prv = ${prev.toSet}")
       val diff = res diff prev
-//      val diff = prev.filterNot(res.toSet) ++ res.filterNot(prev.toSet)
-//      println("SET DIFF=" + diff)
       storageManager.resetIncrEDB(r, res ++ prev, queryId)
       storageManager.resetDeltaEDB(r, diff, queryId)
     })
@@ -137,7 +127,6 @@ class SimpleExecutionEngine extends ExecutionEngine {
     val prevQueryId = storageManager.initEvaluation()
     var count = 0
 
-    println("START SN, rId=" + rId + " relations=" + relations +" (unsorted=" + precedenceGraph.getTopSort(rId) + ")")
     val startRId = relations(0)
     val res = evalRule(startRId, pQueryId, prevQueryId) // TODO: add filter here
     storageManager.resetDeltaEDB(startRId, res, pQueryId)
@@ -146,12 +135,8 @@ class SimpleExecutionEngine extends ExecutionEngine {
 
     var setDiff = true
     while(setDiff) {
-      println("========\nSEMINAIVE LOOP #" + count + "| CURRENT=" + pQueryId)
       count += 1
       val p = evalSN(rId, relations, pQueryId, prevQueryId)
-//      println("after evalSN:")
-//      storageManager.printIncrementDB(pQueryId)
-//      storageManager.printDeltaDB()
       setDiff = storageManager.deltaDB(pQueryId).exists((k, v) => v.nonEmpty)
       storageManager.swapDeltaDBs(prevQueryId, pQueryId)
     }
@@ -159,13 +144,10 @@ class SimpleExecutionEngine extends ExecutionEngine {
   }
   def solveNaive(rId: Int): Set[Seq[Term]] = {
     val res = iterateNaive(rId)
-    println("res=" + res)
     res.toSet
   }
 
   def solve(rId: Int): Set[Seq[Term]] = {
-    val res = iterateSemiNaive(rId)
-    println("res=" + res)
-    res.toSet
+    iterateSemiNaive(rId).toSet
   }
 }

@@ -166,7 +166,6 @@ class RelationalOperators[S <: StorageManager](val storageManager: S) {
       var outerTable = left.toList()
       var innerTable = right.toList()
 
-      debug("JOIN|" + "left=" + left + " right=" + right)// + " vars=" + variables + " consts=" + constants)
 //      if (variables.isEmpty && (outerTable.isEmpty || innerTable.isEmpty)) {
 //        (outerTable ++ innerTable).foreach(joined =>
 //          if (constants.isEmpty || constants.forall((idx, const) => joined(idx) == const))
@@ -215,7 +214,6 @@ class RelationalOperators[S <: StorageManager](val storageManager: S) {
     private var index = 0
     def open(): Unit = {
       var opResults = ops.map(o => o.toList())
-      debug("UNION PRELIM RESULT=" + opResults.map(e => e.map(s => s.mkString("Rule{", ", ", "}")).mkString("[", ", ", "]")).mkString("[", "---", "]"))
       outputRelation = opResults.flatten.toSet.toIndexedSeq
     }
     def next(): Option[edbRow] = {
@@ -244,7 +242,6 @@ class RelationalOperators[S <: StorageManager](val storageManager: S) {
     private var index = 0
     def open(): Unit = {
       var opResults = ops.map(o => o.toList())
-      debug("DIFF PRELIM RESULT=" + opResults.map(e => e.map(s => s.mkString("Rule{", ", ", "}")).mkString("[", ", ", "]")).mkString("[", "---", "]"))
       outputRelation = opResults.toSet.reduce((l, r) => l diff r).toIndexedSeq
     }
     def next(): Option[edbRow] = {
