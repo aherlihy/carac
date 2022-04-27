@@ -158,21 +158,30 @@ class RelationalOperators[S <: StorageManager](val storageManager: S) {
         return
       }
 
-      left = inputs(0)
-      right = if (inputs.length > 1) inputs(1) else EmptyScan()
+//      println("inputs=" + inputs)
+//
+      val inputList: Seq[ArrayBuffer[edbRow]] = inputs.map(i => i.toList())
+//
+//      outputRelationNew = inputList.foldLeft(inputList.head)((outer, inner) => {
+//        println("acc=" + outer + " op=" + inner)
+//        outer.map(outerTuple => {
+//          inner.map(innerTuple => {
+//            outerTuple ++ innerTuple
+//          })
+//        }).filter(joined =>
+//              (variables.isEmpty || variables.forall(condition =>
+//                condition.forall(c => joined(c) == joined(condition.head))))
+//                && (constants.isEmpty ||
+//                constants.forall((idx, const) => joined(idx) == const)))
+//      })
+
+//      left = inputs(0)
+//      right = if (inputs.length > 1) inputs(1) else EmptyScan()
 
 
       // Nested loop join:
-      var outerTable = left.toList()
-      var innerTable = right.toList()
-
-//      if (variables.isEmpty && (outerTable.isEmpty || innerTable.isEmpty)) {
-//        (outerTable ++ innerTable).foreach(joined =>
-//          if (constants.isEmpty || constants.forall((idx, const) => joined(idx) == const))
-//            outputRelation.addOne(joined)
-//        )
-//        return
-//      }
+      val outerTable = inputList(0)//.toList()
+      val innerTable = inputList(1)//.toList()
 
       outerTable.foreach(outerTuple => {
         innerTable.foreach(innerTuple => {
@@ -197,8 +206,7 @@ class RelationalOperators[S <: StorageManager](val storageManager: S) {
     }
 
     def close(): Unit = {
-      left.close()
-      right.close()
+      inputs.foreach(i => i.close())
     }
   }
 

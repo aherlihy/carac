@@ -16,16 +16,16 @@ import scala.quoted.*
 
 //import scala.quoted.*
 
-inline def power(x: Double, inline n: Int): Double = ${ powerCode('x, 'n) }
+//inline def powerMacro(x: Double, inline n: Int): Double = ${ powerCode('x, 'n) }
 
-def powerN(n: Int): Double => Double =
+def powerMSP(n: Int): Double => Double =
   staging.run('{ (x: Double) => ${ efficientPowerCode('x, n) } })
 
 /** Generate code to compute x^n (possibly optimized) */
-def powerCode(x: Expr[Double], n: Expr[Int])(using Quotes): Expr[Double] =
-  n.value match
-    case Some(knownN) => efficientPowerCode(x, knownN)
-    case None => '{ Math.pow($x, $n.toDouble) }
+//def powerCode(x: Expr[Double], n: Expr[Int])(using Quotes): Expr[Double] =
+//  n.value match
+//    case Some(knownN) => efficientPowerCode(x, knownN)
+//    case None => '{ Math.pow($x, $n.toDouble) }
 
 /** Generate code to compute x^n for a particular n */
 def efficientPowerCode(x: Expr[Double], n: Int)(using Quotes): Expr[Double] =

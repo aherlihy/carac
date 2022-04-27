@@ -8,8 +8,8 @@ import datalog.dsl.Program
   given engine: ExecutionEngine = new SimpleExecutionEngine
 
   val program = Program()
-  val e = program.relation[String]("edge")
-  val p = program.relation[String]("tc")
+  val e = program.relation[String]("e")
+  val p = program.relation[String]("p")
 //  val ans1 = program.relation[String]()
 //  val ans2 = program.relation[String]()
 //  val ans3 = program.relation[String]()
@@ -23,5 +23,5 @@ import datalog.dsl.Program
   p(x, y) :- e(x, y)
   p(x, z) :- ( e(x, y), p(y, z) )
 
-  p.solve()
+  println(p.solve())
 }

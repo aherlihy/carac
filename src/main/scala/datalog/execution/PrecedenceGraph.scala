@@ -1,9 +1,11 @@
 package datalog.execution
 
 import datalog.dsl.Atom
-import scala.collection.mutable.{Set, Map}
 
-case class Node(rId: Int, edges: Set[Node] = Set[Node]())
+import scala.collection.mutable
+import scala.collection.mutable.{Map, Set}
+
+case class Node(rId: Int, edges: mutable.Set[Node] = mutable.Set[Node]())
 
 class PrecedenceGraph {
   val nodes = Map[Int, Node]()

@@ -93,7 +93,7 @@ class SimpleStorageManager extends StorageManager {
     deltaDB(qId2) = t1
   }
   def swapIncrDBs(qId1: Int, qId2: Int): Unit = {
-    var t1 = incrementalDB(qId1)
+    val t1 = incrementalDB(qId1)
     incrementalDB(qId1) = incrementalDB(qId2)
     incrementalDB(qId2) = t1
   }
@@ -108,26 +108,10 @@ class SimpleStorageManager extends StorageManager {
     val db1 = incrementalDB(qId1)
     val db2 = incrementalDB(qId2)
     db1 == db2
-//    if (db1.keys.toSet != db2.keys.toSet)
-//      return false
-//    db1.forall((k, relation1) => {
-//      val relation2 = db2(k)
-//      if (relation1.length != relation2.length)
-//        return false
-//      relation1.zipWithIndex.forall((row1, idx) => {
-//        val row2 = relation2(idx)
-//        if (row1.length != row2.length)
-//          return false
-//        row1.zipWithIndex.forall((term1, idx2) => {
-//          val term2 = row2(idx2)
-//          term1 == term2
-//        })
-//      })
-//    })
   }
 
   /**
-   * Use relational operators to evaluate an IDB rule
+   * Use relational operators to evaluate an IDB rule using Naive algo
    *
    * @param rIds - The ids of the relations
    * @param keys - a JoinIndexes object to join on
@@ -149,6 +133,13 @@ class SimpleStorageManager extends StorageManager {
     plan.toList()
   }
 
+  /**
+   * Use relational operators to evaluate an IDB rule using Semi-Naive algo
+   *
+   * @param rIds - The ids of the relations
+   * @param keys - a JoinIndexes object to join on
+   * @return
+   */
   private def semiNaiveRelationalSPJU(rId: Int, keys: Table[JoinIndexes], sourceQueryId: Int): Relation[StorageTerm] = {
     import relOps.*
 
@@ -176,28 +167,69 @@ class SimpleStorageManager extends StorageManager {
     plan.toList()
   }
 
+  private def joinHelper(inputs: Seq[Relation[StorageTerm]], k: JoinIndexes): Relation[StorageTerm] = {
+    val outputRelation = ArrayBuffer[Row[StorageTerm]]()
+
+    if(inputs.length == 1) {
+      return inputs.head.filter(
+        joined =>
+          (k.constIndexes.isEmpty || k.constIndexes.forall((idx, const) => joined(idx) == const)) &&
+            (k.varIndexes.isEmpty || k.varIndexes.forall(condition => condition.forall(c => joined(c) == joined(condition.head))))
+      )
+    }
+    if (inputs.isEmpty || inputs.length > 2)
+      throw new Error("TODO: multi-way join")
+
+    // TODO: multi-way join
+
+    val outerTable = inputs.head
+    val innerTable = inputs(1)
+
+    outerTable.foreach(outerTuple => {
+      innerTable.foreach(innerTuple => {
+        val joined = outerTuple ++ innerTuple
+        if ((k.varIndexes.isEmpty || k.varIndexes.forall(condition =>
+          condition.forall(c => joined(c) == joined(condition.head))))
+          && (k.constIndexes.isEmpty ||
+          k.constIndexes.forall((idx, const) => joined(idx) == const))) {
+          outputRelation.addOne(joined)
+        }
+      })
+    })
+    outputRelation
+  }
+
   /**
-   * Use the Scala built-in collection ops to do a SPJU
+   * Use iterative collection operators to evaluate an IDB rule using Semi-Naive algo
    *
-   * @param rIds
-   * @param keys
+   * @param rIds - The ids of the relations
+   * @param keys - a JoinIndexes object to join on
    * @return
    */
-  def iterativeSPJU(rId: Int, keys: Table[JoinIndexes], sourceQueryId: Int): ArrayBuffer[Row[StorageTerm]] = {
-    debug("SN SPJU: relation=" + names(rId) + " src=" + sourceQueryId + " keys=" + keys)
-    debug("QU-SN: "  + snPlanToString(keys))
-    print("SOURCE "); printIncrementDB(sourceQueryId)
-    print("DIFF "); printDeltaDB(sourceQueryId)
-    null
+  private def semiNaiveIterativeSPJU(rId: Int, keys: Table[JoinIndexes], sourceQueryId: Int): Relation[StorageTerm] = {
+    val plan =
+      keys.flatMap(k => // for each idb rule
+        k.deps.flatMap(d =>
+              joinHelper(
+                k.deps.map(r =>
+                  if (r == d)
+                    deltaDB(sourceQueryId)(r)
+                  else
+                    incrementalDB(sourceQueryId)(r)
+                ), k)
+                .map(t => t.zipWithIndex.filter((e, i) => k.projIndexes.contains(i)).map(_._1))
+          ).toSet
+        ).toSet
+    ArrayBuffer.from(plan)
   }
 
   def spju(rId: Int, keys: Table[JoinIndexes], sourceQueryId: Int): Relation[StorageTerm] = {
     relationalSPJU(rId, keys, sourceQueryId)
-//    iterativeSPJU(rId, keys, sourceQueryId)
   }
 
   def spjuSN(rId: Int, keys: Table[JoinIndexes], sourceQueryId: Int): Relation[StorageTerm] = {
-    semiNaiveRelationalSPJU(rId, keys, sourceQueryId)
+    semiNaiveIterativeSPJU(rId, keys, sourceQueryId)
+//    semiNaiveRelationalSPJU(rId, keys, sourceQueryId)
   }
 
   def printIncrementDB(i: Int) = {

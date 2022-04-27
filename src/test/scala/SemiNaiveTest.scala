@@ -3,7 +3,7 @@ package datalog
 import datalog.dsl.{Program, Relation}
 import datalog.execution.{ExecutionEngine, SimpleExecutionEngine}
 
-class SNNaiveTest extends  munit.FunSuite {
+class SemiNaiveTest extends  munit.FunSuite {
 
   def initEngineTC(): Tuple4[
     Relation[String],

@@ -9,13 +9,13 @@ given staging.Compiler = staging.Compiler.make(getClass.getClassLoader)
   val exp = "3".toInt
   // 1) Staged, runtime generation
   val power3runtime: Double => Double = // (x: Int) => x * x * x * 1
-    powerN(exp) // Staged, runtime generation
+    powerMSP(exp) // Staged, runtime generation
   val stagedResult = power3runtime(base)
   println("stagedR=" + stagedResult)
 
   // 2) macro, compile-time generation
-  def power3macro(x: Double) = // x * x * x * 1
-    power(x, 3)
-  val macroResult = power3macro(base)
-  println("macroResult=" + macroResult)
+//  def power3macro(x: Double) = // x * x * x * 1
+//    powerMacro(x, 3)
+//  val macroResult = power3macro(base)
+//  println("macroResult=" + macroResult)
 }
