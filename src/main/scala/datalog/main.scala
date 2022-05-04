@@ -10,9 +10,11 @@ import datalog.dsl.Program
   val program = Program()
   val e = program.relation[String]("e")
   val p = program.relation[String]("p")
-//  val ans1 = program.relation[String]()
-//  val ans2 = program.relation[String]()
-//  val ans3 = program.relation[String]()
+//  val a = program.relation[String]("a")
+//  val b = program.relation[String]("b")
+//  val c = program.relation[String]("c")
+//  val d = program.relation[String]("d")
+  val other = program.relation[String]("other")
 
   val x, y, z = program.variable()
 
@@ -22,6 +24,11 @@ import datalog.dsl.Program
   e("c", "d") :- ()
   p(x, y) :- e(x, y)
   p(x, z) :- ( e(x, y), p(y, z) )
+  other(x) :- e("a", x)
+//  a(x) :- b(x)
+//  b(y) :- c(y)
+//  c(x) :- a(x)
+//  a(x) :- other(x)
 
   println(p.solve())
 }

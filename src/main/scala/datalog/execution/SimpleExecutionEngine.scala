@@ -4,9 +4,7 @@ import datalog.dsl.{Atom, Constant, Variable, Term}
 import datalog.storage.{SimpleStorageManager, StorageManager, debug}
 
 import scala.collection.mutable.{ArrayBuffer, HashSet, Map}
-// store dependency chart of relations
 class SimpleExecutionEngine extends ExecutionEngine {
-//  given storageManager: StorageManager = new SimpleStorageManager
   val storageManager = new SimpleStorageManager
   import storageManager.{Row, StorageAtom, Relation, JoinIndexes, StorageTerm, StorageConstant}
   val precedenceGraph = new PrecedenceGraph
@@ -102,9 +100,8 @@ class SimpleExecutionEngine extends ExecutionEngine {
   }
 
   def evalRuleSN(rId: Int, queryId: Int, prevQueryId: Int): Relation[StorageTerm] = {
-    println("evalRuleSN: rId:" + rId + " queryId:" + queryId + " prevQId:" + prevQueryId)
-    val keys = storageManager.idbs(rId).filter(r => r.nonEmpty).map(r => getOperatorKeys(r))
-    println("evalRuleSN: keys=" + keys)
+    val keys = storageManager.idbs(rId).map(r => getOperatorKeys(r))
+    println("evalRuleSN: rId:" + rId + " queryId:" + queryId + " prevQId:" + prevQueryId + " keys=" + keys)
     storageManager.spjuSN(rId, keys, prevQueryId)
   }
 
@@ -124,13 +121,14 @@ class SimpleExecutionEngine extends ExecutionEngine {
       return storageManager.edb(rId)
     }
 
-    val relations = precedenceGraph.getTopSort(rId).filter(r => storageManager.idb(r).nonEmpty) // TODO: put empty check elsewhere
+    val relations = precedenceGraph.getTopSort(rId)
     val pQueryId = storageManager.initEvaluation()
     val prevQueryId = storageManager.initEvaluation()
     var count = 0
 
     val startRId = relations.head
-    val res = evalRule(startRId, pQueryId, prevQueryId) // TODO: add filter here
+    val res = evalRule(startRId, pQueryId, prevQueryId)
+    println("init res=" + res)
     storageManager.resetDeltaEDB(startRId, res, pQueryId)
     storageManager.resetIncrEDB(startRId, res, pQueryId)
     storageManager.resetDeltaEDB(startRId, res, prevQueryId)
@@ -139,6 +137,7 @@ class SimpleExecutionEngine extends ExecutionEngine {
     while(setDiff) {
       count += 1
       val p = evalSN(rId, relations, pQueryId, prevQueryId)
+      println("result evalSN=" + p)
       setDiff = storageManager.deltaDB(pQueryId).exists((k, v) => v.nonEmpty)
       storageManager.swapDeltaDBs(prevQueryId, pQueryId)
     }
