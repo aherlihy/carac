@@ -10,7 +10,7 @@ import datalog.dsl.Program
   val program = Program()
   val e = program.relation[String]("e")
   val p = program.relation[String]("p")
-//  val a = program.relation[String]("a")
+  val a = program.relation[String]("a")
 //  val b = program.relation[String]("b")
 //  val c = program.relation[String]("c")
 //  val d = program.relation[String]("d")
@@ -30,5 +30,5 @@ import datalog.dsl.Program
 //  c(x) :- a(x)
 //  a(x) :- other(x)
 
-  println(p.solve())
+  println(other.solve())
 }

@@ -2,38 +2,51 @@ package datalog.storage
 
 import datalog.dsl.{Atom, Constant, Variable}
 
-import scala.collection.immutable.ListMap
-import scala.collection.mutable.{ArrayBuffer, Map}
+import scala.collection.{immutable, mutable}
 
-class SimpleStorageManager extends StorageManager {
+class SimpleStorageManager(using ns: mutable.Map[Int, String]) extends StorageManager {
   type StorageVariable = Variable
   type StorageConstant = Constant
-  type StorageTerm = StorageVariable | StorageConstant
   case class StorageAtom(rId: Int, terms: IndexedSeq[StorageTerm]) {
-    override def toString: String = names(rId) + terms.mkString("(", ", ", ")")
+    override def toString: String = ns(rId) + terms.mkString("(", ", ", ")")
   }
   type Row[+T] = IndexedSeq[T]
-  type Table[T] = ArrayBuffer[T]
+  def Row[T](c: T*) = IndexedSeq[T](c: _*)
+  type Table[T] = mutable.ArrayBuffer[T]
+  def Table[T](r: T*) = mutable.ArrayBuffer[T](r: _*)
   type Relation[T] = Table[Row[T]]
+  def Relation[T](c: Row[T]*) = Table[Row[T]](c: _*)
 
-  val edbs = Map[Int, Relation[StorageTerm]]()
-  val idbs = Map[Int, Relation[StorageAtom]]()
-  val names = Map[Int, String]()
+  type Database[K, V] = mutable.Map[K, V]
 
+  type FactDatabase = Database[Int, EDB]
+  def FactDatabase(e: (Int, EDB)*) = mutable.Map[Int, EDB](e: _*)
+  type RuleDatabase = Database[Int, IDB]
+  def RuleDatabase(e: (Int, IDB)*) = mutable.Map[Int, IDB](e: _*)
+
+  def EDB(c: Row[StorageTerm]*) = Relation[StorageTerm](c: _*)
+  def IDB(c: Row[StorageAtom]*) = Relation[StorageAtom](c: _*)
+
+  // "database", i.e. relationID => Relation
+  val edbs: FactDatabase = FactDatabase()
+  val idbs: RuleDatabase = RuleDatabase()
+
+  // queryID => database
   var increment = 0
-  val incrementalDB = Map[Int, Map[Int, Relation[StorageTerm]]]() // TODO: map from query
-  val deltaDB = Map[Int, Map[Int, Relation[StorageTerm]]]()
+  val incrementalDB: Database[Int, FactDatabase] = mutable.Map[Int, FactDatabase]()
+  val deltaDB: Database[Int, FactDatabase] = mutable.Map[Int, FactDatabase]()
 
-  def idb(rId: Int): Relation[StorageAtom] = idbs(rId)
-  def edb(rId: Int): Relation[StorageTerm] = edbs(rId)
+  def idb(rId: Int): IDB = idbs(rId)
+  def edb(rId: Int): EDB = edbs(rId)
+  val printer: Printer = Printer(this, ns)
 
-  val relOps = RelationalOperators(this)
+  val relOps: RelationalOperators[SimpleStorageManager] = RelationalOperators(this)
 
   // store all relations
   def initRelation(rId: Int, name: String): Unit = {
-    edbs.addOne(rId, ArrayBuffer[Row[StorageTerm]]())
-    idbs.addOne(rId, ArrayBuffer[Row[StorageAtom]]())
-    names(rId) = name
+    edbs.addOne(rId, EDB())
+    idbs.addOne(rId, IDB())
+    ns(rId) = name
   }
   // TODO: For now store IDB and EDB separately
   def insertEDB(rule: StorageAtom): Unit = {
@@ -43,7 +56,7 @@ class SimpleStorageManager extends StorageManager {
     edbs(rId).appendAll(rules)
   }
   def bulkInsertEDB(rId: Int, rules: Relation[StorageTerm], queryId: Int): Unit = {
-    incrementalDB(queryId).getOrElseUpdate(rId, ArrayBuffer[Row[StorageTerm]]()).appendAll(rules)
+    incrementalDB(queryId).getOrElseUpdate(rId, EDB()).appendAll(rules)
   }
   def resetIncrEDB(rId: Int, rules: Relation[StorageTerm], queryId: Int): Unit = {
     incrementalDB(queryId)(rId) = rules
@@ -64,17 +77,17 @@ class SimpleStorageManager extends StorageManager {
    * @return
    */
   def initEvaluation(): Int = {
-    val edbClone = Map[Int, Relation[StorageTerm]]()
+    val edbClone = FactDatabase()
     edbs.foreach((k, relation) => {
-      edbClone(k) = ArrayBuffer[Row[StorageTerm]]()
+      edbClone(k) = EDB()
       relation.zipWithIndex.foreach((row, idx) =>
-        edbClone(k).addOne(IndexedSeq[StorageTerm]().appendedAll(row))
+        edbClone(k).addOne(Row[StorageTerm]().appendedAll(row))
       )
     })
     incrementalDB.addOne(increment, edbClone) // TODO: do we need to clone everything in the edb?
-    val edbClone2 = Map[Int, Relation[StorageTerm]]()
+    val edbClone2 = FactDatabase()
     edbs.foreach((k, relation) => {
-      edbClone2(k) = ArrayBuffer[Row[StorageTerm]]()
+      edbClone2(k) = EDB()
 //      relation.zipWithIndex.foreach((row, idx) =>
 //        edbClone2(k).addOne(IndexedSeq[StorageTerm]().appendedAll(row))
 //      )
@@ -84,8 +97,8 @@ class SimpleStorageManager extends StorageManager {
     increment - 1
   }
 
-  def getIncrementDB(rId: Int, queryId: Int): Relation[StorageTerm] = incrementalDB(queryId)(rId)
-  def getDeltaDB(rId: Int, queryId: Int): Relation[StorageTerm] = deltaDB(queryId)(rId)
+  def getIncrementDB(rId: Int, queryId: Int): EDB = incrementalDB(queryId)(rId)
+  def getDeltaDB(rId: Int, queryId: Int): EDB = deltaDB(queryId)(rId)
 
   def swapDeltaDBs(qId1: Int, qId2: Int): Unit = {
     val t1 = deltaDB(qId1)
@@ -117,7 +130,7 @@ class SimpleStorageManager extends StorageManager {
    * @param keys - a JoinIndexes object to join on
    * @return
    */
-  private def relationalSPJU(rId: Int, keys: Table[JoinIndexes], sourceQueryId: Int): Relation[StorageTerm] = {
+  private def relationalSPJU(rId: Int, keys: Seq[JoinIndexes], sourceQueryId: Int): EDB = {
     import relOps.*
 
     val plan = Union(
@@ -140,13 +153,13 @@ class SimpleStorageManager extends StorageManager {
    * @param keys - a JoinIndexes object to join on
    * @return
    */
-  private def semiNaiveRelationalSPJU(rId: Int, keys: Table[JoinIndexes], sourceQueryId: Int): Relation[StorageTerm] = {
+  private def semiNaiveRelationalSPJU(rId: Int, keys: Seq[JoinIndexes], sourceQueryId: Int): EDB = {
     import relOps.*
 
     val plan = Union(
       keys.map(k => // for each idb rule
         Union(
-          ArrayBuffer() ++ k.deps.map(d =>
+          k.deps.map(d =>
             Project(
               Join(
                 k.deps.map(r =>
@@ -167,8 +180,8 @@ class SimpleStorageManager extends StorageManager {
     plan.toList()
   }
 
-  private def joinHelper(inputs: Seq[Relation[StorageTerm]], k: JoinIndexes): Relation[StorageTerm] = {
-    val outputRelation = ArrayBuffer[Row[StorageTerm]]()
+  private def joinHelper(inputs: Seq[EDB], k: JoinIndexes): EDB = {
+    val outputRelation = EDB()
 
     if(inputs.length == 1) {
       return inputs.head.filter(
@@ -206,7 +219,7 @@ class SimpleStorageManager extends StorageManager {
    * @param keys - a JoinIndexes object to join on
    * @return
    */
-  private def semiNaiveIterativeSPJU(rId: Int, keys: Table[JoinIndexes], sourceQueryId: Int): Relation[StorageTerm] = {
+  private def semiNaiveIterativeSPJU(rId: Int, keys: Table[JoinIndexes], sourceQueryId: Int): EDB = {
     val plan =
       keys.flatMap(k => // for each idb rule
         k.deps.flatMap(d =>
@@ -220,78 +233,15 @@ class SimpleStorageManager extends StorageManager {
                 .map(t => t.zipWithIndex.filter((e, i) => k.projIndexes.contains(i)).map(_._1))
           ).toSet
         ).toSet
-    ArrayBuffer.from(plan)
+    mutable.ArrayBuffer.from(plan)
   }
 
-  def spju(rId: Int, keys: Table[JoinIndexes], sourceQueryId: Int): Relation[StorageTerm] = {
+  def spju(rId: Int, keys: Seq[JoinIndexes], sourceQueryId: Int): EDB = {
     relationalSPJU(rId, keys, sourceQueryId)
   }
 
-  def spjuSN(rId: Int, keys: Table[JoinIndexes], sourceQueryId: Int): Relation[StorageTerm] = {
+  def spjuSN(rId: Int, keys: Table[JoinIndexes], sourceQueryId: Int): EDB = {
     semiNaiveIterativeSPJU(rId, keys, sourceQueryId)
 //    semiNaiveRelationalSPJU(rId, keys, sourceQueryId)
-  }
-
-  def printIncrementDB(i: Int) = {
-    println("INCREMENT:" + dbToString(incrementalDB(i)))
-  }
-  def printIncrementDB() = {
-    println("INCREMENT:" +
-      incrementalDB.map((i, db) => ("queryId: " + i, dbToString(db))).mkString("[\n", ",\n", "]"))
-  }
-  def printDeltaDB(i: Int) = {
-    println("DELTA:" + dbToString(deltaDB(i)))
-  }
-  def printDeltaDB() = {
-    println("DELTA:" +
-      deltaDB.map((i, db) => ("queryId: " + i, dbToString(db))).mkString("[\n", ",\n", "]"))
-  }
-  def tableToString[T](r: Relation[T]): String = {
-    r.map(s => s.mkString("Rule{", ", ", "}")).mkString("[", ", ", "]")
-  }
-  def dbToString[T](db: Map[Int, Relation[T]]): String = {
-    ListMap(db.toSeq.sortBy(_._1):_*)
-      .map((k, v) => (names(k), tableToString(v)))
-      .mkString("[\n  ", ",\n  ", "]")
-  }
-  def planToString(keys: Table[JoinIndexes]): String = {
-    "Union( " +
-      keys.map(k =>
-        "Project" + k.projIndexes.mkString("[", " ", "]") + "( " +
-          "JOIN" +
-          k.varIndexes.map(v => v.mkString("$", "==$", "")).mkString("[", ",", "]") +
-          k.constIndexes.map((k, v) => k + "==" + v).mkString("{", "&&", "}") +
-          k.deps.map(names).mkString("(", "*", ")") +
-          " )"
-      ).mkString("[ ", ", ", " ]") +
-      " )"
-  }
-
-  def snPlanToString(keys: Table[JoinIndexes]): String = {
-    "UNION( " +
-      keys.map(k =>
-        "UNION(" +
-          k.deps.map(d =>
-            "PROJECT" + k.projIndexes.mkString("[", " ", "]") + "( " +
-              "JOIN" +
-              k.varIndexes.map(v => v.mkString("$", "==$", "")).mkString("[", ",", "]") +
-              k.constIndexes.map((k, v) => k + "==" + v).mkString("{", "&&", "}") +
-              k.deps.map(n =>
-                if (n == d)
-                  "delta-" + names(n)
-                else
-                  names(n)
-              ).mkString("(", "*", ")") +
-              " )"
-          ).mkString("[ ", ", ", " ]") + " )"
-      ).mkString("[ ", ", ", " ]") +
-      " )"
-  }
-
-  override def toString = {
-    "EDB:" + dbToString(edbs) +
-    "\nIDB:" + dbToString(idbs) +
-    "\nINCREMENT:" + incrementalDB.map((i, db) => (i, dbToString(db))).mkString("[", ", ", "]") +
-    "\nDELTA:" + deltaDB.map((i, db) => (i, dbToString(db))).mkString("[", ", ", "]")
   }
 }

@@ -8,7 +8,7 @@ import scala.quoted.*
 
 class StagedRelOperators[S <: StorageManager](val storageManager: S) {
   type edbRow = storageManager.Row[storageManager.StorageTerm]
-  type table[T] = storageManager.Table[T]
+//  type table[T] = storageManager.Table[T]
   trait RelNode {
     val parent: RelNode
     val children: List[RelNode]

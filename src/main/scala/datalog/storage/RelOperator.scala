@@ -1,6 +1,5 @@
 package datalog.storage
 
-import scala.collection.mutable.{ArrayBuffer, Map}
 import datalog.dsl.Constant
 
 import scala.collection.mutable
@@ -24,8 +23,8 @@ class RelationalOperators[S <: StorageManager](val storageManager: S) {
 
     def close(): Unit
 
-    def toList(): ArrayBuffer[edbRow] = { // TODO: fix this to use iterator override
-      val list = ArrayBuffer[edbRow]()
+    def toList(): mutable.ArrayBuffer[edbRow] = { // TODO: fix this to use iterator override
+      val list = mutable.ArrayBuffer[edbRow]()
       this.open()
       while (
         this.next() match {
@@ -138,7 +137,7 @@ class RelationalOperators[S <: StorageManager](val storageManager: S) {
                   variables: IndexedSeq[IndexedSeq[Int]],
                   constants: Map[Int, Constant]) extends RelOperator {
 
-    private var outputRelation: ArrayBuffer[edbRow] = ArrayBuffer()
+    private var outputRelation= mutable.ArrayBuffer[edbRow]()
     private var index = 0
 
     // TODO [NOW]: >2 key join
@@ -147,10 +146,10 @@ class RelationalOperators[S <: StorageManager](val storageManager: S) {
 
     def open(): Unit = {
       index = 0
-      outputRelation = ArrayBuffer()
+      outputRelation = mutable.ArrayBuffer()
 
       if(inputs.length == 1) {
-        outputRelation = inputs(0).toList().filter(
+        outputRelation = inputs.head.toList().filter(
           joined =>
             (constants.isEmpty || constants.forall((idx, const) => joined(idx) == const)) &&
             (variables.isEmpty || variables.forall(condition => condition.forall(c => joined(c) == joined(condition.head))))
@@ -160,7 +159,7 @@ class RelationalOperators[S <: StorageManager](val storageManager: S) {
 
 //      println("inputs=" + inputs)
 //
-      val inputList: Seq[ArrayBuffer[edbRow]] = inputs.map(i => i.toList())
+      val inputList: Seq[mutable.ArrayBuffer[edbRow]] = inputs.map(i => i.toList())
 //
 //      outputRelationNew = inputList.foldLeft(inputList.head)((outer, inner) => {
 //        println("acc=" + outer + " op=" + inner)
@@ -215,7 +214,7 @@ class RelationalOperators[S <: StorageManager](val storageManager: S) {
    *
    * @param ops
    */
-  case class Union(ops: table[RelOperator]) extends RelOperator {
+  case class Union(ops: Seq[RelOperator]) extends RelOperator {
 //    private var currentRel: Int = 0
 //    private var length: Long = ops.length
     private var outputRelation: IndexedSeq[edbRow] = IndexedSeq()
@@ -245,7 +244,7 @@ class RelationalOperators[S <: StorageManager](val storageManager: S) {
     }
     def close(): Unit = ops.foreach(o => o.close())
   }
-  case class Diff(ops: table[RelOperator]) extends RelOperator {
+  case class Diff(ops: Seq[RelOperator]) extends RelOperator {
     private var outputRelation: IndexedSeq[edbRow] = IndexedSeq()
     private var index = 0
     def open(): Unit = {

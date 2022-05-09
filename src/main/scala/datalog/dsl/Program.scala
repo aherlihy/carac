@@ -2,6 +2,8 @@ package datalog.dsl
 
 import datalog.execution.{ExecutionEngine, SimpleExecutionEngine}
 
+import scala.collection.mutable
+
 // TODO: better to have program as given instance?
 class Program(engine: ExecutionEngine = new SimpleExecutionEngine) extends AbstractProgram {
   given ee: ExecutionEngine = engine

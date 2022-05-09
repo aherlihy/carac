@@ -64,7 +64,6 @@ class PrecedenceGraph {
   }
 
   def getTopSort(fromRid: Int): Seq[Int] = {
-    printNodes()
     nodes.foreach((rId, node) => {
       if (node.idx == -1) {
         strongConnect(node)

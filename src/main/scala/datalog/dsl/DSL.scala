@@ -2,7 +2,11 @@ package datalog.dsl
 
 import datalog.execution.ExecutionEngine
 
+import scala.collection.mutable
+
 trait AbstractProgram // TODO: alternate program?
+
+type Printer = mutable.Map[Int, String] // TODO: will eventually want bimap
 
 type Constant = Int | String // TODO: other constant types?
 
@@ -31,19 +35,15 @@ case class Relation[T <: Constant](id: Int, name: String)(using ee: ExecutionEng
 
   case class RelAtom(terms: IndexedSeq[RelTerm]) extends Atom { // extend Atom so :- can accept atom of any Relation
     // IDB tuple
-    val rId = id
-    def :-(body: Atom*): Unit = {
-      ee.insertIDB(rId, this +: body)
-    }
+    val rId: Int = id
+    def :-(body: Atom*): Unit = ee.insertIDB(rId, this +: body)
     // EDB tuple
     def :-(body: Unit): Unit = ee.insertEDB(this)
 
     override def toString = rId + terms.mkString("(", ", ", ")")
   }
   // Create a tuple in this relation
-  def apply(ts: RelTerm*): RelAtom = {
-    new RelAtom(ts.toIndexedSeq)
-  }
+  def apply(ts: RelTerm*): RelAtom = RelAtom(ts.toIndexedSeq)
 
   def solve(): Any = ee.solve(id)
   def solveNaive(): Any = ee.solveNaive(id)

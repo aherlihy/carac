@@ -1,15 +1,19 @@
 package datalog.execution
 
-import datalog.dsl.{Atom, Constant, Variable, Term}
+import datalog.dsl.{Atom, Constant, Term, Variable}
 import datalog.storage.{SimpleStorageManager, StorageManager, debug}
 
-import scala.collection.mutable.{ArrayBuffer, HashSet, Map}
+import scala.collection.mutable
+
 class SimpleExecutionEngine extends ExecutionEngine {
+  val ns: mutable.Map[Int, String] = mutable.Map[Int, String]()
+  given namespace: mutable.Map[Int, String] = ns
   val storageManager = new SimpleStorageManager
-  import storageManager.{Row, StorageAtom, Relation, JoinIndexes, StorageTerm, StorageConstant}
+  import storageManager.{Row, StorageAtom, EDB, JoinIndexes, StorageConstant}
   val precedenceGraph = new PrecedenceGraph
 
   def initRelation(rId: Int, name: String): Unit = {
+    ns(rId) = name
     storageManager.initRelation(rId, name)
   }
 
@@ -32,11 +36,11 @@ class SimpleExecutionEngine extends ExecutionEngine {
    * @param rule - Includes the head at idx 0
    */
   def getOperatorKeys(rule: Row[StorageAtom]): JoinIndexes = {
-    val constants = Map[Int, StorageConstant]()
+    val constants = mutable.Map[Int, StorageConstant]()
     var projects = IndexedSeq[Int]()
 
     // variable ids in the head atom
-    val headVars = HashSet() ++ rule(0).terms.flatMap(t => t match {
+    val headVars = mutable.HashSet() ++ rule(0).terms.flatMap(t => t match {
       case v: Variable => Seq(v.oid)
       case _ => Seq()
     })
@@ -63,18 +67,18 @@ class SimpleExecutionEngine extends ExecutionEngine {
         matches.map(_._2)
       )
       .toIndexedSeq
-    JoinIndexes(vars, constants, projects, deps)
+    JoinIndexes(vars, constants.toMap, projects, deps)
   }
 
-  def evalRule(rId: Int, queryId: Int, prevQueryId: Int): Relation[StorageTerm] = {
+  def evalRule(rId: Int, queryId: Int, prevQueryId: Int): EDB = {
     val keys = storageManager.idbs(rId).filter(r => r.nonEmpty).map(r => getOperatorKeys(r))
-    storageManager.spju(rId, keys, prevQueryId)
+    storageManager.spju(rId, keys.toSeq, prevQueryId)
   }
 
   /**
    * Take the union of each evalRule for each IDB predicate
    */
-  def eval(rId: Int, relations: Seq[Int], queryId: Int, prevQueryId: Int): Relation[StorageTerm] = {
+  def eval(rId: Int, relations: Seq[Int], queryId: Int, prevQueryId: Int): EDB = {
     relations.map(r => {
       val res = evalRule(r, queryId, prevQueryId)
       storageManager.resetIncrEDB(r, res, queryId)
@@ -82,7 +86,7 @@ class SimpleExecutionEngine extends ExecutionEngine {
     storageManager.getIncrementDB(rId, queryId)
   }
 
-  def iterateNaive(rId: Int): Relation[StorageTerm] = {
+  def iterateNaive(rId: Int): EDB = {
     val relations = precedenceGraph.getTopSort(rId).filter(r => storageManager.idb(r).nonEmpty) // TODO: put empty check elsewhere
     val pQueryId = storageManager.initEvaluation()
     val prevQueryId = storageManager.initEvaluation()
@@ -99,13 +103,13 @@ class SimpleExecutionEngine extends ExecutionEngine {
     storageManager.getIncrementDB(rId, pQueryId)
   }
 
-  def evalRuleSN(rId: Int, queryId: Int, prevQueryId: Int): Relation[StorageTerm] = {
+  def evalRuleSN(rId: Int, queryId: Int, prevQueryId: Int): EDB = {
     val keys = storageManager.idbs(rId).map(r => getOperatorKeys(r))
     println("evalRuleSN: rId:" + rId + " queryId:" + queryId + " prevQId:" + prevQueryId + " keys=" + keys)
     storageManager.spjuSN(rId, keys, prevQueryId)
   }
 
-  def evalSN(rId: Int, relations: Seq[Int], queryId: Int, prevQueryId: Int): Relation[StorageTerm] = {
+  def evalSN(rId: Int, relations: Seq[Int], queryId: Int, prevQueryId: Int): EDB = {
     relations.foreach(r => {
       val prev = storageManager.getIncrementDB(r, queryId)
       val res = evalRuleSN(r, queryId, prevQueryId)
@@ -116,12 +120,15 @@ class SimpleExecutionEngine extends ExecutionEngine {
     storageManager.getIncrementDB(rId, queryId)
   }
 
-  def iterateSemiNaive(rId: Int): Relation[StorageTerm] = {
+  def iterateSemiNaive(rId: Int): EDB = {
     if (storageManager.edb(rId).nonEmpty) { // if just an edb predicate then return
       return storageManager.edb(rId)
     }
 
     val relations = precedenceGraph.getTopSort(rId)
+    if (relations.isEmpty)
+      return EDB()
+    println("topsort relations=" + relations)
     val pQueryId = storageManager.initEvaluation()
     val prevQueryId = storageManager.initEvaluation()
     var count = 0
@@ -149,7 +156,7 @@ class SimpleExecutionEngine extends ExecutionEngine {
   }
 
   def solve(rId: Int): Set[Seq[Term]] = {
-    println("SM=" + storageManager.toString())
+    println("SM=" + storageManager.printer.toString())
     iterateSemiNaive(rId).toSet
   }
 }

@@ -3,19 +3,30 @@ package datalog.storage
 import datalog.dsl.Atom
 
 import scala.collection.mutable
-import scala.collection.mutable.{ArrayBuffer, Map}
-import scala.collection.immutable.IndexedSeqOps
+import scala.collection.immutable
 
 trait StorageManager {
   /* A bit repetitive to have these types also defined in dsl but good to separate
-   * user-facing class with internal storage */
+   * user-facing API class with internal storage */
   type StorageVariable
   type StorageConstant
-  type StorageTerm = StorageVariable | StorageConstant
   type StorageAtom
-  type Row [+T] <: IndexedSeq[T] with IndexedSeqOps[T, Row, Row[T]]
-  type Table[T] <: ArrayBuffer[T]
+  type Row [+T] <: IndexedSeq[T] with immutable.IndexedSeqOps[T, Row, Row[T]]
+  type Table[T] <: mutable.ArrayBuffer[T]
   type Relation[T] <: Table[Row[T]]
+
+  type StorageTerm = StorageVariable | StorageConstant
+  type EDB = Relation[StorageTerm]
+  type IDB = Relation[StorageAtom]
+  type Database[K, V] <: mutable.Map[K, V]
+  type FactDatabase <: Database[Int, EDB]
+  type RuleDatabase <: Database[Int, IDB]
+
+  val incrementalDB: Database[Int, FactDatabase]
+  val deltaDB: Database[Int, FactDatabase]
+  val edbs: FactDatabase
+  val idbs: RuleDatabase
+
 
   /**
    * Wrapper object for join keys for IDB rules
@@ -42,21 +53,21 @@ trait StorageManager {
 
   def insertIDB(rId: Int, rule: Row[StorageAtom]): Unit
 
-  def idb(rId: Int): Relation[StorageAtom]
+  def idb(rId: Int): IDB
 
-  def edb(rId: Int): Relation[StorageTerm]
+  def edb(rId: Int): EDB
 
-  def spju(rId: Int, keys: Table[JoinIndexes], sourceQueryId: Int): Relation[StorageTerm]
+  def spju(rId: Int, keys: Seq[JoinIndexes], sourceQueryId: Int): EDB
 
-  def getIncrementDB(rId: Int, queryId: Int): Relation[StorageTerm]
+  def getIncrementDB(rId: Int, queryId: Int): EDB
 
   def swapIncrDBs(qId1: Int, qId2: Int): Unit
   def swapDeltaDBs(qId1: Int, qId2: Int): Unit
 
-  def tableToString[T](r: Relation[T]): String
+//  def tableToString[T](r: Relation[T]): String
 
-  def resetIncrEDB(rId: Int, rules: Relation[StorageTerm], queryId: Int): Unit
-  def resetDeltaEDB(rId: Int, rules: Relation[StorageTerm], queryId: Int): Unit
+  def resetIncrEDB(rId: Int, rules: EDB, queryId: Int): Unit
+  def resetDeltaEDB(rId: Int, rules: EDB, queryId: Int): Unit
   def compareDeltaDBs(qId1: Int, qId2: Int): Boolean
   def compareIncrDBs(qId1: Int, qId2: Int): Boolean
 }
