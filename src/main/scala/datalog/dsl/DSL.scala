@@ -2,7 +2,7 @@ package datalog.dsl
 
 import datalog.execution.ExecutionEngine
 
-trait AbstractProgram
+trait AbstractProgram // TODO: alternate program?
 
 type Constant = Int | String // TODO: other constant types?
 

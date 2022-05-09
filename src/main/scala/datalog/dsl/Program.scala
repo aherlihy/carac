@@ -3,8 +3,8 @@ package datalog.dsl
 import datalog.execution.{ExecutionEngine, SimpleExecutionEngine}
 
 // TODO: better to have program as given instance?
-class Program(using ee: ExecutionEngine) extends AbstractProgram {
-
+class Program(engine: ExecutionEngine = new SimpleExecutionEngine) extends AbstractProgram {
+  given ee: ExecutionEngine = engine
   var varCounter = 0
   def variable(): Variable = {
     varCounter += 1
