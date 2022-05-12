@@ -240,8 +240,8 @@ class SimpleStorageManager(using ns: mutable.Map[Int, String]) extends StorageMa
     relationalSPJU(rId, keys, sourceQueryId)
   }
 
-  def spjuSN(rId: Int, keys: Table[JoinIndexes], sourceQueryId: Int): EDB = {
-    semiNaiveIterativeSPJU(rId, keys, sourceQueryId)
-//    semiNaiveRelationalSPJU(rId, keys, sourceQueryId)
+  def spjuSN(rId: Int, keys: Seq[JoinIndexes], sourceQueryId: Int): EDB = {
+//    semiNaiveIterativeSPJU(rId, keys, sourceQueryId)
+    semiNaiveRelationalSPJU(rId, keys, sourceQueryId)
   }
 }

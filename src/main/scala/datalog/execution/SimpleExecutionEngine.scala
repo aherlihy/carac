@@ -79,7 +79,7 @@ class SimpleExecutionEngine extends ExecutionEngine {
    * Take the union of each evalRule for each IDB predicate
    */
   def eval(rId: Int, relations: Seq[Int], queryId: Int, prevQueryId: Int): EDB = {
-    relations.map(r => {
+    relations.foreach(r => {
       val res = evalRule(r, queryId, prevQueryId)
       storageManager.resetIncrEDB(r, res, queryId)
     })
@@ -104,7 +104,7 @@ class SimpleExecutionEngine extends ExecutionEngine {
   }
 
   def evalRuleSN(rId: Int, queryId: Int, prevQueryId: Int): EDB = {
-    val keys = storageManager.idbs(rId).map(r => getOperatorKeys(r))
+    val keys = storageManager.idbs(rId).map(r => getOperatorKeys(r)).toSeq
     println("evalRuleSN: rId:" + rId + " queryId:" + queryId + " prevQId:" + prevQueryId + " keys=" + keys)
     storageManager.spjuSN(rId, keys, prevQueryId)
   }
@@ -135,13 +135,13 @@ class SimpleExecutionEngine extends ExecutionEngine {
 
     val startRId = relations.head
     val res = evalRule(startRId, pQueryId, prevQueryId)
-    println("init res=" + res)
     storageManager.resetDeltaEDB(startRId, res, pQueryId)
     storageManager.resetIncrEDB(startRId, res, pQueryId)
     storageManager.resetDeltaEDB(startRId, res, prevQueryId)
 
     var setDiff = true
     while(setDiff) {
+      println(storageManager.printer.toString())
       count += 1
       val p = evalSN(rId, relations, pQueryId, prevQueryId)
       println("result evalSN=" + p)
@@ -156,7 +156,6 @@ class SimpleExecutionEngine extends ExecutionEngine {
   }
 
   def solve(rId: Int): Set[Seq[Term]] = {
-    println("SM=" + storageManager.printer.toString())
     iterateSemiNaive(rId).toSet
   }
 }

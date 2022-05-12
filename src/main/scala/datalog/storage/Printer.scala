@@ -3,9 +3,7 @@ package datalog.storage
 import scala.collection.{mutable, immutable}
 
 // Keep pretty print stuff separate bc long and ugly
-class Printer(ss: StorageManager, ns: mutable.Map[Int, String]) {
-  val s = ss // for public type signatures?
-
+class Printer(val s: StorageManager, ns: mutable.Map[Int, String]) {
   def printIncrementDB(i: Int) = {
     println("INCREMENT:" + edbToString(s.incrementalDB(i)))
   }
