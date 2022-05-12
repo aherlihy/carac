@@ -45,6 +45,5 @@ case class Relation[T <: Constant](id: Int, name: String)(using ee: ExecutionEng
   // Create a tuple in this relation
   def apply(ts: RelTerm*): RelAtom = RelAtom(ts.toIndexedSeq)
 
-  def solve(): Any = ee.solve(id)
-  def solveNaive(): Any = ee.solveNaive(id)
+  def solve(): Set[Seq[Term]] = ee.solve(id).map(s => s.toSeq).toSet
 }

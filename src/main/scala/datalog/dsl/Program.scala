@@ -1,11 +1,11 @@
 package datalog.dsl
 
-import datalog.execution.{ExecutionEngine, SimpleExecutionEngine}
+import datalog.execution.{ExecutionEngine, NaiveExecutionEngine}
 
 import scala.collection.mutable
 
 // TODO: better to have program as given instance?
-class Program(engine: ExecutionEngine = new SimpleExecutionEngine) extends AbstractProgram {
+class Program(engine: ExecutionEngine) extends AbstractProgram {
   given ee: ExecutionEngine = engine
   var varCounter = 0
   def variable(): Variable = {
@@ -19,6 +19,5 @@ class Program(engine: ExecutionEngine = new SimpleExecutionEngine) extends Abstr
   }
 
   // TODO: also provide solve for multiple/all predicates, or return table so users can query over the derived DB
-  def solve(rId: Int): Any = ee.solve(rId) // TODO: get rid of any
-  def solveNaive(rId: Int): Any = ee.solveNaive(rId) // TODO: get rid of any
+  def solve(rId: Int): Set[Seq[Term]] = ee.solve(rId).map(s => s.toSeq).toSet
 }

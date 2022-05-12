@@ -12,6 +12,4 @@ trait ExecutionEngine {
   def insertEDB(body: Atom): Unit
 
   def solve(rId: Int): Set[Seq[Term]]
-  def solveNaive(rId: Int): Set[Seq[Term]]
-  //  def insertBulkEDB[T](relationId: Int, terms: Seq[Seq[T]]): Unit = {}
 }

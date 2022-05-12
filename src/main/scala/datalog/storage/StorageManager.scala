@@ -1,6 +1,6 @@
 package datalog.storage
 
-import datalog.dsl.Atom
+import datalog.dsl.{Atom, Term, Variable}
 
 import scala.collection.mutable
 import scala.collection.immutable
@@ -17,6 +17,7 @@ trait StorageManager {
 
   type StorageTerm = StorageVariable | StorageConstant
   type EDB = Relation[StorageTerm]
+  def EDB(c: Row[StorageTerm]*): EDB
   type IDB = Relation[StorageAtom]
   type Database[K, V] <: mutable.Map[K, V]
   type FactDatabase <: Database[Int, EDB]
@@ -46,27 +47,33 @@ trait StorageManager {
         ", project:" + projIndexes.mkString("[", ", ", "]") +
         ", srcEDB:" + deps.mkString("[", ", ", "]") + " }"
   }
+  def getOperatorKeys(rule: Row[StorageAtom]): JoinIndexes
 
   def initRelation(rId: Int, name: String): Unit
+  def initEvaluation(): Int
 
-  def insertEDB(rule: StorageAtom): Unit
+  def insertEDB(rule: Atom): Unit
 
-  def insertIDB(rId: Int, rule: Row[StorageAtom]): Unit
+  def insertIDB(rId: Int, rule: Seq[Atom]): Unit
 
   def idb(rId: Int): IDB
 
   def edb(rId: Int): EDB
 
-  def spju(rId: Int, keys: Seq[JoinIndexes], sourceQueryId: Int): EDB
+  def SPJU(rId: Int, keys: Seq[JoinIndexes], sourceQueryId: Int): EDB
+  def naiveSPJU(rId: Int, keys: Seq[JoinIndexes], sourceQueryId: Int): EDB
 
   def getIncrementDB(rId: Int, queryId: Int): EDB
+  def getResult(rId: Int, queryId: Int): Set[Seq[Term]]
+  def getEDBResult(rId: Int): Set[Seq[Term]]
 
   def swapIncrDBs(qId1: Int, qId2: Int): Unit
   def swapDeltaDBs(qId1: Int, qId2: Int): Unit
 
 //  def tableToString[T](r: Relation[T]): String
 
-  def resetIncrEDB(rId: Int, rules: EDB, queryId: Int): Unit
+  def getDiff(lhs: EDB, rhs: EDB): EDB
+  def resetIncrEDB(rId: Int, queryId: Int, rules: EDB, prev: EDB = EDB()): Unit
   def resetDeltaEDB(rId: Int, rules: EDB, queryId: Int): Unit
   def compareDeltaDBs(qId1: Int, qId2: Int): Boolean
   def compareIncrDBs(qId1: Int, qId2: Int): Boolean

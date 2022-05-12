@@ -1,13 +1,16 @@
 package datalog
 
-import datalog.execution.{ExecutionEngine, SimpleExecutionEngine}
+import datalog.execution.{ExecutionEngine, NaiveExecutionEngine}
 import datalog.dsl.Program
+import datalog.storage.RelationalStorageManager
+import scala.collection.mutable
 
 
 @main def main = {
-  given engine: ExecutionEngine = new SimpleExecutionEngine
+  val ns = mutable.Map[Int, String]()
+  given engine: ExecutionEngine = new NaiveExecutionEngine(new RelationalStorageManager(ns))
 
-  val program = Program()
+  val program = Program(engine)
   val e = program.relation[String]("e")
   val p = program.relation[String]("p")
 //  val a = program.relation[String]("a")

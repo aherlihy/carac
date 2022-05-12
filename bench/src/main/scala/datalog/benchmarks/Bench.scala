@@ -1,12 +1,12 @@
 package datalog.benchmarks
 
 import java.util.concurrent.TimeUnit
-
 import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.Blackhole
-
 import datalog.dsl.*
-import datalog.execution.{ExecutionEngine, SimpleExecutionEngine}
+import datalog.execution.{ExecutionEngine, NaiveExecutionEngine}
+import datalog.storage.RelationalStorageManager
+import scala.collection.mutable
 
 @Fork(1) // # of jvms that it will use
 @Warmup(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS)
@@ -16,9 +16,9 @@ class Bench {
   val dummyStream = new java.io.PrintStream(_ => ())
 
   def transitiveClosure(isNaive: Boolean, blackhole: Blackhole): Unit = {
-    given engine: ExecutionEngine = new SimpleExecutionEngine
+    given engine: ExecutionEngine = new NaiveExecutionEngine(new RelationalStorageManager(mutable.Map[Int, String]()))
 
-    val program = Program()
+    val program = Program(engine)
     val e = program.relation[String]()
     val p = program.relation[String]()
     val ans1 = program.relation[String]()
@@ -37,7 +37,7 @@ class Bench {
 
     def solve[T <: Constant](rel: Relation[T]): Unit =
       blackhole.consume(
-        if isNaive then rel.solve() else rel.solveNaive()
+        if isNaive then rel.solve() else rel.solve()
       )
 
     // FIXME: we redirect Console.out.println to a dummy stream here because

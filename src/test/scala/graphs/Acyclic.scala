@@ -1,7 +1,7 @@
 package graphs
 
 import datalog.dsl.{Constant, Program, Relation, Term}
-import datalog.execution.{ExecutionEngine, SimpleExecutionEngine}
+import datalog.execution.{ExecutionEngine, NaiveExecutionEngine}
 
 import scala.collection.mutable
 

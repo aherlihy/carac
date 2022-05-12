@@ -1,10 +1,11 @@
 package datalog.storage
 
-import datalog.dsl.{Atom, Constant, Variable}
+import datalog.dsl.{Atom, Constant, Variable, Term}
 
 import scala.collection.{immutable, mutable}
 
-class SimpleStorageManager(using ns: mutable.Map[Int, String]) extends StorageManager {
+abstract class SimpleStorageManager(ns: mutable.Map[Int, String] = mutable.Map[Int, String]()) extends StorageManager {
+  type StorageTerm = Term
   type StorageVariable = Variable
   type StorageConstant = Constant
   case class StorageAtom(rId: Int, terms: IndexedSeq[StorageTerm]) {
@@ -42,6 +43,8 @@ class SimpleStorageManager(using ns: mutable.Map[Int, String]) extends StorageMa
 
   val relOps: RelationalOperators[SimpleStorageManager] = RelationalOperators(this)
 
+  def getDiff(lhs: EDB, rhs: EDB): EDB =
+    lhs diff rhs
   // store all relations
   def initRelation(rId: Int, name: String): Unit = {
     edbs.addOne(rId, EDB())
@@ -49,7 +52,10 @@ class SimpleStorageManager(using ns: mutable.Map[Int, String]) extends StorageMa
     ns(rId) = name
   }
   // TODO: For now store IDB and EDB separately
-  def insertEDB(rule: StorageAtom): Unit = {
+  def insertIDB(rId: Int, rule: Seq[Atom]): Unit = {
+    idbs(rId).addOne(Row(rule.map(a => StorageAtom(a.rId, a.terms))*))
+  }
+  def insertEDB(rule: Atom): Unit = {
     edbs(rule.rId).addOne(rule.terms)
   }
   def bulkInsertEDB(rId: Int, rules: Relation[StorageTerm]): Unit = {
@@ -58,17 +64,14 @@ class SimpleStorageManager(using ns: mutable.Map[Int, String]) extends StorageMa
   def bulkInsertEDB(rId: Int, rules: Relation[StorageTerm], queryId: Int): Unit = {
     incrementalDB(queryId).getOrElseUpdate(rId, EDB()).appendAll(rules)
   }
-  def resetIncrEDB(rId: Int, rules: Relation[StorageTerm], queryId: Int): Unit = {
-    incrementalDB(queryId)(rId) = rules
+  def resetIncrEDB(rId: Int, queryId: Int, rules: Relation[StorageTerm], prev: Relation[StorageTerm] = Relation[StorageTerm]()): Unit = {
+    incrementalDB(queryId)(rId) = rules ++ prev
   }
   def addIncrEDB(rId: Int, rules: Relation[StorageTerm], queryId: Int): Unit = {
     incrementalDB(queryId)(rId) :+ rules
   }
   def resetDeltaEDB(rId: Int, rules: Relation[StorageTerm], queryId: Int): Unit = {
     deltaDB(queryId)(rId) = rules
-  }
-  def insertIDB(rId: Int, rule: Row[StorageAtom]): Unit = {
-    idbs(rId).addOne(rule)
   }
 
   /**
@@ -98,6 +101,8 @@ class SimpleStorageManager(using ns: mutable.Map[Int, String]) extends StorageMa
   }
 
   def getIncrementDB(rId: Int, queryId: Int): EDB = incrementalDB(queryId)(rId)
+  def getResult(rId: Int, queryId: Int): Set[Seq[Term]] = getIncrementDB(rId, queryId).map(s => s.toSeq).toSet
+  def getEDBResult(rId: Int): Set[Seq[Term]] = edbs(rId).map(s => s.toSeq).toSet
   def getDeltaDB(rId: Int, queryId: Int): EDB = deltaDB(queryId)(rId)
 
   def swapDeltaDBs(qId1: Int, qId2: Int): Unit = {
@@ -123,125 +128,48 @@ class SimpleStorageManager(using ns: mutable.Map[Int, String]) extends StorageMa
     db1 == db2
   }
 
+  // TODO: maybe move this into exec engine
   /**
-   * Use relational operators to evaluate an IDB rule using Naive algo
+   * For a single rule, get (1) the indexes of repeated variables within the body,
+   * (2) the indexes of constants, (3) the indexes of variables in the body present
+   * with the head atom, (4) relations that this rule is dependent on.
+   * #1, #4 goes to join, #2 goes to select (or also join depending on implementation),
+   * #3 goes to project
    *
-   * @param rIds - The ids of the relations
-   * @param keys - a JoinIndexes object to join on
-   * @return
+   * @param rule - Includes the head at idx 0
    */
-  private def relationalSPJU(rId: Int, keys: Seq[JoinIndexes], sourceQueryId: Int): EDB = {
-    import relOps.*
+  def getOperatorKeys(rule: Row[StorageAtom]): JoinIndexes = {
+    val constants = mutable.Map[Int, StorageConstant]()
+    var projects = IndexedSeq[Int]()
 
-    val plan = Union(
-        keys.map(k =>
-          Project(
-            Join(
-                k.deps.map(r => Scan(incrementalDB(sourceQueryId)(r), r)), k.varIndexes, k.constIndexes
-            ),
-            k.projIndexes
-          )
-        )
-    )
-    plan.toList()
-  }
-
-  /**
-   * Use relational operators to evaluate an IDB rule using Semi-Naive algo
-   *
-   * @param rIds - The ids of the relations
-   * @param keys - a JoinIndexes object to join on
-   * @return
-   */
-  private def semiNaiveRelationalSPJU(rId: Int, keys: Seq[JoinIndexes], sourceQueryId: Int): EDB = {
-    import relOps.*
-
-    val plan = Union(
-      keys.map(k => // for each idb rule
-        Union(
-          k.deps.map(d =>
-            Project(
-              Join(
-                k.deps.map(r =>
-                  if (r == d)
-                    Scan(deltaDB(sourceQueryId)(r), r)
-                  else
-                    Scan(incrementalDB(sourceQueryId)(r), r)
-                ),
-                k.varIndexes,
-                k.constIndexes
-              ),
-              k.projIndexes
-            )
-          )
-        )
-      )
-    )
-    plan.toList()
-  }
-
-  private def joinHelper(inputs: Seq[EDB], k: JoinIndexes): EDB = {
-    val outputRelation = EDB()
-
-    if(inputs.length == 1) {
-      return inputs.head.filter(
-        joined =>
-          (k.constIndexes.isEmpty || k.constIndexes.forall((idx, const) => joined(idx) == const)) &&
-            (k.varIndexes.isEmpty || k.varIndexes.forall(condition => condition.forall(c => joined(c) == joined(condition.head))))
-      )
-    }
-    if (inputs.isEmpty || inputs.length > 2)
-      throw new Error("TODO: multi-way join")
-
-    // TODO: multi-way join
-
-    val outerTable = inputs.head
-    val innerTable = inputs(1)
-
-    outerTable.foreach(outerTuple => {
-      innerTable.foreach(innerTuple => {
-        val joined = outerTuple ++ innerTuple
-        if ((k.varIndexes.isEmpty || k.varIndexes.forall(condition =>
-          condition.forall(c => joined(c) == joined(condition.head))))
-          && (k.constIndexes.isEmpty ||
-          k.constIndexes.forall((idx, const) => joined(idx) == const))) {
-          outputRelation.addOne(joined)
-        }
-      })
+    // variable ids in the head atom
+    val headVars = mutable.HashSet() ++ rule(0).terms.flatMap(t => t match {
+      case v: Variable => Seq(v.oid)
+      case _ => Seq()
     })
-    outputRelation
-  }
 
-  /**
-   * Use iterative collection operators to evaluate an IDB rule using Semi-Naive algo
-   *
-   * @param rIds - The ids of the relations
-   * @param keys - a JoinIndexes object to join on
-   * @return
-   */
-  private def semiNaiveIterativeSPJU(rId: Int, keys: Table[JoinIndexes], sourceQueryId: Int): EDB = {
-    val plan =
-      keys.flatMap(k => // for each idb rule
-        k.deps.flatMap(d =>
-              joinHelper(
-                k.deps.map(r =>
-                  if (r == d)
-                    deltaDB(sourceQueryId)(r)
-                  else
-                    incrementalDB(sourceQueryId)(r)
-                ), k)
-                .map(t => t.zipWithIndex.filter((e, i) => k.projIndexes.contains(i)).map(_._1))
-          ).toSet
-        ).toSet
-    mutable.ArrayBuffer.from(plan)
-  }
+    val body = rule.drop(1)
 
-  def spju(rId: Int, keys: Seq[JoinIndexes], sourceQueryId: Int): EDB = {
-    relationalSPJU(rId, keys, sourceQueryId)
-  }
+    val deps = body.map(a => a.rId)
 
-  def spjuSN(rId: Int, keys: Seq[JoinIndexes], sourceQueryId: Int): EDB = {
-//    semiNaiveIterativeSPJU(rId, keys, sourceQueryId)
-    semiNaiveRelationalSPJU(rId, keys, sourceQueryId)
+    val vars = body
+      .flatMap(a => a.terms)
+      .zipWithIndex
+      .groupBy(z => z._1)
+      .filter((term, matches) =>
+        term match {
+          case v: StorageVariable =>
+            if (headVars.contains(v.oid)) projects = projects ++ matches.map(_._2)
+            matches.length >= 2
+          case c: StorageConstant =>
+            matches.foreach((_, idx) => constants(idx) = c)
+            false
+        }
+      )
+      .map((term, matches) =>
+        matches.map(_._2)
+      )
+      .toIndexedSeq
+    JoinIndexes(vars, constants.toMap, projects, deps)
   }
 }
