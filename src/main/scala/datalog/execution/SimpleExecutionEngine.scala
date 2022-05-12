@@ -125,7 +125,7 @@ class SimpleExecutionEngine extends ExecutionEngine {
       return storageManager.edb(rId)
     }
 
-    val relations = precedenceGraph.getTopSort(rId)
+    val relations = precedenceGraph.getTopSort(rId).filter(r => storageManager.idb(r).nonEmpty) // TODO: put empty check elsewhere
     if (relations.isEmpty)
       return EDB()
     println("topsort relations=" + relations)
@@ -134,7 +134,8 @@ class SimpleExecutionEngine extends ExecutionEngine {
     var count = 0
 
     val startRId = relations.head
-    val res = evalRule(startRId, pQueryId, prevQueryId)
+    val res = eval(startRId, relations, pQueryId, prevQueryId)
+
     storageManager.resetDeltaEDB(startRId, res, pQueryId)
     storageManager.resetIncrEDB(startRId, res, pQueryId)
     storageManager.resetDeltaEDB(startRId, res, prevQueryId)
