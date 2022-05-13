@@ -5,7 +5,7 @@ import datalog.dsl.{Atom, Term, Variable}
 import scala.collection.mutable
 import scala.collection.immutable
 
-trait StorageManager {
+trait StorageManager(val ns: mutable.Map[Int, String]) {
   /* A bit repetitive to have these types also defined in dsl but good to separate
    * user-facing API class with internal storage */
   type StorageVariable

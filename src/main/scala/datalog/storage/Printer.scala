@@ -3,7 +3,7 @@ package datalog.storage
 import scala.collection.{mutable, immutable}
 
 // Keep pretty print stuff separate bc long and ugly
-class Printer(val s: StorageManager, ns: mutable.Map[Int, String]) {
+class Printer(val s: StorageManager) {
   def printIncrementDB(i: Int) = {
     println("INCREMENT:" + edbToString(s.incrementalDB(i)))
   }
@@ -31,12 +31,12 @@ class Printer(val s: StorageManager, ns: mutable.Map[Int, String]) {
   }
   def edbToString(db: s.FactDatabase): String = {
     immutable.ListMap(db.toSeq.sortBy(_._1):_*)
-      .map((k, v) => (ns(k), factToString(v)))
+      .map((k, v) => (s.ns(k), factToString(v)))
       .mkString("[\n  ", ",\n  ", "]")
   }
   def idbToString(db: s.RuleDatabase): String = {
     immutable.ListMap(db.toSeq.sortBy(_._1):_*)
-      .map((k, v) => (ns(k), ruleToString(v)))
+      .map((k, v) => (s.ns(k), ruleToString(v)))
       .mkString("[\n  ", ",\n  ", "]")
   }
   def planToString(keys: s.Table[s.JoinIndexes]): String = {
@@ -46,7 +46,7 @@ class Printer(val s: StorageManager, ns: mutable.Map[Int, String]) {
           "JOIN" +
           k.varIndexes.map(v => v.mkString("$", "==$", "")).mkString("[", ",", "]") +
           k.constIndexes.map((k, v) => k + "==" + v).mkString("{", "&&", "}") +
-          k.deps.map(ns).mkString("(", "*", ")") +
+          k.deps.map(s.ns).mkString("(", "*", ")") +
           " )"
       ).mkString("[ ", ", ", " ]") +
       " )"
@@ -63,9 +63,9 @@ class Printer(val s: StorageManager, ns: mutable.Map[Int, String]) {
               k.constIndexes.map((k, v) => k + "==" + v).mkString("{", "&&", "}") +
               k.deps.map(n =>
                 if (n == d)
-                  "delta-" + ns(n)
+                  "delta-" + s.ns(n)
                 else
-                  ns(n)
+                  s.ns(n)
               ).mkString("(", "*", ")") +
               " )"
           ).mkString("[ ", ", ", " ]") + " )"

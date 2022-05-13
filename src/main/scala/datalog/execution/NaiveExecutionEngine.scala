@@ -6,13 +6,11 @@ import datalog.storage.{SimpleStorageManager, StorageManager, debug}
 import scala.collection.mutable
 
 class NaiveExecutionEngine(val storageManager: StorageManager) extends ExecutionEngine {
-  val ns: mutable.Map[Int, String] = mutable.Map[Int, String]()
-  given namespace: mutable.Map[Int, String] = ns
-  import storageManager.{EDB}
-  val precedenceGraph = new PrecedenceGraph
+  import storageManager.EDB
+  val precedenceGraph = new PrecedenceGraph(storageManager.ns)
 
   def initRelation(rId: Int, name: String): Unit = {
-    ns(rId) = name
+    storageManager.ns(rId) = name
     storageManager.initRelation(rId, name)
   }
 
@@ -42,7 +40,7 @@ class NaiveExecutionEngine(val storageManager: StorageManager) extends Execution
   }
 
   def solve(rId: Int): Set[Seq[Term]] = {
-    val relations = precedenceGraph.getTopSort(rId).filter(r => storageManager.idb(r).nonEmpty)
+    val relations = precedenceGraph.getTopSort.flatten.filter(r => storageManager.idb(r).nonEmpty)
     val pQueryId = storageManager.initEvaluation()
     val prevQueryId = storageManager.initEvaluation()
     var count = 0

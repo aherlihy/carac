@@ -4,20 +4,20 @@ import datalog.dsl.Atom
 
 import scala.collection.mutable
 
-class Node(r: Int) {
+class Node(r: Int, ns: mutable.Map[Int, String]) {
   val rId: Int = r
   var idx: Int = -1
   var lowLink: Int = -1
   val edges: mutable.Set[Node] = mutable.Set[Node]()
   var onStack: Boolean = false
   override def toString() =
-    "{" + rId + ": "
-      + "idx=" + idx + " lowLink=" + lowLink + " onstack=" + onStack + " edges="
-      + edges.map(e => e.rId).mkString("[", ", ", "]")
+    "{" + ns(rId) + ": " +
+//      "idx=" + idx + " lowLink=" + lowLink + " onstack=" + onStack +
+      " edges=" + edges.map(e => ns(e.rId)).mkString("[", ", ", "]")
       + "}"
 }
 
-class PrecedenceGraph {
+class PrecedenceGraph(ns: mutable.Map[Int, String] /* for debugging */) {
   val nodes: mutable.Map[Int, Node] = mutable.Map[Int, Node]()
   val result: mutable.Queue[mutable.Set[Int]] = mutable.Queue[mutable.Set[Int]]()
 
@@ -25,9 +25,9 @@ class PrecedenceGraph {
   val stack: mutable.Stack[Node] = mutable.Stack[Node]()
 
   def addNode(rule: Seq[Atom]): Unit = {
-    val node = nodes.getOrElseUpdate(rule.head.rId, Node(rule.head.rId))
+    val node = nodes.getOrElseUpdate(rule.head.rId, Node(rule.head.rId, ns))
     rule.drop(1).foreach(n => {
-      val neighbor = nodes.getOrElseUpdate(n.rId, Node(n.rId))
+      val neighbor = nodes.getOrElseUpdate(n.rId, Node(n.rId, ns))
       node.edges.addOne(neighbor)
     })
   }
@@ -63,14 +63,13 @@ class PrecedenceGraph {
     }
   }
 
-  def getTopSort(fromRid: Int): Seq[Int] = {
+  def getTopSort: Seq[Seq[Int]] = { // TODO: need to indicate recursive anywhere?
     nodes.foreach((rId, node) => {
       if (node.idx == -1) {
         strongConnect(node)
       }
     })
-
-    result.toSeq.flatten
+    result.toSeq.map(s => s.toSeq)
   }
 
   def printNodes() = {

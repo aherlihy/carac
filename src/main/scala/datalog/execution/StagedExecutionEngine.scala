@@ -5,7 +5,7 @@ import datalog.storage.{SimpleStorageManager, StorageManager, debug}
 
 import scala.collection.mutable
 
-class SemiNaiveExecutionEngine(override val storageManager: StorageManager) extends NaiveExecutionEngine(storageManager) {
+class StagedExecutionEngine(override val storageManager: StorageManager) extends NaiveExecutionEngine(storageManager) {
   import storageManager.EDB
 
   def evalRuleSN(rId: Int, queryId: Int, prevQueryId: Int): EDB = {
@@ -29,7 +29,7 @@ class SemiNaiveExecutionEngine(override val storageManager: StorageManager) exte
       return storageManager.getEDBResult(rId)
     }
 
-    val relations = precedenceGraph.getTopSort.flatten.filter(r => storageManager.idb(r).nonEmpty)
+    val relations = precedenceGraph.getTopSort(rId).filter(r => storageManager.idb(r).nonEmpty) // TODO: put empty check elsewhere
     if (relations.isEmpty)
       return Set()
     println("topsort relations=" + relations)

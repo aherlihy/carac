@@ -40,7 +40,7 @@ case class Relation[T <: Constant](id: Int, name: String)(using ee: ExecutionEng
     // EDB tuple
     def :-(body: Unit): Unit = ee.insertEDB(this)
 
-    override def toString = rId + terms.mkString("(", ", ", ")")
+    override def toString = name + terms.mkString("(", ", ", ")")
   }
   // Create a tuple in this relation
   def apply(ts: RelTerm*): RelAtom = RelAtom(ts.toIndexedSeq)

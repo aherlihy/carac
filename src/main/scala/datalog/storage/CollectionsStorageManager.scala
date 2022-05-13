@@ -40,7 +40,7 @@ class CollectionsStorageManager(ns: mutable.Map[Int, String] = mutable.Map[Int, 
   /**
    * Use iterative collection operators to evaluate an IDB rule using Semi-Naive algo
    *
-   * @param rIds - The ids of the relations
+   * @param rId - The id of the relations
    * @param keys - a JoinIndexes object to join on
    * @return
    */
@@ -57,8 +57,8 @@ class CollectionsStorageManager(ns: mutable.Map[Int, String] = mutable.Map[Int, 
                 ), k)
                 .map(t => t.zipWithIndex.filter((e, i) => k.projIndexes.contains(i)).map(_._1))
           ).toSet
-        ).toSet
-    mutable.ArrayBuffer.from(plan)
+        )
+    Table(plan*)
   }
 
   def naiveSPJU(rId: Int, keys: Seq[JoinIndexes], sourceQueryId: Int): EDB = {
@@ -68,7 +68,7 @@ class CollectionsStorageManager(ns: mutable.Map[Int, String] = mutable.Map[Int, 
             k.deps.map(r => incrementalDB(sourceQueryId)(r)), k
           )
           .map(t => t.zipWithIndex.filter((e, i) => k.projIndexes.contains(i)).map(_._1))
-      ).toSet
-    mutable.ArrayBuffer.from(plan) // TODO: use Table not ArrayBuffer
+      )
+    Table(plan*)
   }
 }

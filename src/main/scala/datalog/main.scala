@@ -1,15 +1,13 @@
 package datalog
 
-import datalog.execution.{ExecutionEngine, NaiveExecutionEngine}
+import datalog.execution.{ExecutionEngine, SemiNaiveExecutionEngine}
 import datalog.dsl.Program
 import datalog.storage.RelationalStorageManager
 import scala.collection.mutable
 
 
 @main def main = {
-  val ns = mutable.Map[Int, String]()
-  given engine: ExecutionEngine = new NaiveExecutionEngine(new RelationalStorageManager(ns))
-
+  given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new RelationalStorageManager())
   val program = Program(engine)
   val e = program.relation[String]("e")
   val p = program.relation[String]("p")
@@ -27,7 +25,7 @@ import scala.collection.mutable
   e("c", "d") :- ()
   p(x, y) :- e(x, y)
   p(x, z) :- ( e(x, y), p(y, z) )
-  other(x) :- e("a", x)
+  other(x) :- p("a", x)
 //  a(x) :- b(x)
 //  b(y) :- c(y)
 //  c(x) :- a(x)

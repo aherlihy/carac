@@ -4,7 +4,7 @@ import datalog.dsl.{Atom, Constant, Variable, Term}
 
 import scala.collection.{immutable, mutable}
 
-abstract class SimpleStorageManager(ns: mutable.Map[Int, String] = mutable.Map[Int, String]()) extends StorageManager {
+abstract class SimpleStorageManager(ns: mutable.Map[Int, String]) extends StorageManager(ns) {
   type StorageTerm = Term
   type StorageVariable = Variable
   type StorageConstant = Constant
@@ -39,7 +39,7 @@ abstract class SimpleStorageManager(ns: mutable.Map[Int, String] = mutable.Map[I
 
   def idb(rId: Int): IDB = idbs(rId)
   def edb(rId: Int): EDB = edbs(rId)
-  val printer: Printer = Printer(this, ns)
+  val printer: Printer = Printer(this)
 
   val relOps: RelationalOperators[SimpleStorageManager] = RelationalOperators(this)
 
