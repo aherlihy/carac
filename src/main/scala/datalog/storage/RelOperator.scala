@@ -244,7 +244,7 @@ class RelationalOperators[S <: StorageManager](val storageManager: S) {
     }
     def close(): Unit = ops.foreach(o => o.close())
   }
-  case class Diff(ops: Seq[RelOperator]) extends RelOperator {
+  case class Diff(ops: mutable.ArrayBuffer[RelOperator]) extends RelOperator {
     private var outputRelation: IndexedSeq[edbRow] = IndexedSeq()
     private var index = 0
     def open(): Unit = {

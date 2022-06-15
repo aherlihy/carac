@@ -28,6 +28,7 @@ trait StorageManager(val ns: mutable.Map[Int, String]) {
   val edbs: FactDatabase
   val idbs: RuleDatabase
 
+  val printer: Printer
 
   /**
    * Wrapper object for join keys for IDB rules
@@ -47,7 +48,7 @@ trait StorageManager(val ns: mutable.Map[Int, String]) {
         ", project:" + projIndexes.mkString("[", ", ", "]") +
         ", srcEDB:" + deps.mkString("[", ", ", "]") + " }"
   }
-  def getOperatorKeys(rule: Row[StorageAtom]): JoinIndexes
+  def getOperatorKeys(rId: Int): Table[JoinIndexes]
 
   def initRelation(rId: Int, name: String): Unit
   def initEvaluation(): Int
@@ -60,8 +61,8 @@ trait StorageManager(val ns: mutable.Map[Int, String]) {
 
   def edb(rId: Int): EDB
 
-  def SPJU(rId: Int, keys: Seq[JoinIndexes], sourceQueryId: Int): EDB
-  def naiveSPJU(rId: Int, keys: Seq[JoinIndexes], sourceQueryId: Int): EDB
+  def SPJU(rId: Int, keys: Table[JoinIndexes], sourceQueryId: Int): EDB
+  def naiveSPJU(rId: Int, keys: Table[JoinIndexes], sourceQueryId: Int): EDB
 
   def getIncrementDB(rId: Int, queryId: Int): EDB
   def getResult(rId: Int, queryId: Int): Set[Seq[Term]]
@@ -71,6 +72,7 @@ trait StorageManager(val ns: mutable.Map[Int, String]) {
   def swapDeltaDBs(qId1: Int, qId2: Int): Unit
 
 //  def tableToString[T](r: Relation[T]): String
+  def joinHelper(inputs: Seq[EDB], k: JoinIndexes): EDB
 
   def getDiff(lhs: EDB, rhs: EDB): EDB
   def resetIncrEDB(rId: Int, queryId: Int, rules: EDB, prev: EDB = EDB()): Unit

@@ -9,7 +9,7 @@ class StagedExecutionEngine(override val storageManager: StorageManager) extends
   import storageManager.EDB
 
   def evalRuleSN(rId: Int, queryId: Int, prevQueryId: Int): EDB = {
-    val keys = storageManager.idbs(rId).map(r => storageManager.getOperatorKeys(r)).toSeq
+    val keys = storageManager.getOperatorKeys(rId)
     println("evalRuleSN: rId:" + rId + " queryId:" + queryId + " prevQId:" + prevQueryId + " keys=" + keys)
     storageManager.SPJU(rId, keys, prevQueryId)
   }

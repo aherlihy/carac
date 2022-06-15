@@ -24,8 +24,8 @@ class NaiveExecutionEngine(val storageManager: StorageManager) extends Execution
   }
 
   def evalRule(rId: Int, queryId: Int, prevQueryId: Int): EDB = {
-    val keys = storageManager.idbs(rId).filter(r => r.nonEmpty).map(r => storageManager.getOperatorKeys(r))
-    storageManager.naiveSPJU(rId, keys.toSeq, prevQueryId)
+    val keys = storageManager.getOperatorKeys(rId)
+    storageManager.naiveSPJU(rId, keys, prevQueryId)
   }
 
   /**

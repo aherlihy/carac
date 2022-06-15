@@ -58,12 +58,12 @@ abstract class SimpleStorageManager(ns: mutable.Map[Int, String]) extends Storag
   def insertEDB(rule: Atom): Unit = {
     edbs(rule.rId).addOne(rule.terms)
   }
-  def bulkInsertEDB(rId: Int, rules: Relation[StorageTerm]): Unit = {
-    edbs(rId).appendAll(rules)
-  }
-  def bulkInsertEDB(rId: Int, rules: Relation[StorageTerm], queryId: Int): Unit = {
-    incrementalDB(queryId).getOrElseUpdate(rId, EDB()).appendAll(rules)
-  }
+//  def bulkInsertEDB(rId: Int, rules: Relation[StorageTerm]): Unit = {
+//    edbs(rId).appendAll(rules)
+//  }
+//  def bulkInsertEDB(rId: Int, rules: Relation[StorageTerm], queryId: Int): Unit = {
+//    incrementalDB(queryId).getOrElseUpdate(rId, EDB()).appendAll(rules)
+//  }
   def resetIncrEDB(rId: Int, queryId: Int, rules: Relation[StorageTerm], prev: Relation[StorageTerm] = Relation[StorageTerm]()): Unit = {
     incrementalDB(queryId)(rId) = rules ++ prev
   }
@@ -87,13 +87,10 @@ abstract class SimpleStorageManager(ns: mutable.Map[Int, String]) extends Storag
         edbClone(k).addOne(Row[StorageTerm]().appendedAll(row))
       )
     })
-    incrementalDB.addOne(increment, edbClone) // TODO: do we need to clone everything in the edb?
+    incrementalDB.addOne(increment, edbClone)
     val edbClone2 = FactDatabase()
     edbs.foreach((k, relation) => {
       edbClone2(k) = EDB()
-//      relation.zipWithIndex.foreach((row, idx) =>
-//        edbClone2(k).addOne(IndexedSeq[StorageTerm]().appendedAll(row))
-//      )
     })
     deltaDB.addOne(increment, edbClone2)
     increment += 1
@@ -138,7 +135,7 @@ abstract class SimpleStorageManager(ns: mutable.Map[Int, String]) extends Storag
    *
    * @param rule - Includes the head at idx 0
    */
-  def getOperatorKeys(rule: Row[StorageAtom]): JoinIndexes = {
+  inline def getOperatorKey(rule: Row[StorageAtom]): JoinIndexes = {
     val constants = mutable.Map[Int, StorageConstant]()
     var projects = IndexedSeq[Int]()
 
@@ -171,5 +168,9 @@ abstract class SimpleStorageManager(ns: mutable.Map[Int, String]) extends Storag
       )
       .toIndexedSeq
     JoinIndexes(vars, constants.toMap, projects, deps)
+  }
+
+  def getOperatorKeys(rId: Int): Table[JoinIndexes] = {
+    idbs(rId).filter(r => r.nonEmpty).map(rule => getOperatorKey(rule))
   }
 }

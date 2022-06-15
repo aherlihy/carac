@@ -1,21 +1,21 @@
 package datalog
 
-import datalog.execution.{ExecutionEngine, SemiNaiveExecutionEngine}
+import datalog.execution.{ExecutionEngine, ManuallyInlinedEE, ManuallyInlinedUnrolledEE, NaiveExecutionEngine, SemiNaiveExecutionEngine}
 import datalog.dsl.Program
-import datalog.storage.RelationalStorageManager
+import datalog.execution.old_manual_opt.ManuallyInlinedExternal
+import datalog.storage.{CollectionsStorageManager, IndexedCollStorageManager, RelationalStorageManager}
+
 import scala.collection.mutable
 
 
 @main def main = {
-  given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new RelationalStorageManager())
+  given engine: ExecutionEngine = new ManuallyInlinedUnrolledEE(new CollectionsStorageManager())
   val program = Program(engine)
   val e = program.relation[String]("e")
   val p = program.relation[String]("p")
-//  val a = program.relation[String]("a")
-//  val b = program.relation[String]("b")
-//  val c = program.relation[String]("c")
-//  val d = program.relation[String]("d")
-  val other = program.relation[String]("other")
+  val path2a = program.relation[String]("path2a")
+  val path2a1 = program.relation[String]("path2a1")
+  val edge2a = program.relation[String]("edge2a")
 
   val x, y, z = program.variable()
 
@@ -25,11 +25,12 @@ import scala.collection.mutable
   e("c", "d") :- ()
   p(x, y) :- e(x, y)
   p(x, z) :- ( e(x, y), p(y, z) )
-  other(x) :- p("a", x)
+  path2a(x) :- p("a", x)
+  edge2a(x) :- e("a", x)
 //  a(x) :- b(x)
 //  b(y) :- c(y)
 //  c(x) :- a(x)
 //  a(x) :- other(x)
 
-  println(other.solve())
+  println(p.solve())
 }

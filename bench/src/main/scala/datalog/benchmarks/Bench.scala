@@ -4,26 +4,27 @@ import java.util.concurrent.TimeUnit
 import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.Blackhole
 import datalog.dsl.*
-import datalog.execution.{ExecutionEngine, NaiveExecutionEngine}
-import datalog.storage.RelationalStorageManager
+import datalog.execution.old_manual_opt.{ManuallyCollapseParent, ManuallyInlinedExternal, ManuallyInlinedInternal}
+import datalog.execution.{ExecutionEngine, ManuallyInlinedEE, ManuallyInlinedUnrolledEE, NaiveExecutionEngine, SemiNaiveExecutionEngine}
+import datalog.storage.{CollectionsStorageManager, IndexedCollStorageManager, RelationalStorageManager}
+
 import scala.collection.mutable
 
 @Fork(1) // # of jvms that it will use
-@Warmup(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS)
-@Measurement(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS)
+@Warmup(iterations = 5, time = 2, timeUnit = TimeUnit.SECONDS)
+@Measurement(iterations = 10, time = 2, timeUnit = TimeUnit.SECONDS)
 @State(Scope.Thread)
 class Bench {
   val dummyStream = new java.io.PrintStream(_ => ())
 
-  def transitiveClosure(isNaive: Boolean, blackhole: Blackhole): Unit = {
-    given engine: ExecutionEngine = new NaiveExecutionEngine(new RelationalStorageManager(mutable.Map[Int, String]()))
+  def transitiveClosure(engine: ExecutionEngine, blackhole: Blackhole): Unit = {
 
     val program = Program(engine)
-    val e = program.relation[String]()
-    val p = program.relation[String]()
-    val ans1 = program.relation[String]()
-    val ans2 = program.relation[String]()
-    val ans3 = program.relation[String]()
+    val e = program.relation[String]("e")
+    val p = program.relation[String]("p")
+    val path2a = program.relation[String]("path2a")
+    val path2a1 = program.relation[String]("path2a1")
+    val edge2a = program.relation[String]("edge2a")
 
     val x, y, z = program.variable()
 
@@ -32,12 +33,12 @@ class Bench {
     e("c", "d") :- ()
     p(x, y) :- e(x, y)
     p(x, z) :- ( e(x, y), p(y, z) )
-    ans1(x) :- e("a", x)
-    ans2(x) :- p("a", x)
+    path2a(x) :- p("a", x)
+    edge2a(x) :- e("a", x)
 
     def solve[T <: Constant](rel: Relation[T]): Unit =
       blackhole.consume(
-        if isNaive then rel.solve() else rel.solve()
+        assert(rel.solve() == Set(Vector("a", "d"), Vector("b", "d"), Vector("b", "c"), Vector("a", "b"), Vector("a", "c"), Vector("c", "d")))
       )
 
     // FIXME: we redirect Console.out.println to a dummy stream here because
@@ -45,14 +46,51 @@ class Bench {
     // the benchmarking output.
     Console.withOut(dummyStream) {
       solve(p)
-      solve(ans1)
-      solve(ans2)
+//      solve(ans1)
+//      solve(ans2)
     }
   }
 
-  @Benchmark def transitiveClosure_naive(blackhole: Blackhole): Unit =
-    transitiveClosure(isNaive = true, blackhole)
+//  @Benchmark def transitiveClosure_naive_relational(blackhole: Blackhole): Unit =
+//    given engine: ExecutionEngine = new NaiveExecutionEngine(new RelationalStorageManager())
+//    transitiveClosure(engine, blackhole)
+//
+//  @Benchmark def transitiveClosure_semiNaive_relational(blackhole: Blackhole): Unit =
+//    given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new RelationalStorageManager())
+//    transitiveClosure(engine, blackhole)
 
-  @Benchmark def transitiveClosure_semiNaive(blackhole: Blackhole): Unit =
-    transitiveClosure(isNaive = false, blackhole)
+  @Benchmark def transitiveClosure_manually_inlined(blackhole: Blackhole): Unit =
+    given engine: ExecutionEngine = new ManuallyInlinedEE(new CollectionsStorageManager())
+    transitiveClosure(engine, blackhole)
+
+  @Benchmark def transitiveClosure_manually_inlined_unrolled(blackhole: Blackhole): Unit =
+    given engine: ExecutionEngine = new ManuallyInlinedUnrolledEE(new CollectionsStorageManager())
+    transitiveClosure(engine, blackhole)
+
+  @Benchmark def transitiveClosure_manually_inline_unrolled_indexed(blackhole: Blackhole): Unit =
+    given engine: ExecutionEngine = new ManuallyInlinedUnrolledEE(new IndexedCollStorageManager())
+    transitiveClosure(engine, blackhole)
+//  @Benchmark def transitiveClosure_manually_inlined_internal(blackhole: Blackhole): Unit =
+//    given engine: ExecutionEngine = new ManuallyInlinedInternal(new CollectionsStorageManager())
+//    transitiveClosure(engine, blackhole)
+//
+//  @Benchmark def transitiveClosure_manually_inlined_external(blackhole: Blackhole): Unit =
+//    given engine: ExecutionEngine = new ManuallyInlinedExternal(new CollectionsStorageManager())
+//    transitiveClosure(engine, blackhole)
+//
+//  @Benchmark def transitiveClosure_manually_collapse_parent(blackhole: Blackhole): Unit =
+//    given engine: ExecutionEngine = new ManuallyCollapseParent(new CollectionsStorageManager())
+//    transitiveClosure(engine, blackhole)
+
+  @Benchmark def transitiveClosure_baseline(blackhole: Blackhole): Unit =
+    given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new CollectionsStorageManager())
+    transitiveClosure(engine, blackhole)
+
+
+  //  @Benchmark def transitiveClosure_manualOptMinimized(blackhole: Blackhole): Unit =
+//    given engine: ExecutionEngine = new ManuallyOptimizedExecutionEngine3(new CollectionsStorageManager())
+//    transitiveClosure(engine, blackhole)
+//  @Benchmark def transitiveClosure_Naive_collections(blackhole: Blackhole): Unit =
+//    given engine: ExecutionEngine = new NaiveExecutionEngine(new CollectionsStorageManager())
+//    transitiveClosure(engine, blackhole)
 }

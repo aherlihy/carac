@@ -5,6 +5,7 @@ import datalog.dsl.{Atom, Constant, Variable}
 import scala.collection.{immutable, mutable}
 
 class RelationalStorageManager(ns: mutable.Map[Int, String] = mutable.Map[Int, String]()) extends SimpleStorageManager(ns) {
+  def joinHelper(inputs: Seq[EDB], k: JoinIndexes): EDB = { throw new Error("shouldn't be called") }
   /**
    * Use relational operators to evaluate an IDB rule using Naive algo
    *
@@ -12,7 +13,7 @@ class RelationalStorageManager(ns: mutable.Map[Int, String] = mutable.Map[Int, S
    * @param keys - a JoinIndexes object to join on
    * @return
    */
-  def naiveSPJU(rId: Int, keys: Seq[JoinIndexes], sourceQueryId: Int): EDB = {
+  def naiveSPJU(rId: Int, keys: Table[JoinIndexes], sourceQueryId: Int): EDB = {
     import relOps.*
 
     val plan = Union(
@@ -23,7 +24,7 @@ class RelationalStorageManager(ns: mutable.Map[Int, String] = mutable.Map[Int, S
             ),
             k.projIndexes
           )
-        )
+        ).toSeq
     )
     plan.toList()
   }
@@ -35,7 +36,7 @@ class RelationalStorageManager(ns: mutable.Map[Int, String] = mutable.Map[Int, S
    * @param keys - a JoinIndexes object to join on
    * @return
    */
-  def SPJU(rId: Int, keys: Seq[JoinIndexes], sourceQueryId: Int): EDB = {
+  def SPJU(rId: Int, keys: Table[JoinIndexes], sourceQueryId: Int): EDB = {
     import relOps.*
 
     val plan = Union(
@@ -57,7 +58,7 @@ class RelationalStorageManager(ns: mutable.Map[Int, String] = mutable.Map[Int, S
             )
           )
         )
-      )
+      ).toSeq
     )
     plan.toList()
   }
