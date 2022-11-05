@@ -148,7 +148,7 @@ class ManuallyInlinedUnrolledEE(val storageManager: StorageManager) extends Exec
         val prev_1 = storageManager.getIncrementDB(1, queryId)
 //      [Inlining] val res = evalRuleSN(r, queryId, prevQueryId)
 //      === start body of evalRuleSN
-//        val keys_1 = storageManager.getOperatorKeys(1)
+        val keys_1 = storageManager.getOperatorKeys(1)
 //      [Inlining] val res = storageManager.SPJU(rId, keys, prevQueryId)
 //      === start body of storageManager.SPJU
         val res_1 =
@@ -174,7 +174,7 @@ class ManuallyInlinedUnrolledEE(val storageManager: StorageManager) extends Exec
         val prev_2 = storageManager.getIncrementDB(2, queryId)
 //      [Inlining] val res = evalRuleSN(r, queryId, prevQueryId)
 //      === start body of evalRuleSN
-//        val keys_2 = storageManager.getOperatorKeys(2)
+        val keys_2 = storageManager.getOperatorKeys(2)
 //      [Inlining] val res = storageManager.SPJU(rId, keys, prevQueryId)
 //      === start body of storageManager.SPJU
         val res_2 =
@@ -200,7 +200,7 @@ class ManuallyInlinedUnrolledEE(val storageManager: StorageManager) extends Exec
         val prev_3 = storageManager.getIncrementDB(4, queryId)
 //      [Inlining] val res = evalRuleSN(r, queryId, prevQueryId)
 //      === start body of evalRuleSN
-//        val keys_3 = storageManager.getOperatorKeys(3)
+        val keys_3 = storageManager.getOperatorKeys(4)
 //      [Inlining] val res = storageManager.SPJU(rId, keys, prevQueryId)
 //      === start body of storageManager.SPJU
         val res_3 =

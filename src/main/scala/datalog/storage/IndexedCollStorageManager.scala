@@ -11,6 +11,7 @@ class IndexedCollStorageManager(ns: mutable.Map[Int, String] = mutable.Map[Int, 
     val row = Row(rule.map(a => StorageAtom(a.rId, a.terms))*)
     idbs(rId).addOne(row)
     prebuiltOpKeys.getOrElseUpdate(rId, Table[JoinIndexes]()).addOne(getOperatorKey(row))
+    // TODO: could do this in the topsort instead of as inserted
   }
 
   override def getOperatorKeys(rId: Int): Table[JoinIndexes] = {

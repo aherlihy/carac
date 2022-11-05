@@ -45,4 +45,24 @@ class PrecedenceGraphTest extends munit.FunSuite {
       Seq(Seq(3), Seq(0, 1, 2))
     )
   }
+
+  test("simple cycle with inner loop") {
+    given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new RelationalStorageManager())
+    val program = Program(engine)
+    val a = program.relation[String]("a")
+    val b = program.relation[String]("b")
+    val c = program.relation[String]("c")
+    val other = program.relation[String]("other")
+
+    a() :- b()
+    a() :- (a(), b())
+    b() :- c()
+    c() :- a()
+    a() :- other()
+
+    assertEquals(
+      engine.precedenceGraph.getTopSort,
+      Seq(Seq(3), Seq(0, 1, 2))
+    )
+  }
 }

@@ -5,15 +5,16 @@ import datalog.dsl.Atom
 import scala.collection.mutable
 
 class Node(r: Int, ns: mutable.Map[Int, String]) {
+  var recursive = false
   val rId: Int = r
   var idx: Int = -1
   var lowLink: Int = -1
   val edges: mutable.Set[Node] = mutable.Set[Node]()
   var onStack: Boolean = false
   override def toString() =
-    "{" + ns(rId) + ": " +
-//      "idx=" + idx + " lowLink=" + lowLink + " onstack=" + onStack +
-      " edges=" + edges.map(e => ns(e.rId)).mkString("[", ", ", "]")
+    "{" + ns(rId) + ": " + "recursive=" + recursive
+//      " idx=" + idx + " lowLink=" + lowLink + " onstack=" + onStack +
+//      " edges=" + edges.map(e => ns(e.rId)).mkString("[", ", ", "]")
       + "}"
 }
 
@@ -29,6 +30,9 @@ class PrecedenceGraph(ns: mutable.Map[Int, String] /* for debugging */) {
     rule.drop(1).foreach(n => {
       val neighbor = nodes.getOrElseUpdate(n.rId, Node(n.rId, ns))
       node.edges.addOne(neighbor)
+      if (n.rId == node.rId) {
+        node.recursive = true
+      }
     })
   }
 
@@ -64,11 +68,13 @@ class PrecedenceGraph(ns: mutable.Map[Int, String] /* for debugging */) {
   }
 
   def getTopSort: Seq[Seq[Int]] = { // TODO: need to indicate recursive anywhere?
+    printNodes()
     nodes.foreach((rId, node) => {
       if (node.idx == -1) {
         strongConnect(node)
       }
     })
+    println("result in pg=" + result.map(s => s.map(n => nodes(n).toString())))
     result.toSeq.map(s => s.toSeq)
   }
 

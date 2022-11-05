@@ -4,13 +4,14 @@ import datalog.dsl.{Atom, Constant, Term, Variable}
 import datalog.storage.{SimpleStorageManager, StorageManager, debug}
 
 import scala.collection.mutable
+import scala.quoted.*
+given staging.Compiler = staging.Compiler.make(getClass.getClassLoader)
 
 class StagedExecutionEngine(override val storageManager: StorageManager) extends NaiveExecutionEngine(storageManager) {
   import storageManager.EDB
 
-  def evalRuleSN(rId: Int, queryId: Int, prevQueryId: Int): EDB = {
+  def evalRuleSN(rId: Int, queryIdh: Int, prevQueryId: Int): EDB = {
     val keys = storageManager.getOperatorKeys(rId)
-    println("evalRuleSN: rId:" + rId + " queryId:" + queryId + " prevQId:" + prevQueryId + " keys=" + keys)
     storageManager.SPJU(rId, keys, prevQueryId)
   }
 
@@ -29,10 +30,12 @@ class StagedExecutionEngine(override val storageManager: StorageManager) extends
       return storageManager.getEDBResult(rId)
     }
 
-    val relations = precedenceGraph.getTopSort(rId).filter(r => storageManager.idb(r).nonEmpty) // TODO: put empty check elsewhere
+    val deps = precedenceGraph.getTopSort
+    val relations = deps.flatten.filter(r => storageManager.idb(r).nonEmpty)
+    println("relations=" + relations)
+    println("deps=" + deps)
     if (relations.isEmpty)
       return Set()
-    println("topsort relations=" + relations)
     val pQueryId = storageManager.initEvaluation()
     val prevQueryId = storageManager.initEvaluation()
     var count = 0
@@ -46,10 +49,9 @@ class StagedExecutionEngine(override val storageManager: StorageManager) extends
 
     var setDiff = true
     while(setDiff) {
-//      println(storageManager.printer.toString())
+      println(storageManager.printer)
       count += 1
       val p = evalSN(rId, relations, pQueryId, prevQueryId)
-      println("result evalSN=" + p)
       setDiff = storageManager.deltaDB(pQueryId).exists((k, v) => v.nonEmpty)
       storageManager.swapDeltaDBs(prevQueryId, pQueryId)
     }
