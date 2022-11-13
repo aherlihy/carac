@@ -8,10 +8,6 @@ import scala.collection.mutable
 final val NilTuple: Option[Nothing] = None
 
 final val dbg = true//false
-def debug(msg: Any): Unit = {
-  if (dbg) println(msg)
-}
-
 class RelationalOperators[S <: StorageManager](val storageManager: S) {
   type edbRow = storageManager.Row[storageManager.StorageTerm]
   type table[T] = storageManager.Table[T]
@@ -155,6 +151,8 @@ class RelationalOperators[S <: StorageManager](val storageManager: S) {
             (variables.isEmpty || variables.forall(condition => condition.forall(c => joined(c) == joined(condition.head))))
         )
         return
+      } else if (inputs.length > 2) {
+        throw new Error("TODO: multi-way join")
       }
 
 //      println("inputs=" + inputs)

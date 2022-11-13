@@ -4,6 +4,8 @@ import datalog.dsl.{Atom, Constant, Variable}
 
 import scala.collection.{immutable, mutable}
 
+import datalog.tools.Debug.debug
+
 class CollectionsStorageManager(ns: mutable.Map[Int, String] = mutable.Map[Int, String]()) extends SimpleStorageManager(ns) {
   inline def joinHelper(inputs: Seq[EDB], k: JoinIndexes): EDB = {
 
@@ -42,31 +44,32 @@ class CollectionsStorageManager(ns: mutable.Map[Int, String] = mutable.Map[Int, 
    * @param keys - a JoinIndexes object to join on
    * @return
    */
-  def SPJU(rId: Int, keys: Table[JoinIndexes], sourceQueryId: Int): EDB = {
-//    val plan =
+  def SPJU(rId: Int, keys: Table[JoinIndexes], knownDbId: Int): EDB = {
+    debug("SPJU:", () => "r=" + ns(rId) + " keys=" + printer.snPlanToString(keys) + " knownDBId" + knownDbId)
       keys.flatMap(k => // for each idb rule
-        k.deps.flatMap(d =>
-              joinHelper(
-                k.deps.map(r =>
-                  if (r == d)
-                    deltaDB(sourceQueryId)(r)
-                  else
-                    incrementalDB(sourceQueryId)(r)
-                ), k)
-                .map(t => t.zipWithIndex.filter((e, i) => k.projIndexes.contains(i)).map(_._1))
-          ).toSet
+        k.deps.flatMap(d => {
+          var found = false // TODO: perhaps need entry in derived/delta for each atom instead of each relation?
+          joinHelper(
+            k.deps.map(r =>
+              if (r == d && !found) {
+                found = true
+                deltaDB(knownDbId)(r)
+              }
+              else {
+                derivedDB(knownDbId).getOrElse(r, edbs(r))
+              }
+            ), k)
+            .map(t => t.zipWithIndex.filter((e, i) => k.projIndexes.contains(i)).map(_._1))
+        }).toSet
         )
-//    Table(plan*)
   }
 
-  def naiveSPJU(rId: Int, keys: Table[JoinIndexes], sourceQueryId: Int): EDB = {
-//    val plan =
-      keys.flatMap(k => // for each idb rule
-          joinHelper(
-            k.deps.map(r => incrementalDB(sourceQueryId)(r)), k
-          )
-          .map(t => t.zipWithIndex.filter((e, i) => k.projIndexes.contains(i)).map(_._1))
-      )
-//    Table(plan*)
+  def naiveSPJU(rId: Int, keys: Table[JoinIndexes], knownDbId: Int): EDB = {
+    keys.flatMap(k => // for each idb rule
+        joinHelper(
+          k.deps.map(r => edbs.getOrElse(r, derivedDB(knownDbId)(r))), k
+        )
+        .map(t => t.zipWithIndex.filter((e, i) => k.projIndexes.contains(i)).map(_._1))
+    )
   }
 }

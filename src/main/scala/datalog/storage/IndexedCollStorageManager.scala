@@ -9,7 +9,7 @@ class IndexedCollStorageManager(ns: mutable.Map[Int, String] = mutable.Map[Int, 
 
   override def insertIDB(rId: Int, rule: Seq[Atom]): Unit = {
     val row = Row(rule.map(a => StorageAtom(a.rId, a.terms))*)
-    idbs(rId).addOne(row)
+    idbs.getOrElseUpdate(rId, IDB()).addOne(row)
     prebuiltOpKeys.getOrElseUpdate(rId, Table[JoinIndexes]()).addOne(getOperatorKey(row))
     // TODO: could do this in the topsort instead of as inserted
   }

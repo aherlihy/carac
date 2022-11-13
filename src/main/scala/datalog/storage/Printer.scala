@@ -2,25 +2,9 @@ package datalog.storage
 
 import scala.collection.{mutable, immutable}
 
-// Keep pretty print stuff separate bc long and ugly
-class Printer(val s: StorageManager) {
-  def printIncrementDB(i: Int) = {
-    println("INCREMENT:" + edbToString(s.incrementalDB(i)))
-  }
-
-  def printIncrementDB() = {
-    println("INCREMENT:" +
-      s.incrementalDB.map((i, db) => ("queryId: " + i, edbToString(db))).mkString("[\n", ",\n", "]"))
-  }
-
-  def printDeltaDB(i: Int) = {
-    println("DELTA:" + edbToString(s.deltaDB(i)))
-  }
-
-  def printDeltaDB() = {
-    println("DELTA:" +
-      s.deltaDB.map((i, db) => ("queryId: " + i, edbToString(db))).mkString("[\n", ",\n", "]"))
-  }
+// Keep pretty print stuff separate bc long and ugly, mb put it in a macro
+class Printer[S <: StorageManager](val s: S) {
+  var known = 0
 
   def factToString(r: s.EDB): String = {
     r.map(s => s.mkString("(", ", ", ")")).mkString("[", ", ", "]")
@@ -48,7 +32,7 @@ class Printer(val s: StorageManager) {
           k.constIndexes.map((k, v) => k + "==" + v).mkString("{", "&&", "}") +
           k.deps.map(s.ns).mkString("(", "*", ")") +
           " )"
-      ).mkString("[ ", ", ", " ]") +
+      ).mkString("", ", ", "") +
       " )"
   }
 
@@ -56,29 +40,35 @@ class Printer(val s: StorageManager) {
     "UNION( " +
       keys.map(k =>
         "UNION(" +
-          k.deps.map(d =>
+          k.deps.map(d => {
+            var found = false
             "PROJECT" + k.projIndexes.mkString("[", " ", "]") + "( " +
               "JOIN" +
               k.varIndexes.map(v => v.mkString("$", "==$", "")).mkString("[", ",", "]") +
               k.constIndexes.map((k, v) => k + "==" + v).mkString("{", "&&", "}") +
-              k.deps.map(n =>
-                if (n == d)
+              k.deps.map(n => {
+                if (n == d && !found)
+                  found = true
                   "delta-" + s.ns(n)
                 else
                   s.ns(n)
-              ).mkString("(", "*", ")") +
+              }).mkString("(", "*", ")") +
               " )"
-          ).mkString("[ ", ", ", " ]") + " )"
+          }).mkString("[ ", ", ", " ]") + " )"
       ).mkString("[ ", ", ", " ]") +
       " )"
   }
 
-  override def toString = {
+  override def toString() = {
+    def printHelperRelation(i: Int, db: s.FactDatabase): String = {
+      val name = if (i == known) "known" else "new"
+      "\n" + name + ": " + edbToString(db)
+    }
     "+++++\n" +
       "EDB:" + edbToString(s.edbs) +
       "\nIDB:" + idbToString(s.idbs) +
-      "\nINCREMENT:" + s.incrementalDB.map((i, db) => (i, edbToString(db))).mkString("[", ", ", "]") +
-      "\nDELTA:" + s.deltaDB.map((i, db) => (i, edbToString(db))).mkString("[", ", ", "]") +
+      "\nDERIVED:" + s.derivedDB.map(printHelperRelation).mkString("[", ", ", "]") +
+      "\nDELTA:" + s.deltaDB.map(printHelperRelation).mkString("[", ", ", "]") +
       "\n+++++"
   }
 }

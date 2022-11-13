@@ -20,12 +20,15 @@ class Node(r: Int, ns: mutable.Map[Int, String]) {
 
 class PrecedenceGraph(ns: mutable.Map[Int, String] /* for debugging */) {
   val nodes: mutable.Map[Int, Node] = mutable.Map[Int, Node]()
-  val result: mutable.Queue[mutable.Set[Int]] = mutable.Queue[mutable.Set[Int]]()
+  val sorted: mutable.Queue[mutable.Set[Int]] = mutable.Queue[mutable.Set[Int]]()
 
-  var index = 0 // TODO: for now onetime sort
+  var index = 0
   val stack: mutable.Stack[Node] = mutable.Stack[Node]()
 
-  def addNode(rule: Seq[Atom]): Unit = {
+  override def toString: String = nodes.map((r, n) => ns(r) + " -> " + n.edges.map(e => ns(e.rId)).mkString("[", ", ", "]")).mkString("{", ", ", "}")
+  def sortedString(): String = sorted.map(cc => cc.mkString("(", ", ", ")")).mkString("{", ", ", "}")
+
+  def addNode(rule: Seq[Atom]): Unit = { // TODO: sort incrementally?
     val node = nodes.getOrElseUpdate(rule.head.rId, Node(rule.head.rId, ns))
     rule.drop(1).foreach(n => {
       val neighbor = nodes.getOrElseUpdate(n.rId, Node(n.rId, ns))
@@ -63,22 +66,16 @@ class PrecedenceGraph(ns: mutable.Map[Int, String] /* for debugging */) {
         res.addOne(w.rId)
         w.rId != v.rId
       do {} // TODO: weird?
-      result.addOne(res)
+      sorted.addOne(res)
     }
   }
 
-  def getTopSort: Seq[Seq[Int]] = { // TODO: need to indicate recursive anywhere?
-    printNodes()
+  def topSort(): Seq[Int] = { // TODO: need to indicate recursive anywhere?
     nodes.foreach((rId, node) => {
       if (node.idx == -1) {
         strongConnect(node)
       }
     })
-    println("result in pg=" + result.map(s => s.map(n => nodes(n).toString())))
-    result.toSeq.map(s => s.toSeq)
-  }
-
-  def printNodes() = {
-    println("PRECEDEDENCE: " + nodes.map((r, n) => r + " -> " + n.edges.map(e => e.rId)).mkString("{", ", ", "}"))
+    sorted.toSeq.flatMap(s => s.toSeq)
   }
 }

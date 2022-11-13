@@ -32,98 +32,94 @@ abstract class SimpleStorageManager(ns: mutable.Map[Int, String]) extends Storag
   val edbs: FactDatabase = FactDatabase()
   val idbs: RuleDatabase = RuleDatabase()
 
-  // queryID => database
-  var increment = 0
-  val incrementalDB: Database[Int, FactDatabase] = mutable.Map[Int, FactDatabase]()
+  // dbID => database, because we swap between read (known) and write (new)
+  var dbId = 0
+  val derivedDB: Database[Int, FactDatabase] = mutable.Map[Int, FactDatabase]()
   val deltaDB: Database[Int, FactDatabase] = mutable.Map[Int, FactDatabase]()
 
   def idb(rId: Int): IDB = idbs(rId)
   def edb(rId: Int): EDB = edbs(rId)
-  val printer: Printer = Printer(this)
+  val printer: Printer[this.type] = Printer[this.type](this)
 
-  val relOps: RelationalOperators[SimpleStorageManager] = RelationalOperators(this)
+  val relOps: RelationalOperators[this.type] = RelationalOperators(this)
 
   def getDiff(lhs: EDB, rhs: EDB): EDB =
     lhs diff rhs
   // store all relations
   def initRelation(rId: Int, name: String): Unit = {
-    edbs.addOne(rId, EDB())
-    idbs.addOne(rId, IDB())
+//    edbs.addOne(rId, EDB())
+//    idbs.addOne(rId, IDB())
     ns(rId) = name
   }
   // TODO: For now store IDB and EDB separately
   def insertIDB(rId: Int, rule: Seq[Atom]): Unit = {
-    idbs(rId).addOne(Row(rule.map(a => StorageAtom(a.rId, a.terms))*))
+    idbs.getOrElseUpdate(rId, IDB()).addOne(Row(rule.map(a => StorageAtom(a.rId, a.terms))*))
   }
   def insertEDB(rule: Atom): Unit = {
-    edbs(rule.rId).addOne(rule.terms)
+    edbs.getOrElseUpdate(rule.rId, EDB()).addOne(rule.terms)
   }
 //  def bulkInsertEDB(rId: Int, rules: Relation[StorageTerm]): Unit = {
 //    edbs(rId).appendAll(rules)
 //  }
-//  def bulkInsertEDB(rId: Int, rules: Relation[StorageTerm], queryId: Int): Unit = {
-//    incrementalDB(queryId).getOrElseUpdate(rId, EDB()).appendAll(rules)
+//  def bulkInsertEDB(rId: Int, rules: Relation[StorageTerm], dbId: Int): Unit = {
+//    derivedDB(dbId).getOrElseUpdate(rId, EDB()).appendAll(rules)
 //  }
-  def resetIncrEDB(rId: Int, queryId: Int, rules: Relation[StorageTerm], prev: Relation[StorageTerm] = Relation[StorageTerm]()): Unit = {
-    incrementalDB(queryId)(rId) = rules ++ prev
-  }
-  def addIncrEDB(rId: Int, rules: Relation[StorageTerm], queryId: Int): Unit = {
-    incrementalDB(queryId)(rId) :+ rules
-  }
-  def resetDeltaEDB(rId: Int, rules: Relation[StorageTerm], queryId: Int): Unit = {
-    deltaDB(queryId)(rId) = rules
-  }
-
   /**
-   * Store results of query for later use
+   * Initialize derivedDB to clone EDBs, initialize deltaDB to empty
    *
    * @return
    */
   def initEvaluation(): Int = {
-    val edbClone = FactDatabase()
-    edbs.foreach((k, relation) => {
-      edbClone(k) = EDB()
-      relation.zipWithIndex.foreach((row, idx) =>
-        edbClone(k).addOne(Row[StorageTerm]().appendedAll(row))
-      )
+    derivedDB.addOne(dbId, FactDatabase())
+    deltaDB.addOne(dbId, FactDatabase())
+
+    idbs.foreach((k, relation) => {
+      derivedDB(dbId)(k) = EDB()
+      deltaDB(dbId)(k) = EDB()
     })
-    incrementalDB.addOne(increment, edbClone)
-    val edbClone2 = FactDatabase()
     edbs.foreach((k, relation) => {
-      edbClone2(k) = EDB()
-    })
-    deltaDB.addOne(increment, edbClone2)
-    increment += 1
-    increment - 1
+      deltaDB(dbId)(k) = EDB()
+    }) // Delta-EDB is just empty sets
+    dbId += 1
+    dbId - 1
   }
 
-  def getIncrementDB(rId: Int, queryId: Int): EDB = incrementalDB(queryId)(rId)
-  def getResult(rId: Int, queryId: Int): Set[Seq[Term]] = getIncrementDB(rId, queryId).map(s => s.toSeq).toSet
+  def clearDB(derived: Boolean, dbId: Int): Unit =
+    if (derived)
+      derivedDB(dbId).foreach((i, e) => e.clear())
+    else
+      deltaDB(dbId).foreach((i, e) => e.clear())
+
+//  def cloneDerivedDB(from: Int, to: Int): Unit = {
+//    derivedDB(to).foreach()
+//  }
+
+  def getIDBResult(rId: Int, dbId: Int): Set[Seq[Term]] = getDerivedDB(rId, dbId).map(s => s.toSeq).toSet
   def getEDBResult(rId: Int): Set[Seq[Term]] = edbs(rId).map(s => s.toSeq).toSet
-  def getDeltaDB(rId: Int, queryId: Int): EDB = deltaDB(queryId)(rId)
 
-  def swapDeltaDBs(qId1: Int, qId2: Int): Unit = {
-    val t1 = deltaDB(qId1)
-    deltaDB(qId1) = deltaDB(qId2)
-    deltaDB(qId2) = t1
+  def getDerivedDB(rId: Int, dbId: Int): EDB = derivedDB(dbId)(rId)
+  def getDeltaDB(rId: Int, dbId: Int): EDB = deltaDB(dbId)(rId)
+
+  def resetDerived(rId: Int, dbId: Int, rules: Relation[StorageTerm], prev: Relation[StorageTerm] = Relation[StorageTerm]()): Unit =
+    derivedDB(dbId)(rId) = rules ++ prev
+  def resetDelta(rId: Int, dbId: Int, rules: Relation[StorageTerm]): Unit =
+    deltaDB(dbId)(rId) = rules
+
+  def swapDeltaDBs(dbId1: Int, dbId2: Int): Unit = {
+    val t1 = deltaDB(dbId1)
+    deltaDB(dbId1) = deltaDB(dbId2)
+    deltaDB(dbId2) = t1
   }
-  def swapIncrDBs(qId1: Int, qId2: Int): Unit = {
-    val t1 = incrementalDB(qId1)
-    incrementalDB(qId1) = incrementalDB(qId2)
-    incrementalDB(qId2) = t1
+  def swapDerivedDBs(dbId1: Int, dbId2: Int): Unit = {
+    val t1 = derivedDB(dbId1)
+    derivedDB(dbId1) = derivedDB(dbId2)
+    derivedDB(dbId2) = t1
   }
 
-  def compareDeltaDBs(qId1: Int, qId2: Int): Boolean = { // TODO: best way to compare nested iterables?
-    val db1 = deltaDB(qId1)
-    val db2 = deltaDB(qId2)
-    db1 == db2
-  }
-
-  def compareIncrDBs(qId1: Int, qId2: Int): Boolean = { // TODO: best way to compare nested iterables?
-    val db1 = incrementalDB(qId1)
-    val db2 = incrementalDB(qId2)
-    db1 == db2
-  }
+  def compareDeltaDBs(dbId1: Int, dbId2: Int): Boolean =
+    deltaDB(dbId1) == deltaDB(dbId2)
+  def compareDerivedDBs(dbId1: Int, dbId2: Int): Boolean =
+    derivedDB(dbId1) == derivedDB(dbId2)
 
   // TODO: maybe move this into exec engine
   /**

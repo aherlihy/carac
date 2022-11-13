@@ -1,11 +1,12 @@
 package datalog.execution
 
 import datalog.dsl.{Atom, Constant, Term, Variable}
-import datalog.storage.{SimpleStorageManager, StorageManager, debug}
+import datalog.storage.{SimpleStorageManager, StorageManager}
+import datalog.tools.Debug.debug
 
 import scala.collection.mutable
 
-class NaiveExecutionEngine(val storageManager: StorageManager) extends ExecutionEngine {
+class NaiveExecutionEngine(val storageManager: /*TODO: change back to StorageManager, rn for Intellij*/ StorageManager) extends ExecutionEngine {
   import storageManager.EDB
   val precedenceGraph = new PrecedenceGraph(storageManager.ns)
 
@@ -23,36 +24,49 @@ class NaiveExecutionEngine(val storageManager: StorageManager) extends Execution
     storageManager.insertEDB(rule)
   }
 
-  def evalRule(rId: Int, queryId: Int, prevQueryId: Int): EDB = {
-    val keys = storageManager.getOperatorKeys(rId)
-    storageManager.naiveSPJU(rId, keys, prevQueryId)
+  def evalRule(rId: Int, knownDbId: Int):  EDB = {
+    storageManager.naiveSPJU(rId, storageManager.getOperatorKeys(rId), knownDbId)
   }
 
   /**
    * Take the union of each evalRule for each IDB predicate
    */
-  def eval(rId: Int, relations: Seq[Int], queryId: Int, prevQueryId: Int): EDB = {
+  def eval(rId: Int, relations: Seq[Int], newDbId: Int, knownDbId: Int): EDB = {
+    debug("in eval: ", () => "rId=" + storageManager.ns(rId) + " relations=" + relations.map(storageManager.ns).mkString("[", ", ", "]") + " incr=" + newDbId + " src=" + knownDbId)
     relations.foreach(r => {
-      val res = evalRule(r, queryId, prevQueryId)
-      storageManager.resetIncrEDB(r, queryId, res)
+      val res = evalRule(r, knownDbId)
+      debug("result of evalRule=", () => storageManager.printer.factToString(res))
+      storageManager.resetDerived(r, newDbId, res) // overwrite res to the derived DB
     })
-    storageManager.getIncrementDB(rId, queryId)
+    storageManager.getDerivedDB(rId, newDbId)
   }
 
   def solve(rId: Int): Set[Seq[Term]] = {
-    val relations = precedenceGraph.getTopSort.flatten.filter(r => storageManager.idb(r).nonEmpty)
-    val pQueryId = storageManager.initEvaluation()
-    val prevQueryId = storageManager.initEvaluation()
+    if (storageManager.edbs.contains(rId)) { // if just an edb predicate then return
+      return storageManager.getEDBResult(rId)
+    }
+    val relations = precedenceGraph.topSort().filter(r => !storageManager.edbs.contains(r))
+    var knownDbId = storageManager.initEvaluation() // facts discovered in the previous iteration
+    var newDbId = storageManager.initEvaluation() // place to store new facts
     var count = 0
+
 
     var setDiff = true
     while (setDiff) {
+      storageManager.printer.known = knownDbId // TODO: get rid of
+      debug("start state: ", storageManager.printer.toString)
       count += 1
-      val p = eval(rId, relations, pQueryId, prevQueryId)
+      val res = eval(rId, relations, newDbId, knownDbId)
+      debug("result of eval=", () => storageManager.printer.factToString(res))
+      debug("after state=", storageManager.printer.toString)
 
-      setDiff = !storageManager.compareIncrDBs(pQueryId, prevQueryId)
-      storageManager.swapIncrDBs(prevQueryId, pQueryId)
+      setDiff = !storageManager.compareDerivedDBs(newDbId, knownDbId)
+
+      val t = knownDbId
+      knownDbId = newDbId
+      newDbId = t
+      storageManager.clearDB(true, newDbId)
     }
-    storageManager.getResult(rId, pQueryId)
+    storageManager.getIDBResult(rId, knownDbId)
   }
 }

@@ -21,9 +21,10 @@ class PrecedenceGraphTest extends munit.FunSuite {
     p(x, z) :- ( e(x, y), p(y, z) )
     other(x) :- p("a", x)
 
+    engine.precedenceGraph.topSort() // test against sorted to keep groups
     assertEquals(
-      engine.precedenceGraph.getTopSort,
-      Seq(Seq(0), Seq(1), Seq(2))
+      engine.precedenceGraph.sorted,
+      mutable.Queue[mutable.Set[Int]](mutable.Set(0), mutable.Set(1), mutable.Set(2))
     )
   }
 
@@ -40,9 +41,10 @@ class PrecedenceGraphTest extends munit.FunSuite {
     c() :- a()
     a() :- other()
 
+    engine.precedenceGraph.topSort()
     assertEquals(
-      engine.precedenceGraph.getTopSort,
-      Seq(Seq(3), Seq(0, 1, 2))
+      engine.precedenceGraph.sorted,
+      mutable.Queue(mutable.Set(3), mutable.Set(0, 1, 2))
     )
   }
 
@@ -60,9 +62,31 @@ class PrecedenceGraphTest extends munit.FunSuite {
     c() :- a()
     a() :- other()
 
+    engine.precedenceGraph.topSort()
     assertEquals(
-      engine.precedenceGraph.getTopSort,
-      Seq(Seq(3), Seq(0, 1, 2))
+      engine.precedenceGraph.sorted,
+      mutable.Queue(mutable.Set(3), mutable.Set(0, 1, 2))
+    )
+  }
+
+  test("souffle top order test") {
+    given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new RelationalStorageManager())
+    val program = Program(engine)
+    val a = program.relation[String]("a")
+    val b = program.relation[String]("b")
+    val c = program.relation[String]("c")
+    val other = program.relation[String]("other")
+
+    a() :- b()
+    a() :- (a(), b())
+    b() :- c()
+    c() :- a()
+    a() :- other()
+
+    engine.precedenceGraph.topSort()
+    assertEquals(
+      engine.precedenceGraph.sorted,
+      mutable.Queue(mutable.Set(3), mutable.Set(0, 1, 2))
     )
   }
 }

@@ -1,6 +1,7 @@
 package datalog.storage
 
 import datalog.dsl.{Atom, Constant, Variable}
+import datalog.tools.Debug.debug
 
 import scala.collection.{immutable, mutable}
 
@@ -13,14 +14,17 @@ class RelationalStorageManager(ns: mutable.Map[Int, String] = mutable.Map[Int, S
    * @param keys - a JoinIndexes object to join on
    * @return
    */
-  def naiveSPJU(rId: Int, keys: Table[JoinIndexes], sourceQueryId: Int): EDB = {
+  def naiveSPJU(rId: Int, keys: Table[JoinIndexes], knownDbId: Int): EDB = {
+    debug("naiveSPJU:", () => "r=" + ns(rId) + " keys=" + printer.planToString(keys) + " knownDBId" + knownDbId)
     import relOps.*
 
     val plan = Union(
         keys.map(k =>
           Project(
             Join(
-                k.deps.map(r => Scan(incrementalDB(sourceQueryId)(r), r)), k.varIndexes, k.constIndexes
+                k.deps.map(r => Scan(
+                  edbs.getOrElse(r, derivedDB(knownDbId)(r)), r)
+                ), k.varIndexes, k.constIndexes
             ),
             k.projIndexes
           )
@@ -36,27 +40,29 @@ class RelationalStorageManager(ns: mutable.Map[Int, String] = mutable.Map[Int, S
    * @param keys - a JoinIndexes object to join on
    * @return
    */
-  def SPJU(rId: Int, keys: Table[JoinIndexes], sourceQueryId: Int): EDB = {
+  def SPJU(rId: Int, keys: Table[JoinIndexes], knownDbId: Int): EDB = {
     import relOps.*
-
+    debug("SPJU:", () => "r=" + ns(rId) + " keys=" + printer.snPlanToString(keys) + " knownDBId" + knownDbId)
     val plan = Union(
       keys.map(k => // for each idb rule
         Union(
-          k.deps.map(d =>
+          k.deps.map(d => {
+            var found = false
             Project(
               Join(
-                k.deps.map(r =>
-                  if (r == d)
-                    Scan(deltaDB(sourceQueryId)(r), r)
+                k.deps.map(r => {
+                  if (r == d && !found) // TODO: this needs to only happen once per, even if r is featured twice
+                    found = true
+                    Scan(deltaDB(knownDbId)(r), r)
                   else
-                    Scan(incrementalDB(sourceQueryId)(r), r)
-                ),
+                    Scan(edbs.getOrElse(r, derivedDB(knownDbId)(r)), r)
+                }),
                 k.varIndexes,
                 k.constIndexes
               ),
               k.projIndexes
             )
-          )
+          })
         )
       ).toSeq
     )

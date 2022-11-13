@@ -23,12 +23,12 @@ trait StorageManager(val ns: mutable.Map[Int, String]) {
   type FactDatabase <: Database[Int, EDB]
   type RuleDatabase <: Database[Int, IDB]
 
-  val incrementalDB: Database[Int, FactDatabase]
+  val derivedDB: Database[Int, FactDatabase]
   val deltaDB: Database[Int, FactDatabase]
   val edbs: FactDatabase
   val idbs: RuleDatabase
 
-  val printer: Printer
+  val printer: Printer[this.type]
 
   /**
    * Wrapper object for join keys for IDB rules
@@ -46,7 +46,7 @@ trait StorageManager(val ns: mutable.Map[Int, String]) {
       "{ variables:" + varIndexes.map(s => s.mkString("(", ", ", ")")).mkString("[", ", ", "]") +
         ", consts:" + constIndexes.mkString("[", ", ", "]") +
         ", project:" + projIndexes.mkString("[", ", ", "]") +
-        ", srcEDB:" + deps.mkString("[", ", ", "]") + " }"
+        ", src:" + deps.mkString("[", ", ", "]") + " }"
   }
   def getOperatorKeys(rId: Int): Table[JoinIndexes]
 
@@ -61,22 +61,24 @@ trait StorageManager(val ns: mutable.Map[Int, String]) {
 
   def edb(rId: Int): EDB
 
-  def SPJU(rId: Int, keys: Table[JoinIndexes], sourceQueryId: Int): EDB
-  def naiveSPJU(rId: Int, keys: Table[JoinIndexes], sourceQueryId: Int): EDB
+  def SPJU(rId: Int, keys: Table[JoinIndexes], knownDbId: Int): EDB
+  def naiveSPJU(rId: Int, keys: Table[JoinIndexes], knownDbId: Int): EDB
 
-  def getIncrementDB(rId: Int, queryId: Int): EDB
-  def getResult(rId: Int, queryId: Int): Set[Seq[Term]]
+  def getDerivedDB(rId: Int, dbId: Int): EDB
+  def getIDBResult(rId: Int, dbId: Int): Set[Seq[Term]]
   def getEDBResult(rId: Int): Set[Seq[Term]]
 
-  def swapIncrDBs(qId1: Int, qId2: Int): Unit
-  def swapDeltaDBs(qId1: Int, qId2: Int): Unit
+  def swapDerivedDBs(dbId1: Int, dbId2: Int): Unit
+  def swapDeltaDBs(dbId1: Int, dbId2: Int): Unit
 
 //  def tableToString[T](r: Relation[T]): String
   def joinHelper(inputs: Seq[EDB], k: JoinIndexes): EDB
 
   def getDiff(lhs: EDB, rhs: EDB): EDB
-  def resetIncrEDB(rId: Int, queryId: Int, rules: EDB, prev: EDB = EDB()): Unit
-  def resetDeltaEDB(rId: Int, rules: EDB, queryId: Int): Unit
-  def compareDeltaDBs(qId1: Int, qId2: Int): Boolean
-  def compareIncrDBs(qId1: Int, qId2: Int): Boolean
+  def resetDerived(rId: Int, dbId: Int, rules: EDB, prev: EDB = EDB()): Unit
+  def resetDelta(rId: Int, dbId: Int, rules: EDB): Unit
+  def compareDeltaDBs(dbId1: Int, dbId2: Int): Boolean
+  def compareDerivedDBs(dbId1: Int, dbId2: Int): Boolean
+  def clearDB(derived: Boolean, dbId: Int): Unit
+
 }

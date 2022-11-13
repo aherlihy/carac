@@ -41,7 +41,7 @@ case class MultiIsolatedCycle(program: Program) extends TestGraph {
     ))
 
   queries(p.name) = Query(
-    "path edb",
+    "path idb",
     p,
     Set(
       Vector("a", "d"),
