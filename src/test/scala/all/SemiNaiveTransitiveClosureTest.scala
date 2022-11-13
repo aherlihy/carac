@@ -2,7 +2,7 @@ package all
 
 import datalog.dsl.{Program, Relation}
 import datalog.execution.{ExecutionEngine, NaiveExecutionEngine, SemiNaiveExecutionEngine}
-import datalog.storage.{CollectionsStorageManager, RelationalStorageManager}
+import datalog.storage.{CollectionsStorageManager, RelationalStorageManager, IndexedCollStorageManager}
 import graphs.{Acyclic, MultiIsolatedCycle, RecursivePath, SingleCycle}
 
 class SemiNaiveRelationalTransitiveClosure extends munit.FunSuite {
@@ -30,6 +30,24 @@ class SemiNaiveCollectionTransitiveClosure extends munit.FunSuite {
     MultiIsolatedCycle(new Program(new SemiNaiveExecutionEngine(new CollectionsStorageManager()))),
     SingleCycle(new Program(new SemiNaiveExecutionEngine(new CollectionsStorageManager()))),
     RecursivePath(new Program(new SemiNaiveExecutionEngine(new CollectionsStorageManager())))
+  ).map(graph =>
+    graph.queries.map((hint, query) => {
+      test(graph.description + "." + query.description) {
+        assertEquals(
+          query.relation.solve(),
+          query.solution,
+          hint
+        )
+      }
+    }))
+}
+
+class SemiNaiveIndexedCollectionTransitiveClosure extends munit.FunSuite {
+  List(
+    Acyclic(new Program(new SemiNaiveExecutionEngine(new IndexedCollStorageManager()))),
+    MultiIsolatedCycle(new Program(new SemiNaiveExecutionEngine(new IndexedCollStorageManager()))),
+    SingleCycle(new Program(new SemiNaiveExecutionEngine(new IndexedCollStorageManager()))),
+    RecursivePath(new Program(new SemiNaiveExecutionEngine(new IndexedCollStorageManager())))
   ).map(graph =>
     graph.queries.map((hint, query) => {
       test(graph.description + "." + query.description) {
