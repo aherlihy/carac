@@ -1,6 +1,7 @@
 package datalog.storage
 
 import datalog.dsl.Constant
+import datalog.tools.Debug.debug
 
 import scala.collection.mutable
 
@@ -121,7 +122,10 @@ class RelationalOperators[S <: StorageManager](val storageManager: S) {
         return input.next()
       }
       input.next() match {
-        case Some(t) => Some(t.zipWithIndex.filter((e, i) => ixs.contains(i)).map(_._1))
+        case Some(t) =>
+          Some(
+            ixs.flatMap(idx => t.lift(idx)).asInstanceOf[edbRow]
+          )
         case _ => NilTuple
       }
     }
@@ -245,10 +249,8 @@ class RelationalOperators[S <: StorageManager](val storageManager: S) {
   case class Diff(ops: mutable.ArrayBuffer[RelOperator]) extends RelOperator {
     private var outputRelation: IndexedSeq[edbRow] = IndexedSeq()
     private var index = 0
-    def open(): Unit = {
-      var opResults = ops.map(o => o.toList())
-      outputRelation = opResults.toSet.reduce((l, r) => l diff r).toIndexedSeq
-    }
+    def open(): Unit =
+      outputRelation = ops.map(o => o.toList()).toSet.reduce((l, r) => l diff r).toIndexedSeq
     def next(): Option[edbRow] = {
       if (index >= outputRelation.size)
         NilTuple

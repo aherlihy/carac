@@ -13,6 +13,7 @@ case class RecursivePath(program: Program) extends TestGraph {
   private val path2a = program.relation[Constant]("path2a")
   private val path2a1 = program.relation[Constant]("path2a1")
   private val edge2a = program.relation[Constant]("edge2a")
+  private val reversed = program.relation[Constant]("reversed")
 
   private val x, y, z = program.variable()
 
@@ -21,6 +22,7 @@ case class RecursivePath(program: Program) extends TestGraph {
   e("c", "d") :- ()
   p(x, y) :- e(x, y)
   p(x, z) :- ( p(x, y), p(y, z) )
+  reversed(x, y) :- e(y, x)
 
   path2a(x) :- p("a", x)
   edge2a(x) :- e("a", x)
@@ -37,5 +39,10 @@ case class RecursivePath(program: Program) extends TestGraph {
     Vector("d"),
     Vector("b"),
     Vector("c"),
+  ))
+  queries(reversed.name) = Query("order of variables", reversed, Set(
+    Vector("b", "a"),
+    Vector("c", "b"),
+    Vector("d", "c")
   ))
 }

@@ -30,7 +30,7 @@ class Printer[S <: StorageManager](val s: S) {
           "JOIN" +
           k.varIndexes.map(v => v.mkString("$", "==$", "")).mkString("[", ",", "]") +
           k.constIndexes.map((k, v) => k + "==" + v).mkString("{", "&&", "}") +
-          k.deps.map(s.ns).mkString("(", "*", ")") +
+          k.deps.map(n => if(s.edbs.contains(n)) "edbs-" + s.ns(n) else "" + s.ns(n)).mkString("(", "*", ")") +
           " )"
       ).mkString("", ", ", "") +
       " )"
@@ -51,7 +51,7 @@ class Printer[S <: StorageManager](val s: S) {
                   found = true
                   "delta-" + s.ns(n)
                 else
-                  s.ns(n)
+                  if(s.edbs.contains(n)) "edbs-" + s.ns(n) else "" + s.ns(n)
               }).mkString("(", "*", ")") +
               " )"
           }).mkString("[ ", ", ", " ]") + " )"

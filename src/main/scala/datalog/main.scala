@@ -3,37 +3,50 @@ package datalog
 import datalog.execution.{ExecutionEngine, NaiveExecutionEngine, SemiNaiveExecutionEngine}
 import datalog.dsl.Program
 import datalog.storage.{CollectionsStorageManager, IndexedCollStorageManager, RelationalStorageManager}
+import scala.util.Random
 
 import scala.collection.mutable
 
 def tc() = {
-  given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new CollectionsStorageManager())
+  println("naive+coll, before+after")
+  given engine: ExecutionEngine = new NaiveExecutionEngine(new CollectionsStorageManager())
   val program = Program(engine)
-  val e = program.relation[String]("e")
-  val p = program.relation[String]("tc")
-  val path2a = program.relation[String]("path2a")
-//  val edge2a = program.relation[String]("edge2a")
+  val edge = program.relation[String]("edge")
+//  val isBefore = program.relation[String]("isBefore")
+  val isAfter = program.relation[String]("isAfter")
 
   val x, y, z = program.variable()
 
-  // TODO: use context param to avoid needing :- ()?
-  e("a", "b") :- ()
-  e("b", "c") :- ()
-  e("c", "d") :- ()
-  p(x, y) :- e(x, y)
-  p(x, z) :- ( p(x, y), p(y, z) )
-//  path2a(x) :- p("a", x)
-//  edge2a(x) :- e("a", x)
-  //  a(x) :- b(x)
-  //  b(y) :- c(y)
-  //  c(x) :- a(x)
-  //  a(x) :- other(x)
+  //  for i <- 0 until 10000 do
+  //    e(
+  //      Random.alphanumeric.dropWhile(_.isDigit).dropWhile(_.isUpper).head.toString,
+  //      Random.alphanumeric.dropWhile(_.isDigit).dropWhile(_.isUpper).head.toString
+  //    )  :- ()
 
-  println(p.solve())
+  edge("a", "b") :- ()
+  edge("b", "c") :- ()
+  edge("c", "d") :- ()
+//  edge("d", "e") :- ()
+
+//  isBefore(x, y) :- edge(x, y)
+//  isBefore(x, y) :- ( isBefore(x, z), isBefore(z, y) )
+
+  isAfter(x, y) :- edge(y, x)
+  isAfter(x, y) :- ( isAfter(z, x), isAfter(y, z) )
+
+
+  println(
+    isAfter.solve()
+      .map(f => f.head.toString + "\t" + f.last.toString)
+      .toList
+      .sorted
+      .mkString("", "\n", "")
+  )
+  // TODO: start here, step into isAfter
 }
 
 def soufex() = {
-  given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new IndexedCollStorageManager())
+  given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new CollectionsStorageManager())
   val program = Program(engine)
   val e = program.relation[Int]("e")
   val a = program.relation[Int]("a")
@@ -54,12 +67,11 @@ def soufex() = {
 }
 
 def topsortSouff() = {
-  given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new IndexedCollStorageManager())
+  given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new RelationalStorageManager())
   val program = Program(engine)
-  val edge = program.relation[String](" e")
+  val edge = program.relation[String](" edge")
   val isBefore = program.relation[String]("isBefore")
   val isAfter = program.relation[String]("isAfter")
-  val allBeforeA = program.relation[String]("allBA")
 
   val x, y, z = program.variable()
 
@@ -82,10 +94,10 @@ def topsortSouff() = {
   edge("L",	"M") :- ()
 
   // Vertex x is before vertex y if the graph has an edge from x to y.
-  isBefore(x, y) :- edge(x, y)
+//  isBefore(x, y) :- edge(x, y)
 
   // Vertex x is before vertex y if some vertex z is before x and z is before y.
-  isBefore(x, y) :- ( isBefore(x, z), edge(z, y) )
+//  isBefore(x, y) :- ( isBefore(x, z), edge(z, y) )
 
   // Vertex x is after vertex y if the graph has an edge from y to x.
   isAfter(x, y) :- edge(y, x)
@@ -93,9 +105,7 @@ def topsortSouff() = {
   // Vertex x is after vertex y if some vertex z is after x and y is after z.
   isAfter(x, y) :- ( isAfter(z, x), isAfter(y, z) )
 
-  allBeforeA(x) :- isBefore(x, "M")
-
-  println("isBeforeM=" + allBeforeA.solve())
+  println("solve=" + isAfter.solve().map(f => f.head.toString + "\t" + f.last.toString).mkString("", "\n", ""))
 
 }
 

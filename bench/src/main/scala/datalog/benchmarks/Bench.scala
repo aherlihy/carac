@@ -9,13 +9,15 @@ import datalog.execution.{ExecutionEngine, /*ManuallyInlinedEE, ManuallyInlinedU
 import datalog.storage.{CollectionsStorageManager, IndexedCollStorageManager, RelationalStorageManager}
 
 import scala.collection.mutable
+import scala.util.Random
 
 @Fork(1) // # of jvms that it will use
-@Warmup(iterations = 5, time = 2, timeUnit = TimeUnit.SECONDS)
-@Measurement(iterations = 10, time = 2, timeUnit = TimeUnit.SECONDS)
+@Warmup(iterations = 10, time = 5, timeUnit = TimeUnit.SECONDS)
+@Measurement(iterations = 10, time = 5, timeUnit = TimeUnit.SECONDS)
 @State(Scope.Thread)
 class Bench {
   val dummyStream = new java.io.PrintStream(_ => ())
+
 
   def transitiveClosure(engine: ExecutionEngine, blackhole: Blackhole): Unit = {
 
@@ -27,18 +29,27 @@ class Bench {
     val edge2a = program.relation[String]("edge2a")
 
     val x, y, z = program.variable()
+//
+//    e("a", "b") :- ()
+//    e("b", "c") :- ()
+//    e("c", "d") :- ()
 
-    e("a", "b") :- ()
-    e("b", "c") :- ()
-    e("c", "d") :- ()
+    for i <- 0 until 50 do
+      e(
+        Random.alphanumeric.dropWhile(_.isDigit).dropWhile(_.isUpper).head.toString,
+        Random.alphanumeric.dropWhile(_.isDigit).dropWhile(_.isUpper).head.toString
+      )  :- ()
+
     p(x, y) :- e(x, y)
     p(x, z) :- ( e(x, y), p(y, z) )
-    path2a(x) :- p("a", x)
-    edge2a(x) :- e("a", x)
+//    path2a(x) :- p("a", x)
+
 
     def solve[T <: Constant](rel: Relation[T]): Unit =
       blackhole.consume(
-        assert(rel.solve() == Set(Vector("a", "d"), Vector("b", "d"), Vector("b", "c"), Vector("a", "b"), Vector("a", "c"), Vector("c", "d")))
+        //assert(
+          rel.solve()
+         //   == Set(Vector("a", "d"), Vector("b", "d"), Vector("b", "c"), Vector("a", "b"), Vector("a", "c"), Vector("c", "d")))
       )
 
     // FIXME: we redirect Console.out.println to a dummy stream here because
@@ -59,38 +70,34 @@ class Bench {
 //    given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new RelationalStorageManager())
 //    transitiveClosure(engine, blackhole)
 
-//  @Benchmark def transitiveClosure_manually_inlined(blackhole: Blackhole): Unit =
+//  @Benchmark def transitiveClosure_semiNaive_collections(blackhole: Blackhole): Unit =
+//    given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new CollectionsStorageManager())
+//    transitiveClosure(engine, blackhole)
+//
+//  @Benchmark def transitiveClosure_manually_inlined_collections(blackhole: Blackhole): Unit =
 //    given engine: ExecutionEngine = new ManuallyInlinedEE(new CollectionsStorageManager())
 //    transitiveClosure(engine, blackhole)
 //
-//  @Benchmark def transitiveClosure_manually_inlined_unrolled(blackhole: Blackhole): Unit =
+//  @Benchmark def transitiveClosure_manually_inline_unrolled_collections(blackhole: Blackhole): Unit =
 //    given engine: ExecutionEngine = new ManuallyInlinedUnrolledEE(new CollectionsStorageManager())
 //    transitiveClosure(engine, blackhole)
 //
-//  @Benchmark def transitiveClosure_manually_inline_unrolled_indexed(blackhole: Blackhole): Unit =
-//    given engine: ExecutionEngine = new ManuallyInlinedUnrolledEE(new IndexedCollStorageManager())
-//    transitiveClosure(engine, blackhole)
-//  @Benchmark def transitiveClosure_manually_inlined_internal(blackhole: Blackhole): Unit =
-//    given engine: ExecutionEngine = new ManuallyInlinedInternal(new CollectionsStorageManager())
-//    transitiveClosure(engine, blackhole)
-//
-//  @Benchmark def transitiveClosure_manually_inlined_external(blackhole: Blackhole): Unit =
-//    given engine: ExecutionEngine = new ManuallyInlinedExternal(new CollectionsStorageManager())
-//    transitiveClosure(engine, blackhole)
-//
-//  @Benchmark def transitiveClosure_manually_collapse_parent(blackhole: Blackhole): Unit =
-//    given engine: ExecutionEngine = new ManuallyCollapseParent(new CollectionsStorageManager())
-//    transitiveClosure(engine, blackhole)
 
-  @Benchmark def transitiveClosure_baseline(blackhole: Blackhole): Unit =
-    given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new CollectionsStorageManager())
+  @Benchmark def transitiveClosure_semiNaive_collections_idx(blackhole: Blackhole): Unit =
+    given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new IndexedCollStorageManager())
     transitiveClosure(engine, blackhole)
 
+//  @Benchmark def transitiveClosure_manually_inlined_collections_idx(blackhole: Blackhole): Unit =
+//    given engine: ExecutionEngine = new ManuallyInlinedEE(new IndexedCollStorageManager())
+//    transitiveClosure(engine, blackhole)
+//
+//  @Benchmark def transitiveClosure_manually_inline_unrolled_collections_idx(blackhole: Blackhole): Unit =
+//    given engine: ExecutionEngine = new ManuallyInlinedUnrolledEE(new IndexedCollStorageManager())
+    transitiveClosure(engine, blackhole)
 
-  //  @Benchmark def transitiveClosure_manualOptMinimized(blackhole: Blackhole): Unit =
-//    given engine: ExecutionEngine = new ManuallyOptimizedExecutionEngine3(new CollectionsStorageManager())
+//  @Benchmark def transitiveClosure_manually_inlined_unrolled(blackhole: Blackhole): Unit =
+//    given engine: ExecutionEngine = new ManuallyInlinedUnrolledEE(new CollectionsStorageManager())
 //    transitiveClosure(engine, blackhole)
-//  @Benchmark def transitiveClosure_Naive_collections(blackhole: Blackhole): Unit =
-//    given engine: ExecutionEngine = new NaiveExecutionEngine(new CollectionsStorageManager())
-//    transitiveClosure(engine, blackhole)
+
+
 }

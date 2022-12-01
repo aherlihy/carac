@@ -45,6 +45,9 @@ class NaiveExecutionEngine(val storageManager: /*TODO: change back to StorageMan
     if (storageManager.edbs.contains(rId)) { // if just an edb predicate then return
       return storageManager.getEDBResult(rId)
     }
+    if (!storageManager.idbs.contains(rId)) {
+      throw new Error("Solving for rule without body")
+    }
     val relations = precedenceGraph.topSort().filter(r => !storageManager.edbs.contains(r))
     var knownDbId = storageManager.initEvaluation() // facts discovered in the previous iteration
     var newDbId = storageManager.initEvaluation() // place to store new facts
@@ -53,19 +56,18 @@ class NaiveExecutionEngine(val storageManager: /*TODO: change back to StorageMan
 
     var setDiff = true
     while (setDiff) {
-      storageManager.printer.known = knownDbId // TODO: get rid of
-      debug("start state: ", storageManager.printer.toString)
-      count += 1
-      val res = eval(rId, relations, newDbId, knownDbId)
-      debug("result of eval=", () => storageManager.printer.factToString(res))
-      debug("after state=", storageManager.printer.toString)
-
-      setDiff = !storageManager.compareDerivedDBs(newDbId, knownDbId)
-
       val t = knownDbId
       knownDbId = newDbId
       newDbId = t
       storageManager.clearDB(true, newDbId)
+      storageManager.printer.known = knownDbId // TODO: get rid of
+      debug("initial state @ " + count, storageManager.printer.toString)
+      count += 1
+      eval(rId, relations, newDbId, knownDbId)
+      debug("state after eval=", storageManager.printer.toString)
+
+      setDiff = !storageManager.compareDerivedDBs(newDbId, knownDbId)
+
     }
     storageManager.getIDBResult(rId, knownDbId)
   }

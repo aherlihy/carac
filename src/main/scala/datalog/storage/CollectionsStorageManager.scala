@@ -52,24 +52,27 @@ class CollectionsStorageManager(ns: mutable.Map[Int, String] = mutable.Map[Int, 
           joinHelper(
             k.deps.map(r =>
               if (r == d && !found) {
-                found = true
+                found = true // TODO: if found more than once can potentially get rid of entire stmt
                 deltaDB(knownDbId)(r)
               }
               else {
                 derivedDB(knownDbId).getOrElse(r, edbs(r))
               }
             ), k)
-            .map(t => t.zipWithIndex.filter((e, i) => k.projIndexes.contains(i)).map(_._1))
+            .map(t =>
+              k.projIndexes.flatMap(idx => t.lift(idx))
+            )
         }).toSet
         )
   }
 
   def naiveSPJU(rId: Int, keys: Table[JoinIndexes], knownDbId: Int): EDB = {
-    keys.flatMap(k => // for each idb rule
-        joinHelper(
-          k.deps.map(r => edbs.getOrElse(r, derivedDB(knownDbId)(r))), k
-        )
-        .map(t => t.zipWithIndex.filter((e, i) => k.projIndexes.contains(i)).map(_._1))
-    )
+    keys.flatMap(k => { // for each idb rule
+      joinHelper(
+        k.deps.map(r => edbs.getOrElse(r, derivedDB(knownDbId)(r))), k
+      ).map(t =>
+        k.projIndexes.flatMap(idx => t.lift(idx))
+      ).toSet
+    })
   }
 }

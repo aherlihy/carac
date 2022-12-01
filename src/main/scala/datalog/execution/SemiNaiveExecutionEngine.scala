@@ -15,6 +15,7 @@ class SemiNaiveExecutionEngine(override val storageManager: StorageManager) exte
 
   def evalSN(rId: Int, relations: Seq[Int], newDbId: Int, knownDbId: Int): EDB = {
     relations.foreach(r => {
+      debug("for relation ", () => storageManager.ns(r))
       val prev = storageManager.getDerivedDB(r, knownDbId)
       debug("derived[known]=", () => storageManager.printer.factToString(prev))
       val res = evalRuleSN(r, newDbId, knownDbId)
@@ -41,11 +42,11 @@ class SemiNaiveExecutionEngine(override val storageManager: StorageManager) exte
     var count = 0
 
     val startRId = relations.head
-    val res = eval(startRId, relations, newDbId, knownDbId) // this fills derived[new]
-    storageManager.resetDelta(startRId, newDbId, res) // copy delta[new] = derived[new]
+    eval(startRId, relations, newDbId, knownDbId) // this fills derived[new]
+
+    relations.foreach(rel => storageManager.resetDelta(rel, newDbId, storageManager.getDerivedDB(rel, newDbId))) // copy delta[new] = derived[new]
 
     var setDiff = true
-    var iteration = 0
     while(setDiff) {
       val t = knownDbId
       knownDbId = newDbId
@@ -53,12 +54,11 @@ class SemiNaiveExecutionEngine(override val storageManager: StorageManager) exte
       storageManager.clearDB(true, newDbId)
       storageManager.printer.known = knownDbId // TODO: get rid of
 
-      debug("initial state @ " + iteration, storageManager.printer.toString)
+      debug("initial state @ " + count, storageManager.printer.toString)
       count += 1
-      val p = evalSN(rId, relations, newDbId, knownDbId)
+      evalSN(rId, relations, newDbId, knownDbId)
       setDiff = storageManager.deltaDB(newDbId).exists((k, v) => v.nonEmpty)
       debug("state after evalSN " + count, storageManager.printer.toString)
-      iteration += 1
     }
     storageManager.getIDBResult(rId, newDbId)
   }

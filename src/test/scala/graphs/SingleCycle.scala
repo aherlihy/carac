@@ -25,7 +25,7 @@ case class SingleCycle(program: Program) extends TestGraph {
   path2a(x) :- p("a", x)
   edge2a(x) :- e("a", x)
 
-  queries(e.name) = Query("edge idb", e, Set(
+  queries(e.name) = Query("edge edb", e, Set(
     Vector("a", "b"),
     Vector("b", "c"),
     Vector("c", "d")))
