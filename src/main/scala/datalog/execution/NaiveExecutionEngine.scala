@@ -32,7 +32,7 @@ class NaiveExecutionEngine(val storageManager: /*TODO: change back to StorageMan
    * Take the union of each evalRule for each IDB predicate
    */
   def eval(rId: Int, relations: Seq[Int], newDbId: Int, knownDbId: Int): EDB = {
-    debug("in eval: ", () => "rId=" + storageManager.ns(rId) + " relations=" + relations.map(storageManager.ns).mkString("[", ", ", "]") + " incr=" + newDbId + " src=" + knownDbId)
+    debug("in eval: ", () => "rId=" + storageManager.ns(rId) + " relations=" + relations.map(r => storageManager.ns(r)).mkString("[", ", ", "]") + " incr=" + newDbId + " src=" + knownDbId)
     relations.foreach(r => {
       val res = evalRule(r, knownDbId)
       debug("result of evalRule=", () => storageManager.printer.factToString(res))

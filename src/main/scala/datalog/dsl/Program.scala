@@ -18,6 +18,14 @@ class Program(engine: ExecutionEngine) extends AbstractProgram {
     Relation[T](relCounter - 1, userName)
   }
 
+  def namedRelation[T <: Constant](userName: String): Relation[T] = {
+    if (!ee.storageManager.ns.contains(userName)) {
+      throw new Exception("Named relation '" + userName + "' does not exist")
+    }
+    val rId = ee.storageManager.ns(userName)
+    Relation[T](rId, userName)
+  }
+
   // TODO: also provide solve for multiple/all predicates, or return table so users can query over the derived DB
   def solve(rId: Int): Set[Seq[Term]] = ee.solve(rId).map(s => s.toSeq).toSet
 }

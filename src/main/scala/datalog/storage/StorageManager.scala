@@ -5,7 +5,27 @@ import datalog.dsl.{Atom, Term, Variable}
 import scala.collection.mutable
 import scala.collection.immutable
 
-trait StorageManager(val ns: mutable.Map[Int, String]) {
+/**
+ * Quick BiMap
+ */
+class NS() {
+  private val nameToRid = mutable.Map[String, Int]()
+  private val rIdToName = mutable.Map[Int, String]()
+  def apply(name: String): Int = nameToRid(name)
+  def apply(rId: Int): String = rIdToName(rId)
+  def update(key: String, value: Int): Unit = {
+    nameToRid(key) = value
+    rIdToName(value) = key
+  }
+  def update(key: Int, value: String): Unit = {
+    rIdToName(key) = value
+    nameToRid(value) = key
+  }
+  def contains(key: String): Boolean = nameToRid.contains(key)
+  def contains(key: Int): Boolean = rIdToName.contains(key)
+}
+
+trait StorageManager(val ns: NS) {
   /* A bit repetitive to have these types also defined in dsl but good to separate
    * user-facing API class with internal storage */
   type StorageVariable

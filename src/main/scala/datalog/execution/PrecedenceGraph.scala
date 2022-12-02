@@ -2,10 +2,11 @@ package datalog.execution
 
 import datalog.dsl.Atom
 import datalog.tools.Debug.debug
+import datalog.storage.NS
 
 import scala.collection.mutable
 
-class Node(r: Int, ns: mutable.Map[Int, String]) {
+class Node(r: Int, ns: NS) {
   var recursive = false
   val rId: Int = r
   var idx: Int = -1
@@ -19,7 +20,7 @@ class Node(r: Int, ns: mutable.Map[Int, String]) {
       + "}"
 }
 
-class PrecedenceGraph(ns: mutable.Map[Int, String] /* for debugging */) {
+class PrecedenceGraph(ns: NS /* for debugging */) {
   val nodes: mutable.Map[Int, Node] = mutable.Map[Int, Node]()
   val sorted: mutable.Queue[mutable.Set[Int]] = mutable.Queue[mutable.Set[Int]]()
 

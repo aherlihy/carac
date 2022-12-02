@@ -6,7 +6,7 @@ import scala.collection.{immutable, mutable}
 
 import datalog.tools.Debug.debug
 
-class CollectionsStorageManager(ns: mutable.Map[Int, String] = mutable.Map[Int, String]()) extends SimpleStorageManager(ns) {
+class CollectionsStorageManager(ns: NS = new NS()) extends SimpleStorageManager(ns) {
   inline def joinHelper(inputs: Seq[EDB], k: JoinIndexes): EDB = {
 
     if(inputs.length == 1) { // just a scan, so only filter don't join

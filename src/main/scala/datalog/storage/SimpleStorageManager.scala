@@ -4,7 +4,7 @@ import datalog.dsl.{Atom, Constant, Variable, Term}
 
 import scala.collection.{immutable, mutable}
 
-abstract class SimpleStorageManager(ns: mutable.Map[Int, String]) extends StorageManager(ns) {
+abstract class SimpleStorageManager(ns: NS) extends StorageManager(ns) {
   type StorageTerm = Term
   type StorageVariable = Variable
   type StorageConstant = Constant

@@ -4,7 +4,7 @@ import datalog.dsl.{Atom, Constant, Variable}
 
 import scala.collection.{immutable, mutable}
 
-class IndexedCollStorageManager(ns: mutable.Map[Int, String] = mutable.Map[Int, String]()) extends CollectionsStorageManager(ns) {
+class IndexedCollStorageManager(ns: NS = NS()) extends CollectionsStorageManager(ns) {
   val prebuiltOpKeys: mutable.Map[Int, Table[JoinIndexes]] = mutable.Map[Int, Table[JoinIndexes]]()
 
   override def insertIDB(rId: Int, rule: Seq[Atom]): Unit = {

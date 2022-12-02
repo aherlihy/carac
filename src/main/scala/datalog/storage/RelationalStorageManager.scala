@@ -5,7 +5,7 @@ import datalog.tools.Debug.debug
 
 import scala.collection.{immutable, mutable}
 
-class RelationalStorageManager(ns: mutable.Map[Int, String] = mutable.Map[Int, String]()) extends SimpleStorageManager(ns) {
+class RelationalStorageManager(ns: NS = NS()) extends SimpleStorageManager(ns) {
   def joinHelper(inputs: Seq[EDB], k: JoinIndexes): EDB = { throw new Error("shouldn't be called") }
   /**
    * Use relational operators to evaluate an IDB rule using Naive algo
