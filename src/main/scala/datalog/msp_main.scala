@@ -4,7 +4,7 @@ import scala.quoted.*
 given staging.Compiler = staging.Compiler.make(getClass.getClassLoader)
 
 
-@main def msp_main = {
+def msp_main = {
   val base = "2".toDouble
   val exp = "3".toInt
   // 1) Staged, runtime generation

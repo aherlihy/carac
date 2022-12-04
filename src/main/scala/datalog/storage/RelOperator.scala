@@ -140,61 +140,30 @@ class RelationalOperators[S <: StorageManager](val storageManager: S) {
     private var outputRelation= mutable.ArrayBuffer[edbRow]()
     private var index = 0
 
-    // TODO [NOW]: >2 key join
-    private var left: RelOperator = EmptyScan()
-    private var right: RelOperator = EmptyScan()
-
     def open(): Unit = {
+//      println("====IN JOIN OPEN")
       index = 0
-      outputRelation = mutable.ArrayBuffer()
-
-      if(inputs.length == 1) {
-        outputRelation = inputs.head.toList().filter(
-          joined =>
-            (constants.isEmpty || constants.forall((idx, const) => joined(idx) == const)) &&
-            (variables.isEmpty || variables.forall(condition => condition.forall(c => joined(c) == joined(condition.head))))
-        )
-        return
-      } else if (inputs.length > 2) {
-        throw new Error("TODO: multi-way join")
-      }
-
-//      println("inputs=" + inputs)
-//
       val inputList: Seq[mutable.ArrayBuffer[edbRow]] = inputs.map(i => i.toList())
-//
-//      outputRelationNew = inputList.foldLeft(inputList.head)((outer, inner) => {
-//        println("acc=" + outer + " op=" + inner)
-//        outer.map(outerTuple => {
-//          inner.map(innerTuple => {
-//            outerTuple ++ innerTuple
-//          })
-//        }).filter(joined =>
-//              (variables.isEmpty || variables.forall(condition =>
-//                condition.forall(c => joined(c) == joined(condition.head))))
-//                && (constants.isEmpty ||
-//                constants.forall((idx, const) => joined(idx) == const)))
-//      })
+//      println("\tinputs=" + inputs)
 
-//      left = inputs(0)
-//      right = if (inputs.length > 1) inputs(1) else EmptyScan()
-
-
-      // Nested loop join:
-      val outerTable = inputList(0)//.toList()
-      val innerTable = inputList(1)//.toList()
-
-      outerTable.foreach(outerTuple => {
-        innerTable.foreach(innerTuple => {
-          val joined = outerTuple ++ innerTuple
-          if ((variables.isEmpty || variables.forall(condition =>
-                condition.forall(c => joined(c) == joined(condition.head))))
-            && (constants.isEmpty ||
-              constants.forall((idx, const) => joined(idx) == const))) {
-            outputRelation.addOne(joined)
-          }
+      outputRelation = inputList
+        .reduceLeft((outer, inner) => {
+          outer.flatMap(outerTuple => {
+            inner.map(innerTuple => {
+              (outerTuple ++ innerTuple).asInstanceOf[edbRow]
+            })
+          })
         })
-      })
+        .filter(joined =>
+//          println("\t\tjoined=" + joined)
+          (variables.isEmpty || variables.forall(condition =>
+            condition.forall(c => joined(c) == joined(condition.head))
+          )) &&
+          (constants.isEmpty || constants.forall((idx, const) =>
+            joined(idx) == const
+          ))
+        )
+      println("====END JOIN OPEN")
     }
 
     def next(): Option[edbRow] = {

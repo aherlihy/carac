@@ -8,33 +8,22 @@ import datalog.tools.Debug.debug
 
 class CollectionsStorageManager(ns: NS = new NS()) extends SimpleStorageManager(ns) {
   inline def joinHelper(inputs: Seq[EDB], k: JoinIndexes): EDB = {
-
-    if(inputs.length == 1) { // just a scan, so only filter don't join
-      inputs.head.filter(
-        joined =>
-          (k.constIndexes.isEmpty || k.constIndexes.forall((idx, const) => joined(idx) == const)) &&
-            (k.varIndexes.isEmpty || k.varIndexes.forall(condition => condition.forall(c => joined(c) == joined(condition.head))))
-      )
-    } else if (inputs.isEmpty || inputs.length > 2) {
-      throw new Error("TODO: multi-way join")
-    } else {
-      val outerTable = inputs.head
-      val innerTable = inputs(1)
-
-      outerTable.flatMap(outerTuple => {
-        innerTable.flatMap(innerTuple => {
-          val joined = outerTuple ++ innerTuple
-          if ((k.varIndexes.isEmpty || k.varIndexes.forall(condition =>
-            condition.forall(c => joined(c) == joined(condition.head))))
-            && (k.constIndexes.isEmpty ||
-            k.constIndexes.forall((idx, const) => joined(idx) == const))) {
-            Some(joined)
-          } else {
-            None
-          }
+    inputs
+      .reduceLeft((outer, inner) => {
+        outer.flatMap(outerTuple => {
+          inner.map(innerTuple => {
+            outerTuple ++ innerTuple
+          })
         })
       })
-    }
+      .filter(joined =>
+        (k.varIndexes.isEmpty || k.varIndexes.forall(condition =>
+          condition.forall(c => joined(c) == joined(condition.head))
+        )) &&
+          (k.constIndexes.isEmpty || k.constIndexes.forall((idx, const) =>
+            joined(idx) == const
+          ))
+      )
   }
 
   /**

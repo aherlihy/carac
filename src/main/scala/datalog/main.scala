@@ -9,75 +9,71 @@ import scala.collection.mutable
 import scala.quoted.*
 import scala.quoted.staging.*
 
-def tc() = {
-  println("naive+coll, before+after")
-  given engine: ExecutionEngine = new NaiveExecutionEngine(new CollectionsStorageManager())
-  val program = Program(engine)
-  val edge = program.relation[String]("edge")
-//  val isBefore = program.relation[String]("isBefore")
-  val isAfter = program.relation[String]("isAfter")
-
-  val x, y, z = program.variable()
-
-  //  for i <- 0 until 10000 do
-  //    e(
-  //      Random.alphanumeric.dropWhile(_.isDigit).dropWhile(_.isUpper).head.toString,
-  //      Random.alphanumeric.dropWhile(_.isDigit).dropWhile(_.isUpper).head.toString
-  //    )  :- ()
-
-  edge("a", "b") :- ()
-  edge("b", "c") :- ()
-  edge("c", "d") :- ()
-//  edge("d", "e") :- ()
-
-//  isBefore(x, y) :- edge(x, y)
-//  isBefore(x, y) :- ( isBefore(x, z), isBefore(z, y) )
-
-  isAfter(x, y) :- edge(y, x)
-  isAfter(x, y) :- ( isAfter(z, x), isAfter(y, z) )
-
-
-  println(
-    isAfter.solve()
-      .map(f => f.head.toString + "\t" + f.last.toString)
-      .toList
-      .sorted
-      .mkString("", "\n", "")
-  )
-  // TODO: start here, step into isAfter
-}
-
 def souff() = {
-  println("SEMINAIVE")
-  given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new RelationalStorageManager())
+  given engine: ExecutionEngine = new NaiveExecutionEngine(new RelationalStorageManager())
   val program = Program(engine)
-  val edge = program.relation[String]("edge")
-  val reachable = program.relation[Constant]("reachable")
-  val same_clique = program.relation[Constant]("same_clique")
-  val x, y, z = program.variable()
+  val succ = program.relation[Constant]("succ")
+  val greaterThanZ = program.relation[Constant]("greaterThanZ")
+  val ack = program.relation[Constant]("ack")
+  val N, M, X, Y, Ans, Ans2 = program.variable()
 
-  reachable(x, y) :- edge(x, y)
-  reachable(x, y) :- ( edge(x, z), reachable(z, y) )
-  same_clique(x, y) :- ( reachable(x, y), reachable(y, x) )
+  ack(0, N, Ans) :- succ(N, Ans)
 
-    edge("0", "1") :- ()
-    edge("1", "2") :- ()
-    edge("2", "0") :- ()
-//    edge("3", "0") :- ()
-//  edge("1", "2") :- ()
-//  edge("2", "3") :- ()
-//  edge("3", "4") :- ()
-//  edge("4", "5") :- ()
-//  edge("5", "0") :- ()
-//  edge("5", "6") :- ()
-//  edge("6", "7") :- ()
-//  edge("7", "8") :- ()
-//  edge("8", "9") :- ()
-//  edge("9", "10") :- ()
-//  edge("10", "7") :- ()
+  ack(M, 0, Ans) :- ( greaterThanZ(M), succ(X, M), ack(X, 1, Ans) )
 
-  println("solve=" + same_clique.solve().size)//.map(f => f.head.toString + "\t" + f.last.toString).mkString("", "\n", ""))
+  ack(M, N, Ans) :- (
+    greaterThanZ(M),
+    greaterThanZ(N),
+    succ(X, M),
+    succ(Y, N),
+    ack(M, Y, Ans2),
+    ack(X, Ans2, Ans))
 
+  // EDB
+  succ("0", "1") :- ()
+  succ("1", "2") :- ()
+    /*succ("2", "3").
+    succ("3", "4").
+    succ("4", "5").
+    succ("5", "6").
+    succ("6", "7").
+    succ("7", "8").
+    succ("8", "9").
+    succ("9", "10").
+    succ("10", "11").
+    succ("11", "12").
+    succ("12", "13").
+    succ("13", "14").
+    succ("14", "15").
+    succ("15", "16").
+    succ("16", "17").
+    succ("17", "18").
+    succ("18", "19").
+    succ("19", "20").
+    succ("20", "21").*/
+
+  greaterThanZ("1") :- ()
+  greaterThanZ("2") :- ()
+  /*greaterThanZ("3").
+  greaterThanZ("4").
+  greaterThanZ("5").
+  greaterThanZ("6").
+  greaterThanZ("7").
+  greaterThanZ("8").
+  greaterThanZ("9").
+  greaterThanZ("10").
+  greaterThanZ("11").
+  greaterThanZ("12").
+  greaterThanZ("13").
+  greaterThanZ("14").
+  greaterThanZ("15").
+  greaterThanZ("16").
+  greaterThanZ("17").
+  greaterThanZ("18").
+  greaterThanZ("19").
+  greaterThanZ("20").*/
+
+  println(ack.solve())
 }
 
 def msp() = {
@@ -89,7 +85,7 @@ def msp() = {
 }
 
 def run(): Unit = {
-  given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new CollectionsStorageManager())
+  given engine: ExecutionEngine = new NaiveExecutionEngine(new RelationalStorageManager())
   val program = Program(engine)
   val edge = program.relation[Constant]("edge")
   val isBefore = program.relation[Constant]("isBefore")

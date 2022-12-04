@@ -4,7 +4,6 @@ import datalog.execution.{ExecutionEngine, NaiveExecutionEngine, SemiNaiveExecut
 import datalog.storage.{CollectionsStorageManager, IndexedCollStorageManager, RelationalStorageManager}
 import graphs.{EDBFromFile, TestGraph}
 
-import scala.quoted.Quotes
 import java.nio.file.*
 
 abstract class TestThief(p: () => Program, t: String) extends munit.FunSuite {

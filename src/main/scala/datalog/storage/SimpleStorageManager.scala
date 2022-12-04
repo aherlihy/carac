@@ -136,12 +136,6 @@ abstract class SimpleStorageManager(ns: NS) extends StorageManager(ns) {
     val constants = mutable.Map[Int, StorageConstant]() // position => constant
     val variables = mutable.Map[Int, Int]() // v.oid => position
 
-    // variable ids in the head atom
-    val headVars = rule(0).terms.flatMap {
-      case v: Variable => Some(v.oid)
-      case _ => None
-    }
-
     val body = rule.drop(1)
 
     val deps = body.map(a => a.rId) // TODO: should this be a set?
@@ -164,6 +158,13 @@ abstract class SimpleStorageManager(ns: NS) extends StorageManager(ns) {
         matches.map(_._2)
       )
       .toIndexedSeq
+
+    // variable ids in the head atom
+    val headVars = rule(0).terms.flatMap {
+      case v: Variable => Some(v.oid)
+      case _ => None
+    }
+
     val projects = headVars.map(vId =>
       if (!variables.contains(vId)) throw new Exception(f"Free variable in rule head with varId $vId")
       variables(vId)

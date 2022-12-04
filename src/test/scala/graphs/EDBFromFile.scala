@@ -40,7 +40,7 @@ case class EDBFromFile(program: Program, directory: Path) extends TestGraph {
 // TODO: a reflection way to do this?
   description match {
     case "topological_ordering" => graphs.topological_ordering.run(program)
-    case "ackermann" => graphs.ackermann.run(program)
+    case "ackermann" => ackermann.run(program)
     case "andersen" => andersen.run(program)
     case "clique" => graphs.clique.run(program)
     case _ => throw new Exception(f"carac program undefined for '$description'")
