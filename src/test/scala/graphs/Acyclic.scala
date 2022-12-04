@@ -33,6 +33,6 @@ case class Acyclic(program: Program) extends TestGraph {
     Vector("c")
   ))
   queries(queryB.name) = Query("oneHop between a and c", queryB, Set(
-    Vector("b", "b") // TODO: should this be (b, b) or (b)?
+    Vector("b")
   ))
 }

@@ -45,14 +45,16 @@ class RelationalStorageManager(ns: NS = NS()) extends SimpleStorageManager(ns) {
     debug("SPJU:", () => "r=" + ns(rId) + " keys=" + printer.snPlanToString(keys) + " knownDBId" + knownDbId)
     val plan = Union(
       keys.map(k => // for each idb rule
+        var idx = -1 // if dep is featured more than once, only us delta once, but at a different pos each time
         Union(
           k.deps.map(d => {
             var found = false
             Project(
               Join(
-                k.deps.map(r => {
-                  if (r == d && !found) // TODO: this needs to only happen once per, even if r is featured twice
+                k.deps.zipWithIndex.map((r, i) => {
+                  if (r == d && !found && i > idx)
                     found = true
+                    idx = i
                     Scan(deltaDB(knownDbId)(r), r)
                   else
                     Scan(edbs.getOrElse(r, derivedDB(knownDbId)(r)), r)

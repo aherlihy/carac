@@ -1,6 +1,7 @@
 package datalog.storage
 
-import datalog.dsl.{Atom, Constant, Variable, Term}
+import datalog.dsl.{Atom, Constant, Term, Variable}
+import datalog.tools.Debug.debug
 
 import scala.collection.{immutable, mutable}
 
@@ -132,41 +133,46 @@ abstract class SimpleStorageManager(ns: NS) extends StorageManager(ns) {
    * @param rule - Includes the head at idx 0
    */
   inline def getOperatorKey(rule: Row[StorageAtom]): JoinIndexes = {
-    val constants = mutable.Map[Int, StorageConstant]()
-    var projects = IndexedSeq[Int]()
+    val constants = mutable.Map[Int, StorageConstant]() // position => constant
+    val variables = mutable.Map[Int, Int]() // v.oid => position
 
     // variable ids in the head atom
-    val headVars = mutable.HashSet() ++ rule(0).terms.flatMap(t => t match {
-      case v: Variable => Seq(v.oid)
-      case _ => Seq()
-    })
+    val headVars = rule(0).terms.flatMap {
+      case v: Variable => Some(v.oid)
+      case _ => None
+    }
 
     val body = rule.drop(1)
 
-    val deps = body.map(a => a.rId)
+    val deps = body.map(a => a.rId) // TODO: should this be a set?
 
-    val vars = body
+    val bodyVars = body
       .flatMap(a => a.terms)
-      .zipWithIndex
+      .zipWithIndex // terms, position
       .groupBy(z => z._1)
-      .filter((term, matches) =>
+      .filter((term, matches) => // matches = Seq[(var, pos1), (var, pos2), ...]
         term match {
           case v: StorageVariable =>
-            if (headVars.contains(v.oid)) projects = projects ++ matches.map(_._2)
+            variables(v.oid) = matches.head._2 // first idx for a variable
             matches.length >= 2
           case c: StorageConstant =>
             matches.foreach((_, idx) => constants(idx) = c)
             false
         }
       )
-      .map((term, matches) =>
+      .map((term, matches) => // get rid of groupBy elem in result tuple
         matches.map(_._2)
       )
       .toIndexedSeq
-    JoinIndexes(vars, constants.toMap, projects, deps)
+    val projects = headVars.map(vId =>
+      if (!variables.contains(vId)) throw new Exception(f"Free variable in rule head with varId $vId")
+      variables(vId)
+    )
+    JoinIndexes(bodyVars, constants.toMap, projects, deps)
   }
 
   def getOperatorKeys(rId: Int): Table[JoinIndexes] = {
+    if (!idbs.contains(rId)) throw new Exception("EDB '" + ns(rId) + "' has no facts")
     idbs(rId).filter(r => r.nonEmpty).map(rule => getOperatorKey(rule))
   }
 }

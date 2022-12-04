@@ -6,7 +6,7 @@ import datalog.tools.Debug.debug
 
 import scala.collection.mutable
 
-class NaiveExecutionEngine(val storageManager: /*TODO: change back to StorageManager, rn for Intellij*/ StorageManager) extends ExecutionEngine {
+class NaiveExecutionEngine(val storageManager: StorageManager) extends ExecutionEngine {
   import storageManager.EDB
   val precedenceGraph = new PrecedenceGraph(storageManager.ns)
 
@@ -31,14 +31,13 @@ class NaiveExecutionEngine(val storageManager: /*TODO: change back to StorageMan
   /**
    * Take the union of each evalRule for each IDB predicate
    */
-  def eval(rId: Int, relations: Seq[Int], newDbId: Int, knownDbId: Int): EDB = {
+  def eval(rId: Int, relations: Seq[Int], newDbId: Int, knownDbId: Int): Unit = {
     debug("in eval: ", () => "rId=" + storageManager.ns(rId) + " relations=" + relations.map(r => storageManager.ns(r)).mkString("[", ", ", "]") + " incr=" + newDbId + " src=" + knownDbId)
     relations.foreach(r => {
       val res = evalRule(r, knownDbId)
       debug("result of evalRule=", () => storageManager.printer.factToString(res))
       storageManager.resetDerived(r, newDbId, res) // overwrite res to the derived DB
     })
-    storageManager.getDerivedDB(rId, newDbId)
   }
 
   def solve(rId: Int): Set[Seq[Term]] = {
@@ -53,7 +52,7 @@ class NaiveExecutionEngine(val storageManager: /*TODO: change back to StorageMan
     var newDbId = storageManager.initEvaluation() // place to store new facts
     var count = 0
 
-
+    debug("solving relation: " + storageManager.ns(rId) + " order of relations=", relations.toString)
     var setDiff = true
     while (setDiff) {
       val t = knownDbId

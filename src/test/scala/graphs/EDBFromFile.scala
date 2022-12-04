@@ -5,16 +5,18 @@ import datalog.dsl.{Constant, Program, Relation, Term}
 import scala.collection.mutable
 import java.nio.file.{Files, Path, Paths}
 import scala.io.Source
-import scala.jdk.StreamConverters._
-
+import scala.jdk.StreamConverters.*
+//import scala.quoted.*
+//import scala.quoted.staging.*
 
 case class EDBFromFile(program: Program, directory: Path) extends TestGraph {
-  val description = directory.getFileName.toString
+  val description: String = directory.getFileName.toString
   val queries: mutable.Map[String, Query] = mutable.Map[String, Query]()
 
   // import EDBs
-  val factdir = Paths.get(directory.toString, "facts")
-  println("EDBFromFile class constructor, file=" + directory.getFileName)
+  private val factdir = Paths.get(directory.toString, "facts")
+  if (!Files.exists(factdir)) throw new Exception(f"Missing fact directory '$factdir'")
+
   Files.walk(factdir, 1)
     .filter(p => Files.isRegularFile(p))
     .forEach(f => {
@@ -29,20 +31,25 @@ case class EDBFromFile(program: Program, directory: Path) extends TestGraph {
       reader.close()
     })
 
-//  idbs(program) // generate IDBs, in theory could do this also by parsing
-  val edge = program.namedRelation("edge")
-  val isBefore = program.relation[Constant]("is_before")
-  val isAfter = program.relation[Constant]("is_after")
-  val x, y, z = program.variable()
+  // define IDBs
 
-  isBefore(x, y) :- edge(x, y)
-  isBefore(x, y) :- (isBefore(x, z), isBefore(z, y))
-
-  isAfter(x, y) :- edge(y, x)
-  isAfter(x, y) :- (isAfter(z, x), isAfter(y, z))
+//  private val idbFile = Paths.get(directory.toString, "carac_idb.scala")
+//  private val idbCode = new String(Files.readAllBytes(idbFile))
+//  given Compiler = Compiler.make(getClass.getClassLoader)
+//  private val idbQuote = '{ }
+// TODO: a reflection way to do this?
+  description match {
+    case "topological_ordering" => graphs.topological_ordering.run(program)
+    case "ackermann" => graphs.ackermann.run(program)
+    case "andersen" => andersen.run(program)
+    case "clique" => graphs.clique.run(program)
+    case _ => throw new Exception(f"carac program undefined for '$description'")
+  }
 
   // Generate queries
-  Files.walk(directory, 1)
+  private val expDir = Paths.get(directory.toString, "expected")
+  if (!Files.exists(expDir)) throw new Exception(f"Missing expected directory '$expDir'")
+  Files.walk(expDir, 1)
     .filter(p => Files.isRegularFile(p) && p.toString.endsWith(".csv"))
     .forEach(f => {
       val rule = f.getFileName.toString.replaceFirst("[.][^.]+$", "")

@@ -66,7 +66,7 @@ trait StorageManager(val ns: NS) {
       "{ variables:" + varIndexes.map(s => s.mkString("(", ", ", ")")).mkString("[", ", ", "]") +
         ", consts:" + constIndexes.mkString("[", ", ", "]") +
         ", project:" + projIndexes.mkString("[", ", ", "]") +
-        ", src:" + deps.mkString("[", ", ", "]") + " }"
+        ", deps:" + deps.mkString("[", ", ", "]") + " }"
   }
   def getOperatorKeys(rId: Int): Table[JoinIndexes]
 

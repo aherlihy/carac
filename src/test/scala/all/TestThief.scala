@@ -4,54 +4,66 @@ import datalog.execution.{ExecutionEngine, NaiveExecutionEngine, SemiNaiveExecut
 import datalog.storage.{CollectionsStorageManager, IndexedCollStorageManager, RelationalStorageManager}
 import graphs.{EDBFromFile, TestGraph}
 
+import scala.quoted.Quotes
 import java.nio.file.*
-//import java.io.File
 
-class TestThief extends munit.FunSuite {
-  val partialDir = Paths.get("src", "test", "scala", "graphs", "fromFile", "partial")
-  val graph = new Fixture[TestGraph]("Current tests") {
+abstract class TestThief(p: () => Program, t: String) extends munit.FunSuite {
+  private val srcDir = Paths.get("src", "test", "scala", "graphs", "fromFile", t)
+
+  val graph: Fixture[TestGraph] = new Fixture[TestGraph]("PartialTests") {
     var graph: TestGraph = null
     var program: Program = null
-    def apply() = graph
+    def apply(): TestGraph = graph
 
     override def beforeEach(context: BeforeEach): Unit = {
-      println("in beforeEach, arg=" + context.test.name)
-      program = new Program(new SemiNaiveExecutionEngine(new CollectionsStorageManager()))
-      graph = EDBFromFile(program, Paths.get(partialDir.toString, context.test.name))
-    }
-    override def afterEach(context: AfterEach): Unit = {
-      // Always gets called, even if test failed.
-      println("in afterEach, arg=" + context.test.name)
+      program = p()
+      graph = EDBFromFile(program, Paths.get(srcDir.toString, context.test.name))
     }
   }
   override def munitFixtures = List(graph)
 
-//  test("exists") {
-//     `file` is the temporary file that was created for this test case.
-//    assert(Files.exists(file()))
-//  }
-
-  partialDir.toFile
+    srcDir.toFile
     .listFiles
     .filter(_.isDirectory)
     .map(_.getName)
-    .map(testdir => {
-      //      test(testdir) {
-      //        println("in test, graph()=" + graph())
-      //        assert(true)
-      //      }
-
+    .foreach(testdir => {
       test(testdir) {
         val g = graph()
-        println("in test, graph=" + g)
         g.queries.map((hint, query) => {
-          println("RUNNING QUERY " + g.description + "." + query.description)
           assertEquals(
             query.relation.solve(),
             query.solution,
-            hint
+            f"relation '$hint' did not match'"
           )
+          println(f"passed: relation $hint") // get around munit lack of nesting
         })
       }
     })
 }
+
+// better way to instantiate type w reflection?
+class TT_PARTIAL_DN_R extends TestThief(() => new Program(
+  new SemiNaiveExecutionEngine(
+    new RelationalStorageManager())), "partial")
+class TT_PARTIAL_N_R extends TestThief(() => new Program(
+  new NaiveExecutionEngine(
+    new RelationalStorageManager())), "partial")
+class TT_PARTIAL_SN_IC extends TestThief(() => new Program(
+  new SemiNaiveExecutionEngine(
+    new IndexedCollStorageManager())), "partial")
+class TT_PARTIAL_N_IC extends TestThief(() => new Program(
+  new NaiveExecutionEngine(
+    new IndexedCollStorageManager())), "partial")
+
+class TT_COMPLETE_SN_R extends TestThief(() => new Program(
+  new SemiNaiveExecutionEngine(
+    new RelationalStorageManager())), "complete")
+class TT_COMPLETE_N_R extends TestThief(() => new Program(
+  new NaiveExecutionEngine(
+    new RelationalStorageManager())), "complete")
+class TT_COMPLETE_SN_IC extends TestThief(() => new Program(
+  new SemiNaiveExecutionEngine(
+    new IndexedCollStorageManager())), "complete")
+class TT_COMPLETE_N_IC extends TestThief(() => new Program(
+  new NaiveExecutionEngine(
+    new IndexedCollStorageManager())), "complete")

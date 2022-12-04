@@ -1,11 +1,13 @@
 package datalog
 
 import datalog.execution.{ExecutionEngine, NaiveExecutionEngine, SemiNaiveExecutionEngine}
-import datalog.dsl.Program
+import datalog.dsl.{Program, Constant}
 import datalog.storage.{CollectionsStorageManager, IndexedCollStorageManager, RelationalStorageManager}
-import scala.util.Random
 
+import scala.util.Random
 import scala.collection.mutable
+import scala.quoted.*
+import scala.quoted.staging.*
 
 def tc() = {
   println("naive+coll, before+after")
@@ -45,70 +47,65 @@ def tc() = {
   // TODO: start here, step into isAfter
 }
 
-def soufex() = {
-  given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new CollectionsStorageManager())
-  val program = Program(engine)
-  val e = program.relation[Int]("e")
-  val a = program.relation[Int]("a")
-  val b = program.relation[Int]("b")
-  val c = program.relation[Int]("c")
-  val d = program.relation[Int]("d")
-
-  val x = program.variable()
-
-  a(x) :- (b(x), c(x))
-  b(1) :- ()
-  b(x) :- (c(x), d(x))
-  c(2) :- ()
-  c(x) :- (b(x), d(x))
-  d(3) :- ()
-  e(4) :- ()
-  println("solve=" + e.solve())
-}
-
-def topsortSouff() = {
+def souff() = {
+  println("SEMINAIVE")
   given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new RelationalStorageManager())
   val program = Program(engine)
-  val edge = program.relation[String](" edge")
-  val isBefore = program.relation[String]("isBefore")
-  val isAfter = program.relation[String]("isAfter")
-
+  val edge = program.relation[String]("edge")
+  val reachable = program.relation[Constant]("reachable")
+  val same_clique = program.relation[Constant]("same_clique")
   val x, y, z = program.variable()
 
-  edge("A",	"B") :- ()
-  edge("A",	"D") :- ()
-  edge("A",	"E") :- ()
-  edge("B",	"C") :- ()
-  edge("C",	"D") :- ()
-  edge("C",	"E") :- ()
-  edge("D",	"E") :- ()
-  edge("E",	"F") :- ()
-  edge("F",	"G") :- ()
-  edge("F",	"H") :- ()
-  edge("F",	"I") :- ()
-  edge("G",	"J") :- ()
-  edge("H",	"K") :- ()
-  edge("I",	"L") :- ()
-  edge("J",	"M") :- ()
-  edge("K",	"M") :- ()
-  edge("L",	"M") :- ()
+  reachable(x, y) :- edge(x, y)
+  reachable(x, y) :- ( edge(x, z), reachable(z, y) )
+  same_clique(x, y) :- ( reachable(x, y), reachable(y, x) )
 
-  // Vertex x is before vertex y if the graph has an edge from x to y.
-//  isBefore(x, y) :- edge(x, y)
+    edge("0", "1") :- ()
+    edge("1", "2") :- ()
+    edge("2", "0") :- ()
+//    edge("3", "0") :- ()
+//  edge("1", "2") :- ()
+//  edge("2", "3") :- ()
+//  edge("3", "4") :- ()
+//  edge("4", "5") :- ()
+//  edge("5", "0") :- ()
+//  edge("5", "6") :- ()
+//  edge("6", "7") :- ()
+//  edge("7", "8") :- ()
+//  edge("8", "9") :- ()
+//  edge("9", "10") :- ()
+//  edge("10", "7") :- ()
 
-  // Vertex x is before vertex y if some vertex z is before x and z is before y.
-//  isBefore(x, y) :- ( isBefore(x, z), edge(z, y) )
+  println("solve=" + same_clique.solve().size)//.map(f => f.head.toString + "\t" + f.last.toString).mkString("", "\n", ""))
 
-  // Vertex x is after vertex y if the graph has an edge from y to x.
-  isAfter(x, y) :- edge(y, x)
+}
 
-  // Vertex x is after vertex y if some vertex z is after x and y is after z.
-  isAfter(x, y) :- ( isAfter(z, x), isAfter(y, z) )
+def msp() = {
 
-  println("solve=" + isAfter.solve().map(f => f.head.toString + "\t" + f.last.toString).mkString("", "\n", ""))
+//  given Compiler = Compiler.make(getClass.getClassLoader)
+//  val str = "println(100)"
+//  def expr(using Quotes) = str
+//  println(run(expr))
+}
 
+def run(): Unit = {
+  given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new CollectionsStorageManager())
+  val program = Program(engine)
+  val edge = program.relation[Constant]("edge")
+  val isBefore = program.relation[Constant]("isBefore")
+//  val isAfter = program.relation[Constant]("isAfter")
+  val x, y, z = program.variable()
+
+  edge("a", "b") :- ()
+  isBefore(x, y) :- edge(x, y)
+  isBefore(x, y) :- (isBefore(x, z), isBefore(z, y))
+
+  println(isBefore.solve())
+
+//  isAfter(x, y) :- edge(y, x)
+//  isAfter(x, y) :- (isAfter(z, x), isAfter(y, z))
 }
 
 @main def main = {
-  tc()
+  souff()
 }

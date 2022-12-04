@@ -39,6 +39,7 @@ class Printer[S <: StorageManager](val s: S) {
   def snPlanToString(keys: s.Table[s.JoinIndexes]): String = {
     "UNION( " +
       keys.map(k =>
+        var idx = -1
         "UNION(" +
           k.deps.map(d => {
             var found = false
@@ -46,12 +47,13 @@ class Printer[S <: StorageManager](val s: S) {
               "JOIN" +
               k.varIndexes.map(v => v.mkString("$", "==$", "")).mkString("[", ",", "]") +
               k.constIndexes.map((k, v) => k + "==" + v).mkString("{", "&&", "}") +
-              k.deps.map(n => {
-                if (n == d && !found)
+              k.deps.zipWithIndex.map((n, i) => {
+                if (n == d && !found && i > idx)
                   found = true
-                  "delta-" + s.ns(n)
+                  idx = i
+                  "delta[known][" + s.ns(n) + "]"
                 else
-                  if(s.edbs.contains(n)) "edbs-" + s.ns(n) else "" + s.ns(n)
+                  if(s.edbs.contains(n)) "edbs[" + s.ns(n) + "]" else "derived[known][" + s.ns(n) + "]"
               }).mkString("(", "*", ")") +
               " )"
           }).mkString("[ ", ", ", " ]") + " )"

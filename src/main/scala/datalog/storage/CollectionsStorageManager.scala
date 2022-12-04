@@ -47,12 +47,14 @@ class CollectionsStorageManager(ns: NS = new NS()) extends SimpleStorageManager(
   def SPJU(rId: Int, keys: Table[JoinIndexes], knownDbId: Int): EDB = {
     debug("SPJU:", () => "r=" + ns(rId) + " keys=" + printer.snPlanToString(keys) + " knownDBId" + knownDbId)
       keys.flatMap(k => // for each idb rule
+        var idx = -1 // if dep is featured more than once, only us delta once, but at a different pos each time
         k.deps.flatMap(d => {
           var found = false // TODO: perhaps need entry in derived/delta for each atom instead of each relation?
           joinHelper(
-            k.deps.map(r =>
-              if (r == d && !found) {
-                found = true // TODO: if found more than once can potentially get rid of entire stmt
+            k.deps.zipWithIndex.map((r, i) =>
+              if (r == d && !found && i > idx) {
+                found = true
+                idx = i
                 deltaDB(knownDbId)(r)
               }
               else {
