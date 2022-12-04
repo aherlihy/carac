@@ -6,10 +6,10 @@ import graphs.{EDBFromFile, TestGraph}
 
 import java.nio.file.*
 
-abstract class TestThief(p: () => Program, t: String) extends munit.FunSuite {
+abstract class TestThief(p: () => Program, t: String, isNaive: Boolean = false) extends munit.FunSuite {
   private val srcDir = Paths.get("src", "test", "scala", "graphs", "fromFile", t)
 
-  val graph: Fixture[TestGraph] = new Fixture[TestGraph]("PartialTests") {
+  val graph: Fixture[TestGraph] = new Fixture[TestGraph]("Graph") {
     var graph: TestGraph = null
     var program: Program = null
     def apply(): TestGraph = graph
@@ -29,12 +29,16 @@ abstract class TestThief(p: () => Program, t: String) extends munit.FunSuite {
       test(testdir) {
         val g = graph()
         g.queries.map((hint, query) => {
-          assertEquals(
-            query.relation.solve(),
-            query.solution,
-            f"relation '$hint' did not match'"
-          )
-          println(f"passed: relation $hint") // get around munit lack of nesting
+          if (!(query.skipNaive && isNaive)) {
+            assertEquals(
+              query.relation.solve(),
+              query.solution,
+              f"relation '$hint' did not match'"
+            )
+            println(f"passed: relation $testdir.$hint") // get around munit lack of nesting
+          } else {
+            println(f"skipped: $testdir.$hint")
+          }
         })
       }
     })
@@ -46,23 +50,23 @@ class TT_PARTIAL_DN_R extends TestThief(() => new Program(
     new RelationalStorageManager())), "partial")
 class TT_PARTIAL_N_R extends TestThief(() => new Program(
   new NaiveExecutionEngine(
-    new RelationalStorageManager())), "partial")
+    new RelationalStorageManager())), "partial", true)
 class TT_PARTIAL_SN_IC extends TestThief(() => new Program(
   new SemiNaiveExecutionEngine(
     new IndexedCollStorageManager())), "partial")
 class TT_PARTIAL_N_IC extends TestThief(() => new Program(
   new NaiveExecutionEngine(
-    new IndexedCollStorageManager())), "partial")
+    new IndexedCollStorageManager())), "partial", true)
 
 class TT_COMPLETE_SN_R extends TestThief(() => new Program(
   new SemiNaiveExecutionEngine(
     new RelationalStorageManager())), "complete")
 class TT_COMPLETE_N_R extends TestThief(() => new Program(
   new NaiveExecutionEngine(
-    new RelationalStorageManager())), "complete")
+    new RelationalStorageManager())), "complete", true)
 class TT_COMPLETE_SN_IC extends TestThief(() => new Program(
   new SemiNaiveExecutionEngine(
     new IndexedCollStorageManager())), "complete")
 class TT_COMPLETE_N_IC extends TestThief(() => new Program(
   new NaiveExecutionEngine(
-    new IndexedCollStorageManager())), "complete")
+    new IndexedCollStorageManager())), "complete", true)

@@ -160,15 +160,12 @@ abstract class SimpleStorageManager(ns: NS) extends StorageManager(ns) {
       .toIndexedSeq
 
     // variable ids in the head atom
-    val headVars = rule(0).terms.flatMap {
-      case v: Variable => Some(v.oid)
-      case _ => None
+    val projects = rule(0).terms.map {
+      case v: Variable =>
+        if (!variables.contains(v.oid)) throw new Exception(f"Free variable in rule head with varId $v.oid")
+        ("v", variables(v.oid))
+      case c: Constant => ("c", c)
     }
-
-    val projects = headVars.map(vId =>
-      if (!variables.contains(vId)) throw new Exception(f"Free variable in rule head with varId $vId")
-      variables(vId)
-    )
     JoinIndexes(bodyVars, constants.toMap, projects, deps)
   }
 

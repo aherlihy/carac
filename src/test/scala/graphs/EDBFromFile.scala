@@ -9,6 +9,11 @@ import scala.jdk.StreamConverters.*
 //import scala.quoted.*
 //import scala.quoted.staging.*
 
+abstract trait TestIDB {
+  def run(program: Program): Unit
+  val skipNaive = false // for tests that will run out of memory for naive, so skip
+}
+
 case class EDBFromFile(program: Program, directory: Path) extends TestGraph {
   val description: String = directory.getFileName.toString
   val queries: mutable.Map[String, Query] = mutable.Map[String, Query]()
@@ -38,13 +43,15 @@ case class EDBFromFile(program: Program, directory: Path) extends TestGraph {
 //  given Compiler = Compiler.make(getClass.getClassLoader)
 //  private val idbQuote = '{ }
 // TODO: a reflection way to do this?
-  description match {
-    case "topological_ordering" => graphs.topological_ordering.run(program)
-    case "ackermann" => ackermann.run(program)
-    case "andersen" => andersen.run(program)
-    case "clique" => graphs.clique.run(program)
+  private val idbProgram = description match {
+    case "topological_ordering" => topological_ordering
+    case "ackermann" => ackermann
+    case "andersen" => andersen
+    case "clique" => clique
     case _ => throw new Exception(f"carac program undefined for '$description'")
   }
+  idbProgram.run(program)
+
 
   // Generate queries
   private val expDir = Paths.get(directory.toString, "expected")
@@ -60,7 +67,8 @@ case class EDBFromFile(program: Program, directory: Path) extends TestGraph {
       queries(rule) = Query(
         rule,
         program.namedRelation[Constant](rule),
-        res
+        res,
+        idbProgram.skipNaive
       )
       reader.close()
     })

@@ -2,7 +2,7 @@ package graphs
 
 import datalog.dsl.{Program, Constant}
 
-object andersen {
+object andersen extends TestIDB {
  def run(program: Program): Unit = {
   val addressOf = program.namedRelation("addressOf")
   val assign = program.namedRelation("assign")

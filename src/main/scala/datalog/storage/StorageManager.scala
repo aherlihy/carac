@@ -55,12 +55,12 @@ trait StorageManager(val ns: NS) {
    *
    * @param varIndexes - indexes of repeated variables within the body
    * @param constIndexes - indexes of constants within the body
-   * @param projIndexes - indexes of variables within the body that are present in the head
+   * @param projIndexes - for each term in the head, either ("c", the constant value) or ("v", the first index of the variable within the body)
    * @param deps - set of relations directly depended upon by this rule
    */
   case class JoinIndexes(varIndexes: IndexedSeq[IndexedSeq[Int]],
                          constIndexes: Map[Int, StorageConstant],
-                         projIndexes: IndexedSeq[Int],
+                         projIndexes: IndexedSeq[(String, StorageConstant)],
                          deps: Seq[Int]) {
     override def toString: String =
       "{ variables:" + varIndexes.map(s => s.mkString("(", ", ", ")")).mkString("[", ", ", "]") +

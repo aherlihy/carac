@@ -26,7 +26,7 @@ class Printer[S <: StorageManager](val s: S) {
   def planToString(keys: s.Table[s.JoinIndexes]): String = {
     "Union( " +
       keys.map(k =>
-        "Project" + k.projIndexes.mkString("[", " ", "]") + "( " +
+        "Project" + k.projIndexes.map((typ, v) => f"$typ$v").mkString("[", " ", "]") + "( " +
           "JOIN" +
           k.varIndexes.map(v => v.mkString("$", "==$", "")).mkString("[", ",", "]") +
           k.constIndexes.map((k, v) => k + "==" + v).mkString("{", "&&", "}") +
@@ -43,7 +43,7 @@ class Printer[S <: StorageManager](val s: S) {
         "UNION(" +
           k.deps.map(d => {
             var found = false
-            "PROJECT" + k.projIndexes.mkString("[", " ", "]") + "( " +
+            "PROJECT" + k.projIndexes.map((typ, v) => f"$typ$v").mkString("[", " ", "]") + "( " +
               "JOIN" +
               k.varIndexes.map(v => v.mkString("$", "==$", "")).mkString("[", ",", "]") +
               k.constIndexes.map((k, v) => k + "==" + v).mkString("{", "&&", "}") +

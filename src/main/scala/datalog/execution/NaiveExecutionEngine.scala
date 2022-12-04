@@ -63,7 +63,7 @@ class NaiveExecutionEngine(val storageManager: StorageManager) extends Execution
       debug("initial state @ " + count, storageManager.printer.toString)
       count += 1
       eval(rId, relations, newDbId, knownDbId)
-      debug("state after eval=", storageManager.printer.toString)
+//      debug("state after eval=", storageManager.printer.toString)
 
       setDiff = !storageManager.compareDerivedDBs(newDbId, knownDbId)
 

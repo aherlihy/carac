@@ -51,7 +51,12 @@ class CollectionsStorageManager(ns: NS = new NS()) extends SimpleStorageManager(
               }
             ), k)
             .map(t =>
-              k.projIndexes.flatMap(idx => t.lift(idx))
+              k.projIndexes.flatMap((typ, idx) =>
+                typ match {
+                  case "v" => t.lift(idx.asInstanceOf[Int])
+                  case "c" => Some(idx)
+                  case _ => throw new Exception("Internal error: projecting something that is not a constant nor a variable")
+                })
             )
         }).toSet
         )
@@ -62,7 +67,13 @@ class CollectionsStorageManager(ns: NS = new NS()) extends SimpleStorageManager(
       joinHelper(
         k.deps.map(r => edbs.getOrElse(r, derivedDB(knownDbId)(r))), k
       ).map(t =>
-        k.projIndexes.flatMap(idx => t.lift(idx))
+        k.projIndexes.flatMap((typ, idx) =>
+          typ match {
+            case "v" => t.lift(idx.asInstanceOf[Int])
+            case "c" => Some(idx)
+            case _ => throw new Exception("Internal error: projecting something that is not a constant nor a variable")
+          }
+        )
       ).toSet
     })
   }

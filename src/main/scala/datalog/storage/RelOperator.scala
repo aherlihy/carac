@@ -111,7 +111,7 @@ class RelationalOperators[S <: StorageManager](val storageManager: S) {
     def close(): Unit = input.close()
   }
 
-  case class Project(input: RelOperator, ixs: Seq[Int]) extends RelOperator {
+  case class Project(input: RelOperator, ixs: Seq[(String, Constant)]) extends RelOperator {
     def open(): Unit = {
 //      debug("PROJ[" + ixs + "]")
       input.open()
@@ -124,7 +124,12 @@ class RelationalOperators[S <: StorageManager](val storageManager: S) {
       input.next() match {
         case Some(t) =>
           Some(
-            ixs.flatMap(idx => t.lift(idx)).asInstanceOf[edbRow]
+            ixs.flatMap((typ, idx) =>
+              typ match {
+                case "v" => t.lift(idx.asInstanceOf[Int])
+                case "c" => Some(idx)
+                case _ => throw new Exception("Internal error: projecting something that is not a constant nor a variable")
+              }).asInstanceOf[edbRow]
           )
         case _ => NilTuple
       }
@@ -141,10 +146,8 @@ class RelationalOperators[S <: StorageManager](val storageManager: S) {
     private var index = 0
 
     def open(): Unit = {
-//      println("====IN JOIN OPEN")
       index = 0
       val inputList: Seq[mutable.ArrayBuffer[edbRow]] = inputs.map(i => i.toList())
-//      println("\tinputs=" + inputs)
 
       outputRelation = inputList
         .reduceLeft((outer, inner) => {
@@ -155,15 +158,17 @@ class RelationalOperators[S <: StorageManager](val storageManager: S) {
           })
         })
         .filter(joined =>
-//          println("\t\tjoined=" + joined)
-          (variables.isEmpty || variables.forall(condition =>
-            condition.forall(c => joined(c) == joined(condition.head))
+          (variables.isEmpty ||
+            variables.forall(condition =>
+              condition.forall(c =>
+                joined(c) == joined(condition.head)
+            )
           )) &&
-          (constants.isEmpty || constants.forall((idx, const) =>
-            joined(idx) == const
+          (constants.isEmpty ||
+            constants.forall((idx, const) =>
+              joined(idx) == const
           ))
         )
-      println("====END JOIN OPEN")
     }
 
     def next(): Option[edbRow] = {

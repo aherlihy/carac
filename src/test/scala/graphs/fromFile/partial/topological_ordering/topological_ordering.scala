@@ -2,7 +2,7 @@ package graphs
 
 import datalog.dsl.{Program, Constant}
 
-object topological_ordering {
+object topological_ordering extends TestIDB {
   def run(program: Program): Unit = {
     val edge = program.namedRelation("edge")
     val isBefore = program.relation[Constant]("is_before")
