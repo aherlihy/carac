@@ -33,11 +33,11 @@ abstract class TestThief(p: () => Program, t: String, isNaive: Boolean = false) 
             assertEquals(
               query.relation.solve(),
               query.solution,
-              f"relation '$hint' did not match'"
+              s"relation '$hint' did not match'"
             )
-            println(f"passed: relation $testdir.$hint") // get around munit lack of nesting
+            println(s"passed: relation $testdir.$hint") // get around munit lack of nesting
           } else {
-            println(f"skipped: $testdir.$hint")
+            println(s"skipped: $testdir.$hint")
           }
         })
       }
@@ -45,9 +45,6 @@ abstract class TestThief(p: () => Program, t: String, isNaive: Boolean = false) 
 }
 
 // better way to instantiate type w reflection?
-class TT_PARTIAL_DN_R extends TestThief(() => new Program(
-  new SemiNaiveExecutionEngine(
-    new RelationalStorageManager())), "partial")
 class TT_PARTIAL_N_R extends TestThief(() => new Program(
   new NaiveExecutionEngine(
     new RelationalStorageManager())), "partial", true)

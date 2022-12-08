@@ -4,8 +4,7 @@ import java.util.concurrent.TimeUnit
 import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.Blackhole
 import datalog.dsl.*
-//import datalog.execution.old_manual_opt.{ManuallyCollapseParent, ManuallyInlinedExternal, ManuallyInlinedInternal}
-import datalog.execution.{ExecutionEngine, /*ManuallyInlinedEE, ManuallyInlinedUnrolledEE,*/ NaiveExecutionEngine, SemiNaiveExecutionEngine}
+import datalog.execution.{ExecutionEngine,NaiveExecutionEngine, SemiNaiveExecutionEngine}
 import datalog.storage.{CollectionsStorageManager, IndexedCollStorageManager, RelationalStorageManager}
 
 import scala.collection.mutable
@@ -29,10 +28,6 @@ class Bench {
     val edge2a = program.relation[String]("edge2a")
 
     val x, y, z = program.variable()
-//
-//    e("a", "b") :- ()
-//    e("b", "c") :- ()
-//    e("c", "d") :- ()
 
     for i <- 0 until 50 do
       e(
@@ -42,7 +37,6 @@ class Bench {
 
     p(x, y) :- e(x, y)
     p(x, z) :- ( e(x, y), p(y, z) )
-//    path2a(x) :- p("a", x)
 
 
     def solve[T <: Constant](rel: Relation[T]): Unit =
@@ -74,30 +68,8 @@ class Bench {
 //    given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new CollectionsStorageManager())
 //    transitiveClosure(engine, blackhole)
 //
-//  @Benchmark def transitiveClosure_manually_inlined_collections(blackhole: Blackhole): Unit =
-//    given engine: ExecutionEngine = new ManuallyInlinedEE(new CollectionsStorageManager())
-//    transitiveClosure(engine, blackhole)
-//
-//  @Benchmark def transitiveClosure_manually_inline_unrolled_collections(blackhole: Blackhole): Unit =
-//    given engine: ExecutionEngine = new ManuallyInlinedUnrolledEE(new CollectionsStorageManager())
-//    transitiveClosure(engine, blackhole)
-//
 
   @Benchmark def transitiveClosure_semiNaive_collections_idx(blackhole: Blackhole): Unit =
     given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new IndexedCollStorageManager())
     transitiveClosure(engine, blackhole)
-
-//  @Benchmark def transitiveClosure_manually_inlined_collections_idx(blackhole: Blackhole): Unit =
-//    given engine: ExecutionEngine = new ManuallyInlinedEE(new IndexedCollStorageManager())
-//    transitiveClosure(engine, blackhole)
-//
-//  @Benchmark def transitiveClosure_manually_inline_unrolled_collections_idx(blackhole: Blackhole): Unit =
-//    given engine: ExecutionEngine = new ManuallyInlinedUnrolledEE(new IndexedCollStorageManager())
-    transitiveClosure(engine, blackhole)
-
-//  @Benchmark def transitiveClosure_manually_inlined_unrolled(blackhole: Blackhole): Unit =
-//    given engine: ExecutionEngine = new ManuallyInlinedUnrolledEE(new CollectionsStorageManager())
-//    transitiveClosure(engine, blackhole)
-
-
 }

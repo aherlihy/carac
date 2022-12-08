@@ -85,19 +85,19 @@ def msp() = {
 }
 
 def run(): Unit = {
-  given engine: ExecutionEngine = new NaiveExecutionEngine(new RelationalStorageManager())
-  val program = Program(engine)
-  val edge = program.relation[Constant]("edge")
-  val isBefore = program.relation[Constant]("isBefore")
-//  val isAfter = program.relation[Constant]("isAfter")
-  val x, y, z = program.variable()
-
-  edge("a", "b") :- ()
-  isBefore(x, y) :- edge(x, y)
-  isBefore(x, y) :- (isBefore(x, z), isBefore(z, y))
-
-  println(isBefore.solve())
-
+//  given engine: ExecutionEngine = new NaiveExecutionEngine(new RelationalStorageManager())
+//  val program = Program(engine)
+//  val edge = program.relation[Constant]("edge")
+//  val isBefore = program.relation[Constant]("isBefore")
+////  val isAfter = program.relation[Constant]("isAfter")
+//  val x, y, z = program.variable()
+//
+//  edge("a", "b") :- ()
+//  isBefore(x, y) :- edge(x, y)
+//  isBefore(x, y) :- (isBefore(x, z), isBefore(z, y))
+//
+//  println(isBefore.solve())
+//
 //  isAfter(x, y) :- edge(y, x)
 //  isAfter(x, y) :- (isAfter(z, x), isAfter(y, z))
 }

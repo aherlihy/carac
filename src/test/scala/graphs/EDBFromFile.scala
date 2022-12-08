@@ -37,25 +37,15 @@ case class EDBFromFile(program: Program, directory: Path) extends TestGraph {
     })
 
   // define IDBs
+  private val classz = this.getClass.getClassLoader.loadClass(s"graphs.$description")
+  private val constr = classz.getConstructor()
+  private val idbProgram = constr.newInstance().asInstanceOf[TestIDB]
 
-//  private val idbFile = Paths.get(directory.toString, "carac_idb.scala")
-//  private val idbCode = new String(Files.readAllBytes(idbFile))
-//  given Compiler = Compiler.make(getClass.getClassLoader)
-//  private val idbQuote = '{ }
-// TODO: a reflection way to do this?
-  private val idbProgram = description match {
-    case "topological_ordering" => topological_ordering
-    case "ackermann" => ackermann
-    case "andersen" => andersen
-    case "clique" => clique
-    case _ => throw new Exception(f"carac program undefined for '$description'")
-  }
   idbProgram.run(program)
-
 
   // Generate queries
   private val expDir = Paths.get(directory.toString, "expected")
-  if (!Files.exists(expDir)) throw new Exception(f"Missing expected directory '$expDir'")
+  if (!Files.exists(expDir)) throw new Exception(s"Missing expected directory '$expDir'")
   Files.walk(expDir, 1)
     .filter(p => Files.isRegularFile(p) && p.toString.endsWith(".csv"))
     .forEach(f => {

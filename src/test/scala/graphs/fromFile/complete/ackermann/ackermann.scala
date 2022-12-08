@@ -2,7 +2,7 @@ package graphs
 
 import datalog.dsl.{Program, Constant}
 
-object ackermann extends TestIDB {
+class ackermann extends TestIDB {
   def run(program: Program): Unit = {
     val succ = program.namedRelation("succ")
     val greaterThanZ = program.namedRelation("greaterThanZ")
