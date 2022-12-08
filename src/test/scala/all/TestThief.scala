@@ -45,25 +45,28 @@ abstract class TestThief(p: () => Program, t: String, isNaive: Boolean = false) 
 }
 
 // better way to instantiate type w reflection?
-class TT_PARTIAL_N_R extends TestThief(() => new Program(
+class TT_PARTIAL_SemiNaive_Relational extends TestThief(() => new Program(
+  new SemiNaiveExecutionEngine(
+    new RelationalStorageManager())), "partial")
+class TT_PARTIAL_Naive_Relational extends TestThief(() => new Program(
   new NaiveExecutionEngine(
     new RelationalStorageManager())), "partial", true)
-class TT_PARTIAL_SN_IC extends TestThief(() => new Program(
+class TT_PARTIAL_SemiNaive_IdxCollections extends TestThief(() => new Program(
   new SemiNaiveExecutionEngine(
     new IndexedCollStorageManager())), "partial")
-class TT_PARTIAL_N_IC extends TestThief(() => new Program(
+class TT_PARTIAL_Naive_IdxCollections extends TestThief(() => new Program(
   new NaiveExecutionEngine(
     new IndexedCollStorageManager())), "partial", true)
 
-class TT_COMPLETE_SN_R extends TestThief(() => new Program(
+class TT_COMPLETE_SemiNaive_Relational extends TestThief(() => new Program(
   new SemiNaiveExecutionEngine(
     new RelationalStorageManager())), "complete")
-class TT_COMPLETE_N_R extends TestThief(() => new Program(
+class TT_COMPLETE_Naive_Relational extends TestThief(() => new Program(
   new NaiveExecutionEngine(
     new RelationalStorageManager())), "complete", true)
-class TT_COMPLETE_SN_IC extends TestThief(() => new Program(
+class TT_COMPLETE_SemiNaive_IdxCollections extends TestThief(() => new Program(
   new SemiNaiveExecutionEngine(
     new IndexedCollStorageManager())), "complete")
-class TT_COMPLETE_N_IC extends TestThief(() => new Program(
+class TT_COMPLETE_Naive_IdxCollections extends TestThief(() => new Program(
   new NaiveExecutionEngine(
     new IndexedCollStorageManager())), "complete", true)
