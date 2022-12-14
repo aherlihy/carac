@@ -9,5 +9,7 @@ limitations under the License.
 
 The majority of the Carac codebase is new code, with the exception of the
 components mentioned below.
-* src.test.scala.graphs.fromFile.*: These tests were adapted and translated to Carac Datalog from the Souffle[1] "example" test suite. The original authors of these parts
+* src.test.scala.graphs.fromFile.*: These tests were adapted and translated to Carac Datalog from the Souffle[1] "example" test suite licensed under the UPL. The original authors of these parts
   include Bernhard Scholz and others in the Souffle development team.
+  
+ [1] https://github.com/souffle-lang/souffle/blob/master/LICENSE
