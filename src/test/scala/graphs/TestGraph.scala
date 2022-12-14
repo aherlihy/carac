@@ -9,4 +9,4 @@ trait TestGraph {
   val description: String
 }
 
-case class Query(description: String, relation: Relation[Constant], solution: Set[Seq[Term]], skipNaive: Boolean = false)
+case class Query(description: String, relation: Relation[Constant], solution: Set[Seq[Term]], skip: Seq[String] = Seq())

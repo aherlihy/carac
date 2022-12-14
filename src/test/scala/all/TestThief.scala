@@ -6,7 +6,7 @@ import graphs.{EDBFromFile, TestGraph}
 
 import java.nio.file.*
 
-abstract class TestThief(p: () => Program, t: String, isNaive: Boolean = false) extends munit.FunSuite {
+abstract class TestThief(p: () => Program, t: String, engine: String = "SemiNaive", storage: String = "Collections") extends munit.FunSuite {
   private val srcDir = Paths.get("src", "test", "scala", "graphs", "fromFile", t)
 
   val graph: Fixture[TestGraph] = new Fixture[TestGraph]("Graph") {
@@ -29,15 +29,17 @@ abstract class TestThief(p: () => Program, t: String, isNaive: Boolean = false) 
       test(testdir) {
         val g = graph()
         g.queries.map((hint, query) => {
-          if (!(query.skipNaive && isNaive)) {
+//          assume(!query.skip.contains(engine), s"skipping engine $engine")
+//          assume(!query.skip.contains(storage), s"skipping storage $storage")
+          if (!query.skip.contains(engine) && !query.skip.contains(storage)) {
             assertEquals(
               query.relation.solve(),
               query.solution,
               s"relation '$hint' did not match'"
             )
-            println(s"passed: relation $testdir.$hint") // get around munit lack of nesting
+//            println(s"passed: $testdir.$hint.solve()") // get around munit lack of nesting
           } else {
-            println(s"skipped: $testdir.$hint")
+            println(s"skipped: $testdir.$hint for config $engine$storage")
           }
         })
       }
@@ -47,26 +49,26 @@ abstract class TestThief(p: () => Program, t: String, isNaive: Boolean = false) 
 // better way to instantiate type w reflection?
 class TT_PARTIAL_SemiNaive_Relational extends TestThief(() => new Program(
   new SemiNaiveExecutionEngine(
-    new RelationalStorageManager())), "partial")
+    new RelationalStorageManager())), "partial", "SemiNaive", "Relational")
 class TT_PARTIAL_Naive_Relational extends TestThief(() => new Program(
   new NaiveExecutionEngine(
-    new RelationalStorageManager())), "partial", true)
+    new RelationalStorageManager())), "partial", "Naive", "Relational")
 class TT_PARTIAL_SemiNaive_IdxCollections extends TestThief(() => new Program(
   new SemiNaiveExecutionEngine(
-    new IndexedCollStorageManager())), "partial")
+    new IndexedCollStorageManager())), "partial", "SemiNaive", "IndexedColl")
 class TT_PARTIAL_Naive_IdxCollections extends TestThief(() => new Program(
   new NaiveExecutionEngine(
-    new IndexedCollStorageManager())), "partial", true)
+    new IndexedCollStorageManager())), "partial", "Naive", "IndexedColl")
 
 class TT_COMPLETE_SemiNaive_Relational extends TestThief(() => new Program(
   new SemiNaiveExecutionEngine(
-    new RelationalStorageManager())), "complete")
+    new RelationalStorageManager())), "complete", "SemiNaive", "Relational")
 class TT_COMPLETE_Naive_Relational extends TestThief(() => new Program(
   new NaiveExecutionEngine(
-    new RelationalStorageManager())), "complete", true)
+    new RelationalStorageManager())), "complete", "Naive", "Relational")
 class TT_COMPLETE_SemiNaive_IdxCollections extends TestThief(() => new Program(
   new SemiNaiveExecutionEngine(
-    new IndexedCollStorageManager())), "complete")
+    new IndexedCollStorageManager())), "complete", "SemiNaive", "IndexedColl")
 class TT_COMPLETE_Naive_IdxCollections extends TestThief(() => new Program(
   new NaiveExecutionEngine(
-    new IndexedCollStorageManager())), "complete", true)
+    new IndexedCollStorageManager())), "complete", "Naive", "IndexedColl")

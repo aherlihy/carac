@@ -11,7 +11,7 @@ import scala.jdk.StreamConverters.*
 
 abstract trait TestIDB {
   def run(program: Program): Unit
-  val skipNaive = false // for tests that will run out of memory for naive, so skip
+  val skip: Seq[String] = Seq()// skip tests, usually for ones that will run out of memory for naive
 }
 
 case class EDBFromFile(program: Program, directory: Path) extends TestGraph {
@@ -58,7 +58,7 @@ case class EDBFromFile(program: Program, directory: Path) extends TestGraph {
         rule,
         program.namedRelation[Constant](rule),
         res,
-        idbProgram.skipNaive
+        idbProgram.skip
       )
       reader.close()
     })
