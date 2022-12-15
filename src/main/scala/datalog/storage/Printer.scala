@@ -42,24 +42,27 @@ class Printer[S <: StorageManager](val s: S) {
   def snPlanToString(keys: s.Table[s.JoinIndexes]): String = {
     "UNION( " +
       keys.map(k =>
-        var idx = -1
-        "UNION(" +
-          k.deps.map(d => {
-            var found = false
-            "PROJECT" + k.projIndexes.map((typ, v) => f"$typ$v").mkString("[", " ", "]") + "( " +
-              "JOIN" +
-              k.varIndexes.map(v => v.mkString("$", "==$", "")).mkString("[", ",", "]") +
-              k.constIndexes.map((k, v) => k + "==" + v).mkString("{", "&&", "}") +
-              k.deps.zipWithIndex.map((n, i) => {
-                if (n == d && !found && i > idx)
-                  found = true
-                  idx = i
-                  "delta[known][" + s.ns(n) + "]"
-                else
-                  if(s.idbs.contains(n)) "derived[known][" + s.ns(n) + "]" else "edbs[" + s.ns(n) + "]"
-              }).mkString("(", "*", ")") +
-              " )"
-          }).mkString("[ ", ", ", " ]") + " )"
+        if (k.edb)
+          "SCAN(" + k.deps.map(n => s.ns(n)).mkString("[", ", ", "]") + ")"
+        else
+          var idx = -1
+          "UNION(" +
+            k.deps.map(d => {
+              var found = false
+              "PROJECT" + k.projIndexes.map((typ, v) => f"$typ$v").mkString("[", " ", "]") + "( " +
+                "JOIN" +
+                k.varIndexes.map(v => v.mkString("$", "==$", "")).mkString("[", ",", "]") +
+                k.constIndexes.map((k, v) => k + "==" + v).mkString("{", "&&", "}") +
+                k.deps.zipWithIndex.map((n, i) => {
+                  if (n == d && !found && i > idx)
+                    found = true
+                    idx = i
+                    "delta[known][" + s.ns(n) + "]"
+                  else
+                    if(s.idbs.contains(n)) "derived[known][" + s.ns(n) + "]" else "edbs[" + s.ns(n) + "]"
+                }).mkString("(", "*", ")") +
+                " )"
+            }).mkString("[ ", ", ", " ]") + " )"
       ).mkString("[ ", ", ", " ]") +
       " )"
   }

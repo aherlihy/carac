@@ -10,7 +10,7 @@ import scala.quoted.*
 import scala.quoted.staging.*
 
 def souff() = {
-  given engine: ExecutionEngine = new NaiveExecutionEngine(new RelationalStorageManager())
+  given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new RelationalStorageManager())
   val program = Program(engine)
 //  val f1 = program.relation[Constant]("f1")
   val succ = program.relation[Constant]("succ")
