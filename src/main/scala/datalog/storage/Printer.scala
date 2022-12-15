@@ -23,15 +23,18 @@ class Printer[S <: StorageManager](val s: S) {
       .map((k, v) => (s.ns(k), ruleToString(v)))
       .mkString("[\n  ", ",\n  ", "]")
   }
-  def planToString(keys: s.Table[s.JoinIndexes]): String = {
+  def naivePlanToString(keys: s.Table[s.JoinIndexes]): String = {
     "Union( " +
       keys.map(k =>
-        "Project" + k.projIndexes.map((typ, v) => f"$typ$v").mkString("[", " ", "]") + "( " +
-          "JOIN" +
-          k.varIndexes.map(v => v.mkString("$", "==$", "")).mkString("[", ",", "]") +
-          k.constIndexes.map((k, v) => k + "==" + v).mkString("{", "&&", "}") +
-          k.deps.map(n => if(s.edbs.contains(n)) "edbs-" + s.ns(n) else "" + s.ns(n)).mkString("(", "*", ")") +
-          " )"
+        if (k.edb)
+          "SCAN(" + k.deps.map(n => s.ns(n)).mkString("[", ", ", "]") + ")"
+        else
+          "Project" + k.projIndexes.map((typ, v) => f"$typ$v").mkString("[", " ", "]") + "( " +
+            "JOIN" +
+            k.varIndexes.map(v => v.mkString("$", "==$", "")).mkString("[", ",", "]") +
+            k.constIndexes.map((k, v) => k + "==" + v).mkString("{", "&&", "}") +
+            k.deps.map(n => if(s.idbs.contains(n)) s.ns(n) else "edbs-" + s.ns(n)).mkString("(", "*", ")") +
+            " )"
       ).mkString("", ", ", "") +
       " )"
   }
@@ -53,7 +56,7 @@ class Printer[S <: StorageManager](val s: S) {
                   idx = i
                   "delta[known][" + s.ns(n) + "]"
                 else
-                  if(s.edbs.contains(n)) "edbs[" + s.ns(n) + "]" else "derived[known][" + s.ns(n) + "]"
+                  if(s.idbs.contains(n)) "derived[known][" + s.ns(n) + "]" else "edbs[" + s.ns(n) + "]"
               }).mkString("(", "*", ")") +
               " )"
           }).mkString("[ ", ", ", " ]") + " )"

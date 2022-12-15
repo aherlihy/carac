@@ -196,7 +196,8 @@ class RelationalOperators[S <: StorageManager](val storageManager: S) {
     private var outputRelation: IndexedSeq[edbRow] = IndexedSeq()
     private var index = 0
     def open(): Unit = {
-      var opResults = ops.map(o => o.toList())
+      val opResults = ops.map(o => o.toList())
+      debug("in union, opresults=", () => opResults.toString())
       outputRelation = opResults.flatten.toSet.toIndexedSeq
     }
     def next(): Option[edbRow] = {

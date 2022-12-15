@@ -10,26 +10,22 @@ import scala.quoted.*
 import scala.quoted.staging.*
 
 def souff() = {
-  given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new IndexedCollStorageManager())
+  given engine: ExecutionEngine = new NaiveExecutionEngine(new RelationalStorageManager())
   val program = Program(engine)
+//  val f1 = program.relation[Constant]("f1")
   val succ = program.relation[Constant]("succ")
-  val greaterThanZ = program.relation[Constant]("greaterThanZ")
-  val ack = program.relation[Constant]("ack")
-  val N, M, X, Y, Ans, Ans2 = program.variable()
+  val plus_mod = program.relation[Constant]("plus_mod")
 
-  ack("0", N, Ans) :- succ(N, Ans)
+  plus_mod("0", "0", "0") :- ()
+  plus_mod("0", "1", "1") :- ()
+  plus_mod("1", "0", "1") :- ()
+  plus_mod("1", "1", "2") :- ()
+  plus_mod("0", "2", "2") :- ()
+  plus_mod("2", "0", "2") :- ()
+  plus_mod("2", "1", "0") :- ()
+  plus_mod("1", "2", "0") :- ()
+  plus_mod("2", "2", "1") :- ()
 
-  ack(M, "0", Ans) :- ( greaterThanZ(M), succ(X, M), ack(X, "1", Ans) )
-
-  ack(M, N, Ans) :- (
-    greaterThanZ(M),
-    greaterThanZ(N),
-    succ(X, M),
-    succ(Y, N),
-    ack(M, Y, Ans2),
-    ack(X, Ans2, Ans))
-
-  // EDB
   succ("0", "1") :- ()
   succ("1", "2") :- ()
   succ("2", "3") :- ()
@@ -50,30 +46,20 @@ def souff() = {
   succ("17", "18") :- ()
   succ("18", "19") :- ()
   succ("19", "20") :- ()
-  succ("20", "21") :- ()
 
-  greaterThanZ("1") :- ()
-  greaterThanZ("2") :- ()
-  greaterThanZ("3") :- ()
-  greaterThanZ("4") :- ()
-  greaterThanZ("5") :- ()
-  greaterThanZ("6") :- ()
-  greaterThanZ("7") :- ()
-  greaterThanZ("8") :- ()
-  greaterThanZ("9") :- ()
-  greaterThanZ("10") :- ()
-  greaterThanZ("11") :- ()
-  greaterThanZ("12") :- ()
-  greaterThanZ("13") :- ()
-  greaterThanZ("14") :- ()
-  greaterThanZ("15") :- ()
-  greaterThanZ("16") :- ()
-  greaterThanZ("17") :- ()
-  greaterThanZ("18") :- ()
-  greaterThanZ("19") :- ()
-  greaterThanZ("20") :- ()
+  val f = program.relation[Constant]("f")
+  val i, r, prev, pprev, x, y = program.variable()
 
-  println(ack.solve())
+//  f("0", "0") :- ()
+//  f("1", "1") :- ()
+////  f(i, r) :- f(i, r)
+//  f(i, r) :- ( succ(prev, i), succ(pprev, prev),f(prev, x), f(pprev, y), plus_mod(x, y, r) )
+  f("0", "0") :- ()
+  f("1", "1") :- ()
+  f(i, r) :- ( succ(prev, i), succ(pprev, prev),f(prev, x), f(pprev, y), plus_mod(x, y, r) )
+
+  assert(f.solve().size == 21)
+
 }
 
 def msp() = {

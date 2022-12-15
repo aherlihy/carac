@@ -30,13 +30,16 @@ class SemiNaiveExecutionEngine(override val storageManager: StorageManager) exte
   }
 
   override def solve(rId: Int): Set[Seq[Term]] = {
-    if (storageManager.edbs.contains(rId)) { // if just an edb predicate then return
+    if (storageManager.edbs.contains(rId) && !storageManager.idbs.contains(rId)) { // if just an edb predicate then return
       return storageManager.getEDBResult(rId)
+    }
+    if (!storageManager.idbs.contains(rId)) {
+      throw new Error("Solving for rule without body")
     }
     // TODO: if a IDB predicate without vars, then solve all and test contains result?
     //    if (relations.isEmpty)
     //      return Set()
-    val relations = precedenceGraph.topSort().filter(r => !storageManager.edbs.contains(r))
+    val relations = precedenceGraph.topSort().filter(r => storageManager.idbs.contains(r))
     debug("solving relation: " + storageManager.ns(rId) + " order of relations=", relations.toString)
     var knownDbId = storageManager.initEvaluation()
     var newDbId = storageManager.initEvaluation()
@@ -48,8 +51,6 @@ class SemiNaiveExecutionEngine(override val storageManager: StorageManager) exte
       eval(rel, relations, newDbId, knownDbId) // this fills derived[new]
       storageManager.resetDelta(rel, newDbId, storageManager.getDerivedDB(rel, newDbId)) // copy delta[new] = derived[new]
     })
-
-//    relations.foreach(rel => storageManager.resetDelta(rel, newDbId, storageManager.getDerivedDB(rel, newDbId))) // copy delta[new] = derived[new]
 
     var setDiff = true
     while(setDiff) {

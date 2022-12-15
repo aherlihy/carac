@@ -41,13 +41,13 @@ class NaiveExecutionEngine(val storageManager: StorageManager) extends Execution
   }
 
   def solve(rId: Int): Set[Seq[Term]] = {
-    if (storageManager.edbs.contains(rId)) { // if just an edb predicate then return
+    if (storageManager.edbs.contains(rId) && !storageManager.idbs.contains(rId)) { // if just an edb predicate then return
       return storageManager.getEDBResult(rId)
     }
     if (!storageManager.idbs.contains(rId)) {
       throw new Error("Solving for rule without body")
     }
-    val relations = precedenceGraph.topSort().filter(r => !storageManager.edbs.contains(r))
+    val relations = precedenceGraph.topSort().filter(r => storageManager.idbs.contains(r))
     var knownDbId = storageManager.initEvaluation() // facts discovered in the previous iteration
     var newDbId = storageManager.initEvaluation() // place to store new facts
     var count = 0

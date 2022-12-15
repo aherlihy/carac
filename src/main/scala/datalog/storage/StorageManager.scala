@@ -57,16 +57,20 @@ trait StorageManager(val ns: NS) {
    * @param constIndexes - indexes of constants within the body
    * @param projIndexes - for each term in the head, either ("c", the constant value) or ("v", the first index of the variable within the body)
    * @param deps - set of relations directly depended upon by this rule
+   * @param edb - for rules that have EDBs defined on the same predicate, just read
    */
   case class JoinIndexes(varIndexes: IndexedSeq[IndexedSeq[Int]],
                          constIndexes: Map[Int, StorageConstant],
                          projIndexes: IndexedSeq[(String, StorageConstant)],
-                         deps: Seq[Int]) {
+                         deps: Seq[Int],
+                         edb: Boolean = false) {
     override def toString: String =
       "{ variables:" + varIndexes.map(s => s.mkString("(", ", ", ")")).mkString("[", ", ", "]") +
         ", consts:" + constIndexes.mkString("[", ", ", "]") +
         ", project:" + projIndexes.mkString("[", ", ", "]") +
-        ", deps:" + deps.mkString("[", ", ", "]") + " }"
+        ", deps:" + deps.mkString("[", ", ", "]") +
+        ", edb:" + edb +
+        " }"
   }
   def getOperatorKeys(rId: Int): Table[JoinIndexes]
 
