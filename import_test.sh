@@ -24,7 +24,7 @@ for i in "$TESTDIR"/*.{err,out}; do
     exit
   else
     echo "rm -rf $i"
-#    rm -rf "$i"
+    rm -rf "$i"
   fi
 done
 

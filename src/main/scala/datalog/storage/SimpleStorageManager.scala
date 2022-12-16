@@ -171,6 +171,10 @@ abstract class SimpleStorageManager(ns: NS) extends StorageManager(ns) {
 
   def getOperatorKeys(rId: Int): Table[JoinIndexes] = {
     if (!idbs.contains(rId)) throw new Exception("EDB '" + ns(rId) + "' has no facts")
-    idbs(rId).filter(r => r.nonEmpty).map(rule => getOperatorKey(rule))
+    val res = idbs(rId).filter(r => r.nonEmpty).map(rule => getOperatorKey(rule))
+    if (edbs.contains(rId)) { // need to add EDBs to final result
+      res.addOne(JoinIndexes(IndexedSeq(), Map(), IndexedSeq(), Seq(rId), true))
+    }
+    res
   }
 }

@@ -36,45 +36,52 @@ class CollectionsStorageManager(ns: NS = new NS()) extends SimpleStorageManager(
   def SPJU(rId: Int, keys: Table[JoinIndexes], knownDbId: Int): EDB = {
     debug("SPJU:", () => "r=" + ns(rId) + " keys=" + printer.snPlanToString(keys) + " knownDBId" + knownDbId)
       keys.flatMap(k => // for each idb rule
-        var idx = -1 // if dep is featured more than once, only us delta once, but at a different pos each time
-        k.deps.flatMap(d => {
-          var found = false // TODO: perhaps need entry in derived/delta for each atom instead of each relation?
-          joinHelper(
-            k.deps.zipWithIndex.map((r, i) =>
-              if (r == d && !found && i > idx) {
-                found = true
-                idx = i
-                deltaDB(knownDbId)(r)
-              }
-              else {
-                derivedDB(knownDbId).getOrElse(r, edbs(r))
-              }
-            ), k)
-            .map(t =>
-              k.projIndexes.flatMap((typ, idx) =>
-                typ match {
-                  case "v" => t.lift(idx.asInstanceOf[Int])
-                  case "c" => Some(idx)
-                  case _ => throw new Exception("Internal error: projecting something that is not a constant nor a variable")
-                })
-            )
-        }).toSet
+        if (k.edb)
+          edbs(rId)
+        else
+          var idx = -1 // if dep is featured more than once, only us delta once, but at a different pos each time
+          k.deps.flatMap(d => {
+            var found = false // TODO: perhaps need entry in derived/delta for each atom instead of each relation?
+            joinHelper(
+              k.deps.zipWithIndex.map((r, i) =>
+                if (r == d && !found && i > idx) {
+                  found = true
+                  idx = i
+                  deltaDB(knownDbId)(r)
+                }
+                else {
+                  derivedDB(knownDbId).getOrElse(r, edbs(r))
+                }
+              ), k)
+              .map(t =>
+                k.projIndexes.flatMap((typ, idx) =>
+                  typ match {
+                    case "v" => t.lift(idx.asInstanceOf[Int])
+                    case "c" => Some(idx)
+                    case _ => throw new Exception("Internal error: projecting something that is not a constant nor a variable")
+                  })
+              )
+          }).toSet
         )
   }
 
   def naiveSPJU(rId: Int, keys: Table[JoinIndexes], knownDbId: Int): EDB = {
+    debug("NaiveSPJU:", () => "r=" + ns(rId) + " keys=" + printer.naivePlanToString(keys) + " knownDBId" + knownDbId)
     keys.flatMap(k => { // for each idb rule
-      joinHelper(
-        k.deps.map(r => edbs.getOrElse(r, derivedDB(knownDbId)(r))), k
-      ).map(t =>
-        k.projIndexes.flatMap((typ, idx) =>
-          typ match {
-            case "v" => t.lift(idx.asInstanceOf[Int])
-            case "c" => Some(idx)
-            case _ => throw new Exception("Internal error: projecting something that is not a constant nor a variable")
-          }
-        )
-      ).toSet
+      if (k.edb)
+        edbs(rId)
+      else
+        joinHelper(
+          k.deps.map(r => derivedDB(knownDbId).getOrElse(r, edbs(r))), k
+        ).map(t =>
+          k.projIndexes.flatMap((typ, idx) =>
+            typ match {
+              case "v" => t.lift(idx.asInstanceOf[Int])
+              case "c" => Some(idx)
+              case _ => throw new Exception("Internal error: projecting something that is not a constant nor a variable")
+            }
+          )
+        ).toSet
     })
   }
 }
