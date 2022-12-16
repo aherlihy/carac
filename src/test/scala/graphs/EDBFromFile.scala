@@ -20,21 +20,20 @@ case class EDBFromFile(program: Program, directory: Path) extends TestGraph {
 
   // import EDBs
   private val factdir = Paths.get(directory.toString, "facts")
-  if (!Files.exists(factdir)) throw new Exception(f"Missing fact directory '$factdir'")
+  if (Files.exists(factdir))
+    Files.walk(factdir, 1)
+      .filter(p => Files.isRegularFile(p))
+      .forEach(f => {
+        val edbName = f.getFileName.toString.replaceFirst("[.][^.]+$", "")
+        val fact = program.relation[Constant](edbName)
 
-  Files.walk(factdir, 1)
-    .filter(p => Files.isRegularFile(p))
-    .forEach(f => {
-      val edbName = f.getFileName.toString.replaceFirst("[.][^.]+$", "")
-      val fact = program.relation[Constant](edbName)
-
-      val reader = Files.newBufferedReader(f)
-      var line: String = null
-      while ({line = reader.readLine(); line != null}) {
-        fact(line.split("\t"): _*) :- ()
-      }
-      reader.close()
-    })
+        val reader = Files.newBufferedReader(f)
+        var line: String = null
+        while ({line = reader.readLine(); line != null}) {
+          fact(line.split("\t"): _*) :- ()
+        }
+        reader.close()
+      })
 
   // define IDBs
   private val classz = this.getClass.getClassLoader.loadClass(s"graphs.$description")
@@ -51,8 +50,15 @@ case class EDBFromFile(program: Program, directory: Path) extends TestGraph {
     .forEach(f => {
       val rule = f.getFileName.toString.replaceFirst("[.][^.]+$", "")
       val reader = Files.newBufferedReader(f)
+      val headers = reader.readLine().split("\t")
       val res = reader.lines()
-        .map(l => l.split("\t").map(s => s.asInstanceOf[Term]).toSeq)
+        .map(l => l.split("\t").zipWithIndex.map((s, i) =>
+          (headers(i) match {
+            case "Int" => s.toInt
+            case "String" => s
+            case _ => throw new Error(s"Unknown type ${headers(i)}")
+          }).asInstanceOf[Term]
+        ).toSeq)
         .toScala(Set)
       queries(rule) = Query(
         rule,

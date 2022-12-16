@@ -32,11 +32,9 @@ abstract class TestThief(p: () => Program, t: String, engine: String = "SemiNaiv
 //          assume(!query.skip.contains(engine), s"skipping engine $engine")
 //          assume(!query.skip.contains(storage), s"skipping storage $storage")
           if (!query.skip.contains(engine) && !query.skip.contains(storage)) {
-            assertEquals(
-              query.relation.solve(),
-              query.solution,
-              s"relation '$hint' did not match'"
-            )
+            val expected = query.solution
+            val result = query.relation.solve()
+            assertEquals(expected, result, s"relation '$hint' did not match'")
 //            println(s"passed: $testdir.$hint.solve()") // get around munit lack of nesting
           } else {
             println(s"skipped: $testdir.$hint for config $engine$storage")
