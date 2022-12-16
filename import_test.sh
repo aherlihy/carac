@@ -35,18 +35,23 @@ for i in "$TESTDIR"/*.dl; do
   echo -e "$TEMPLATE" > $PROGRAM
   echo -e "$TEMPLATE2" >> $PROGRAM
   for e in $TESTDIR/facts/*.facts; do
+    [ -f "$e" ] || break
     EDB=$(basename $e .facts)
-    echo -e "    val $EDB = program.relation[Constant](\"$EDB\")\n" >> $PROGRAM
+    echo -e "    val $EDB = program.namedRelation[Constant](\"$EDB\")\n" >> $PROGRAM
   done
   for j in $TESTDIR/expected/*.csv; do
-     IDB=$(basename $j .csv)
-     echo -e "    val $IDB = program.namedRelation[Constant](\"$IDB\")\n" >> $PROGRAM
+    [ -f "$j" ] || break
+    IDB=$(basename $j .csv)
+    echo -e "    val $IDB = program.relation[Constant](\"$IDB\")\n" >> $PROGRAM
   done
 
   cat $i | sed -e  '/^\/\//d' | sed -e '/^\./d' | sed -e '/^$/N;/^\n$/D' | sed -e 's/^/    /' | sed -e 's/\:-/\:- (/' | sed -e 's/\.$/\ )/' >> $PROGRAM
 
   echo -e "  }\n}" >> $PROGRAM
+  git add $PROGRAM
+  git reset $i
 done
+git add "$TESTDIR"/expected
 
 
 
