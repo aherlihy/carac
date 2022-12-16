@@ -50,7 +50,7 @@ class CollectionsStorageManager(ns: NS = new NS()) extends SimpleStorageManager(
                   deltaDB(knownDbId)(r)
                 }
                 else {
-                  derivedDB(knownDbId).getOrElse(r, edbs(r))
+                  derivedDB(knownDbId).getOrElse(r, edbs.getOrElse(r, EDB())) // TODO: warn if EDB is empty? Right now can't tell the difference between undeclared and empty EDB
                 }
               ), k)
               .map(t =>
@@ -72,7 +72,7 @@ class CollectionsStorageManager(ns: NS = new NS()) extends SimpleStorageManager(
         edbs(rId)
       else
         joinHelper(
-          k.deps.map(r => derivedDB(knownDbId).getOrElse(r, edbs(r))), k
+          k.deps.map(r => derivedDB(knownDbId).getOrElse(r, edbs.getOrElse(r, EDB()))), k  // TODO: warn if EDB is empty? Right now can't tell the difference between undeclared and empty EDB)
         ).map(t =>
           k.projIndexes.flatMap((typ, idx) =>
             typ match {

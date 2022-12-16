@@ -31,16 +31,21 @@ case class EDBFromFile(program: Program, directory: Path) extends TestGraph {
         val headers = reader.readLine().split("\t")
         reader.lines()
           .forEach(l =>
-            fact(
-              l.split("\t")
-                .zipWithIndex.map((s, i) =>
+            val factInput = l
+              .split("\t")
+              .zipWithIndex.map((s, i) =>
                 (headers(i) match {
                   case "Int" => s.toInt
                   case "String" => s
                   case _ => throw new Error(s"Unknown type ${headers(i)}")
                 }).asInstanceOf[Term]
-              ): _*) :- ())
+              )
+            if (factInput.size != headers.size)
+              throw new Error(s"Input data for fact of length ${factInput.size} but should be ${headers.mkString("[", ", ", "]")}. Line='$l'")
+            fact(factInput: _*) :- ())
         reader.close()
+
+        program.ee.storageManager.edbs.getOrElseUpdate(fact.id, program.ee.storageManager.EDB()) // TODO: handle empty collections better
       })
 
   // define IDBs

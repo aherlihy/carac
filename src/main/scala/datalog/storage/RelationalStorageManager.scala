@@ -15,7 +15,7 @@ class RelationalStorageManager(ns: NS = NS()) extends SimpleStorageManager(ns) {
    * @return
    */
   def naiveSPJU(rId: Int, keys: Table[JoinIndexes], knownDbId: Int): EDB = {
-    debug("naiveSPJU:", () => "r=" + ns(rId) + " keys=" + printer.naivePlanToString(keys) + " knownDBId" + knownDbId)
+    debug("naiveSPJU:", () => "r=" + ns(rId) + s"($rId)" + " keys=" + printer.naivePlanToString(keys) + " knownDBId" + knownDbId)
     import relOps.*
 
     val plan = Union(
@@ -26,7 +26,7 @@ class RelationalStorageManager(ns: NS = NS()) extends SimpleStorageManager(ns) {
             Project(
               Join(
                   k.deps.map(r => Scan(
-                    derivedDB(knownDbId).getOrElse(r, edbs(r)), r)
+                    derivedDB(knownDbId).getOrElse(r, edbs.getOrElse(r, EDB())), r) // TODO: warn if EDB is empty? Right now can't tell the difference between undeclared and empty EDB
                   ), k.varIndexes, k.constIndexes
               ),
               k.projIndexes
