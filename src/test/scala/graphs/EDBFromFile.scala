@@ -28,10 +28,18 @@ case class EDBFromFile(program: Program, directory: Path) extends TestGraph {
         val fact = program.relation[Constant](edbName)
 
         val reader = Files.newBufferedReader(f)
-        var line: String = null
-        while ({line = reader.readLine(); line != null}) {
-          fact(line.split("\t"): _*) :- ()
-        }
+        val headers = reader.readLine().split("\t")
+        reader.lines()
+          .forEach(l =>
+            fact(
+              l.split("\t")
+                .zipWithIndex.map((s, i) =>
+                (headers(i) match {
+                  case "Int" => s.toInt
+                  case "String" => s
+                  case _ => throw new Error(s"Unknown type ${headers(i)}")
+                }).asInstanceOf[Term]
+              ): _*) :- ())
         reader.close()
       })
 
