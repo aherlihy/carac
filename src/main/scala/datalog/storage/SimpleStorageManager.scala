@@ -134,7 +134,7 @@ abstract class SimpleStorageManager(ns: NS) extends StorageManager(ns) {
    */
   inline def getOperatorKey(rule: Row[StorageAtom]): JoinIndexes = {
     val constants = mutable.Map[Int, StorageConstant]() // position => constant
-    val variables = mutable.Map[Int, Int]() // v.oid => position
+    val variables = mutable.Map[StorageVariable, Int]() // v.oid => position
 
     val body = rule.drop(1)
 
@@ -147,8 +147,8 @@ abstract class SimpleStorageManager(ns: NS) extends StorageManager(ns) {
       .filter((term, matches) => // matches = Seq[(var, pos1), (var, pos2), ...]
         term match {
           case v: StorageVariable =>
-            variables(v.oid) = matches.head._2 // first idx for a variable
-            matches.length >= 2
+            variables(v) = matches.head._2 // first idx for a variable
+            !v.anon && matches.length >= 2
           case c: StorageConstant =>
             matches.foreach((_, idx) => constants(idx) = c)
             false
@@ -162,8 +162,9 @@ abstract class SimpleStorageManager(ns: NS) extends StorageManager(ns) {
     // variable ids in the head atom
     val projects = rule(0).terms.map {
       case v: Variable =>
-        if (!variables.contains(v.oid)) throw new Exception(f"Free variable in rule head with varId $v.oid")
-        ("v", variables(v.oid))
+        if (!variables.contains(v)) throw new Exception(f"Free variable in rule head with varId $v.oid")
+        if (v.anon) throw new Exception("Anonymous variable ('__') not allowed in head of rule")
+        ("v", variables(v))
       case c: Constant => ("c", c)
     }
     JoinIndexes(bodyVars, constants.toMap, projects, deps)

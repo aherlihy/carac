@@ -37,7 +37,7 @@ class CollectionsStorageManager(ns: NS = new NS()) extends SimpleStorageManager(
     debug("SPJU:", () => "r=" + ns(rId) + " keys=" + printer.snPlanToString(keys) + " knownDBId" + knownDbId)
       keys.flatMap(k => // for each idb rule
         if (k.edb)
-          edbs(rId)
+          edbs.getOrElse(rId, EDB())
         else
           var idx = -1 // if dep is featured more than once, only us delta once, but at a different pos each time
           k.deps.flatMap(d => {
@@ -69,7 +69,7 @@ class CollectionsStorageManager(ns: NS = new NS()) extends SimpleStorageManager(
     debug("NaiveSPJU:", () => "r=" + ns(rId) + " keys=" + printer.naivePlanToString(keys) + " knownDBId" + knownDbId)
     keys.flatMap(k => { // for each idb rule
       if (k.edb)
-        edbs(rId)
+        edbs.getOrElse(rId, EDB())
       else
         joinHelper(
           k.deps.map(r => derivedDB(knownDbId).getOrElse(r, edbs.getOrElse(r, EDB()))), k  // TODO: warn if EDB is empty? Right now can't tell the difference between undeclared and empty EDB)

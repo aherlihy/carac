@@ -10,11 +10,13 @@ type Printer = mutable.Map[Int, String] // TODO: will eventually want bimap
 
 type Constant = Int | String // TODO: other constant types?
 
-case class Variable(oid: Int) {
-  override def toString = "v" + oid
+val __ = Variable(-1, true)
+
+case class Variable(oid: Int, anon: Boolean = false) {
+  override def toString = if (anon) "_" else "v" + oid
   override def equals(that: Any): Boolean =
     that match {
-      case v: Variable => oid == v.oid
+      case v: Variable => !anon && !v.anon && oid == v.oid
       case _ => false // TODO: is this ok?
     }
 }

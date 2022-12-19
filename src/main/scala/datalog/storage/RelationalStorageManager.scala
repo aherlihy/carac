@@ -21,7 +21,7 @@ class RelationalStorageManager(ns: NS = NS()) extends SimpleStorageManager(ns) {
     val plan = Union(
         keys.map(k =>
           if (k.edb)
-            Scan(edbs(rId), rId)
+            Scan(edbs.getOrElse(rId, EDB()), rId)
           else
             Project(
               Join(
@@ -49,7 +49,7 @@ class RelationalStorageManager(ns: NS = NS()) extends SimpleStorageManager(ns) {
     val plan = Union(
       keys.map(k => // for each idb rule
         if (k.edb)
-          Scan(edbs(rId), rId)
+          Scan(edbs.getOrElse(rId, EDB()), rId)
         else
           var idx = -1 // if dep is featured more than once, only us delta once, but at a different pos each time
           Union(
@@ -61,9 +61,9 @@ class RelationalStorageManager(ns: NS = NS()) extends SimpleStorageManager(ns) {
                     if (r == d && !found && i > idx)
                       found = true
                       idx = i
-                      Scan(deltaDB(knownDbId)(r), r)
+                      Scan(deltaDB(knownDbId).getOrElse(r, EDB()), r)
                     else
-                      Scan(derivedDB(knownDbId).getOrElse(r, edbs(r)), r)
+                      Scan(derivedDB(knownDbId).getOrElse(r, edbs.getOrElse(r, EDB())), r)
                   }),
                   k.varIndexes,
                   k.constIndexes
