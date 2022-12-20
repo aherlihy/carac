@@ -105,5 +105,5 @@ class anon_var extends TestIDB {
     A5(14, i) :- ( Check(a, b, c, d, __, f), In(a, b, c, d, __, f, i) )
     A5(15, i) :- ( Check(a, __, c, d, __, __), In(a, __, c, d, __, __, i) )
   }
-  override val skip = Seq("SemiNaive", "Relational") // too slow
+  override val skip = Seq("SemiNaive", "Relational", "CI") //  run only NaiveIdxColl, locally
 }

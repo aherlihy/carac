@@ -5,6 +5,7 @@ import datalog.storage.{CollectionsStorageManager, IndexedCollStorageManager, Re
 import graphs.{EDBFromFile, TestGraph}
 
 import java.nio.file.*
+import scala.util.Properties
 
 abstract class TestThief(p: () => Program, t: String, engine: String = "SemiNaive", storage: String = "Collections") extends munit.FunSuite {
   private val srcDir = Paths.get("src", "test", "scala", "graphs", "fromFile", t)
@@ -28,9 +29,10 @@ abstract class TestThief(p: () => Program, t: String, engine: String = "SemiNaiv
     .foreach(testdir => {
       test(testdir) {
         val g = graph()
+        assume(!g.skip.contains(engine), s"skipping engine $engine")
+        assume(!g.skip.contains(storage), s"skipping storage $storage")
+        assume(!(g.skip.contains("CI") && Properties.isLinux), "skipping CI run bc out-of-memory")
         g.queries.map((hint, query) => {
-//          assume(!query.skip.contains(engine), s"skipping engine $engine")
-//          assume(!query.skip.contains(storage), s"skipping storage $storage")
           if (!query.skip.contains(engine) && !query.skip.contains(storage)) {
             val expected = query.solution
             val result = query.relation.solve()

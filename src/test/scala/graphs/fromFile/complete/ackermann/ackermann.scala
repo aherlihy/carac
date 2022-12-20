@@ -21,5 +21,5 @@ class ackermann extends TestIDB {
       ack(M, Y, Ans2),
       ack(X, Ans2, Ans))
   }
-  override val skip = Seq("Naive", "SemiNaive") // too slow
+  override val skip = Seq("Naive", "Relational", "CI") // run only SemiNaiveIdxColl, locally
 }

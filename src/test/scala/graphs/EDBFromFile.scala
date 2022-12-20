@@ -54,6 +54,7 @@ case class EDBFromFile(program: Program, directory: Path) extends TestGraph {
   private val idbProgram = constr.newInstance().asInstanceOf[TestIDB]
 
   idbProgram.run(program)
+  override val skip: Seq[String] = idbProgram.skip
 
   // Generate queries
   private val expDir = Paths.get(directory.toString, "expected")
@@ -76,8 +77,7 @@ case class EDBFromFile(program: Program, directory: Path) extends TestGraph {
       queries(rule) = Query(
         rule,
         program.namedRelation[Constant](rule),
-        res,
-        idbProgram.skip
+        res
       )
       reader.close()
     })
