@@ -90,7 +90,7 @@ class PrecedenceGraphTest extends munit.FunSuite {
     )
   }
 
-  test("from souffle double_tree") {
+  test("from souffle double_tree".ignore) {
     //
     // double_tree.dl
     //
@@ -772,10 +772,5 @@ class PrecedenceGraphTest extends munit.FunSuite {
     y2343(z) :- y234(z)
     y2344(z) :- y234(z)
     y2345(z) :- y234(z)
-
-
-    println("sorted=" + engine.precedenceGraph.topSort())
-    println("sorted=" + engine.precedenceGraph.sorted)
-
   }
 }
