@@ -48,4 +48,5 @@ case class Relation[T <: Constant](id: Int, name: String)(using ee: ExecutionEng
   def apply(ts: RelTerm*): RelAtom = RelAtom(ts.toIndexedSeq)
 
   def solve(): Set[Seq[Term]] = ee.solve(id).map(s => s.toSeq).toSet
+  def get(): Set[Seq[Term]] = ee.get(id)
 }

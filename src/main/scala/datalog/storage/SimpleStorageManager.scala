@@ -96,7 +96,7 @@ abstract class SimpleStorageManager(ns: NS) extends StorageManager(ns) {
 //  }
 
   def getIDBResult(rId: Int, dbId: Int): Set[Seq[Term]] = getDerivedDB(rId, dbId).map(s => s.toSeq).toSet
-  def getEDBResult(rId: Int): Set[Seq[Term]] = edbs(rId).map(s => s.toSeq).toSet
+  def getEDBResult(rId: Int): Set[Seq[Term]] = edbs.getOrElse(rId, EDB()).map(s => s.toSeq).toSet
 
   def getDerivedDB(rId: Int, dbId: Int): EDB = derivedDB(dbId)(rId)
   def getDeltaDB(rId: Int, dbId: Int): EDB = deltaDB(dbId)(rId)

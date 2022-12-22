@@ -2,6 +2,7 @@ package graphs
 
 import datalog.dsl.{Constant, Program, Relation, Term}
 import datalog.execution.{ExecutionEngine, NaiveExecutionEngine}
+import tools.{Query, TestGraph}
 
 import scala.collection.mutable
 

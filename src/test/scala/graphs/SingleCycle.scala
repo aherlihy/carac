@@ -1,6 +1,7 @@
 package graphs
 
 import datalog.dsl.{Constant, Program, Relation, Term}
+import tools.{Query, TestGraph}
 
 import scala.collection.mutable
 

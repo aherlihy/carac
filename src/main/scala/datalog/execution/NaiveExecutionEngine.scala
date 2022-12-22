@@ -9,10 +9,24 @@ import scala.collection.mutable
 class NaiveExecutionEngine(val storageManager: StorageManager) extends ExecutionEngine {
   import storageManager.EDB
   val precedenceGraph = new PrecedenceGraph(storageManager.ns)
+  var knownDbId = -1
 
   def initRelation(rId: Int, name: String): Unit = {
     storageManager.ns(rId) = name
     storageManager.initRelation(rId, name)
+  }
+
+  def get(rId: Int): Set[Seq[Term]] = {
+    if (knownDbId == -1)
+      throw new Exception("Solve() has not yet been called")
+    val edbs = storageManager.getEDBResult(rId)
+    if (storageManager.idbs.contains(rId))
+      edbs ++ storageManager.getIDBResult(rId, knownDbId)
+    else
+      edbs
+  }
+  def get(name: String): Set[Seq[Term]] = {
+    get(storageManager.ns(name))
   }
 
   def insertIDB(rId: Int, rule: Seq[Atom]): Unit = {
@@ -48,7 +62,7 @@ class NaiveExecutionEngine(val storageManager: StorageManager) extends Execution
       throw new Error("Solving for rule without body")
     }
     val relations = precedenceGraph.topSort().filter(r => storageManager.idbs.contains(r))
-    var knownDbId = storageManager.initEvaluation() // facts discovered in the previous iteration
+    knownDbId = storageManager.initEvaluation() // facts discovered in the previous iteration
     var newDbId = storageManager.initEvaluation() // place to store new facts
     var count = 0
 

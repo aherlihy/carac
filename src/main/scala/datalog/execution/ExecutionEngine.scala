@@ -14,4 +14,6 @@ trait ExecutionEngine {
   def insertEDB(body: Atom): Unit
 
   def solve(rId: Int): Set[Seq[Term]]
+  def get(rId: Int): Set[Seq[Term]]
+  def get(name: String): Set[Seq[Term]]
 }
