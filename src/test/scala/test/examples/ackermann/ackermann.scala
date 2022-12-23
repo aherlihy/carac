@@ -8,7 +8,7 @@ import scala.util.Properties
 
 class ackermann extends ExampleTestGenerator("ackermann",
   Set(Tags.Naive, Tags.Relational), // run only SemiNaiveIdxColl
-  Set(Tags.Slow, Tags.LocalOnly)
+  Set(Tags.Slow, Tags.CI)
 ) {
   def pretest(program: Program): Unit = {
     val succ = program.namedRelation("succ")

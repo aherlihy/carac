@@ -7,7 +7,7 @@ import java.nio.file.Paths
 class ranpo extends ExampleTestGenerator(
   "ranpo",
   Set(),
-  Set(Tags.LocalOnly)
+  Set(Tags.CI)
 ) {
 
   def pretest(program: Program): Unit = {

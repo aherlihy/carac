@@ -7,7 +7,7 @@ import java.nio.file.Paths
 class anon_var extends ExampleTestGenerator(
   "anon_var",
   Set(Tags.Naive, Tags.Relational), // run only NaiveRelational
-  Set(Tags.Slow, Tags.LocalOnly)
+  Set(Tags.Slow, Tags.CI)
 ) {
   def pretest(program: Program): Unit = {
     val Check = program.namedRelation[Constant]("Check")

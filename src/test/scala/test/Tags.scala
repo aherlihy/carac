@@ -2,7 +2,7 @@ package test
 
 object Tags {
   val Slow = "Slow"
-  val LocalOnly = "CI"
+  val CI = "CI"
   val Naive = "Naive"
   val SemiNaive = "SemiNaive"
   val Relational = "Relational"

@@ -7,7 +7,7 @@ import java.nio.file.Paths
 class fib extends ExampleTestGenerator(
   "fib",
   Set(),
-  Set(Tags.LocalOnly)
+  Set(Tags.CI)
 ) {
 
   def pretest(program: Program): Unit = {
