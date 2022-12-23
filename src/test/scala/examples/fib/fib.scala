@@ -5,7 +5,8 @@ import tools.GraphGenerator
 
 import java.nio.file.Paths
 class fib extends GraphGenerator(
-  Paths.get("src", "test", "scala", "examples", "fib") // TODO: use pwd
+  Paths.get("src", "test", "scala", "examples", "fib"), // TODO: use pwd
+  Set("LocalOnly")
 ) {
 
   def pretest(program: Program): Unit = {
