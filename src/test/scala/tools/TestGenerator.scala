@@ -1,13 +1,14 @@
 package tools
 
 import datalog.dsl.{Constant, Program, Relation, Term}
-import datalog.storage.{RelationalStorageManager, IndexedCollStorageManager}
-import datalog.execution.{SemiNaiveExecutionEngine, NaiveExecutionEngine}
+import datalog.storage.{IndexedCollStorageManager, RelationalStorageManager}
+import datalog.execution.{NaiveExecutionEngine, SemiNaiveExecutionEngine}
 
 import java.nio.file.{Files, Path, Paths}
 import scala.collection.mutable
 import scala.io.Source
 import scala.jdk.StreamConverters.*
+import scala.util.Properties
 //import scala.quoted.*
 //import scala.quoted.staging.*
 
@@ -20,7 +21,7 @@ package Tags {
   val IndexedColl = "IndexedColl"
 }
 
-abstract class TestGenerator(directory: Path, skip: Set[String] = Set(), tags: Set[String] = Set()) extends munit.FunSuite {
+abstract class TestGenerator(directory: Path, skip: Set[String] = Set(), val tags: Set[String] = Set()) extends munit.FunSuite {
   def pretest(program: Program): Unit
   val mTags = tags.map(t => new munit.Tag(t))
   val toSolve: String = "_"
@@ -115,7 +116,10 @@ abstract class TestGenerator(directory: Path, skip: Set[String] = Set(), tags: S
 
     Seq("SemiNaive", "Naive").foreach(execution => {
       Seq("Relational", "IndexedColl").foreach(storage => {
-          if (skip.contains(execution) || skip.contains(storage)) {
+          if (
+            skip.contains(execution) || skip.contains(storage) ||
+            (Properties.isLinux && tags.contains(Tags.LocalOnly))
+          ) {
             test(s"$execution$storage".ignore) {}
           } else {
             val tags = mTags ++ Set(new munit.Tag(execution), new munit.Tag(storage))
