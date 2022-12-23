@@ -1,11 +1,13 @@
 package examples.ranpo
 
 import datalog.dsl.{Constant, Program, __}
-import tools.TestGenerator
+import tools.{TestGenerator, Tags}
 
 import java.nio.file.Paths
 class ranpo extends TestGenerator(
-  Paths.get("src", "test", "scala", "examples", "ranpo") // TODO: use pwd
+  Paths.get("src", "test", "scala", "examples", "ranpo"), // TODO: use pwd
+  Set(),
+  Set(Tags.LocalOnly)
 ) {
 
   def pretest(program: Program): Unit = {
