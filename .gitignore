@@ -6,6 +6,7 @@
 # Scala
 *.class
 *.tasty
+*.jvmopts
 
 # sbt
 target/
