@@ -14,7 +14,7 @@ jobs:
           distribution: temurin
           java-version: 17
     - name: Run unit tests
-      run: sbt testOnly "--exclude-tags=LocalOnly"
+      run: sbt test
   bench:
     runs-on: ubuntu-latest
     steps:
