@@ -16,7 +16,7 @@ jobs:
     - name: Run unit tests
       run: sbt test
       env:
-        _JAVA_OPTIONS: -Xmx1g
+        _JAVA_OPTIONS: -Xmx7g
   bench:
     runs-on: ubuntu-latest
     steps:
