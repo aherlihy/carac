@@ -1,10 +1,10 @@
 package examples.prime
 
 import datalog.dsl.{Constant, Program}
-import tools.GraphGenerator
+import tools.TestGenerator
 
 import java.nio.file.Paths
-class prime extends GraphGenerator(
+class prime extends TestGenerator(
   Paths.get("src", "test", "scala", "examples", "prime") // TODO: use pwd
 ) {
 

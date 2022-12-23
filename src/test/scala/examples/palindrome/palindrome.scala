@@ -1,10 +1,10 @@
 package examples.palindrome
 
 import datalog.dsl.{Constant, Program}
-import tools.GraphGenerator
+import tools.TestGenerator
 
 import java.nio.file.Paths
-class palindrome extends GraphGenerator(
+class palindrome extends TestGenerator(
   Paths.get("src", "test", "scala", "examples", "palindrome")
   ) {
   def pretest(program: Program): Unit = {

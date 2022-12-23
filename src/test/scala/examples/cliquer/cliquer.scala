@@ -1,10 +1,10 @@
 package examples.cliquer
 
 import datalog.dsl.{Constant, Program}
-import tools.GraphGenerator
+import tools.TestGenerator
 
 import java.nio.file.Paths
-class cliquer extends GraphGenerator(
+class cliquer extends TestGenerator(
   Paths.get("src", "test", "scala", "examples", "cliquer") // TODO: use pwd
 ) {
 

@@ -11,7 +11,16 @@ import scala.jdk.StreamConverters.*
 //import scala.quoted.*
 //import scala.quoted.staging.*
 
-abstract class GraphGenerator(directory: Path, skip: Set[String] = Set(), tags: Set[String] = Set()) extends munit.FunSuite {
+package Tags {
+  val Slow = "Slow"
+  val LocalOnly = "LocalOnly"
+  val Naive = "Naive"
+  val SemiNaive = "SemiNaive"
+  val Relational = "Relational"
+  val IndexedColl = "IndexedColl"
+}
+
+abstract class TestGenerator(directory: Path, skip: Set[String] = Set(), tags: Set[String] = Set()) extends munit.FunSuite {
   def pretest(program: Program): Unit
   val mTags = tags.map(t => new munit.Tag(t))
   val toSolve: String = "_"
@@ -81,6 +90,7 @@ abstract class GraphGenerator(directory: Path, skip: Set[String] = Set(), tags: 
       def apply(): Program = program
 
       override def beforeEach(context: BeforeEach): Unit = {
+        println(s"TEST=$description.${context.test.name} TAGS=${context.test.tags}")
         program = context.test.name match {
           case "SemiNaiveRelational" => Program(SemiNaiveExecutionEngine(RelationalStorageManager()))
           case "NaiveRelational" => Program(NaiveExecutionEngine(RelationalStorageManager()))
@@ -96,7 +106,6 @@ abstract class GraphGenerator(directory: Path, skip: Set[String] = Set(), tags: 
             val edbs = program.ee.storageManager.edbs.asInstanceOf[mutable.Map[Int, Any]]
             edbs.getOrElseUpdate(fact.id, program.ee.storageManager.EDB()) // TODO: handle empty collections better
           }
-
         )
         pretest(program)
       }
@@ -106,13 +115,11 @@ abstract class GraphGenerator(directory: Path, skip: Set[String] = Set(), tags: 
 
     Seq("SemiNaive", "Naive").foreach(execution => {
       Seq("Relational", "IndexedColl").foreach(storage => {
-          if (skip.contains(execution) || skip.contains(storage) || tags.contains("Slow")) { // TODO: fix slow so that it filters on the munit level
+          if (skip.contains(execution) || skip.contains(storage)) {
             test(s"$execution$storage".ignore) {}
           } else {
-            test(s"$execution$storage".withTags(Set(
-              new munit.Tag(execution),
-              new munit.Tag(storage)
-            ))) {
+            val tags = mTags ++ Set(new munit.Tag(execution), new munit.Tag(storage))
+            test(s"$execution$storage".withTags(tags)) {
               val p = program()
               if (toSolve != "_") { // solve for one relation, check all expected
                 assertEquals(

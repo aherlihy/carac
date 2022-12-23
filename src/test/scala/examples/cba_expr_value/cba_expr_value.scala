@@ -1,10 +1,10 @@
 package examples.cba_expr_value
 
 import datalog.dsl.{Constant, Program}
-import tools.GraphGenerator
+import tools.TestGenerator
 
 import java.nio.file.Paths
-class cba_expr_value extends GraphGenerator(
+class cba_expr_value extends TestGenerator(
   Paths.get("src", "test", "scala", "examples", "cba_expr_value") // TODO: use pwd
 ) {
   def pretest(program: Program): Unit = {

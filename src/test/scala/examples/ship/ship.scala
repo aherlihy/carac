@@ -1,10 +1,10 @@
 package examples.ship
 
 import datalog.dsl.{Constant, Program}
-import tools.GraphGenerator
+import tools.TestGenerator
 
 import java.nio.file.Paths
-class ship extends GraphGenerator(
+class ship extends TestGenerator(
   Paths.get("src", "test", "scala", "examples", "ship") // TODO: use pwd
 ) {
 

@@ -1,10 +1,10 @@
 package examples.clique
 import datalog.dsl.{Constant, Program}
-import tools.GraphGenerator
+import tools.TestGenerator
 
 import java.nio.file.Paths
 
-class clique extends GraphGenerator(
+class clique extends TestGenerator(
   Paths.get("src", "test", "scala", "examples", "clique")// TODO: use pwd
 ) {
   override val toSolve = "same_clique"

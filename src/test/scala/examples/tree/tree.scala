@@ -1,10 +1,10 @@
 package examples.tree
 
 import datalog.dsl.{Constant, Program, __}
-import tools.GraphGenerator
+import tools.TestGenerator
 
 import java.nio.file.Paths
-class tree extends GraphGenerator(
+class tree extends TestGenerator(
   Paths.get("src", "test", "scala", "examples", "tree") // TODO: use pwd
 ) {
   override val toSolve: String = "S"

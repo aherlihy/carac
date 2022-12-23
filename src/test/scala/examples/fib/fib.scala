@@ -1,12 +1,13 @@
 package examples.fib
 
 import datalog.dsl.{Constant, Program}
-import tools.GraphGenerator
+import tools.{TestGenerator, Tags}
 
 import java.nio.file.Paths
-class fib extends GraphGenerator(
+class fib extends TestGenerator(
   Paths.get("src", "test", "scala", "examples", "fib"), // TODO: use pwd
-  Set("LocalOnly")
+  Set(),
+  Set(Tags.LocalOnly)
 ) {
 
   def pretest(program: Program): Unit = {

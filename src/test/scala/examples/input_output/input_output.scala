@@ -1,10 +1,10 @@
 package examples.input_output
 
 import datalog.dsl.{Constant, Program}
-import tools.GraphGenerator
+import tools.TestGenerator
 
 import java.nio.file.Paths
-class input_output extends GraphGenerator(
+class input_output extends TestGenerator(
   Paths.get("src", "test", "scala", "examples", "input_output") // TODO: use pwd
 ) {
   def pretest(program: Program): Unit = {

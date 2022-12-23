@@ -1,11 +1,11 @@
 package examples.topological_ordering
 
 import datalog.dsl.{Constant, Program}
-import tools.GraphGenerator
+import tools.TestGenerator
 
 import java.nio.file.Paths
 
-class topological_ordering extends GraphGenerator(
+class topological_ordering extends TestGenerator(
   Paths.get("src", "test", "scala", "examples", "topological_ordering") // TODO: use pwd
 ) {
   def pretest(program: Program): Unit = {

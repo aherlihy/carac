@@ -1,10 +1,10 @@
 package examples.pointsto
 
 import datalog.dsl.{Constant, Program}
-import tools.GraphGenerator
+import tools.TestGenerator
 
 import java.nio.file.Paths
-class pointsto extends GraphGenerator(
+class pointsto extends TestGenerator(
   Paths.get("src", "test", "scala", "examples", "pointsto") // TODO: use pwd
 ) {
 

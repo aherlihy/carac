@@ -1,11 +1,11 @@
 package examples.andersen
 
 import datalog.dsl.{Constant, Program}
-import tools.GraphGenerator
+import tools.TestGenerator
 
 import java.nio.file.Paths
 
-class andersen extends GraphGenerator(
+class andersen extends TestGenerator(
  Paths.get("src", "test", "scala", "examples", "andersen") // TODO: use pwd
 ) {
  override val toSolve = "pointsTo"

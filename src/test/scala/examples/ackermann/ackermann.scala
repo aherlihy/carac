@@ -1,15 +1,15 @@
 package examples.ackermann
 
 import datalog.dsl.{Constant, Program}
-import tools.GraphGenerator
+import tools.{TestGenerator, Tags}
 
 import java.nio.file.{Path, Paths}
 import scala.util.Properties
 
-class ackermann extends GraphGenerator(
+class ackermann extends TestGenerator(
   Paths.get("src", "test", "scala", "examples", "ackermann"), // TODO: use pwd
-  Set("Naive", "Relational"), // run only SemiNaiveIdxColl
-  Set("Slow", "LocalOnly")
+  Set(Tags.Naive, Tags.Relational), // run only SemiNaiveIdxColl
+  Set(Tags.Slow, Tags.LocalOnly)
 ) {
   def pretest(program: Program): Unit = {
     val succ = program.namedRelation("succ")

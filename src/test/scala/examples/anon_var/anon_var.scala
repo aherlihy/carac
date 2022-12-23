@@ -1,13 +1,13 @@
 package examples.anon_var
 
 import datalog.dsl.{Constant, Program, __}
-import tools.GraphGenerator
+import tools.{TestGenerator, Tags}
 
 import java.nio.file.Paths
-class anon_var extends GraphGenerator(
+class anon_var extends TestGenerator(
   Paths.get("src", "test", "scala", "examples", "anon_var"), // TODO: use pwd
-  Set("Naive", "Relational"), // run only NaiveRelational
-  Set("Slow", "LocalOnly")
+  Set(Tags.Naive, Tags.Relational), // run only NaiveRelational
+  Set(Tags.Slow, Tags.LocalOnly)
 ) {
   def pretest(program: Program): Unit = {
     val Check = program.namedRelation[Constant]("Check")

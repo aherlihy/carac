@@ -1,10 +1,10 @@
 package examples.rsg
 
 import datalog.dsl.{Constant, Program}
-import tools.GraphGenerator
+import tools.TestGenerator
 
 import java.nio.file.Paths
-class rsg extends GraphGenerator(
+class rsg extends TestGenerator(
   Paths.get("src", "test", "scala", "examples", "rsg") // TODO: use pwd
 ) {
 

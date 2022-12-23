@@ -1,10 +1,10 @@
 package examples.trains
 
 import datalog.dsl.{Constant, Program, __}
-import tools.GraphGenerator
+import tools.TestGenerator
 
 import java.nio.file.Paths
-class trains extends GraphGenerator(
+class trains extends TestGenerator(
   Paths.get("src", "test", "scala", "examples", "trains") // TODO: use pwd
 ) {
 

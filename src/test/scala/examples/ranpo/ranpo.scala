@@ -1,10 +1,10 @@
 package examples.ranpo
 
 import datalog.dsl.{Constant, Program, __}
-import tools.GraphGenerator
+import tools.TestGenerator
 
 import java.nio.file.Paths
-class ranpo extends GraphGenerator(
+class ranpo extends TestGenerator(
   Paths.get("src", "test", "scala", "examples", "ranpo") // TODO: use pwd
 ) {
 

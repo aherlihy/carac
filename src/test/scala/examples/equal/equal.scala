@@ -1,10 +1,10 @@
 package examples.equal
 
 import datalog.dsl.{Constant, Program}
-import tools.GraphGenerator
+import tools.TestGenerator
 
 import java.nio.file.Paths
-class equal extends GraphGenerator(
+class equal extends TestGenerator(
   Paths.get("src", "test", "scala", "examples", "equal") // TODO: use pwd
 ) {
 

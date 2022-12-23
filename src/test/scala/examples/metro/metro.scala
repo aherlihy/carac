@@ -1,10 +1,10 @@
 package examples.metro
 
 import datalog.dsl.{Constant, Program}
-import tools.GraphGenerator
+import tools.TestGenerator
 
 import java.nio.file.Paths
-class metro extends GraphGenerator(
+class metro extends TestGenerator(
   Paths.get("src", "test", "scala", "examples", "metro") // TODO: use pwd
 ) {
 
