@@ -46,7 +46,7 @@ class NaiveExecutionEngine(val storageManager: StorageManager) extends Execution
    * Take the union of each evalRule for each IDB predicate
    */
   def eval(rId: Int, relations: Seq[Int], newDbId: Int, knownDbId: Int): Unit = {
-    debug("in eval: ", () => "rId=" + storageManager.ns(rId) + " relations=" + relations.map(r => storageManager.ns(r)).mkString("[", ", ", "]") + " incr=" + newDbId + " src=" + knownDbId)
+    debug("in eval: ", () => s"rId=${storageManager.ns(rId)} relations=${relations.map(r => storageManager.ns(r)).mkString("[", ", ", "]")}  incr=$newDbId src=$knownDbId")
     relations.foreach(r => {
       val res = evalRule(r, knownDbId)
       debug("result of evalRule=", () => storageManager.printer.factToString(res))
@@ -67,7 +67,7 @@ class NaiveExecutionEngine(val storageManager: StorageManager) extends Execution
     var newDbId = storageManager.initEvaluation() // place to store new facts
     var count = 0
 
-    debug("solving relation: " + storageManager.ns(rId) + " order of relations=", relations.toString)
+    debug(s"solving relation: ${storageManager.ns(rId)} order of relations=", relations.toString)
     var setDiff = true
     while (setDiff) {
       val t = knownDbId
@@ -75,10 +75,9 @@ class NaiveExecutionEngine(val storageManager: StorageManager) extends Execution
       newDbId = t
       storageManager.clearDB(true, newDbId)
       storageManager.printer.known = knownDbId // TODO: get rid of
-      debug("initial state @ " + count, storageManager.printer.toString)
+      debug(s"initial state @ $count", storageManager.printer.toString)
       count += 1
       eval(rId, relations, newDbId, knownDbId)
-//      debug("state after eval=", storageManager.printer.toString)
 
       setDiff = !storageManager.compareDerivedDBs(newDbId, knownDbId)
 

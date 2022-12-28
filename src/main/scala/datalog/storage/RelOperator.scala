@@ -78,7 +78,7 @@ class RelationalOperators[S <: StorageManager](val storageManager: S) {
     private var length: Long = relation.size
 
     def open(): Unit = {
-//      debug("SCAN[" + rId + "]")
+//      debug(s"SCAN[$rId]")
     }
 
     def next(): Option[edbRow] = {
@@ -113,7 +113,7 @@ class RelationalOperators[S <: StorageManager](val storageManager: S) {
 
   case class Project(input: RelOperator, ixs: Seq[(String, Constant)]) extends RelOperator {
     def open(): Unit = {
-//      debug("PROJ[" + ixs + "]")
+//      debug(s"PROJ[$ixs]")
       input.open()
     }
 
@@ -185,6 +185,64 @@ class RelationalOperators[S <: StorageManager](val storageManager: S) {
     }
   }
 
+  case class JoinOpt(inputs: Seq[RelOperator],
+                     variables: IndexedSeq[IndexedSeq[Int]],
+                     constants: Map[Int, Constant]) extends RelOperator {
+
+    private var outputRelation= mutable.ArrayBuffer[edbRow]()
+    private var index = 0
+
+    def scanFilter(maxIdx: Int)(get: Int => storageManager.StorageTerm = x => x.asInstanceOf[storageManager.StorageTerm]) = {
+      val vCmp = variables.isEmpty || variables.forall(condition =>
+        if (condition.head >= maxIdx)
+          true
+        else
+          val toCompare = get(condition.head)
+            condition.drop(1).forall(idx =>
+          idx >= maxIdx || get(idx) == toCompare
+        )
+      )
+      val kCmp = constants.isEmpty || constants.forall((idx, const) =>
+        idx >= maxIdx || get(idx) == const
+      )
+      vCmp && kCmp
+    }
+
+    override def open(): Unit = {
+      index = 0
+      val inputList: Seq[mutable.ArrayBuffer[edbRow]] = inputs.map(i => i.toList())
+
+      outputRelation = inputList
+        .reduceLeft((outer, inner) => {
+          outer.flatMap(outerTuple => {
+            inner.flatMap(innerTuple => {
+              val get = (i: Int) => {
+                outerTuple.applyOrElse(i, j => innerTuple(j - outerTuple.size))
+              }
+              if(scanFilter(innerTuple.size + outerTuple.size)(get))
+                Some((outerTuple ++ innerTuple).asInstanceOf[edbRow])
+              else
+                None
+            })
+          })
+        })
+        .filter(r => scanFilter(r.size)(r))
+    }
+    def next(): Option[edbRow] = {
+      if (index >= outputRelation.length)
+        NilTuple
+      else {
+        index += 1
+        Option(outputRelation(index - 1))
+      }
+    }
+
+    def close(): Unit = {
+      inputs.foreach(i => i.close())
+    }
+  }
+
+
   /**
    * TODO: remove duplicates
    *
@@ -197,7 +255,6 @@ class RelationalOperators[S <: StorageManager](val storageManager: S) {
     private var index = 0
     def open(): Unit = {
       val opResults = ops.map(o => o.toList())
-      debug("in union, opresults=", () => opResults.toString())
       outputRelation = opResults.flatten.toSet.toIndexedSeq
     }
     def next(): Option[edbRow] = {

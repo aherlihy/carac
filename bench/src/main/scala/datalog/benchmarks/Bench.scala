@@ -5,7 +5,7 @@ import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.Blackhole
 import datalog.dsl.*
 import datalog.execution.{ExecutionEngine, NaiveExecutionEngine, SemiNaiveExecutionEngine}
-import datalog.storage.{CollectionsStorageManager, IndexedCollStorageManager, JoinOptIdxCollStorageManager, RelationalStorageManager}
+import datalog.storage.{CollectionsStorageManager, IndexedCollStorageManager, JoinOptIdxCollStorageManager, RelationalStorageManager, NS, JoinOptCollStorageManager}
 
 import scala.collection.mutable
 import scala.util.Random
@@ -52,23 +52,57 @@ class Bench {
     }
   }
 
-//  @Benchmark def transitiveClosure_naive_relational(blackhole: Blackhole): Unit =
-//    given engine: ExecutionEngine = new NaiveExecutionEngine(new RelationalStorageManager())
-//    transitiveClosure(engine, blackhole)
-//
-//  @Benchmark def transitiveClosure_semiNaive_relational(blackhole: Blackhole): Unit =
-//    given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new RelationalStorageManager())
-//    transitiveClosure(engine, blackhole)
+  // relational, naive
+  @Benchmark def transitiveClosure_naive_relational(blackhole: Blackhole): Unit =
+    given engine: ExecutionEngine = new NaiveExecutionEngine(new RelationalStorageManager())
+    transitiveClosure(engine, blackhole)
 
-//  @Benchmark def transitiveClosure_semiNaive_collections(blackhole: Blackhole): Unit =
-//    given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new CollectionsStorageManager())
-//    transitiveClosure(engine, blackhole)
-//
-  @Benchmark def transitiveClosure_semiNaive_collections_join(blackhole: Blackhole): Unit =
+  @Benchmark def transitiveClosure_naive_relationalOpt(blackhole: Blackhole): Unit =
+    given engine: ExecutionEngine = new NaiveExecutionEngine(new RelationalStorageManager(NS(), true))
+    transitiveClosure(engine, blackhole)
+
+  // relational, seminaive
+  @Benchmark def transitiveClosure_semiNaive_relational(blackhole: Blackhole): Unit =
+    given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new RelationalStorageManager())
+    transitiveClosure(engine, blackhole)
+
+  @Benchmark def transitiveClosure_semiNaive_relationalOpt(blackhole: Blackhole): Unit =
+    given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new RelationalStorageManager(NS(), true))
+    transitiveClosure(engine, blackhole)
+
+  // seminaive, indexedcoll
+  @Benchmark def transitiveClosure_semiNaive_IdxcollectionsOpt(blackhole: Blackhole): Unit =
     given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new JoinOptIdxCollStorageManager())
     transitiveClosure(engine, blackhole)
 
-  @Benchmark def transitiveClosure_semiNaive_collections_idx(blackhole: Blackhole): Unit =
+  @Benchmark def transitiveClosure_semiNaive_Idxcollections(blackhole: Blackhole): Unit =
     given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new IndexedCollStorageManager())
+    transitiveClosure(engine, blackhole)
+
+  // naive, indexedcoll
+  @Benchmark def transitiveClosure_naive_IdxcollectionsOpt(blackhole: Blackhole): Unit =
+    given engine: ExecutionEngine = new NaiveExecutionEngine(new JoinOptIdxCollStorageManager())
+    transitiveClosure(engine, blackhole)
+
+  @Benchmark def transitiveClosure_naive_Idxcollections(blackhole: Blackhole): Unit =
+    given engine: ExecutionEngine = new NaiveExecutionEngine(new IndexedCollStorageManager())
+    transitiveClosure(engine, blackhole)
+
+  // seminaive, coll
+  @Benchmark def transitiveClosure_semiNaive_collectionsOpt(blackhole: Blackhole): Unit =
+    given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new JoinOptCollStorageManager())
+    transitiveClosure(engine, blackhole)
+
+  @Benchmark def transitiveClosure_semiNaive_collections(blackhole: Blackhole): Unit =
+    given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new CollectionsStorageManager())
+    transitiveClosure(engine, blackhole)
+
+  // naive, coll
+  @Benchmark def transitiveClosure_naive_collectionsOpt(blackhole: Blackhole): Unit =
+    given engine: ExecutionEngine = new NaiveExecutionEngine(new JoinOptCollStorageManager())
+    transitiveClosure(engine, blackhole)
+
+  @Benchmark def transitiveClosure_naive_collections(blackhole: Blackhole): Unit =
+    given engine: ExecutionEngine = new NaiveExecutionEngine(new CollectionsStorageManager())
     transitiveClosure(engine, blackhole)
 }

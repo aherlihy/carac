@@ -2,7 +2,7 @@ package datalog
 
 import datalog.execution.{ExecutionEngine, NaiveExecutionEngine, SemiNaiveExecutionEngine}
 import datalog.dsl.{Program, Constant, __}
-import datalog.storage.{CollectionsStorageManager, IndexedCollStorageManager, RelationalStorageManager}
+import datalog.storage.{CollectionsStorageManager, IndexedCollStorageManager, RelationalStorageManager, NS}
 
 import scala.util.Random
 import scala.collection.mutable
@@ -24,7 +24,7 @@ def msp() = {
 }
 
 def run(): Unit = {
-  given engine: ExecutionEngine = new NaiveExecutionEngine(new IndexedCollStorageManager())
+  given engine: ExecutionEngine = new NaiveExecutionEngine(new RelationalStorageManager(NS(),true))
   val program = Program(engine)
   val edge = program.relation[Constant]("edge")
   val edge2 = program.relation[Constant]("edge2")

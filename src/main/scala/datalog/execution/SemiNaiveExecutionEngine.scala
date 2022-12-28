@@ -18,14 +18,14 @@ class SemiNaiveExecutionEngine(override val storageManager: StorageManager) exte
     relations.foreach(r => {
       debug("\t=>iterating@", () => storageManager.ns(r))
       val prev = storageManager.getDerivedDB(r, knownDbId)
-      debug("\tderived[known][" + storageManager.ns(r) + "] =", () => storageManager.printer.factToString(prev))
+      debug(s"\tderived[known][${storageManager.ns(r)}] =", () => storageManager.printer.factToString(prev))
       val res = evalRuleSN(r, newDbId, knownDbId)
       debug("\tevalRuleSN=", () => storageManager.printer.factToString(res))
       val diff = storageManager.getDiff(res, prev)
       storageManager.resetDerived(r, newDbId, diff, prev) // set derived[new] to derived[new]+delta[new]
       storageManager.resetDelta(r, newDbId, diff)
-      debug("\tdiff, i.e. delta[new][" + storageManager.ns(r) + "] =", () => storageManager.printer.factToString(storageManager.deltaDB(newDbId)(r)))
-      debug("\tall, i.e. derived[new][" + storageManager.ns(r) + "] =", () => storageManager.printer.factToString(storageManager.derivedDB(newDbId)(r)))
+      debug(s"\tdiff, i.e. delta[new][${storageManager.ns(r)}] =", () => storageManager.printer.factToString(storageManager.deltaDB(newDbId)(r)))
+      debug(s"\tall, i.e. derived[new][${storageManager.ns(r)}] =", () => storageManager.printer.factToString(storageManager.derivedDB(newDbId)(r)))
     })
   }
 
@@ -41,7 +41,7 @@ class SemiNaiveExecutionEngine(override val storageManager: StorageManager) exte
     //    if (relations.isEmpty)
     //      return Set()
     val relations = precedenceGraph.topSort().filter(r => storageManager.idbs.contains(r))
-    debug("solving relation: " + storageManager.ns(rId) + " order of relations=", relations.toString)
+    debug(s"solving relation: ${storageManager.ns(rId)} order of relations=", relations.toString)
     knownDbId = storageManager.initEvaluation()
     var newDbId = storageManager.initEvaluation()
     var count = 0
@@ -61,11 +61,10 @@ class SemiNaiveExecutionEngine(override val storageManager: StorageManager) exte
       storageManager.clearDB(true, newDbId)
       storageManager.printer.known = knownDbId // TODO: get rid of
 
-      debug("initial state @ " + count, storageManager.printer.toString)
+      debug(s"initial state @ $count", storageManager.printer.toString)
       count += 1
       evalSN(rId, relations, newDbId, knownDbId)
       setDiff = storageManager.deltaDB(newDbId).exists((k, v) => v.nonEmpty)
-//      debug("state after evalSN " + count, storageManager.printer.toString)
     }
     storageManager.getIDBResult(rId, newDbId)
   }
