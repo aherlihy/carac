@@ -43,28 +43,34 @@ abstract class SimpleStorageManager(ns: NS) extends StorageManager(ns) {
   val printer: Printer[this.type] = Printer[this.type](this)
 
   val relOps: RelationalOperators[this.type] = RelationalOperators(this)
+  val prebuiltOpKeys: mutable.Map[Int, Table[JoinIndexes]] = mutable.Map[Int, Table[JoinIndexes]]()
+
+  override def insertIDB(rId: Int, rule: Seq[Atom]): Unit = {
+    val row = Row(rule.map(a => StorageAtom(a.rId, a.terms))*)
+    idbs.getOrElseUpdate(rId, IDB()).addOne(row)
+    prebuiltOpKeys.getOrElseUpdate(rId, Table[JoinIndexes]()).addOne(getOperatorKey(row))
+    // TODO: could do this in the topsort instead of as inserted
+  }
+
+  override def insertEDB(rule: Atom): Unit = {
+    if (edbs.contains(rule.rId))
+      edbs(rule.rId).addOne(rule.terms)
+    else
+      edbs(rule.rId) = EDB()
+      edbs(rule.rId).addOne(rule.terms)
+      prebuiltOpKeys.getOrElseUpdate(rule.rId, Table[JoinIndexes]()).addOne(JoinIndexes(IndexedSeq(), Map(), IndexedSeq(), Seq(rule.rId), true))
+  }
+
+  override def getOperatorKeys(rId: Int): Table[JoinIndexes] = {
+    prebuiltOpKeys.getOrElseUpdate(rId, Table[JoinIndexes]())
+  }
 
   def getDiff(lhs: EDB, rhs: EDB): EDB =
     lhs diff rhs
-  // store all relations
+
   def initRelation(rId: Int, name: String): Unit = {
-//    edbs.addOne(rId, EDB())
-//    idbs.addOne(rId, IDB())
     ns(rId) = name
   }
-  // TODO: For now store IDB and EDB separately
-  def insertIDB(rId: Int, rule: Seq[Atom]): Unit = {
-    idbs.getOrElseUpdate(rId, IDB()).addOne(Row(rule.map(a => StorageAtom(a.rId, a.terms))*))
-  }
-  def insertEDB(rule: Atom): Unit = {
-    edbs.getOrElseUpdate(rule.rId, EDB()).addOne(rule.terms)
-  }
-//  def bulkInsertEDB(rId: Int, rules: Relation[StorageTerm]): Unit = {
-//    edbs(rId).appendAll(rules)
-//  }
-//  def bulkInsertEDB(rId: Int, rules: Relation[StorageTerm], dbId: Int): Unit = {
-//    derivedDB(dbId).getOrElseUpdate(rId, EDB()).appendAll(rules)
-//  }
 
   def verifyEDBs(): Unit = {
     ns.rIds().foreach(rId =>
@@ -175,14 +181,5 @@ abstract class SimpleStorageManager(ns: NS) extends StorageManager(ns) {
       case c: Constant => ("c", c)
     }
     JoinIndexes(bodyVars, constants.toMap, projects, deps)
-  }
-
-  def getOperatorKeys(rId: Int): Table[JoinIndexes] = {
-    if (!idbs.contains(rId)) throw new Exception("EDB '" + ns(rId) + "' has no facts")
-    val res = idbs(rId).filter(r => r.nonEmpty).map(rule => getOperatorKey(rule))
-    if (edbs.contains(rId)) { // need to add EDBs to final result
-      res.addOne(JoinIndexes(IndexedSeq(), Map(), IndexedSeq(), Seq(rId), true))
-    }
-    res
   }
 }

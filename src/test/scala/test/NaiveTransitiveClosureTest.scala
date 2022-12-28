@@ -2,7 +2,7 @@ package test
 
 import datalog.dsl.{Program, Relation}
 import datalog.execution.{ExecutionEngine, NaiveExecutionEngine, SemiNaiveExecutionEngine}
-import datalog.storage.{CollectionsStorageManager, IndexedCollStorageManager, RelationalStorageManager}
+import datalog.storage.{CollectionsStorageManager, RelationalStorageManager}
 import test.graphs.{Acyclic, MultiIsolatedCycle, MultiJoin, RecursivePath, SingleCycle, TopSort}
 
 class NaiveRelationalTransitiveClosure extends munit.FunSuite {

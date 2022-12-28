@@ -1,6 +1,6 @@
 package datalog.storage
 
-class JoinOptIdxCollStorageManager (ns: NS = NS()) extends IndexedCollStorageManager(ns) {
+class JoinOptIdxCollStorageManager (ns: NS = NS()) extends CollectionsStorageManager(ns) {
   inline def scanFilter(k: JoinIndexes, maxIdx: Int)(get: Int => StorageTerm = x => x) = {
     val vCmp = k.varIndexes.isEmpty || k.varIndexes.forall(condition =>
       if (condition.head >= maxIdx)

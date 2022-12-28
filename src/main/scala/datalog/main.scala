@@ -2,7 +2,7 @@ package datalog
 
 import datalog.execution.{ExecutionEngine, NaiveExecutionEngine, SemiNaiveExecutionEngine}
 import datalog.dsl.{Program, Constant, __}
-import datalog.storage.{CollectionsStorageManager, IndexedCollStorageManager, RelationalStorageManager, NS}
+import datalog.storage.{CollectionsStorageManager, RelationalStorageManager, NS}
 
 import scala.util.Random
 import scala.collection.mutable
