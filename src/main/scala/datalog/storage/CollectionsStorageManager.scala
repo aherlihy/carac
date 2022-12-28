@@ -7,7 +7,7 @@ import scala.collection.{immutable, mutable}
 import datalog.tools.Debug.debug
 
 class CollectionsStorageManager(ns: NS = new NS()) extends SimpleStorageManager(ns) {
-  inline def joinHelper(inputs: Seq[EDB], k: JoinIndexes): EDB = {
+  def joinHelper(inputs: Seq[EDB], k: JoinIndexes): EDB = {
     inputs
       .reduceLeft((outer, inner) => {
         outer.flatMap(outerTuple => {

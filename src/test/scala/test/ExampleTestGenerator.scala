@@ -116,7 +116,7 @@ abstract class TestGenerator(directory: Path,
       Seq("Relational", "IndexedColl").foreach(storage => {
         if (
             skip.contains(execution) || skip.contains(storage) ||
-            tags.flatMap(t => Properties.envOrNone(t.toUpperCase())).nonEmpty // manually implement --exclude for intellij
+              (tags ++ Set(execution, storage)).flatMap(t => Properties.envOrNone(t.toUpperCase())).nonEmpty// manually implement --exclude for intellij
         ) {
             test(s"$execution$storage".ignore) {}
           } else {

@@ -4,8 +4,8 @@ import java.util.concurrent.TimeUnit
 import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.Blackhole
 import datalog.dsl.*
-import datalog.execution.{ExecutionEngine,NaiveExecutionEngine, SemiNaiveExecutionEngine}
-import datalog.storage.{CollectionsStorageManager, IndexedCollStorageManager, RelationalStorageManager}
+import datalog.execution.{ExecutionEngine, NaiveExecutionEngine, SemiNaiveExecutionEngine}
+import datalog.storage.{CollectionsStorageManager, IndexedCollStorageManager, JoinOptIdxCollStorageManager, RelationalStorageManager}
 
 import scala.collection.mutable
 import scala.util.Random
@@ -41,9 +41,7 @@ class Bench {
 
     def solve[T <: Constant](rel: Relation[T]): Unit =
       blackhole.consume(
-        //assert(
           rel.solve()
-         //   == Set(Vector("a", "d"), Vector("b", "d"), Vector("b", "c"), Vector("a", "b"), Vector("a", "c"), Vector("c", "d")))
       )
 
     // FIXME: we redirect Console.out.println to a dummy stream here because
@@ -51,8 +49,6 @@ class Bench {
     // the benchmarking output.
     Console.withOut(dummyStream) {
       solve(p)
-//      solve(ans1)
-//      solve(ans2)
     }
   }
 
@@ -68,6 +64,9 @@ class Bench {
 //    given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new CollectionsStorageManager())
 //    transitiveClosure(engine, blackhole)
 //
+  @Benchmark def transitiveClosure_semiNaive_collections_join(blackhole: Blackhole): Unit =
+    given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new JoinOptIdxCollStorageManager())
+    transitiveClosure(engine, blackhole)
 
   @Benchmark def transitiveClosure_semiNaive_collections_idx(blackhole: Blackhole): Unit =
     given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new IndexedCollStorageManager())
