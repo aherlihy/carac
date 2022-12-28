@@ -23,6 +23,7 @@ class NS() {
   }
   def contains(key: String): Boolean = nameToRid.contains(key)
   def contains(key: Int): Boolean = rIdToName.contains(key)
+  def rIds(): Iterable[Int] = rIdToName.keys
 }
 
 trait StorageManager(val ns: NS) {
@@ -105,4 +106,5 @@ trait StorageManager(val ns: NS) {
   def compareDerivedDBs(dbId1: Int, dbId2: Int): Boolean
   def clearDB(derived: Boolean, dbId: Int): Unit
 
+  def verifyEDBs(): Unit
 }

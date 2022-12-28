@@ -65,6 +65,13 @@ abstract class SimpleStorageManager(ns: NS) extends StorageManager(ns) {
 //  def bulkInsertEDB(rId: Int, rules: Relation[StorageTerm], dbId: Int): Unit = {
 //    derivedDB(dbId).getOrElseUpdate(rId, EDB()).appendAll(rules)
 //  }
+
+  def verifyEDBs(): Unit = {
+    ns.rIds().foreach(rId =>
+      if (!edbs.contains(rId) && !idbs.contains(rId)) // treat undefined relations as empty edbs
+        edbs(rId) = EDB()
+    )
+  }
   /**
    * Initialize derivedDB to clone EDBs, initialize deltaDB to empty
    *

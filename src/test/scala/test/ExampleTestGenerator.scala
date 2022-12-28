@@ -103,7 +103,6 @@ abstract class TestGenerator(directory: Path,
           factInput.foreach(f => fact(f: _*) :- ())
           if (factInput.size == 0) {
             val edbs = program.ee.storageManager.edbs.asInstanceOf[mutable.Map[Int, Any]]
-            edbs.getOrElseUpdate(fact.id, program.ee.storageManager.EDB()) // TODO: handle empty collections better
           }
         )
         pretest(program)
