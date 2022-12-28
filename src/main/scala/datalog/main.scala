@@ -24,7 +24,7 @@ def msp() = {
 }
 
 def run(): Unit = {
-  given engine: ExecutionEngine = new NaiveExecutionEngine(new RelationalStorageManager(NS(),true))
+  given engine: ExecutionEngine = new NaiveExecutionEngine(new RelationalStorageManager())
   val program = Program(engine)
   val edge = program.relation[Constant]("edge")
   val edge2 = program.relation[Constant]("edge2")

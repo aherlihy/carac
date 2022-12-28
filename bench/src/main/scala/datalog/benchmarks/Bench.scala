@@ -5,7 +5,7 @@ import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.Blackhole
 import datalog.dsl.*
 import datalog.execution.{ExecutionEngine, NaiveExecutionEngine, SemiNaiveExecutionEngine}
-import datalog.storage.{CollectionsStorageManager, JoinOptIdxCollStorageManager, RelationalStorageManager, NS}
+import datalog.storage.{CollectionsStorageManager, RelationalStorageManager, NS}
 
 import scala.collection.mutable
 import scala.util.Random
@@ -30,33 +30,17 @@ class Bench {
     given engine: ExecutionEngine = new NaiveExecutionEngine(new RelationalStorageManager())
     runTest(MultiJoin(), engine, blackhole)
 
-  @Benchmark def multiJoin_naive_relational_opt(blackhole: Blackhole): Unit =
-    given engine: ExecutionEngine = new NaiveExecutionEngine(new RelationalStorageManager(NS(), true))
-    runTest(MultiJoin(), engine, blackhole)
-
   // relational, seminaive
   @Benchmark def multiJoin_semiNaive_relational(blackhole: Blackhole): Unit =
     given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new RelationalStorageManager())
     runTest(MultiJoin(), engine, blackhole)
 
-  @Benchmark def multiJoin_semiNaive_relational_opt(blackhole: Blackhole): Unit =
-    given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new RelationalStorageManager(NS(), true))
-    runTest(MultiJoin(), engine, blackhole)
-
   // seminaive, coll
-  @Benchmark def multiJoin_semiNaive_collections_opt(blackhole: Blackhole): Unit =
-    given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new JoinOptIdxCollStorageManager())
-    runTest(MultiJoin(), engine, blackhole)
-
   @Benchmark def multiJoin_semiNaive_collections(blackhole: Blackhole): Unit =
     given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new CollectionsStorageManager())
     runTest(MultiJoin(), engine, blackhole)
 
   // naive, coll
-  @Benchmark def multiJoin_naive_collections_opt(blackhole: Blackhole): Unit =
-    given engine: ExecutionEngine = new NaiveExecutionEngine(new JoinOptIdxCollStorageManager())
-    runTest(MultiJoin(), engine, blackhole)
-
   @Benchmark def multiJoin_naive_collections(blackhole: Blackhole): Unit =
     given engine: ExecutionEngine = new NaiveExecutionEngine(new CollectionsStorageManager())
     runTest(MultiJoin(), engine, blackhole)

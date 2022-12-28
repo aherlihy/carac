@@ -5,7 +5,7 @@ import datalog.tools.Debug.debug
 
 import scala.collection.{immutable, mutable}
 
-class RelationalStorageManager(ns: NS = NS(), useOpt: Boolean=false) extends SimpleStorageManager(ns) {
+class RelationalStorageManager(ns: NS = NS()) extends SimpleStorageManager(ns) {
   def joinHelper(inputs: Seq[EDB], k: JoinIndexes): EDB = { throw new Error("shouldn't be called") }
   /**
    * Use relational operators to evaluate an IDB rule using Naive algo
@@ -24,11 +24,7 @@ class RelationalStorageManager(ns: NS = NS(), useOpt: Boolean=false) extends Sim
             Scan(edbs.getOrElse(rId, EDB()), rId)
           else
             Project(
-              if (useOpt) JoinOpt(
-                  k.deps.map(r => Scan(
-                    derivedDB(knownDbId).getOrElse(r, edbs.getOrElse(r, EDB())), r) // TODO: warn if EDB is empty? Right now can't tell the difference between undeclared and empty EDB
-                  ), k.varIndexes, k.constIndexes
-              ) else Join(k.deps.map(r => Scan(
+              Join(k.deps.map(r => Scan(
                 derivedDB(knownDbId).getOrElse(r, edbs.getOrElse(r, EDB())), r) // TODO: warn if EDB is empty? Right now can't tell the difference between undeclared and empty EDB
               ), k.varIndexes, k.constIndexes),
               k.projIndexes

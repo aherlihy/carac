@@ -139,53 +139,6 @@ class RelationalOperators[S <: StorageManager](val storageManager: S) {
   }
 
   case class Join(inputs: Seq[RelOperator],
-                  variables: IndexedSeq[IndexedSeq[Int]],
-                  constants: Map[Int, Constant]) extends RelOperator {
-
-    private var outputRelation= mutable.ArrayBuffer[edbRow]()
-    private var index = 0
-
-    def open(): Unit = {
-      index = 0
-      val inputList: Seq[mutable.ArrayBuffer[edbRow]] = inputs.map(i => i.toList())
-
-      outputRelation = inputList
-        .reduceLeft((outer, inner) => {
-          outer.flatMap(outerTuple => {
-            inner.map(innerTuple => {
-              (outerTuple ++ innerTuple).asInstanceOf[edbRow]
-            })
-          })
-        })
-        .filter(joined =>
-          (variables.isEmpty ||
-            variables.forall(condition =>
-              condition.forall(c =>
-                joined(c) == joined(condition.head)
-            )
-          )) &&
-          (constants.isEmpty ||
-            constants.forall((idx, const) =>
-              joined(idx) == const
-          ))
-        )
-    }
-
-    def next(): Option[edbRow] = {
-      if (index >= outputRelation.length)
-        NilTuple
-      else {
-        index += 1
-        Option(outputRelation(index - 1))
-      }
-    }
-
-    def close(): Unit = {
-      inputs.foreach(i => i.close())
-    }
-  }
-
-  case class JoinOpt(inputs: Seq[RelOperator],
                      variables: IndexedSeq[IndexedSeq[Int]],
                      constants: Map[Int, Constant]) extends RelOperator {
 
