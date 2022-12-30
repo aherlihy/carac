@@ -23,6 +23,8 @@ case class Variable(oid: Int, anon: Boolean = false) {
 
 type Term = Constant | Variable
 
+type NegatedAtom = Atom
+
 trait Atom {
   def :- (body: Atom*): Unit
   def :- (body: Unit): Unit

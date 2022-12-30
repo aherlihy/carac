@@ -41,6 +41,7 @@ class SemiNaiveExecutionEngine(override val storageManager: StorageManager) exte
     //    if (relations.isEmpty)
     //      return Set()
     val relations = precedenceGraph.topSort().filter(r => storageManager.idbs.contains(r))
+    debug(s"precedence graph=", precedenceGraph.sortedString)
     debug(s"solving relation: ${storageManager.ns(rId)} order of relations=", relations.toString)
     knownDbId = storageManager.initEvaluation()
     var newDbId = storageManager.initEvaluation()

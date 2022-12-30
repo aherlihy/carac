@@ -1,6 +1,8 @@
 package datalog.storage
 
-import scala.collection.{mutable, immutable}
+import datalog.execution.ast.*
+
+import scala.collection.{immutable, mutable}
 
 // Keep pretty print stuff separate bc long and ugly, mb put it in a macro
 class Printer[S <: StorageManager](val s: S) {
@@ -78,5 +80,22 @@ class Printer[S <: StorageManager](val s: S) {
       "\nDERIVED:" + s.derivedDB.map(printHelperRelation).mkString("[", ", ", "]") +
       "\nDELTA:" + s.deltaDB.map(printHelperRelation).mkString("[", ", ", "]") +
       "\n+++++"
+  }
+
+  def printAST(node: ASTNode): String = {
+    node match {
+      case ProgramNode(allRules) => "PROGRAM\n" + allRules.map((rId, rules) => s"  ${s.ns(rId)} => ${printAST(rules)}").mkString("", "\n", "")
+      case AllRulesNode(rules) => s"${rules.map(printAST).mkString("[", "\n\t", "  ]")}"
+      case RuleNode(head, body) =>
+        s"\n\t${printAST(head)} :- ${body.map(printAST).mkString("(", ", ", ")")}\n"
+      case n: AtomNode => n match {
+        case NegAtom(expr) => s"!${printAST(expr)}"
+        case LogicAtom(relation, terms) => s"${s.ns(relation)}${terms.map(printAST).mkString("(", ", ", ")")}"
+      }
+      case n: TermNode => n match {
+        case VarTerm(value) => s"${value.toString}"
+        case ConstTerm(value) => s"$value"
+      }
+    }
   }
 }

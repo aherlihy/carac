@@ -28,7 +28,7 @@ class PrecedenceGraph(ns: NS /* for debugging */) {
   val stack: mutable.Stack[Node] = mutable.Stack[Node]()
 
   override def toString: String = nodes.map((r, n) => ns(r) + " -> " + n.edges.map(e => ns(e.rId)).mkString("[", ", ", "]")).mkString("{", ", ", "}")
-  def sortedString(): String = sorted.map(cc => cc.mkString("(", ", ", ")")).mkString("{", ", ", "}")
+  def sortedString(): String = sorted.map(cc => cc.map(ns.apply).mkString("(", ", ", ")")).mkString("{", ", ", "}")
 
   def addNode(rule: Seq[Atom]): Unit = { // TODO: sort incrementally?
     val node = nodes.getOrElseUpdate(rule.head.rId, Node(rule.head.rId, ns))
@@ -78,6 +78,7 @@ class PrecedenceGraph(ns: NS /* for debugging */) {
         strongConnect(node)
       }
     })
+    println("sorted=" + sorted)
     sorted.toSeq.flatMap(s => s.toSeq)
   }
 }
