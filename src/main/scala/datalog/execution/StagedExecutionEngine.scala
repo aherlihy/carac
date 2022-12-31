@@ -2,6 +2,7 @@ package datalog.execution
 
 import datalog.dsl.{Atom, Constant, Term, Variable}
 import datalog.execution.ast.*
+import datalog.execution.ast.transform.{Transformer, CopyEliminationPass, JoinIndexPass}
 import datalog.storage.{SimpleStorageManager, StorageManager}
 import datalog.tools.Debug.debug
 
@@ -13,7 +14,7 @@ class StagedExecutionEngine(val storageManager: StorageManager) extends Executio
   val precedenceGraph = new PrecedenceGraph(storageManager.ns)
   val tree: ProgramNode = ProgramNode()
   private var knownDbId = -1
-  private val transforms: Seq[Transformer] = Seq(CopyEliminationPass())
+  private val transforms: Seq[Transformer] = Seq(CopyEliminationPass(), JoinIndexPass())
 
   def initRelation(rId: Int, name: String): Unit = {
     storageManager.ns(rId) = name

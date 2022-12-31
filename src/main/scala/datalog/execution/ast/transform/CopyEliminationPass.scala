@@ -1,4 +1,6 @@
-package datalog.execution.ast
+package datalog.execution.ast.transform
+
+import datalog.execution.ast.*
 
 import scala.collection.mutable.{ArrayBuffer, Map}
 
@@ -17,7 +19,7 @@ class CopyEliminationPass() extends Transformer {
       case AllRulesNode(rules) =>
         if (rules.size == 1)
           checkAlias(rules.head)
-      case RuleNode(head, body) =>
+      case RuleNode(head, body, _) =>
         if (body.size == 1) // for now just subst simple equality
           (head, body(0)) match {
             case (h: LogicAtom, b: LogicAtom) =>
@@ -33,13 +35,13 @@ class CopyEliminationPass() extends Transformer {
     if (aliases.nonEmpty)
       node match {
         case ProgramNode(m) =>
-          val filtered = m.
+          ProgramNode(m.
             filter((rId, allRules) => !aliases.contains(rId)).
             map((rId, allRules) => (rId, transform(allRules)))
-          ProgramNode(filtered) // delete aliases
+          ) // delete aliases
         case AllRulesNode(rules) =>
           AllRulesNode(rules.map(transform))
-        case RuleNode(head, body) =>
+        case RuleNode(head, body, _) =>
           RuleNode(transform(head), body.map(transform))
         case n: AtomNode => n match {
           case NegAtom(expr) =>

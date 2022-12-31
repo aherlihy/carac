@@ -1,6 +1,7 @@
 package datalog.storage
 
 import datalog.execution.ast.*
+import datalog.execution.JoinIndexes
 
 import scala.collection.{immutable, mutable}
 
@@ -25,7 +26,7 @@ class Printer[S <: StorageManager](val s: S) {
       .map((k, v) => (s.ns(k), ruleToString(v)))
       .mkString("[\n  ", ",\n  ", "]")
   }
-  def naivePlanToString(keys: s.Table[s.JoinIndexes]): String = {
+  def naivePlanToString(keys: s.Table[JoinIndexes]): String = {
     "Union( " +
       keys.map(k =>
         if (k.edb)
@@ -41,7 +42,7 @@ class Printer[S <: StorageManager](val s: S) {
       " )"
   }
 
-  def snPlanToString(keys: s.Table[s.JoinIndexes]): String = {
+  def snPlanToString(keys: s.Table[JoinIndexes]): String = {
     "UNION( " +
       keys.map(k =>
         if (k.edb)
@@ -86,8 +87,9 @@ class Printer[S <: StorageManager](val s: S) {
     node match {
       case ProgramNode(allRules) => "PROGRAM\n" + allRules.map((rId, rules) => s"  ${s.ns(rId)} => ${printAST(rules)}").mkString("", "\n", "")
       case AllRulesNode(rules) => s"${rules.map(printAST).mkString("[", "\n\t", "  ]")}"
-      case RuleNode(head, body) =>
-        s"\n\t${printAST(head)} :- ${body.map(printAST).mkString("(", ", ", ")")}\n"
+      case RuleNode(head, body, joinIdx) =>
+        s"\n\t${printAST(head)} :- ${body.map(printAST).mkString("(", ", ", ")")}" +
+          s" => idx=${joinIdx.getOrElse("").toString}\n"
       case n: AtomNode => n match {
         case NegAtom(expr) => s"!${printAST(expr)}"
         case LogicAtom(relation, terms) => s"${s.ns(relation)}${terms.map(printAST).mkString("(", ", ", ")")}"

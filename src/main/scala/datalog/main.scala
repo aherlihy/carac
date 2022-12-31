@@ -2,8 +2,8 @@ package datalog
 
 import datalog.execution.{ExecutionEngine, NaiveExecutionEngine, SemiNaiveExecutionEngine, StagedExecutionEngine}
 import datalog.dsl.{Constant, Program, __}
+import datalog.execution.ast.transform.CopyEliminationPass
 import datalog.storage.{CollectionsStorageManager, NS, RelationalStorageManager}
-import datalog.execution.ast.CopyEliminationPass
 
 import scala.util.Random
 import scala.collection.mutable
