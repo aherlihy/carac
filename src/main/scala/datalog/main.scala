@@ -38,8 +38,8 @@ def run(): Unit = {
   edge("c", "d") :- ()
   edge("d", "e") :- ()
 
-  oneHop("a", y) :- edge(x, y)
-  twoHops(x, y) :- oneHop(x, y)
+  oneHop(x, y) :- edge(x, y)
+  twoHops(x, z) :- (oneHop(x, y), oneHop(y, z))
   threeHops(x, y) :- (twoHops(x, z), edge(z, y))
 
 
@@ -49,12 +49,7 @@ def run(): Unit = {
 //  println(s"graph to string ${program.ee.precedenceGraph.toString()}")
 //  program.ee.precedenceGraph.topSort()
 //  println(program.ee.precedenceGraph.sortedString())
-//  oneHop.solve()
-//  val tree = program.ee.asInstanceOf[StagedExecutionEngine].tree
-//  val cpp = CopyEliminationPass().transform(tree)
-//  println(program.ee.storageManager.printer.printAST(tree))
-//  println("transformed:")
-//  println(program.ee.storageManager.printer.printAST(cpp))
+  println(threeHops.solve())
 }
 
 @main def main = {

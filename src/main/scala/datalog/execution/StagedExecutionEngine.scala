@@ -13,6 +13,7 @@ class StagedExecutionEngine(val storageManager: StorageManager) extends Executio
   val precedenceGraph = new PrecedenceGraph(storageManager.ns)
   val tree: ProgramNode = ProgramNode()
   private var knownDbId = -1
+  private val transforms: Seq[Transformer] = Seq(CopyEliminationPass())
 
   def initRelation(rId: Int, name: String): Unit = {
     storageManager.ns(rId) = name
@@ -92,16 +93,19 @@ class StagedExecutionEngine(val storageManager: StorageManager) extends Executio
   }
 
   override def solve(rId: Int): Set[Seq[Term]] = {
-    storageManager.verifyEDBs()
-    if (storageManager.edbs.contains(rId) && !storageManager.idbs.contains(rId)) { // if just an edb predicate then return
-      return storageManager.getEDBResult(rId)
-    }
-    if (!storageManager.idbs.contains(rId)) {
-      throw new Error("Solving for rule without body")
-    }
-    // TODO: if a IDB predicate without vars, then solve all and test contains result?
-    //    if (relations.isEmpty)
-    //      return Set()
+    // verify setup
+//    storageManager.verifyEDBs()
+//    if (storageManager.edbs.contains(rId) && !storageManager.idbs.contains(rId)) { // if just an edb predicate then return
+//      return storageManager.getEDBResult(rId)
+//    }
+//    if (!storageManager.idbs.contains(rId)) {
+//      throw new Error("Solving for rule without body")
+//    }
+    val transformedTree = transforms.foldLeft(tree.asInstanceOf[ASTNode])((t, pass) => pass.transform(t)) // TODO: need cast?
+
+    debug("AST: ", () => storageManager.printer.printAST(tree))
+    debug("TRANSFORMED: ", () => storageManager.printer.printAST(transformedTree))
+
     val relations = precedenceGraph.topSort().filter(r => storageManager.idbs.contains(r))
     debug(s"precedence graph=", precedenceGraph.sortedString)
     debug(s"solving relation: ${storageManager.ns(rId)} order of relations=", relations.toString)
