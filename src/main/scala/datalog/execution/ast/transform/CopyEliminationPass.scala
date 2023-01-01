@@ -16,7 +16,7 @@ class CopyEliminationPass() extends Transformer {
         allRules.map((rId, rules) => {
           checkAlias(rules)
         })
-      case AllRulesNode(rules) =>
+      case AllRulesNode(rules, _) =>
         if (rules.size == 1)
           checkAlias(rules.head)
       case RuleNode(head, body, _) =>
@@ -39,8 +39,8 @@ class CopyEliminationPass() extends Transformer {
             filter((rId, allRules) => !aliases.contains(rId)).
             map((rId, allRules) => (rId, transform(allRules)))
           ) // delete aliases
-        case AllRulesNode(rules) =>
-          AllRulesNode(rules.map(transform))
+        case AllRulesNode(rules, rId) =>
+          AllRulesNode(rules.map(transform), rId)
         case RuleNode(head, body, _) =>
           RuleNode(transform(head), body.map(transform))
         case n: AtomNode => n match {

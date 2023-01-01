@@ -2,6 +2,7 @@ package datalog.storage
 
 import datalog.execution.ast.*
 import datalog.execution.JoinIndexes
+import datalog.execution.ir.*
 
 import scala.collection.{immutable, mutable}
 
@@ -86,7 +87,7 @@ class Printer[S <: StorageManager](val s: S) {
   def printAST(node: ASTNode): String = {
     node match {
       case ProgramNode(allRules) => "PROGRAM\n" + allRules.map((rId, rules) => s"  ${s.ns(rId)} => ${printAST(rules)}").mkString("", "\n", "")
-      case AllRulesNode(rules) => s"${rules.map(printAST).mkString("[", "\n\t", "  ]")}"
+      case AllRulesNode(rules, _) => s"${rules.map(printAST).mkString("[", "\n\t", "  ]")}"
       case RuleNode(head, body, joinIdx) =>
         s"\n\t${printAST(head)} :- ${body.map(printAST).mkString("(", ", ", ")")}" +
           s" => idx=${joinIdx.getOrElse("").toString}\n"
@@ -99,5 +100,22 @@ class Printer[S <: StorageManager](val s: S) {
         case ConstTerm(value) => s"$value"
       }
     }
+  }
+
+  def printIR(node: IROp, ident: Int = 0): String = {
+    val i = "  "*ident
+    i + (node match {
+      case ProgramOp(body) => s"PROGRAM:\n${printIR(body, ident+1)}"
+      case SwapOp() => "SWAP"
+      case DoWhileOp(body, cond) => s"DO {\n${printIR(body, ident+1)}}\n${i}WHILE {${printIR(cond, ident)}}\n"
+      case SequenceOp(ops) => s"SEQ:${ops.zipWithIndex.map((o, idx) => s"$idx" + printIR(o, ident+1)).mkString("[\n", ",\n", "]")}"
+      case DiffOp() => s"DIFF"
+      case ClearOp() => s"CLEAR"
+      case FilterOp(srcRel, cond) => s"FILTER${cond.constToString()}(${node.ctx.storageManager.ns(srcRel)})"
+      case JoinOp(subOps, cond) => s"JOIN${cond.varToString()}${subOps.map(s => printIR(s, ident+1)).mkString("(\n", ",\n", ")")}"
+      case ProjectOp(subOp, cond) => s"PROJECT${cond.projToString()}(\n${printIR(subOp, ident+1)})"
+      case InsertOp(rId, subOp) => s"INSERT INTO ${node.ctx.storageManager.ns(rId)}\n${printIR(subOp, ident+1)}"
+      case UnionOp(ops) => s"UNION${ops.map(o => printIR(o, ident+1)).mkString("(\n", ",", ")")}"
+    })
   }
 }

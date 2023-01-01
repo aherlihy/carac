@@ -13,7 +13,7 @@ class JoinIndexPass extends Transformer {
   override def transform(node: ASTNode): ASTNode = {
     node match {
       case ProgramNode(idbs) => ProgramNode(idbs.map((rId, allRules) => (rId, transform(allRules))))
-      case AllRulesNode(rules) => AllRulesNode(rules.map(transform))
+      case AllRulesNode(rules, rId) => AllRulesNode(rules.map(transform), rId)
       case RuleNode(h, b, _) =>
         val constants = mutable.Map[Int, Constant]() // position => constant
         val variables = mutable.Map[Variable, Int]() // v.oid => position

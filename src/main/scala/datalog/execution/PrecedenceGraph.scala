@@ -78,7 +78,6 @@ class PrecedenceGraph(ns: NS /* for debugging */) {
         strongConnect(node)
       }
     })
-    println("sorted=" + sorted)
     sorted.toSeq.flatMap(s => s.toSeq)
   }
 }

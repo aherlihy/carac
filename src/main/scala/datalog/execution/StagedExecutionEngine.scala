@@ -2,7 +2,8 @@ package datalog.execution
 
 import datalog.dsl.{Atom, Constant, Term, Variable}
 import datalog.execution.ast.*
-import datalog.execution.ast.transform.{Transformer, CopyEliminationPass, JoinIndexPass}
+import datalog.execution.ast.transform.{CopyEliminationPass, JoinIndexPass, Transformer}
+import datalog.execution.ir.{IRTree, Context}
 import datalog.storage.{SimpleStorageManager, StorageManager}
 import datalog.tools.Debug.debug
 
@@ -12,7 +13,7 @@ import scala.collection.mutable.ArrayBuffer
 class StagedExecutionEngine(val storageManager: StorageManager) extends ExecutionEngine {
   import storageManager.EDB
   val precedenceGraph = new PrecedenceGraph(storageManager.ns)
-  val tree: ProgramNode = ProgramNode()
+  val ast: ProgramNode = ProgramNode()
   private var knownDbId = -1
   private val transforms: Seq[Transformer] = Seq(CopyEliminationPass(), JoinIndexPass())
 
@@ -36,7 +37,7 @@ class StagedExecutionEngine(val storageManager: StorageManager) extends Executio
 
   def insertIDB(rId: Int, rule: Seq[Atom]): Unit = {
     precedenceGraph.addNode(rule)
-    val allRules = tree.rules.getOrElseUpdate(rId, AllRulesNode(ArrayBuffer.empty)).asInstanceOf[AllRulesNode]
+    val allRules = ast.rules.getOrElseUpdate(rId, AllRulesNode(ArrayBuffer.empty, rId)).asInstanceOf[AllRulesNode]
     allRules.rules.append(
       RuleNode(
         LogicAtom(
@@ -102,38 +103,39 @@ class StagedExecutionEngine(val storageManager: StorageManager) extends Executio
 //    if (!storageManager.idbs.contains(rId)) {
 //      throw new Error("Solving for rule without body")
 //    }
-    val transformedTree = transforms.foldLeft(tree.asInstanceOf[ASTNode])((t, pass) => pass.transform(t)) // TODO: need cast?
+    val transformedAST = transforms.foldLeft(ast.asInstanceOf[ASTNode])((t, pass) => pass.transform(t)) // TODO: need cast?
 
-    debug("AST: ", () => storageManager.printer.printAST(tree))
-    debug("TRANSFORMED: ", () => storageManager.printer.printAST(transformedTree))
+    debug("AST: ", () => storageManager.printer.printAST(ast))
+    debug("TRANSFORMED: ", () => storageManager.printer.printAST(transformedAST))
 
-    val relations = precedenceGraph.topSort().filter(r => storageManager.idbs.contains(r))
-    debug(s"precedence graph=", precedenceGraph.sortedString)
-    debug(s"solving relation: ${storageManager.ns(rId)} order of relations=", relations.toString)
-    knownDbId = storageManager.initEvaluation()
-    var newDbId = storageManager.initEvaluation()
-    var count = 0
+    val ctx = Context(storageManager, precedenceGraph, rId)
+    val irTree = IRTree(using ctx).initialize(transformedAST)
 
-    debug("initial state @ -1", storageManager.printer.toString)
-    val startRId = relations.head
-    relations.foreach(rel => {
-      eval(rel, relations, newDbId, knownDbId) // this fills derived[new]
-      storageManager.resetDelta(rel, newDbId, storageManager.getDerivedDB(rel, newDbId)) // copy delta[new] = derived[new]
-    })
+    debug("PROGRAM:\n", () => storageManager.printer.printIR(irTree))
 
-    var setDiff = true
-    while(setDiff) {
-      val t = knownDbId
-      knownDbId = newDbId
-      newDbId = t // swap new and known DBs
-      storageManager.clearDB(true, newDbId)
-      storageManager.printer.known = knownDbId // TODO: get rid of
-
-      debug(s"initial state @ $count", storageManager.printer.toString)
-      count += 1
-      evalSN(rId, relations, newDbId, knownDbId)
-      setDiff = storageManager.deltaDB(newDbId).exists((k, v) => v.nonEmpty)
-    }
-    storageManager.getIDBResult(rId, newDbId)
+//    var count = 0
+//
+//    debug("initial state @ -1", storageManager.printer.toString)
+//    val startRId = relations.head
+//    relations.foreach(rel => {
+//      eval(rel, relations, newDbId, knownDbId) // this fills derived[new]
+//      storageManager.resetDelta(rel, newDbId, storageManager.getDerivedDB(rel, newDbId)) // copy delta[new] = derived[new]
+//    })
+//
+//    var setDiff = true
+//    while(setDiff) {
+//      val t = knownDbId
+//      knownDbId = newDbId
+//      newDbId = t // swap new and known DBs
+//      storageManager.clearDB(true, newDbId)
+//      storageManager.printer.known = knownDbId // TODO: get rid of
+//
+//      debug(s"initial state @ $count", storageManager.printer.toString)
+//      count += 1
+//      evalSN(rId, relations, newDbId, knownDbId)
+//      setDiff = storageManager.deltaDB(newDbId).exists((k, v) => v.nonEmpty)
+//    }
+//    storageManager.getIDBResult(rId, ctx.newDbId)
+    Set(Seq())
   }
 }

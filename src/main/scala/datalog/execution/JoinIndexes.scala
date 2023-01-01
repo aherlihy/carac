@@ -22,4 +22,7 @@ case class JoinIndexes(varIndexes: IndexedSeq[IndexedSeq[Int]],
       ", deps:" + deps.mkString("[", ", ", "]") +
       ", edb:" + edb +
       " }"
+  def varToString() = varIndexes.map(v => v.mkString("$", "==$", "")).mkString("[", ",", "]")
+  def constToString() = constIndexes.map((k, v) => k + "==" + v).mkString("{", "&&", "}")
+  def projToString() = projIndexes.map((typ, v) => f"$typ$v").mkString("[", " ", "]")
 }
