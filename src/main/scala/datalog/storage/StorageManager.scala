@@ -85,5 +85,6 @@ trait StorageManager(val ns: NS) {
   def compareDerivedDBs(dbId1: Int, dbId2: Int): Boolean
   def clearDB(derived: Boolean, dbId: Int): Unit
 
+  def verifyEDBs(idbList: mutable.Set[Int]): Unit
   def verifyEDBs(): Unit
 }

@@ -87,7 +87,7 @@ class Printer[S <: StorageManager](val s: S) {
   def printAST(node: ASTNode): String = {
     node match {
       case ProgramNode(allRules) => "PROGRAM\n" + allRules.map((rId, rules) => s"  ${s.ns(rId)} => ${printAST(rules)}").mkString("", "\n", "")
-      case AllRulesNode(rules, _) => s"${rules.map(printAST).mkString("[", "\n\t", "  ]")}"
+      case AllRulesNode(rules, rId, edb) => s"${if (edb) "{EDB}"+factToString(s.edbs(rId))+"{IDB}" else ""}${rules.map(printAST).mkString("[", "\n\t", "  ]")}"
       case RuleNode(head, body, joinIdx) =>
         s"\n\t${printAST(head)} :- ${body.map(printAST).mkString("(", ", ", ")")}" +
           s" => idx=${joinIdx.getOrElse("").toString}\n"
@@ -111,11 +111,11 @@ class Printer[S <: StorageManager](val s: S) {
       case SequenceOp(ops) => s"SEQ:${ops.zipWithIndex.map((o, idx) => s"$idx" + printIR(o, ident+1)).mkString("[\n", ",\n", "]")}"
       case DiffOp() => s"DIFF"
       case ClearOp() => s"CLEAR"
-      case FilterOp(srcRel, cond) => s"FILTER${cond.constToString()}(${node.ctx.storageManager.ns(srcRel)})"
-      case JoinOp(subOps, cond) => s"JOIN${cond.varToString()}${subOps.map(s => printIR(s, ident+1)).mkString("(\n", ",\n", ")")}"
-      case ProjectOp(subOp, cond) => s"PROJECT${cond.projToString()}(\n${printIR(subOp, ident+1)})"
+      case FilterOp(srcRel, keys) => s"FILTER${keys.constToString()}(${node.ctx.storageManager.ns(srcRel)})"
+      case JoinOp(subOps, keys) => s"JOIN${keys.varToString()}${subOps.map(s => printIR(s, ident+1)).mkString("(\n", ",\n", ")")}"
+      case ProjectOp(subOp, keys) => s"PROJECT${keys.projToString()}(\n${printIR(subOp, ident+1)})"
       case InsertOp(rId, subOp) => s"INSERT INTO ${node.ctx.storageManager.ns(rId)}\n${printIR(subOp, ident+1)}"
-      case UnionOp(ops) => s"UNION${ops.map(o => printIR(o, ident+1)).mkString("(\n", ",", ")")}"
+      case UnionOp(ops) => s"UNION${ops.map(o => printIR(o, ident+1)).mkString("(\n", ",\n", ")")}"
     })
   }
 }

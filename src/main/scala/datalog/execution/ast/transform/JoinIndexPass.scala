@@ -9,11 +9,11 @@ import scala.collection.mutable
 /**
  * Decorate nodes with join info. TODO: mutate instead of copy?
  */
-class JoinIndexPass extends Transformer {
+class JoinIndexPass(using ASTTransformerContext) extends Transformer {
   override def transform(node: ASTNode): ASTNode = {
     node match {
       case ProgramNode(idbs) => ProgramNode(idbs.map((rId, allRules) => (rId, transform(allRules))))
-      case AllRulesNode(rules, rId) => AllRulesNode(rules.map(transform), rId)
+      case AllRulesNode(rules, rId, edb) => AllRulesNode(rules.map(transform), rId, edb)
       case RuleNode(h, b, _) =>
         val constants = mutable.Map[Int, Constant]() // position => constant
         val variables = mutable.Map[Variable, Int]() // v.oid => position

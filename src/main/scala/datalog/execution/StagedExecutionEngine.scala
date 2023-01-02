@@ -2,8 +2,8 @@ package datalog.execution
 
 import datalog.dsl.{Atom, Constant, Term, Variable}
 import datalog.execution.ast.*
-import datalog.execution.ast.transform.{CopyEliminationPass, JoinIndexPass, Transformer}
-import datalog.execution.ir.{IRTree, Context}
+import datalog.execution.ast.transform.{CopyEliminationPass, JoinIndexPass, Transformer, ASTTransformerContext}
+import datalog.execution.ir.*
 import datalog.storage.{SimpleStorageManager, StorageManager}
 import datalog.tools.Debug.debug
 
@@ -15,7 +15,8 @@ class StagedExecutionEngine(val storageManager: StorageManager) extends Executio
   val precedenceGraph = new PrecedenceGraph(storageManager.ns)
   val ast: ProgramNode = ProgramNode()
   private var knownDbId = -1
-  private val transforms: Seq[Transformer] = Seq(CopyEliminationPass(), JoinIndexPass())
+  private val tCtx = ASTTransformerContext()
+  private val transforms: Seq[Transformer] = Seq(/*CopyEliminationPass()(using tCtx),*/ JoinIndexPass()(using tCtx))
 
   def initRelation(rId: Int, name: String): Unit = {
     storageManager.ns(rId) = name
@@ -25,12 +26,12 @@ class StagedExecutionEngine(val storageManager: StorageManager) extends Executio
   def get(rId: Int): Set[Seq[Term]] = {
     if (knownDbId == -1)
       throw new Exception("Solve() has not yet been called")
-    val edbs = storageManager.getEDBResult(rId)
-    if (storageManager.idbs.contains(rId))
-      edbs ++ storageManager.getIDBResult(rId, knownDbId)
+    if (precedenceGraph.idbs.contains(rId))
+      storageManager.getIDBResult(rId, knownDbId)
     else
-      edbs
+      storageManager.getEDBResult(rId)
   }
+
   def get(name: String): Set[Seq[Term]] = {
     get(storageManager.ns(name))
   }
@@ -56,86 +57,95 @@ class StagedExecutionEngine(val storageManager: StorageManager) extends Executio
 
   def insertEDB(rule: Atom): Unit = {
     storageManager.insertEDB(rule)
+    val allRules = ast.rules.getOrElseUpdate(rule.rId, AllRulesNode(ArrayBuffer.empty, rule.rId)).asInstanceOf[AllRulesNode]
+    allRules.edb = true
   }
 
-  def evalRule(rId: Int, knownDbId: Int):  EDB = {
-    storageManager.naiveSPJU(rId, storageManager.getOperatorKeys(rId), knownDbId)
-  }
-
-  /**
-   * Take the union of each evalRule for each IDB predicate
-   */
-  def eval(rId: Int, relations: Seq[Int], newDbId: Int, knownDbId: Int): Unit = {
-    debug("in eval: ", () => s"rId=${storageManager.ns(rId)} relations=${relations.map(r => storageManager.ns(r)).mkString("[", ", ", "]")}  incr=$newDbId src=$knownDbId")
-    relations.foreach(r => {
-      val res = evalRule(r, knownDbId)
-      debug("result of evalRule=", () => storageManager.printer.factToString(res))
-      storageManager.resetDerived(r, newDbId, res) // overwrite res to the derived DB
-    })
-  }
-
-  def evalRuleSN(rId: Int, newDbId: Int, knownDbId: Int): EDB = {
-    storageManager.SPJU(rId, storageManager.getOperatorKeys(rId), knownDbId)
-  }
-
-  def evalSN(rId: Int, relations: Seq[Int], newDbId: Int, knownDbId: Int): Unit = {
-    debug("evalSN for ", () => storageManager.ns(rId))
-    relations.foreach(r => {
-      debug("\t=>iterating@", () => storageManager.ns(r))
-      val prev = storageManager.getDerivedDB(r, knownDbId)
-      debug(s"\tderived[known][${storageManager.ns(r)}] =", () => storageManager.printer.factToString(prev))
-      val res = evalRuleSN(r, newDbId, knownDbId)
-      debug("\tevalRuleSN=", () => storageManager.printer.factToString(res))
-      val diff = storageManager.getDiff(res, prev)
-      storageManager.resetDerived(r, newDbId, diff, prev) // set derived[new] to derived[new]+delta[new]
-      storageManager.resetDelta(r, newDbId, diff)
-      debug(s"\tdiff, i.e. delta[new][${storageManager.ns(r)}] =", () => storageManager.printer.factToString(storageManager.deltaDB(newDbId)(r)))
-      debug(s"\tall, i.e. derived[new][${storageManager.ns(r)}] =", () => storageManager.printer.factToString(storageManager.derivedDB(newDbId)(r)))
-    })
+  def naiveInterpretIR(irTree: IROp): Any = {
+    irTree match {
+      case ProgramOp(body) =>
+        naiveInterpretIR(body)
+        debug(s"solving relation: ${storageManager.ns(irTree.ctx.toSolve)} order of relations=", irTree.ctx.relations.toString)
+      case DoWhileOp(body, cond) =>
+        while({
+          naiveInterpretIR(body)
+          irTree.ctx.count += 1
+          naiveInterpretIR(cond).asInstanceOf[Boolean]
+        }) ()
+      case SwapOp() =>
+        val t = irTree.ctx.knownDbId
+        irTree.ctx.knownDbId = irTree.ctx.newDbId
+        irTree.ctx.newDbId = t
+        storageManager.printer.known = irTree.ctx.knownDbId
+      case SequenceOp(ops) =>
+        ops.map(naiveInterpretIR)
+      case ClearOp() =>
+        storageManager.clearDB(true, irTree.ctx.newDbId)
+        debug(s"initial state @ ${irTree.ctx.count}", storageManager.printer.toString)
+      case DiffOp() =>
+        !storageManager.compareDerivedDBs(irTree.ctx.newDbId, irTree.ctx.knownDbId)
+      case FilterOp(rId, keys) =>
+        if (keys.edb)
+          storageManager.edbs.getOrElse(rId, EDB())
+        else
+          storageManager.derivedDB(irTree.ctx.knownDbId).getOrElse(rId, storageManager.edbs.getOrElse(rId, EDB()))
+      case JoinOp(subOps, keys) =>
+        storageManager.joinHelper(
+          subOps.map(naiveInterpretIR).asInstanceOf[Seq[EDB]],
+          keys
+        )
+      case ProjectOp(subOp, keys) =>
+        naiveInterpretIR(subOp).asInstanceOf[EDB].map(t =>
+          keys.projIndexes.flatMap((typ, idx) =>
+            typ match {
+              case "v" => t.lift(idx.asInstanceOf[Int])
+              case "c" => Some(idx)
+              case _ => throw new Exception("Internal error: projecting something that is not a constant nor a variable")
+            }
+          )
+        )
+      case InsertOp(rId, subOp) =>
+        debug("in eval: ", () => s"rId=${storageManager.ns(rId)} relations=${irTree.ctx.relations.map(r => storageManager.ns(r)).mkString("[", ", ", "]")}  incr=${irTree.ctx.newDbId} src=${irTree.ctx.knownDbId}")
+        val res = naiveInterpretIR(subOp)
+        debug("result of evalRule=", () => storageManager.printer.factToString(res.asInstanceOf[EDB]))
+        storageManager.resetDerived(rId, irTree.ctx.newDbId, res.asInstanceOf[EDB])
+      case UnionOp(ops) =>
+        ops.flatMap(o => naiveInterpretIR(o).asInstanceOf[EDB]).toSet.toBuffer
+    }
   }
 
   override def solve(rId: Int): Set[Seq[Term]] = {
     // verify setup
-//    storageManager.verifyEDBs()
-//    if (storageManager.edbs.contains(rId) && !storageManager.idbs.contains(rId)) { // if just an edb predicate then return
-//      return storageManager.getEDBResult(rId)
-//    }
-//    if (!storageManager.idbs.contains(rId)) {
-//      throw new Error("Solving for rule without body")
-//    }
+    storageManager.verifyEDBs(precedenceGraph.idbs)
+    if (storageManager.edbs.contains(rId) && !precedenceGraph.idbs.contains(rId)) { // if just an edb predicate then return
+      debug("Returning EDB without any IDB rule: ", () => storageManager.ns(rId))
+      return storageManager.getEDBResult(rId)
+    }
+    if (!precedenceGraph.idbs.contains(rId)) {
+      throw new Error("Solving for rule without body")
+    }
     val transformedAST = transforms.foldLeft(ast.asInstanceOf[ASTNode])((t, pass) => pass.transform(t)) // TODO: need cast?
+
+    var toSolve = rId
+    if (tCtx.aliases.contains(rId))
+      toSolve = tCtx.aliases.getOrElse(rId, rId)
+      debug("aliased:", () => s"${storageManager.ns(rId)} => ${storageManager.ns(toSolve)}")
+      if (storageManager.edbs.contains(toSolve) && !precedenceGraph.idbs.contains(toSolve)) { // if just an edb predicate then return
+        debug("Returning EDB as IDB aliased to EDB: ", () => storageManager.ns(toSolve))
+        return storageManager.getEDBResult(toSolve)
+      }
 
     debug("AST: ", () => storageManager.printer.printAST(ast))
     debug("TRANSFORMED: ", () => storageManager.printer.printAST(transformedAST))
 
-    val ctx = Context(storageManager, precedenceGraph, rId)
-    val irTree = IRTree(using ctx).initialize(transformedAST)
+    val irCtx = InterpreterContext(storageManager, precedenceGraph, toSolve)
+    val irTree = IRTree(using irCtx).initialize(transformedAST)
 
     debug("PROGRAM:\n", () => storageManager.printer.printIR(irTree))
 
-//    var count = 0
-//
-//    debug("initial state @ -1", storageManager.printer.toString)
-//    val startRId = relations.head
-//    relations.foreach(rel => {
-//      eval(rel, relations, newDbId, knownDbId) // this fills derived[new]
-//      storageManager.resetDelta(rel, newDbId, storageManager.getDerivedDB(rel, newDbId)) // copy delta[new] = derived[new]
-//    })
-//
-//    var setDiff = true
-//    while(setDiff) {
-//      val t = knownDbId
-//      knownDbId = newDbId
-//      newDbId = t // swap new and known DBs
-//      storageManager.clearDB(true, newDbId)
-//      storageManager.printer.known = knownDbId // TODO: get rid of
-//
-//      debug(s"initial state @ $count", storageManager.printer.toString)
-//      count += 1
-//      evalSN(rId, relations, newDbId, knownDbId)
-//      setDiff = storageManager.deltaDB(newDbId).exists((k, v) => v.nonEmpty)
-//    }
-//    storageManager.getIDBResult(rId, ctx.newDbId)
-    Set(Seq())
+    naiveInterpretIR(irTree)
+
+    knownDbId = irCtx.knownDbId
+    storageManager.getIDBResult(toSolve, irCtx.knownDbId)
   }
 }

@@ -79,6 +79,13 @@ abstract class SimpleStorageManager(ns: NS) extends StorageManager(ns) {
         edbs(rId) = EDB()
     )
   }
+
+  def verifyEDBs(idbList: mutable.Set[Int]): Unit = {
+    ns.rIds().foreach(rId =>
+      if (!edbs.contains(rId) && !idbList.contains(rId)) // treat undefined relations as empty edbs
+        edbs(rId) = EDB()
+    )
+  }
   /**
    * Initialize derivedDB to clone EDBs, initialize deltaDB to empty
    *

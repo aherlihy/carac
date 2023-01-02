@@ -23,6 +23,7 @@ class Node(r: Int, ns: NS) {
 class PrecedenceGraph(ns: NS /* for debugging */) {
   val nodes: mutable.Map[Int, Node] = mutable.Map[Int, Node]()
   val sorted: mutable.Queue[mutable.Set[Int]] = mutable.Queue[mutable.Set[Int]]()
+  val idbs: mutable.Set[Int] = mutable.Set[Int]()
 
   var index = 0
   val stack: mutable.Stack[Node] = mutable.Stack[Node]()
@@ -31,6 +32,7 @@ class PrecedenceGraph(ns: NS /* for debugging */) {
   def sortedString(): String = sorted.map(cc => cc.map(ns.apply).mkString("(", ", ", ")")).mkString("{", ", ", "}")
 
   def addNode(rule: Seq[Atom]): Unit = { // TODO: sort incrementally?
+    idbs.addOne(rule.head.rId)
     val node = nodes.getOrElseUpdate(rule.head.rId, Node(rule.head.rId, ns))
     rule.drop(1).foreach(n => {
       val neighbor = nodes.getOrElseUpdate(n.rId, Node(n.rId, ns))
