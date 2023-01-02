@@ -1,6 +1,6 @@
 package datalog
 
-import datalog.execution.{ExecutionEngine, NaiveExecutionEngine, SemiNaiveExecutionEngine, StagedExecutionEngine}
+import datalog.execution.{ExecutionEngine, NaiveExecutionEngine, SemiNaiveExecutionEngine, NaiveStagedExecutionEngine}
 import datalog.dsl.{Constant, Program, __}
 import datalog.execution.ast.transform.CopyEliminationPass
 import datalog.storage.{CollectionsStorageManager, NS, RelationalStorageManager}
@@ -43,7 +43,7 @@ def run(program: Program): Unit = {
 }
 
 @main def main = {
-  given engine: ExecutionEngine = new StagedExecutionEngine(new CollectionsStorageManager())
+  given engine: ExecutionEngine = new NaiveStagedExecutionEngine(new CollectionsStorageManager())
   val program = Program(engine)
   println("staged")
   run(program)

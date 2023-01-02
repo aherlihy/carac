@@ -1,7 +1,7 @@
 package test
 
 import datalog.dsl.{Constant, Program, Relation, Term}
-import datalog.execution.{NaiveExecutionEngine, SemiNaiveExecutionEngine, StagedExecutionEngine}
+import datalog.execution.{NaiveExecutionEngine, SemiNaiveExecutionEngine, NaiveStagedExecutionEngine}
 import datalog.storage.{CollectionsStorageManager, RelationalStorageManager}
 
 import java.nio.file.{Files, Path, Paths}
@@ -95,7 +95,7 @@ abstract class TestGenerator(directory: Path,
           case "NaiveRelational" => Program(NaiveExecutionEngine(RelationalStorageManager()))
           case "SemiNaiveCollections" => Program(SemiNaiveExecutionEngine(CollectionsStorageManager()))
           case "NaiveCollections" => Program(NaiveExecutionEngine(CollectionsStorageManager()))
-          case "StagedCollections" => Program(StagedExecutionEngine(CollectionsStorageManager()))
+          case "NaiveStagedCollections" => Program(NaiveStagedExecutionEngine(CollectionsStorageManager()))
           case _ => // WARNING: MUnit just returns null pointers everywhere if an error or assert is triggered in beforeEach
             throw new Exception(s"Unknown engine construction ${context.test.name}") // TODO: this is reported as passing
         }
@@ -112,12 +112,12 @@ abstract class TestGenerator(directory: Path,
 
     override def munitFixtures = List(program)
 
-    Seq("SemiNaive", "Naive", "Staged").foreach(execution => {
+    Seq("SemiNaive", "Naive", "NaiveStaged").foreach(execution => {
       Seq("Relational", "Collections").foreach(storage => {
         if (
             skip.contains(execution) || skip.contains(storage) ||
               (tags ++ Set(execution, storage)).flatMap(t => Properties.envOrNone(t.toUpperCase())).nonEmpty ||// manually implement --exclude for intellij
-              (execution == "Staged" && storage == "Relational")
+              (execution.contains("Staged") && storage == "Relational")
         ) {
             test(s"$execution$storage".ignore) {}
           } else {

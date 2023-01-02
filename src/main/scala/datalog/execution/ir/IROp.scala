@@ -40,6 +40,9 @@ class IRTree(using val ctx: InterpreterContext) {
       case _ => throw new Exception("Non-root passed to IR Program")
     }
   }
+  def initializeSemiNaive(ast: ASTNode): IROp = {
+    SwapOp()
+  }
 }
 
 /**

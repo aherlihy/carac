@@ -10,7 +10,7 @@ import datalog.tools.Debug.debug
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
-class StagedExecutionEngine(val storageManager: StorageManager) extends ExecutionEngine {
+abstract class StagedExecutionEngine(val storageManager: StorageManager) extends ExecutionEngine {
   import storageManager.EDB
   val precedenceGraph = new PrecedenceGraph(using storageManager.ns)
   val prebuiltOpKeys: mutable.Map[Int, ArrayBuffer[JoinIndexes]] = mutable.Map[Int, mutable.ArrayBuffer[JoinIndexes]]()
@@ -18,6 +18,8 @@ class StagedExecutionEngine(val storageManager: StorageManager) extends Executio
   private var knownDbId = -1
   private val tCtx = ASTTransformerContext(using precedenceGraph)
   private val transforms: Seq[Transformer] = Seq(CopyEliminationPass()(using tCtx), JoinIndexPass()(using tCtx))
+
+  def createIR(irTree: IRTree, ast: ASTNode): IROp
 
   def initRelation(rId: Int, name: String): Unit = {
     storageManager.ns(rId) = name
@@ -63,16 +65,16 @@ class StagedExecutionEngine(val storageManager: StorageManager) extends Executio
     allRules.edb = true
   }
 
-  def naiveInterpretIR(irTree: IROp): Any = {
+  def interpretIR(irTree: IROp): Any = {
     irTree match {
       case ProgramOp(body) =>
-        naiveInterpretIR(body)
+        interpretIR(body)
         debug(s"solving relation: ${storageManager.ns(irTree.ctx.toSolve)} order of relations=", irTree.ctx.relations.toString)
       case DoWhileOp(body, cond) =>
         while({
-          naiveInterpretIR(body)
+          interpretIR(body)
           irTree.ctx.count += 1
-          naiveInterpretIR(cond).asInstanceOf[Boolean]
+          interpretIR(cond).asInstanceOf[Boolean]
         }) ()
       case SwapOp() =>
         val t = irTree.ctx.knownDbId
@@ -80,7 +82,7 @@ class StagedExecutionEngine(val storageManager: StorageManager) extends Executio
         irTree.ctx.newDbId = t
         storageManager.printer.known = irTree.ctx.knownDbId
       case SequenceOp(ops) =>
-        ops.map(naiveInterpretIR)
+        ops.map(interpretIR)
       case ClearOp() =>
         storageManager.clearDB(true, irTree.ctx.newDbId)
         debug(s"initial state @ ${irTree.ctx.count}", storageManager.printer.toString)
@@ -93,11 +95,11 @@ class StagedExecutionEngine(val storageManager: StorageManager) extends Executio
           storageManager.derivedDB(irTree.ctx.knownDbId).getOrElse(rId, storageManager.edbs.getOrElse(rId, EDB()))
       case JoinOp(subOps, keys) =>
         storageManager.joinHelper(
-          subOps.map(naiveInterpretIR).asInstanceOf[Seq[EDB]],
+          subOps.map(interpretIR).asInstanceOf[Seq[EDB]],
           keys
         )
       case ProjectOp(subOp, keys) =>
-        naiveInterpretIR(subOp).asInstanceOf[EDB].map(t =>
+        interpretIR(subOp).asInstanceOf[EDB].map(t =>
           keys.projIndexes.flatMap((typ, idx) =>
             typ match {
               case "v" => t.lift(idx.asInstanceOf[Int])
@@ -108,11 +110,11 @@ class StagedExecutionEngine(val storageManager: StorageManager) extends Executio
         )
       case InsertOp(rId, subOp) =>
         debug("in eval: ", () => s"rId=${storageManager.ns(rId)} relations=${irTree.ctx.relations.map(r => storageManager.ns(r)).mkString("[", ", ", "]")}  incr=${irTree.ctx.newDbId} src=${irTree.ctx.knownDbId}")
-        val res = naiveInterpretIR(subOp)
+        val res = interpretIR(subOp)
         debug("result of evalRule=", () => storageManager.printer.factToString(res.asInstanceOf[EDB]))
         storageManager.resetDerived(rId, irTree.ctx.newDbId, res.asInstanceOf[EDB])
       case UnionOp(ops) =>
-        ops.flatMap(o => naiveInterpretIR(o).asInstanceOf[EDB]).toSet.toBuffer
+        ops.flatMap(o => interpretIR(o).asInstanceOf[EDB]).toSet.toBuffer
     }
   }
 
@@ -141,11 +143,11 @@ class StagedExecutionEngine(val storageManager: StorageManager) extends Executio
     debug("TRANSFORMED: ", () => storageManager.printer.printAST(transformedAST))
 
     val irCtx = InterpreterContext(storageManager, precedenceGraph, toSolve)
-    val irTree = IRTree(using irCtx).initialize(transformedAST)
+    val irTree = createIR(IRTree(using irCtx), transformedAST)
 
     debug("PROGRAM:\n", () => storageManager.printer.printIR(irTree))
 
-    naiveInterpretIR(irTree)
+    interpretIR(irTree)
 
     knownDbId = irCtx.knownDbId
     storageManager.getIDBResult(toSolve, irCtx.knownDbId)
