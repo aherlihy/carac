@@ -40,8 +40,8 @@ class CopyEliminationPass()(using ASTTransformerContext) extends Transformer {
           ) // delete aliased rules
         case AllRulesNode(rules, rId, edb) =>
           AllRulesNode(rules.map(transform), rId, edb)
-        case RuleNode(head, body, _) =>
-          RuleNode(transform(head), body.map(transform))
+        case RuleNode(head, body, key) =>
+          RuleNode(transform(head), body.map(transform), key)
         case n: AtomNode => n match {
           case NegAtom(expr) =>
             NegAtom(transform(expr))

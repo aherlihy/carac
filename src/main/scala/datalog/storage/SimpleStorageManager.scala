@@ -6,13 +6,10 @@ import datalog.tools.Debug.debug
 
 import scala.collection.{immutable, mutable}
 
-abstract class SimpleStorageManager(ns: NS) extends StorageManager(ns) {
+abstract class SimpleStorageManager(override val ns: NS) extends StorageManager(ns) {
   type StorageTerm = Term
   type StorageVariable = Variable
   type StorageConstant = Constant
-  case class StorageAtom(rId: Int, terms: IndexedSeq[StorageTerm]) {
-    override def toString: String = ns(rId) + terms.mkString("(", ", ", ")")
-  }
   type Row[+T] = IndexedSeq[T]
   def Row[T](c: T*) = IndexedSeq[T](c: _*)
   type Table[T] = mutable.ArrayBuffer[T]
@@ -44,12 +41,10 @@ abstract class SimpleStorageManager(ns: NS) extends StorageManager(ns) {
   val printer: Printer[this.type] = Printer[this.type](this)
 
   val relOps: RelationalOperators[this.type] = RelationalOperators(this)
-  val prebuiltOpKeys: mutable.Map[Int, Table[JoinIndexes]] = mutable.Map[Int, Table[JoinIndexes]]()
 
   override def insertIDB(rId: Int, rule: Seq[Atom]): Unit = {
     val row = Row(rule.map(a => StorageAtom(a.rId, a.terms))*)
     idbs.getOrElseUpdate(rId, IDB()).addOne(row)
-    prebuiltOpKeys.getOrElseUpdate(rId, Table[JoinIndexes]()).addOne(getOperatorKey(row))
     // TODO: could do this in the topsort instead of as inserted
   }
 
@@ -59,11 +54,6 @@ abstract class SimpleStorageManager(ns: NS) extends StorageManager(ns) {
     else
       edbs(rule.rId) = EDB()
       edbs(rule.rId).addOne(rule.terms)
-      prebuiltOpKeys.getOrElseUpdate(rule.rId, Table[JoinIndexes]()).addOne(JoinIndexes(IndexedSeq(), Map(), IndexedSeq(), Seq(rule.rId), true))
-  }
-
-  override def getOperatorKeys(rId: Int): Table[JoinIndexes] = {
-    prebuiltOpKeys.getOrElseUpdate(rId, Table[JoinIndexes]())
   }
 
   def getDiff(lhs: EDB, rhs: EDB): EDB =
@@ -143,51 +133,4 @@ abstract class SimpleStorageManager(ns: NS) extends StorageManager(ns) {
   def compareDerivedDBs(dbId1: Int, dbId2: Int): Boolean =
     derivedDB(dbId1) == derivedDB(dbId2)
 
-  // TODO: maybe move this into exec engine
-  /**
-   * For a single rule, get (1) the indexes of repeated variables within the body,
-   * (2) the indexes of constants, (3) the indexes of variables in the body present
-   * with the head atom, (4) relations that this rule is dependent on.
-   * #1, #4 goes to join, #2 goes to select (or also join depending on implementation),
-   * #3 goes to project
-   *
-   * @param rule - Includes the head at idx 0
-   */
-  inline def getOperatorKey(rule: Row[StorageAtom]): JoinIndexes = {
-    val constants = mutable.Map[Int, StorageConstant]() // position => constant
-    val variables = mutable.Map[StorageVariable, Int]() // v.oid => position
-
-    val body = rule.drop(1)
-
-    val deps = body.map(a => a.rId) // TODO: should this be a set?
-
-    val bodyVars = body
-      .flatMap(a => a.terms)
-      .zipWithIndex // terms, position
-      .groupBy(z => z._1)
-      .filter((term, matches) => // matches = Seq[(var, pos1), (var, pos2), ...]
-        term match {
-          case v: StorageVariable =>
-            variables(v) = matches.head._2 // first idx for a variable
-            !v.anon && matches.length >= 2
-          case c: StorageConstant =>
-            matches.foreach((_, idx) => constants(idx) = c)
-            false
-        }
-      )
-      .map((term, matches) => // get rid of groupBy elem in result tuple
-        matches.map(_._2)
-      )
-      .toIndexedSeq
-
-    // variable ids in the head atom
-    val projects = rule(0).terms.map {
-      case v: Variable =>
-        if (!variables.contains(v)) throw new Exception(f"Free variable in rule head with varId $v.oid")
-        if (v.anon) throw new Exception("Anonymous variable ('__') not allowed in head of rule")
-        ("v", variables(v))
-      case c: Constant => ("c", c)
-    }
-    JoinIndexes(bodyVars, constants.toMap, projects, deps)
-  }
 }

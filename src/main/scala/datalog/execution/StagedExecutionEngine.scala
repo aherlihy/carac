@@ -12,11 +12,12 @@ import scala.collection.mutable.ArrayBuffer
 
 class StagedExecutionEngine(val storageManager: StorageManager) extends ExecutionEngine {
   import storageManager.EDB
-  val precedenceGraph = new PrecedenceGraph(storageManager.ns)
+  val precedenceGraph = new PrecedenceGraph(using storageManager.ns)
+  val prebuiltOpKeys: mutable.Map[Int, ArrayBuffer[JoinIndexes]] = mutable.Map[Int, mutable.ArrayBuffer[JoinIndexes]]()
   val ast: ProgramNode = ProgramNode()
   private var knownDbId = -1
-  private val tCtx = ASTTransformerContext()
-  private val transforms: Seq[Transformer] = Seq(/*CopyEliminationPass()(using tCtx),*/ JoinIndexPass()(using tCtx))
+  private val tCtx = ASTTransformerContext(using precedenceGraph)
+  private val transforms: Seq[Transformer] = Seq(CopyEliminationPass()(using tCtx), JoinIndexPass()(using tCtx))
 
   def initRelation(rId: Int, name: String): Unit = {
     storageManager.ns(rId) = name
@@ -37,8 +38,9 @@ class StagedExecutionEngine(val storageManager: StorageManager) extends Executio
   }
 
   def insertIDB(rId: Int, rule: Seq[Atom]): Unit = {
-    precedenceGraph.addNode(rule)
+    precedenceGraph.idbs.addOne(rId)
     val allRules = ast.rules.getOrElseUpdate(rId, AllRulesNode(ArrayBuffer.empty, rId)).asInstanceOf[AllRulesNode]
+
     allRules.rules.append(
       RuleNode(
         LogicAtom(
@@ -51,7 +53,7 @@ class StagedExecutionEngine(val storageManager: StorageManager) extends Executio
           LogicAtom(b.rId, b.terms.map {
             case x: Variable => VarTerm(x)
             case x: Constant => ConstTerm(x)
-          }))
+          })),
       ))
   }
 

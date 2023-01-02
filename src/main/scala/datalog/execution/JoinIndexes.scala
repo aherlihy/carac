@@ -1,5 +1,6 @@
 package datalog.execution
 import datalog.dsl.Constant
+import datalog.storage.NS
 
 /**
  * Wrapper object for join keys for IDB rules
@@ -15,14 +16,17 @@ case class JoinIndexes(varIndexes: IndexedSeq[IndexedSeq[Int]],
                        projIndexes: IndexedSeq[(String, Constant)],
                        deps: Seq[Int],
                        edb: Boolean = false) {
-  override def toString: String =
-    "{ variables:" + varIndexes.map(s => s.mkString("(", ", ", ")")).mkString("[", ", ", "]") +
-      ", consts:" + constIndexes.mkString("[", ", ", "]") +
-      ", project:" + projIndexes.mkString("[", ", ", "]") +
-      ", deps:" + deps.mkString("[", ", ", "]") +
+  override def toString(): String = toStringWithNS(null)
+
+  def toStringWithNS(ns: NS): String = "{ vars:" + varToString() +
+      ", consts:" + constToString() +
+      ", project:" + projToString() +
+      ", deps:" + depsToString(ns) +
       ", edb:" + edb +
       " }"
-  def varToString() = varIndexes.map(v => v.mkString("$", "==$", "")).mkString("[", ",", "]")
-  def constToString() = constIndexes.map((k, v) => k + "==" + v).mkString("{", "&&", "}")
-  def projToString() = projIndexes.map((typ, v) => f"$typ$v").mkString("[", " ", "]")
+
+  def varToString(): String = varIndexes.map(v => v.mkString("$", "==$", "")).mkString("[", ",", "]")
+  def constToString(): String = constIndexes.map((k, v) => k + "==" + v).mkString("{", "&&", "}")
+  def projToString(): String = projIndexes.map((typ, v) => f"$typ$v").mkString("[", " ", "]")
+  def depsToString(ns: NS): String = deps.map(d => if (ns != null) ns(d) else d).mkString("[", ", ", "]")
 }

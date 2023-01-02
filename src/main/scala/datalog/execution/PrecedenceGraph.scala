@@ -6,7 +6,7 @@ import datalog.storage.NS
 
 import scala.collection.mutable
 
-class Node(r: Int, ns: NS) {
+class Node(r: Int) (using ns: NS) {
   var recursive = false
   val rId: Int = r
   var idx: Int = -1
@@ -20,7 +20,7 @@ class Node(r: Int, ns: NS) {
       + "}"
 }
 
-class PrecedenceGraph(ns: NS /* for debugging */) {
+class PrecedenceGraph(using ns: NS /* for debugging */) {
   val nodes: mutable.Map[Int, Node] = mutable.Map[Int, Node]()
   val sorted: mutable.Queue[mutable.Set[Int]] = mutable.Queue[mutable.Set[Int]]()
   val idbs: mutable.Set[Int] = mutable.Set[Int]()
@@ -32,12 +32,22 @@ class PrecedenceGraph(ns: NS /* for debugging */) {
   def sortedString(): String = sorted.map(cc => cc.map(ns.apply).mkString("(", ", ", ")")).mkString("{", ", ", "}")
 
   def addNode(rule: Seq[Atom]): Unit = { // TODO: sort incrementally?
-    idbs.addOne(rule.head.rId)
-    val node = nodes.getOrElseUpdate(rule.head.rId, Node(rule.head.rId, ns))
+    val node = nodes.getOrElseUpdate(rule.head.rId, Node(rule.head.rId))
     rule.drop(1).foreach(n => {
-      val neighbor = nodes.getOrElseUpdate(n.rId, Node(n.rId, ns))
+      val neighbor = nodes.getOrElseUpdate(n.rId, Node(n.rId))
       node.edges.addOne(neighbor)
       if (n.rId == node.rId) {
+        node.recursive = true
+      }
+    })
+  }
+
+  def addNode(rId: Int, deps: Seq[Int]): Unit = {
+    val node = nodes.getOrElseUpdate(rId, Node(rId))
+    deps.foreach(n => {
+      val neighbor = nodes.getOrElseUpdate(n, Node(n))
+      node.edges.addOne(neighbor)
+      if (n == rId) {
         node.recursive = true
       }
     })
@@ -81,5 +91,9 @@ class PrecedenceGraph(ns: NS /* for debugging */) {
       }
     })
     sorted.toSeq.flatMap(s => s.toSeq)
+  }
+
+  def removeAliases(aliases: mutable.Map[Int, Int]): Unit = {
+
   }
 }

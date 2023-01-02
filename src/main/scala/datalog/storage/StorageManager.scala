@@ -32,7 +32,9 @@ trait StorageManager(val ns: NS) {
    * user-facing API class with internal storage */
   type StorageVariable
   type StorageConstant
-  type StorageAtom
+  case class StorageAtom(rId: Int, terms: IndexedSeq[StorageTerm]) {
+    override def toString: String = ns(rId) + terms.mkString("(", ", ", ")")
+  }
   type Row [+T] <: IndexedSeq[T] with immutable.IndexedSeqOps[T, Row, Row[T]]
   type Table[T] <: mutable.ArrayBuffer[T]
   type Relation[T] <: Table[Row[T]]
@@ -52,8 +54,6 @@ trait StorageManager(val ns: NS) {
 
   val printer: Printer[this.type]
 
-  def getOperatorKeys(rId: Int): Table[JoinIndexes]
-
   def initRelation(rId: Int, name: String): Unit
   def initEvaluation(): Int
 
@@ -65,8 +65,8 @@ trait StorageManager(val ns: NS) {
 
   def edb(rId: Int): EDB
 
-  def SPJU(rId: Int, keys: Table[JoinIndexes], knownDbId: Int): EDB
-  def naiveSPJU(rId: Int, keys: Table[JoinIndexes], knownDbId: Int): EDB
+  def SPJU(rId: Int, keys: mutable.ArrayBuffer[JoinIndexes], knownDbId: Int): EDB
+  def naiveSPJU(rId: Int, keys: mutable.ArrayBuffer[JoinIndexes], knownDbId: Int): EDB
 
   def getDerivedDB(rId: Int, dbId: Int): EDB
   def getIDBResult(rId: Int, dbId: Int): Set[Seq[Term]]

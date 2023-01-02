@@ -49,7 +49,7 @@ class CollectionsStorageManager(ns: NS = new NS()) extends SimpleStorageManager(
    * @param keys - a JoinIndexes object to join on
    * @return
    */
-  def SPJU(rId: Int, keys: Table[JoinIndexes], knownDbId: Int): EDB = {
+  def SPJU(rId: Int, keys: mutable.ArrayBuffer[JoinIndexes], knownDbId: Int): EDB = {
     debug("SPJU:", () => s"r=${ns(rId)} keys=${printer.snPlanToString(keys)} knownDBId $knownDbId")
       keys.flatMap(k => // for each idb rule
         if (k.edb)
@@ -81,7 +81,7 @@ class CollectionsStorageManager(ns: NS = new NS()) extends SimpleStorageManager(
         )
   }
 
-  def naiveSPJU(rId: Int, keys: Table[JoinIndexes], knownDbId: Int): EDB = {
+  def naiveSPJU(rId: Int, keys: mutable.ArrayBuffer[JoinIndexes], knownDbId: Int): EDB = {
     debug("NaiveSPJU:", () => s"r=${ns(rId)} keys=${printer.naivePlanToString(keys)} knownDBId $knownDbId")
     keys.flatMap(k => { // for each idb rule
       if (k.edb)

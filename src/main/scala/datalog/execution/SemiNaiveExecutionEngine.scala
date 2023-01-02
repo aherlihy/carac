@@ -7,10 +7,10 @@ import datalog.tools.Debug.debug
 import scala.collection.mutable
 
 class SemiNaiveExecutionEngine(override val storageManager: StorageManager) extends NaiveExecutionEngine(storageManager) {
-  import storageManager.EDB
+  import storageManager.{EDB, Table}
 
   def evalRuleSN(rId: Int, newDbId: Int, knownDbId: Int): EDB = {
-    storageManager.SPJU(rId, storageManager.getOperatorKeys(rId), knownDbId)
+    storageManager.SPJU(rId, getOperatorKeys(rId), knownDbId)
   }
 
   def evalSN(rId: Int, relations: Seq[Int], newDbId: Int, knownDbId: Int): Unit = {

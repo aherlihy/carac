@@ -5,10 +5,12 @@ import datalog.storage.{SimpleStorageManager, StorageManager}
 import datalog.tools.Debug.debug
 
 import scala.collection.mutable
+import scala.collection.mutable.ArrayBuffer
 
 class NaiveExecutionEngine(val storageManager: StorageManager) extends ExecutionEngine {
   import storageManager.EDB
-  val precedenceGraph = new PrecedenceGraph(storageManager.ns)
+  val precedenceGraph = new PrecedenceGraph(using storageManager.ns)
+  val prebuiltOpKeys: mutable.Map[Int, ArrayBuffer[JoinIndexes]] = mutable.Map[Int, mutable.ArrayBuffer[JoinIndexes]]()
   var knownDbId = -1
 
   def initRelation(rId: Int, name: String): Unit = {
@@ -32,14 +34,17 @@ class NaiveExecutionEngine(val storageManager: StorageManager) extends Execution
   def insertIDB(rId: Int, rule: Seq[Atom]): Unit = {
     precedenceGraph.addNode(rule)
     storageManager.insertIDB(rId, rule)
+    prebuiltOpKeys.getOrElseUpdate(rId, mutable.ArrayBuffer[JoinIndexes]()).addOne(getOperatorKey(rule))
   }
 
   def insertEDB(rule: Atom): Unit = {
+    if (!storageManager.edbs.contains(rule.rId))
+      prebuiltOpKeys.getOrElseUpdate(rule.rId, mutable.ArrayBuffer[JoinIndexes]()).addOne(JoinIndexes(IndexedSeq(), Map(), IndexedSeq(), Seq(rule.rId), true))
     storageManager.insertEDB(rule)
   }
 
   def evalRule(rId: Int, knownDbId: Int):  EDB = {
-    storageManager.naiveSPJU(rId, storageManager.getOperatorKeys(rId), knownDbId)
+    storageManager.naiveSPJU(rId, getOperatorKeys(rId).asInstanceOf[storageManager.Table[JoinIndexes]], knownDbId)
   }
 
   /**

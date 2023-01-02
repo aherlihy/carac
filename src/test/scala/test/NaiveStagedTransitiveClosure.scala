@@ -5,7 +5,7 @@ import datalog.execution.{ExecutionEngine, StagedExecutionEngine}
 import datalog.storage.{CollectionsStorageManager, RelationalStorageManager}
 import test.graphs.*
 
-class NaiveStagedCollTransitiveClosure extends munit.FunSuite {
+class NaiveStagedTransitiveClosure extends munit.FunSuite {
   List(
     Acyclic(new Program(new StagedExecutionEngine(new CollectionsStorageManager()))),
     MultiIsolatedCycle(new Program(new StagedExecutionEngine(new CollectionsStorageManager()))),

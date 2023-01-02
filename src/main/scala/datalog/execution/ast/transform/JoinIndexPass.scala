@@ -50,6 +50,7 @@ class JoinIndexPass(using ASTTransformerContext) extends Transformer {
             ("v", variables(v))
           case ConstTerm(c) => ("c", c)
         }.toIndexedSeq
+        ctx.precedenceGraph.addNode(head.relation, deps)
         RuleNode(head, body, Some(JoinIndexes(bodyVars, constants.toMap, projects, deps)))
       case n:AtomNode => n
       case n:TermNode => n

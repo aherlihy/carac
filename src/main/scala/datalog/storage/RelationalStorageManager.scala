@@ -15,7 +15,7 @@ class RelationalStorageManager(ns: NS = NS()) extends SimpleStorageManager(ns) {
    * @param keys - a JoinIndexes object to join on
    * @return
    */
-  def naiveSPJU(rId: Int, keys: Table[JoinIndexes], knownDbId: Int): EDB = {
+  def naiveSPJU(rId: Int, keys: mutable.ArrayBuffer[JoinIndexes], knownDbId: Int): EDB = {
     debug("naiveSPJU:", () => s"r=${ns(rId)}($rId) keys=${printer.naivePlanToString(keys)} knownDBId $knownDbId")
     import relOps.*
 
@@ -42,7 +42,7 @@ class RelationalStorageManager(ns: NS = NS()) extends SimpleStorageManager(ns) {
    * @param keys - a JoinIndexes object to join on
    * @return
    */
-  def SPJU(rId: Int, keys: Table[JoinIndexes], knownDbId: Int): EDB = {
+  def SPJU(rId: Int, keys: mutable.ArrayBuffer[JoinIndexes], knownDbId: Int): EDB = {
     import relOps.*
     debug("SPJU:", () => s"r=${ns(rId)} keys=${printer.snPlanToString(keys)} knownDBId $knownDbId")
     val plan = Union(
