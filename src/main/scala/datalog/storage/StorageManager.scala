@@ -69,6 +69,7 @@ trait StorageManager(val ns: NS) {
   def naiveSPJU(rId: Int, keys: mutable.ArrayBuffer[JoinIndexes], knownDbId: Int): EDB
 
   def getDerivedDB(rId: Int, dbId: Int): EDB
+  def getDeltaDB(rId: Int, dbId: Int): EDB
   def getIDBResult(rId: Int, dbId: Int): Set[Seq[Term]]
   def getEDBResult(rId: Int): Set[Seq[Term]]
 

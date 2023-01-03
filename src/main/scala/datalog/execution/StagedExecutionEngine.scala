@@ -68,10 +68,13 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
   def interpretIR(irTree: IROp): Any = {
     irTree match {
       case ProgramOp(body) =>
-        interpretIR(body)
+        debug(s"precedence graph=", irTree.ctx.precedenceGraph.sortedString)
         debug(s"solving relation: ${storageManager.ns(irTree.ctx.toSolve)} order of relations=", irTree.ctx.relations.toString)
+        debug("initial state @ -1", storageManager.printer.toString)
+        interpretIR(body)
       case DoWhileOp(body, cond) =>
         while({
+          debug(s"initial state @ ${irTree.ctx.count}", storageManager.printer.toString)
           interpretIR(body)
           irTree.ctx.count += 1
           interpretIR(cond).asInstanceOf[Boolean]
@@ -85,14 +88,23 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
         ops.map(interpretIR)
       case ClearOp() =>
         storageManager.clearDB(true, irTree.ctx.newDbId)
-        debug(s"initial state @ ${irTree.ctx.count}", storageManager.printer.toString)
-      case DiffOp() =>
-        !storageManager.compareDerivedDBs(irTree.ctx.newDbId, irTree.ctx.knownDbId)
-      case FilterOp(rId, keys) =>
-        if (keys.edb)
-          storageManager.edbs.getOrElse(rId, EDB())
-        else
-          storageManager.derivedDB(irTree.ctx.knownDbId).getOrElse(rId, storageManager.edbs.getOrElse(rId, EDB()))
+      case CompareOp(db: DB) =>
+        db match {
+          case DB.Derived =>
+            !storageManager.compareDerivedDBs(irTree.ctx.newDbId, irTree.ctx.knownDbId)
+          case DB.Delta =>
+            storageManager.deltaDB(irTree.ctx.newDbId).exists((k, v) => v.nonEmpty)
+        }
+      case ScanOp(rId, db, knowledge) =>
+        val k = if (knowledge == KNOWLEDGE.Known) irTree.ctx.knownDbId else irTree.ctx.newDbId
+        db match {
+          case DB.Derived =>
+            storageManager.derivedDB(k).getOrElse(rId, storageManager.edbs.getOrElse(rId, EDB()))
+          case DB.Delta =>
+            storageManager.deltaDB(k).getOrElse(rId, storageManager.edbs.getOrElse(rId, EDB()))
+        }
+      case ScanEDBOp(rId) =>
+        storageManager.edbs.getOrElse(rId, EDB())
       case JoinOp(subOps, keys) =>
         storageManager.joinHelper(
           subOps.map(interpretIR).asInstanceOf[Seq[EDB]],
@@ -108,13 +120,19 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
             }
           )
         )
-      case InsertOp(rId, subOp) =>
-        debug("in eval: ", () => s"rId=${storageManager.ns(rId)} relations=${irTree.ctx.relations.map(r => storageManager.ns(r)).mkString("[", ", ", "]")}  incr=${irTree.ctx.newDbId} src=${irTree.ctx.knownDbId}")
+      case InsertOp(rId, db, knowledge, subOp, clear) =>
+        val k = if (knowledge == KNOWLEDGE.Known) irTree.ctx.knownDbId else irTree.ctx.newDbId
         val res = interpretIR(subOp)
-        debug("result of evalRule=", () => storageManager.printer.factToString(res.asInstanceOf[EDB]))
-        storageManager.resetDerived(rId, irTree.ctx.newDbId, res.asInstanceOf[EDB])
+        db match {
+          case DB.Derived =>
+            storageManager.resetDerived(rId, k, res.asInstanceOf[EDB])
+          case DB.Delta =>
+            storageManager.resetDelta(rId, k, res.asInstanceOf[EDB])
+        }
       case UnionOp(ops) =>
         ops.flatMap(o => interpretIR(o).asInstanceOf[EDB]).toSet.toBuffer
+      case DiffOp(lhs, rhs) =>
+        interpretIR(lhs).asInstanceOf[EDB] diff interpretIR(rhs).asInstanceOf[EDB]
     }
   }
 

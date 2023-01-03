@@ -26,6 +26,11 @@ class SemiNaiveExecutionEngine(override val storageManager: StorageManager) exte
       storageManager.resetDelta(r, newDbId, diff)
       debug(s"\tdiff, i.e. delta[new][${storageManager.ns(r)}] =", () => storageManager.printer.factToString(storageManager.deltaDB(newDbId)(r)))
       debug(s"\tall, i.e. derived[new][${storageManager.ns(r)}] =", () => storageManager.printer.factToString(storageManager.derivedDB(newDbId)(r)))
+      /* storageManager.resetDelta(r, newDbId, storageManager.getDiff(
+        evalRuleSN(r, newDbId, knownDbId),
+        storageManager.getDerivedDB(r, knownDbId)
+      ))
+      storageManager.resetDerived(r, newDbId, storageManager.getDeltaDB(r, newDbId), storageManager.getDerivedDB(r, knownDbId)) // set derived[new] to derived[known]+delta[new] */
     })
   }
 

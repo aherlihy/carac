@@ -7,5 +7,5 @@ import datalog.tools.Debug.debug
 
 class SemiNaiveStagedExecutionEngine(storageManager: StorageManager) extends StagedExecutionEngine(storageManager) {
   import storageManager.EDB
-  override def createIR(irTree: IRTree, ast: ASTNode): IROp = irTree.initialize(ast)
+  override def createIR(irTree: IRTree, ast: ASTNode): IROp = irTree.generateSemiNaive(ast)
 }
