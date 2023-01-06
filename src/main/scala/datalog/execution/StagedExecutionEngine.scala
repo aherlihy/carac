@@ -17,7 +17,7 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
   val ast: ProgramNode = ProgramNode()
   private var knownDbId = -1
   private val tCtx = ASTTransformerContext(using precedenceGraph)
-  private val transforms: Seq[Transformer] = Seq(/*CopyEliminationPass()(using tCtx),*/ JoinIndexPass()(using tCtx))
+  private val transforms: Seq[Transformer] = Seq(CopyEliminationPass()(using tCtx), JoinIndexPass()(using tCtx))
 
   def createIR(irTree: IRTree, ast: ASTNode): IROp
 

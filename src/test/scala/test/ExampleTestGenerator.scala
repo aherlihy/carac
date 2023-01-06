@@ -115,10 +115,10 @@ abstract class TestGenerator(directory: Path,
 
     Seq("SemiNaive", "Naive", "NaiveStaged", "SemiNaiveStaged").foreach(execution => {
       Seq("Relational", "Collections").foreach(storage => {
-        if (
+        if (execution.contains("Staged") && storage == "Relational") {} // skip and don't report as skipped
+        else if (
             skip.contains(execution) || skip.contains(storage) ||
-              (tags ++ Set(execution, storage)).flatMap(t => Properties.envOrNone(t.toUpperCase())).nonEmpty ||// manually implement --exclude for intellij
-              (execution.contains("Staged") && storage == "Relational")
+              (tags ++ Set(execution, storage)).flatMap(t => Properties.envOrNone(t.toUpperCase())).nonEmpty// manually implement --exclude for intellij
         ) {
             test(s"$execution$storage".ignore) {}
           } else {
