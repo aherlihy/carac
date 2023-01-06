@@ -16,7 +16,6 @@ class SemiNaiveExecutionEngine(override val storageManager: StorageManager) exte
   def evalSN(rId: Int, relations: Seq[Int], newDbId: Int, knownDbId: Int): Unit = {
     debug("evalSN for ", () => storageManager.ns(rId))
     relations.foreach(r => {
-      debug("\t=>iterating@", () => storageManager.ns(r))
       val prev = storageManager.getDerivedDB(r, knownDbId)
       debug(s"\tderived[known][${storageManager.ns(r)}] =", () => storageManager.printer.factToString(prev))
       val res = evalRuleSN(r, newDbId, knownDbId)
@@ -45,7 +44,7 @@ class SemiNaiveExecutionEngine(override val storageManager: StorageManager) exte
     // TODO: if a IDB predicate without vars, then solve all and test contains result?
     //    if (relations.isEmpty)
     //      return Set()
-    val relations = precedenceGraph.topSort().filter(r => storageManager.idbs.contains(r))
+    val relations = precedenceGraph.topSort()
     debug(s"precedence graph=", precedenceGraph.sortedString)
     debug(s"solving relation: ${storageManager.ns(rId)} order of relations=", relations.toString)
     knownDbId = storageManager.initEvaluation()
@@ -72,6 +71,7 @@ class SemiNaiveExecutionEngine(override val storageManager: StorageManager) exte
       evalSN(rId, relations, newDbId, knownDbId)
       setDiff = storageManager.deltaDB(newDbId).exists((k, v) => v.nonEmpty)
     }
+    debug(s"final state @$count, res@$newDbId", storageManager.printer.toString)
     storageManager.getIDBResult(rId, newDbId)
   }
 }

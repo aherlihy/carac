@@ -33,6 +33,7 @@ class NaiveExecutionEngine(val storageManager: StorageManager) extends Execution
 
   def insertIDB(rId: Int, rule: Seq[Atom]): Unit = {
     precedenceGraph.addNode(rule)
+    precedenceGraph.idbs.addOne(rId)
     storageManager.insertIDB(rId, rule)
     prebuiltOpKeys.getOrElseUpdate(rId, mutable.ArrayBuffer[JoinIndexes]()).addOne(getOperatorKey(rule))
   }
@@ -59,20 +60,20 @@ class NaiveExecutionEngine(val storageManager: StorageManager) extends Execution
     })
   }
 
-  def solve(rId: Int): Set[Seq[Term]] = {
+  def solve(toSolve: Int): Set[Seq[Term]] = {
     storageManager.verifyEDBs()
-    if (storageManager.edbs.contains(rId) && !storageManager.idbs.contains(rId)) { // if just an edb predicate then return
-      return storageManager.getEDBResult(rId)
+    if (storageManager.edbs.contains(toSolve) && !storageManager.idbs.contains(toSolve)) { // if just an edb predicate then return
+      return storageManager.getEDBResult(toSolve)
     }
-    if (!storageManager.idbs.contains(rId)) {
+    if (!storageManager.idbs.contains(toSolve)) {
       throw new Error("Solving for rule without body")
     }
-    val relations = precedenceGraph.topSort().filter(r => storageManager.idbs.contains(r))
+    val relations = precedenceGraph.topSort()
     knownDbId = storageManager.initEvaluation() // facts discovered in the previous iteration
     var newDbId = storageManager.initEvaluation() // place to store new facts
     var count = 0
 
-    debug(s"solving relation: ${storageManager.ns(rId)} order of relations=", relations.toString)
+    debug(s"solving relation: ${storageManager.ns(toSolve)} order of relations=", relations.toString)
     var setDiff = true
     while (setDiff) {
       val t = knownDbId
@@ -82,11 +83,11 @@ class NaiveExecutionEngine(val storageManager: StorageManager) extends Execution
       storageManager.printer.known = knownDbId // TODO: get rid of
       debug(s"initial state @ $count", storageManager.printer.toString)
       count += 1
-      eval(rId, relations, newDbId, knownDbId)
+      eval(toSolve, relations, newDbId, knownDbId)
 
       setDiff = !storageManager.compareDerivedDBs(newDbId, knownDbId)
 
     }
-    storageManager.getIDBResult(rId, knownDbId)
+    storageManager.getIDBResult(toSolve, knownDbId)
   }
 }

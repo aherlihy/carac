@@ -115,13 +115,15 @@ class Printer[S <: StorageManager](val s: S) {
       case ScanOp(srcRel, db, knowledge) =>
 //        val name = if (knowledge == known) "known" else "new"
         s"READ[$db.$knowledge](${node.ctx.storageManager.ns(srcRel)})"
-      case JoinOp(subOps, keys) => s"JOIN${keys.varToString()}${subOps.map(s => printIR(s, ident+1)).mkString("(\n", ",\n", ")")}"
+      case JoinOp(subOps, keys) => s"JOIN${keys.varToString()}${keys.constToString()}${subOps.map(s => printIR(s, ident+1)).mkString("(\n", ",\n", ")")}"
       case ProjectOp(subOp, keys) => s"PROJECT${keys.projToString()}(\n${printIR(subOp, ident+1)})"
       case InsertOp(rId, db, knowledge, subOp, clear) =>
 //        val name = if (knowledge == known) "known" else "new"
         s"INSERT INTO $db.$knowledge.${node.ctx.storageManager.ns(rId)}\n${printIR(subOp, ident+1)}"
       case UnionOp(ops) => s"UNION${ops.map(o => printIR(o, ident+1)).mkString("(\n", ",\n", ")")}"
       case DiffOp(lhs, rhs) => s"DIFF ${printIR(lhs)} - ${printIR(rhs)}"
+      case DebugNode(prefix, op) => s"DEBUG: $prefix"
+      case DebugPeek(prefix, msg, op) => s"DEBUG PEEK: $prefix into: ${printIR(op)}"
     })
   }
 }

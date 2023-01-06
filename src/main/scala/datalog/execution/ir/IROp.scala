@@ -1,8 +1,9 @@
 package datalog.execution.ir
 
-import datalog.execution.{JoinIndexes, PrecedenceGraph}
+import datalog.execution.{JoinIndexes, PrecedenceGraph, ir}
 import datalog.execution.ast.*
 import datalog.storage.StorageManager
+import datalog.tools.Debug
 import datalog.tools.Debug.debug
 
 import scala.collection.mutable
@@ -14,42 +15,32 @@ enum KNOWLEDGE:
   case New, Known
 
 class IRTree(using val ctx: InterpreterContext) {
-  def generateNaive(ast: ASTNode): IROp = {
-    ast match {
-      case ProgramNode(ruleMap) =>
-        DoWhileOp(
-          SequenceOp(Seq(
-            SwapOp(),
-            ClearOp(),
-            naiveEval(ruleMap)
-          )),
-          CompareOp(DB.Derived)
-        )
-      case _ => throw new Exception("Non-root passed to IR Program")
-    }
-  }
-
-  def naiveEval(ruleMap: mutable.Map[Int, ASTNode]): IROp =
+  def naiveEval(rId: Relation, ruleMap: mutable.Map[Relation, ASTNode]): IROp =
     SequenceOp(
+//      DebugNode("in eval:", () => s"rId=${ctx.storageManager.ns(rId)} relations=${ctx.relations.map(r => ctx.storageManager.ns(r)).mkString("[", ", ", "]")}  incr=${ctx.newDbId} src=${ctx.knownDbId}") +:
       ctx.relations
         .filter(ruleMap.contains)
         .map(r =>
-          InsertOp(r, DB.Derived, KNOWLEDGE.New, naiveEvalRule(ruleMap(r)), true)
+          InsertOp(r, DB.Derived, KNOWLEDGE.New, naiveEvalRule(ruleMap(r)))
         )
     )
 
-  def semiNaiveEval(ruleMap: mutable.Map[Int, ASTNode]): IROp =
+  def semiNaiveEval(rId: Relation, ruleMap: mutable.Map[Relation, ASTNode]): IROp =
     SequenceOp(
+//      DebugNode("initial state ", () => s"@ ${ctx.count} ${ctx.storageManager.printer.toString()}") +:
+//      DebugNode("evalSN for ", () => ctx.storageManager.ns(rId)) +:
       ctx.relations
         .filter(ruleMap.contains)
         .map(r =>
+          val prev = ScanOp(r, DB.Derived, KNOWLEDGE.Known)
+          val res = semiNaiveEvalRule(ruleMap(r))
+          val diff = DiffOp(res, prev)
+
           SequenceOp(Seq(
-            InsertOp(r, DB.Delta, KNOWLEDGE.New,
-              DiffOp(semiNaiveEvalRule(ruleMap(r)), ScanOp(r, DB.Derived, KNOWLEDGE.Known)), true),
-            InsertOp(r, DB.Derived, KNOWLEDGE.New,
-              ScanOp(r, DB.Delta, KNOWLEDGE.New), true),
-            InsertOp(r, DB.Derived, KNOWLEDGE.New,
-              ScanOp(r, DB.Derived, KNOWLEDGE.Known))
+            InsertOp(r, DB.Delta, KNOWLEDGE.New, diff),
+            InsertOp(r, DB.Derived, KNOWLEDGE.New, prev, Some(diff)),
+//            DebugPeek("\tdiff, i.e. delta[new]", () => s"${ctx.storageManager.ns(r)}] = ", ScanOp(r, DB.Delta, KNOWLEDGE.New)),
+//            DebugPeek("\tall, i.e. derived[new]", () => s"${ctx.storageManager.ns(r)}] = ", ScanOp(r, DB.Derived, KNOWLEDGE.New)),
           ))
         )
     )
@@ -57,10 +48,12 @@ class IRTree(using val ctx: InterpreterContext) {
   def naiveEvalRule(ast: ASTNode): IROp = {
     ast match {
       case AllRulesNode(rules, rId, edb) =>
-        var res = rules.map(naiveEvalRule).toSeq
+        var allRes = rules.map(naiveEvalRule).toSeq
         if (edb)
-          res = res :+ ScanEDBOp(rId)
-        UnionOp(res)
+          allRes = allRes :+ ScanEDBOp(rId)
+        val res = UnionOp(allRes)
+//        DebugPeek("NaiveSPJU: ", () => s"r=${ctx.storageManager.ns(rId)} keys=${ctx.storageManager.printer.printIR(res).replace("\n", " ")} knownDBId ${ctx.knownDbId} \nresult of evalRule: ", res)
+        res
       case RuleNode(head, _, joinIdx) =>
         val r = head.asInstanceOf[LogicAtom].relation
         joinIdx match {
@@ -82,10 +75,12 @@ class IRTree(using val ctx: InterpreterContext) {
   def semiNaiveEvalRule(ast: ASTNode): IROp = {
     ast match {
       case AllRulesNode(rules, rId, edb) =>
-        var res = rules.map(semiNaiveEvalRule).toSeq
+        var allRes = rules.map(semiNaiveEvalRule).toSeq
         if (edb)
-          res = res :+ ScanEDBOp(rId)
-        UnionOp(res)
+          allRes = allRes :+ ScanEDBOp(rId)
+        val res = UnionOp(allRes)
+//        DebugPeek("SPJU: ", () => s"r=${ctx.storageManager.ns(rId)} keys=${ctx.storageManager.printer.printIR(res).replace("\n", " ")} knownDBId ${ctx.knownDbId} \nevalRuleSN ", res)
+        res
       case RuleNode(head, _, joinIdx) =>
         val r = head.asInstanceOf[LogicAtom].relation
         joinIdx match {
@@ -93,7 +88,7 @@ class IRTree(using val ctx: InterpreterContext) {
             if (k.edb)
               ScanEDBOp(r)
             else
-              var idx = -1 // if dep is featured more than once, only us delta once, but at a different pos each time
+              var idx = -1 // if dep is featured more than once, only use delta once, but at a different pos each time
               UnionOp(
                 k.deps.map(d => {
                   var found = false
@@ -103,9 +98,9 @@ class IRTree(using val ctx: InterpreterContext) {
                         if (r == d && !found && i > idx)
                           found = true
                           idx = i
-                          ScanOp(r, DB.Delta, KNOWLEDGE.Known) //Scan(deltaDB(knownDbId).getOrElse(r, EDB()), r)
+                          ScanOp(r, DB.Delta, KNOWLEDGE.Known)
                         else
-                          ScanOp(r, DB.Derived, KNOWLEDGE.Known) //Scan(derivedDB(knownDbId).getOrElse(r, edbs.getOrElse(r, EDB())), r)
+                          ScanOp(r, DB.Derived, KNOWLEDGE.Known)
                       }),
                       k
                     ),
@@ -121,6 +116,21 @@ class IRTree(using val ctx: InterpreterContext) {
     }
   }
 
+  def generateNaive(ast: ASTNode): IROp = {
+    ast match {
+      case ProgramNode(ruleMap) =>
+        DoWhileOp(
+          SequenceOp(Seq(
+            SwapOp(),
+            ClearOp(),
+            naiveEval(ctx.toSolve, ruleMap)
+          )),
+          CompareOp(DB.Derived)
+        )
+      case _ => throw new Exception("Non-root passed to IR Program")
+    }
+  }
+
   def generateSemiNaive(ast: ASTNode): IROp = {
     ast match {
       case ProgramNode(ruleMap) =>
@@ -130,9 +140,9 @@ class IRTree(using val ctx: InterpreterContext) {
                 .filter(ruleMap.contains)
                 .map(r =>
                   SequenceOp(Seq(
-                    naiveEval(ruleMap),
+                    naiveEval(r, ruleMap),
                     InsertOp(r, DB.Delta, KNOWLEDGE.New,
-                      ScanOp(r, DB.Derived, KNOWLEDGE.New), true)
+                      ScanOp(r, DB.Derived, KNOWLEDGE.New))
                   ))
                 )
             ),
@@ -140,7 +150,7 @@ class IRTree(using val ctx: InterpreterContext) {
             SequenceOp(Seq(
               SwapOp(),
               ClearOp(),
-              semiNaiveEval(ruleMap)
+              semiNaiveEval(ctx.toSolve, ruleMap)
             )),
             CompareOp(DB.Delta)
           )
@@ -174,10 +184,11 @@ case class ProjectOp(op: IROp, keys: JoinIndexes)(using InterpreterContext) exte
 
 case class JoinOp(ops: Seq[IROp], keys: JoinIndexes)(using InterpreterContext) extends IROp {} // needed?
 
-case class InsertOp(rId: Relation, db: DB, knowledge: KNOWLEDGE, value: IROp, clear: Boolean = false)(using InterpreterContext) extends IROp {}
+case class InsertOp(rId: Relation, db: DB, knowledge: KNOWLEDGE, value: IROp, value2: Option[IROp] = None)(using InterpreterContext) extends IROp {}
 
 case class UnionOp(ops: Seq[IROp])(using InterpreterContext) extends IROp {}
 
 case class DiffOp(lhs: IROp, rhs: IROp)(using InterpreterContext) extends IROp {}
 
-case class DebugNode(debug: () => Unit)(using InterpreterContext) extends IROp {}
+case class DebugNode(prefix: String, debug: () => String)(using InterpreterContext) extends IROp {}
+case class DebugPeek(prefix: String, debug: () => String, op: IROp)(using InterpreterContext) extends IROp {}

@@ -90,7 +90,7 @@ class PrecedenceGraph(using ns: NS /* for debugging */) {
         strongConnect(node)
       }
     })
-    sorted.toSeq.flatMap(s => s.toSeq)
+    sorted.toSeq.flatMap(s => s.toSeq).filter(r => idbs.contains(r)) // sort and remove edbs
   }
 
   def removeAliases(aliases: mutable.Map[Int, Int]): Unit = {

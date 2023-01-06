@@ -106,7 +106,9 @@ abstract class SimpleStorageManager(override val ns: NS) extends StorageManager(
 //    derivedDB(to).foreach()
 //  }
 
-  def getIDBResult(rId: Int, dbId: Int): Set[Seq[Term]] = getDerivedDB(rId, dbId).map(s => s.toSeq).toSet
+  def getIDBResult(rId: Int, dbId: Int): Set[Seq[Term]] =
+    debug("Final IDB Result: ", () => s"@$dbId")
+    getDerivedDB(rId, dbId).map(s => s.toSeq).toSet
   def getEDBResult(rId: Int): Set[Seq[Term]] = edbs.getOrElse(rId, EDB()).map(s => s.toSeq).toSet
 
   def getDerivedDB(rId: Int, dbId: Int): EDB = derivedDB(dbId)(rId)

@@ -17,7 +17,7 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
   val ast: ProgramNode = ProgramNode()
   private var knownDbId = -1
   private val tCtx = ASTTransformerContext(using precedenceGraph)
-  private val transforms: Seq[Transformer] = Seq(CopyEliminationPass()(using tCtx), JoinIndexPass()(using tCtx))
+  private val transforms: Seq[Transformer] = Seq(/*CopyEliminationPass()(using tCtx),*/ JoinIndexPass()(using tCtx))
 
   def createIR(irTree: IRTree, ast: ASTNode): IROp
 
@@ -74,7 +74,6 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
         interpretIR(body)
       case DoWhileOp(body, cond) =>
         while({
-          debug(s"initial state @ ${irTree.ctx.count}", storageManager.printer.toString)
           interpretIR(body)
           irTree.ctx.count += 1
           interpretIR(cond).asInstanceOf[Boolean]
@@ -120,12 +119,13 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
             }
           )
         )
-      case InsertOp(rId, db, knowledge, subOp, clear) =>
+      case InsertOp(rId, db, knowledge, subOp, subOp2) =>
         val k = if (knowledge == KNOWLEDGE.Known) irTree.ctx.knownDbId else irTree.ctx.newDbId
         val res = interpretIR(subOp)
+        val res2 = if (subOp2.isEmpty) EDB() else interpretIR(subOp2.get)
         db match {
           case DB.Derived =>
-            storageManager.resetDerived(rId, k, res.asInstanceOf[EDB])
+            storageManager.resetDerived(rId, k, res.asInstanceOf[EDB], res2.asInstanceOf[EDB])
           case DB.Delta =>
             storageManager.resetDelta(rId, k, res.asInstanceOf[EDB])
         }
@@ -133,6 +133,11 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
         ops.flatMap(o => interpretIR(o).asInstanceOf[EDB]).toSet.toBuffer
       case DiffOp(lhs, rhs) =>
         interpretIR(lhs).asInstanceOf[EDB] diff interpretIR(rhs).asInstanceOf[EDB]
+      case DebugNode(prefix, msg) => debug(prefix, msg)
+      case DebugPeek(prefix, msg, op) =>
+        val res = interpretIR(op)
+        debug(prefix, () => s"${msg()} ${storageManager.printer.factToString(res.asInstanceOf[EDB])}")
+        res
     }
   }
 
@@ -167,7 +172,8 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
 
     interpretIR(irTree)
 
-    knownDbId = irCtx.knownDbId
-    storageManager.getIDBResult(toSolve, irCtx.knownDbId)
+    knownDbId = irCtx.newDbId
+    debug(s"final state @${irCtx.count} res@${irCtx.newDbId}", storageManager.printer.toString)
+    storageManager.getIDBResult(toSolve, irCtx.newDbId)
   }
 }
