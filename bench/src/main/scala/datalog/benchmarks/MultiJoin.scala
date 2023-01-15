@@ -7,8 +7,7 @@ import scala.util.Random
 
 class MultiJoin extends DLBenchmark {
   override val expected: Any = Vector(1,2)
-  def run(engine: ExecutionEngine): Relation[Constant] = {
-    val program = Program(engine)
+  def run(program: Program): Relation[Constant] = {
     val edge = program.relation[Constant]("edge")
 
     val oneHop = program.relation[Constant]("oh")

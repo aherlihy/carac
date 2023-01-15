@@ -1,12 +1,12 @@
 package test.examples.andersen
 
 import datalog.dsl.{Constant, Program}
-import test.ExampleTestGenerator
+import test.{ExampleBenchmarkGenerator2, ExampleTestGenerator}
 
 import java.nio.file.Paths
 
-class andersen extends ExampleTestGenerator("andersen") {
- override val toSolve = "pointsTo"
+trait andersen {
+ def toSolve = "pointsTo"
  def pretest(program: Program): Unit = {
   val addressOf = program.namedRelation("addressOf")
   val assign = program.namedRelation("assign")
@@ -30,4 +30,8 @@ class andersen extends ExampleTestGenerator("andersen") {
     pointsTo(y, z),
     pointsTo(x, w))
  }
+}
+
+class AndersenTest() extends ExampleTestGenerator("andersen") with andersen {
+ override def toSolve: String = super.toSolve
 }

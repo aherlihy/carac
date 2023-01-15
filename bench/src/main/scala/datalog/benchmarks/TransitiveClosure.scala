@@ -7,8 +7,7 @@ import scala.util.Random
 
 class TransitiveClosure extends DLBenchmark {
   val expected = Vector(1,2)
-  def run(engine: ExecutionEngine): Relation[Constant] = {
-    val program = Program(engine)
+  def run(program: Program): Relation[Constant] = {
     val e = program.relation[Constant]("e")
     val p = program.relation[Constant]("p")
     val path2a = program.relation[Constant]("path2a")

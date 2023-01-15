@@ -1,9 +1,10 @@
 package datalog.benchmarks
 
-import datalog.dsl.{Relation, Constant}
+import datalog.dsl.{Constant, Program, Relation}
 import datalog.execution.ExecutionEngine
 
 abstract class DLBenchmark {
-  def run(engine: ExecutionEngine): Relation[Constant]
+//  def pretest(program: Program): Unit
+  def run(program: Program): Relation[Constant]
   val expected: Any
 }

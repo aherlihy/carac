@@ -6,10 +6,7 @@ import test.{ExampleTestGenerator, Tags}
 import java.nio.file.{Path, Paths}
 import scala.util.Properties
 
-class ackermann extends ExampleTestGenerator("ackermann",
-  Set(Tags.Naive, Tags.Relational), // run only SemiNaiveIdxColl
-  Set(Tags.Slow, Tags.CI)
-) {
+trait ackermann {
   def pretest(program: Program): Unit = {
     val succ = program.namedRelation("succ")
     val greaterThanZ = program.namedRelation("greaterThanZ")
@@ -29,3 +26,8 @@ class ackermann extends ExampleTestGenerator("ackermann",
       ack(X, Ans2, Ans))
   }
 }
+
+class AckermannTest extends ExampleTestGenerator("ackermann",
+  Set(Tags.Naive, Tags.Relational), // run only SemiNaiveIdxColl
+  Set(Tags.Slow, Tags.CI)
+) with ackermann
