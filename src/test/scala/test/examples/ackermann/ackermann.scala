@@ -27,7 +27,7 @@ trait ackermann {
   }
 }
 
-class AckermannTest extends ExampleTestGenerator("ackermann",
+class ackermann_test extends ExampleTestGenerator("ackermann",
   Set(Tags.Naive, Tags.Relational), // run only SemiNaiveIdxColl
   Set(Tags.Slow, Tags.CI)
 ) with ackermann

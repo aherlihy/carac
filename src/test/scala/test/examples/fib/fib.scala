@@ -4,11 +4,12 @@ import datalog.dsl.{Constant, Program}
 import test.{ExampleTestGenerator, Tags}
 
 import java.nio.file.Paths
-class fib extends ExampleTestGenerator(
+class fib_test extends ExampleTestGenerator(
   "fib",
   Set(),
   Set(Tags.CI)
-) {
+) with fib
+trait fib {
 
   def pretest(program: Program): Unit = {
     val f = program.relation[Constant]("f")

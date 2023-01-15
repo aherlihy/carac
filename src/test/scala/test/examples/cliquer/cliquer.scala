@@ -4,8 +4,11 @@ import datalog.dsl.{Constant, Program}
 import test.ExampleTestGenerator
 
 import java.nio.file.Paths
-class cliquer extends ExampleTestGenerator("cliquer") {
-  override val toSolve = "reachable"
+class cliquer_test extends ExampleTestGenerator("cliquer") with cliquer {
+  override def toSolve: String = super.toSolve
+}
+trait cliquer {
+  def toSolve = "reachable"
   def pretest(program: Program): Unit = {
     val edge = program.relation[Constant]("edge")
 

@@ -4,7 +4,8 @@ import datalog.dsl.{Constant, Program}
 import test.ExampleTestGenerator
 
 import java.nio.file.Paths
-class tc extends ExampleTestGenerator("tc") {
+class tc_test extends ExampleTestGenerator("tc") with tc
+trait tc {
 
   def pretest(program: Program): Unit = {
     val base = program.namedRelation[Constant]("base")

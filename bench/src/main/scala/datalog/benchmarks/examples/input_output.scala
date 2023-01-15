@@ -1,10 +1,63 @@
-package test.examples.input_output
+package datalog.benchmarks.examples
 
 import datalog.dsl.{Constant, Program}
-import test.ExampleTestGenerator
 
 import java.nio.file.Paths
-class input_output_test extends ExampleTestGenerator("input_output") with input_output
+import java.util.concurrent.TimeUnit
+import org.openjdk.jmh.annotations.*
+import org.openjdk.jmh.infra.Blackhole
+@Fork(1) // # of jvms that it will use
+@Warmup(iterations = 1, time = 1, timeUnit = TimeUnit.SECONDS)
+@Measurement(iterations = 1, time = 1, timeUnit = TimeUnit.SECONDS)
+@State(Scope.Thread)
+class input_output_benchmark() extends ExampleBenchmarkGenerator("input_output") with input_output {
+ override def toSolve: String = super.toSolve
+ @Setup
+ def s(): Unit = setup() // can't add annotations to super, so just call
+
+ @TearDown
+ def f(): Unit = finish()
+
+ // relational, naive
+ @Benchmark def naive_relational(blackhole: Blackhole): Unit = {
+  blackhole.consume(
+   run(programs("NaiveRelational"), result)
+  )
+ }
+ // relational, seminaive
+ @Benchmark def seminaive_relational(blackhole: Blackhole): Unit = {
+  blackhole.consume(
+   run(programs("SemiNaiveRelational"), result)
+  )
+ }
+
+ // collections, naive
+ @Benchmark def naive_collections(blackhole: Blackhole): Unit = {
+  blackhole.consume(
+   run(programs("NaiveCollections"), result)
+  )
+ }
+ // relational, seminaive
+ @Benchmark def seminaive_collections(blackhole: Blackhole): Unit = {
+  blackhole.consume(
+   run(programs("SemiNaiveCollections"), result)
+  )
+ }
+
+ // staged, naive
+ @Benchmark def naive_staged(blackhole: Blackhole): Unit = {
+  blackhole.consume(
+   run(programs("NaiveStagedCollections"), result)
+  )
+ }
+
+ // staged, seminaive
+ @Benchmark def seminaive_staged(blackhole: Blackhole): Unit = {
+  blackhole.consume(
+   run(programs("SemiNaiveStagedCollections"), result)
+  )
+ }
+}
 trait input_output {
   def pretest(program: Program): Unit = {
     // input, i.e. defined in facts+here, i.e. named

@@ -4,7 +4,8 @@ import datalog.dsl.{Constant, Program, __}
 import test.ExampleTestGenerator
 
 import java.nio.file.Paths
-class puzzle extends ExampleTestGenerator("puzzle") {
+class puzzle_test extends ExampleTestGenerator("puzzle") with puzzle
+trait puzzle {
 
   def pretest(program: Program): Unit = {
     val opp = program.relation[Constant]("opp")

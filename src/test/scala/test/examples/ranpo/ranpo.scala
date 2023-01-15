@@ -4,11 +4,12 @@ import datalog.dsl.{Constant, Program, __}
 import test.{ExampleTestGenerator, Tags}
 
 import java.nio.file.Paths
-class ranpo extends ExampleTestGenerator(
+class ranpo_test extends ExampleTestGenerator(
   "ranpo",
   Set(),
   Set(Tags.CI)
-) {
+) with ranpo
+trait ranpo {
 
   def pretest(program: Program): Unit = {
     val Check = program.namedRelation[Constant]("Check")

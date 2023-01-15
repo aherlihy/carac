@@ -1,14 +1,33 @@
-package test.examples.anon_var
+package datalog.benchmarks.examples
 
 import datalog.dsl.{Constant, Program, __}
-import test.{ExampleTestGenerator, Tags}
+import java.util.concurrent.TimeUnit
+import org.openjdk.jmh.annotations.*
+import org.openjdk.jmh.infra.Blackhole
 
 import java.nio.file.Paths
-class anon_var_test extends ExampleTestGenerator(
+@Fork(1) // # of jvms that it will use
+@Warmup(iterations = 1, time = 1, timeUnit = TimeUnit.SECONDS)
+@Measurement(iterations = 1, time = 1, timeUnit = TimeUnit.SECONDS)
+@State(Scope.Thread)
+class anon_var_benchmark extends ExampleBenchmarkGenerator(
   "anon_var",
-  Set(Tags.Naive, Tags.Relational), // run only NaiveRelational
-  Set(Tags.Slow, Tags.CI)
-) with anon_var
+  Set("Naive", "Relational"), // run only SemiNaiveCollections
+  Set("Slow", "CI")
+) with anon_var {
+ @Setup
+ def s(): Unit = setup() // can't add annotations to super, so just call
+
+ @TearDown
+ def f(): Unit = finish()
+
+  // collections, seminaive
+  @Benchmark def seminaive_collections(blackhole: Blackhole): Unit = {
+    blackhole.consume(
+      run(programs("SemiNaiveCollections"), result)
+    )
+  }
+}
 
 trait anon_var {
   def pretest(program: Program): Unit = {

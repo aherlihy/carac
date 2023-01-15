@@ -1,4 +1,4 @@
-package datalog.benchmarks
+package datalog.benchmarks.examples
 
 import datalog.dsl.{Constant, Program, Relation, Term}
 import datalog.execution.{NaiveExecutionEngine, NaiveStagedExecutionEngine, SemiNaiveExecutionEngine, SemiNaiveStagedExecutionEngine}
@@ -9,13 +9,12 @@ import scala.collection.mutable
 import scala.io.Source
 import scala.jdk.StreamConverters.*
 import scala.util.Properties
-//import scala.quoted.*
-//import scala.quoted.staging.*
 
 abstract class ExampleBenchmarkGenerator(testname: String,
                                          val skip: Set[String] = Set(),
                                          override val tags: Set[String] = Set()) extends BenchmarkGenerator(
-  Paths.get("src", "main", "scala", "datalog", "benchmarks", testname), skip, tags
+  Paths.get("..", "src", "test", "scala", "test", "examples", testname),
+  skip, tags
 )
 
 abstract class BenchmarkGenerator(directory: Path,
@@ -104,6 +103,32 @@ abstract class BenchmarkGenerator(directory: Path,
     } else { // solve all relations for their expected
       expectedFacts.foreach((fact, expected) => {
         result(fact) = program.namedRelation(fact).solve()
+      })
+    }
+  }
+
+  var result: mutable.Map[String, Set[Seq[Term]]] = mutable.Map()
+  var programs: mutable.Map[String, Program] = mutable.Map()
+
+  Seq("SemiNaive", "Naive", "NaiveStaged", "SemiNaiveStaged").foreach(execution =>
+    Seq("Relational", "Collections").foreach(storage =>
+      if (
+        (execution.contains("Staged") && storage == "Relational") ||
+          skip.contains(execution) || skip.contains(storage) ||
+          (tags ++ Set(execution, storage)).flatMap(t => Properties.envOrNone(t.toUpperCase())).nonEmpty
+      ) {}
+      else {
+        programs(s"$execution$storage") = initialize(s"$execution$storage")
+      }))
+
+  def setup(): Unit = result.clear()
+  def finish(): Unit = {
+    assert(result.nonEmpty)
+    if (toSolve != "_") { // solve for one relation, check all expected
+      assert(result(toSolve) == expectedFacts(toSolve))
+    } else { // solve all relations for their expected
+      expectedFacts.foreach((fact, expected) => {
+        assert(result(fact) == expectedFacts(fact))
       })
     }
   }

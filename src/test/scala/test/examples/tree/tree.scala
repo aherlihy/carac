@@ -4,8 +4,11 @@ import datalog.dsl.{Constant, Program, __}
 import test.ExampleTestGenerator
 
 import java.nio.file.Paths
-class tree extends ExampleTestGenerator("tree") {
-  override val toSolve: String = "S"
+class tree_test extends ExampleTestGenerator("tree") with tree {
+  override def toSolve: String = super.toSolve
+}
+trait tree {
+  def toSolve: String = "S"
   def pretest(program: Program): Unit = {
     val S = program.relation[Constant]("S")
 

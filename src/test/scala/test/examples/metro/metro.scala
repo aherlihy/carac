@@ -4,7 +4,8 @@ import datalog.dsl.{Constant, Program}
 import test.ExampleTestGenerator
 
 import java.nio.file.Paths
-class metro extends ExampleTestGenerator("metro") {
+class metro_test extends ExampleTestGenerator("metro") with metro
+trait metro {
 
   def pretest(program: Program): Unit = {
     val platform2_reach = program.relation[Constant]("platform2_reach")

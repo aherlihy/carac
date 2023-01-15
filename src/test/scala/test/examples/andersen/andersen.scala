@@ -1,7 +1,7 @@
 package test.examples.andersen
 
 import datalog.dsl.{Constant, Program}
-import test.{ExampleBenchmarkGenerator2, ExampleTestGenerator}
+import test.ExampleTestGenerator
 
 import java.nio.file.Paths
 
@@ -32,6 +32,6 @@ trait andersen {
  }
 }
 
-class AndersenTest() extends ExampleTestGenerator("andersen") with andersen {
+class andersen_test() extends ExampleTestGenerator("andersen") with andersen {
  override def toSolve: String = super.toSolve
 }

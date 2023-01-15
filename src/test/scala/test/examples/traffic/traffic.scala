@@ -4,9 +4,11 @@ import datalog.dsl.{Constant, Program}
 import test.ExampleTestGenerator
 
 import java.nio.file.Paths
-class traffic extends ExampleTestGenerator("traffic") {
-
-  override val toSolve: String = "crashes"
+class traffic_test extends ExampleTestGenerator("traffic") with traffic {
+  override def toSolve: String = super.toSolve
+}
+trait traffic {
+  def toSolve: String = "crashes"
   def pretest(program: Program): Unit = {
     val crashable = program.relation[Constant]("crashable")
     val crashes = program.relation[Constant]("crashes")
