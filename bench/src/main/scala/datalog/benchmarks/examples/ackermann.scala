@@ -47,15 +47,17 @@ class ackermann_benchmark() extends ExampleBenchmarkGenerator(
 
  // relational, seminaive
  @Benchmark def seminaive_collections(blackhole: Blackhole): Unit = {
-  blackhole.consume(
-   run(programs("SemiNaiveCollections"), result)
-  )
+   val p = "SemiNaiveCollections"
+   if (!programs.contains(p))
+     throw new Exception(f"skip test $p for current env")
+   blackhole.consume(run(programs(p), result))
  }
 
  // staged, seminaive
  @Benchmark def seminaive_staged(blackhole: Blackhole): Unit = {
-  blackhole.consume(
-   run(programs("SemiNaiveStagedCollections"), result)
-  )
+  val p = "SemiNaiveStagedCollections"
+  if(!programs.contains(p))
+    throw new Exception(f"skip test $p for current env")
+  blackhole.consume(run(programs(p), result))
  }
 }

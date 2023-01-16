@@ -20,42 +20,48 @@ class prime_benchmark() extends ExampleBenchmarkGenerator("prime") with prime {
 
  // relational, naive
  @Benchmark def naive_relational(blackhole: Blackhole): Unit = {
-  blackhole.consume(
-   run(programs("NaiveRelational"), result)
-  )
+  val p = "NaiveRelational"
+  if(!programs.contains(p))
+    throw new Exception(f"skip test $p for current env")
+  blackhole.consume(run(programs(p), result))
  }
  // relational, seminaive
  @Benchmark def seminaive_relational(blackhole: Blackhole): Unit = {
-  blackhole.consume(
-   run(programs("SemiNaiveRelational"), result)
-  )
+  val p = "SemiNaiveRelational"
+  if(!programs.contains(p))
+    throw new Exception(f"skip test $p for current env")
+  blackhole.consume(run(programs(p), result))
  }
 
  // collections, naive
  @Benchmark def naive_collections(blackhole: Blackhole): Unit = {
-  blackhole.consume(
-   run(programs("NaiveCollections"), result)
-  )
+  val p = "NaiveCollections"
+  if(!programs.contains(p))
+    throw new Exception(f"skip test $p for current env")
+  blackhole.consume(run(programs(p), result))
  }
  // relational, seminaive
  @Benchmark def seminaive_collections(blackhole: Blackhole): Unit = {
-  blackhole.consume(
-   run(programs("SemiNaiveCollections"), result)
-  )
+  val p = "SemiNaiveCollections"
+  if(!programs.contains(p))
+    throw new Exception(f"skip test $p for current env")
+  blackhole.consume(run(programs(p), result))
  }
 
  // staged, naive
  @Benchmark def naive_staged(blackhole: Blackhole): Unit = {
-  blackhole.consume(
-   run(programs("NaiveStagedCollections"), result)
-  )
+  val p = "NaiveStagedCollections"
+  if(!programs.contains(p))
+    throw new Exception(f"skip test $p for current env")
+  blackhole.consume(run(programs(p), result))
  }
 
  // staged, seminaive
  @Benchmark def seminaive_staged(blackhole: Blackhole): Unit = {
-  blackhole.consume(
-   run(programs("SemiNaiveStagedCollections"), result)
-  )
+  val p = "SemiNaiveStagedCollections"
+  if(!programs.contains(p))
+    throw new Exception(f"skip test $p for current env")
+  blackhole.consume(run(programs(p), result))
  }
 }
 trait prime {

@@ -11,20 +11,23 @@ jobs:
     - name: Run unit tests
       run: sbt test
   bench:
+    name: continuous benchmark
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
     - name: run benchmarks
-      run: sbt bench/Jmh/run -rf json -rff benchmark_out.json
+      run: sbt 'bench/Jmh/run -rf json -rff benchmark_out.json'
     - name: Store benchmark result
       uses: benchmark-action/github-action-benchmark@v1
       with:
       # What benchmark tool the output.txt came from
         tool: 'jmh'
         output-file-path: bench/benchmark_out.json
-        fail-on-alert: true
         # GitHub API token to make a commit comment
         github-token: ${{ secrets.GITHUB_TOKEN }}
+        auto-push: true
+        alert-threshold: '200%'
+        fail-on-alert: true
         # Enable alert commit comment
         comment-on-alert: true
         # Mention @aherihy in the commit comment

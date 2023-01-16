@@ -23,9 +23,10 @@ class anon_var_benchmark extends ExampleBenchmarkGenerator(
 
   // collections, seminaive
   @Benchmark def seminaive_collections(blackhole: Blackhole): Unit = {
-    blackhole.consume(
-      run(programs("SemiNaiveCollections"), result)
-    )
+    val p = "SemiNaiveCollections"
+    if(!programs.contains(p))
+      throw new Exception(f"skip test $p for current env")
+    blackhole.consume(run(programs(p), result))
   }
 }
 
