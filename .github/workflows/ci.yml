@@ -18,11 +18,11 @@ jobs:
     - name: run benchmarks
       run: sbt 'bench/Jmh/run -rf json -rff benchmark_out.json'
     # Download previous benchmark result from cache (if exists)
-     - name: Download previous benchmark data
-     uses: actions/cache@v1
-     with:
-       path: ./cache
-       key: ${{ runner.os }}-benchmark
+    - name: Download previous benchmark data
+      uses: actions/cache@v1
+      with:
+        path: ./cache
+        key: ${{ runner.os }}-benchmark
     - name: Store benchmark result
       uses: benchmark-action/github-action-benchmark@v1
       with:
