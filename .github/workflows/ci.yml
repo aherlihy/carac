@@ -15,4 +15,23 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: run benchmarks
-      run: sbt bench/Jmh/run
+      run: sbt bench/Jmh/run -rf json -rff benchmark_out.json
+    - name: Download previous benchmark data
+        uses: actions/cache@v1
+        with:
+          path: ./cache
+          key: ${{ runner.os }}-benchmark
+          # Run `github-action-benchmark` action
+    - name: Store benchmark result
+      uses: benchmark-action/github-action-benchmark@v1
+      with:
+      # What benchmark tool the output.txt came from
+        tool: 'jmh'
+        output-file-path: bench/benchmark_out.json
+        fail-on-alert: true
+        # GitHub API token to make a commit comment
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        # Enable alert commit comment
+        comment-on-alert: true
+        # Mention @aherihy in the commit comment
+        alert-comment-cc-users: '@aherlihy'
