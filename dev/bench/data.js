@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1673892568056,
+  "lastUpdate": 1673893007723,
   "repoUrl": "https://github.com/aherlihy/carac",
   "entries": {
     "Benchmark": [
@@ -2599,6 +2599,59 @@ window.BENCHMARK_DATA = {
         "date": 1673892567539,
         "tool": "customBiggerIsBetter",
         "benches": [
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {}
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "herlihyap@gmail.com",
+            "name": "aherlihy",
+            "username": "aherlihy"
+          },
+          "committer": {
+            "email": "herlihyap@gmail.com",
+            "name": "aherlihy",
+            "username": "aherlihy"
+          },
+          "distinct": true,
+          "id": "53c4efcb727a35a2a2a9cbd36d8d29333f7dee0f",
+          "message": "remove printlines",
+          "timestamp": "2023-01-16T18:55:12+01:00",
+          "tree_id": "7422295ab7ad74a23b38878ee62ce8ae80da9c4d",
+          "url": "https://github.com/aherlihy/carac/commit/53c4efcb727a35a2a2a9cbd36d8d29333f7dee0f"
+        },
+        "date": 1673893006892,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {},
+          {},
+          {},
+          {},
           {},
           {},
           {},
