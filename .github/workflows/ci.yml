@@ -1,0 +1,30 @@
+name: CI
+on:
+  pull_request:
+  push:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Setup JDK
+      uses: actions/setup-java@v3
+      with:
+          distribution: temurin
+          java-version: 17
+    - name: Run unit tests
+      run: sbt test
+      env:
+        _JAVA_OPTIONS: -Xmx7g
+  bench:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Setup JDK
+      uses: actions/setup-java@v3
+      with:
+        distribution: temurin
+        java-version: 17
+    - name: run benchmarks
+      run: sbt bench/Jmh/run

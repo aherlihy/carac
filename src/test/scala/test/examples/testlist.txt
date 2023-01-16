@@ -1,0 +1,117 @@
+❌ 2sat - negation
+✅ access-policy
+✅ ackermann
+❌ amicable - aggregators, functions
+✅ andersen
+❌ array - aggregators, negation
+✅ bigrams
+❌ catalan - aggregators
+✅ cba_expr_value
+❌ cellular_automata - aggregators, negation
+❌ centroids - negation
+❌ circuit_eval - negation
+❌ circuit_records - aggregation
+❌ circuit_sat - aggregators, negation
+✅ clique
+✅ cliquer
+❌ comp-parametrized - aggregators, negation, comp
+❌ comp-parametrized-inherit - comp
+❌ comp-parametrized-multilvl - aggregators, comp
+❌ convex_hull - aggregators, negation
+❌ counter - aggregators, str
+❌ degree - aggregators
+❌ dfa - comp, negation
+❌ dfa_live_vars - negation
+❌ dfa_min - negation, aggregators
+❌ dfa_parse - negation, aggregators
+❌ dfa_summary_function - comp, negation
+❌ disconnected - negation
+❌ dnf - negation
+❌ dominance - negation, aggregators, comp
+double_tree
+❌ earley - aggregators, negation
+❌ edit_distance - aggregators, negation
+✅ equal
+❌ euclid - aggregators, negation
+❌ factorial - aggregators
+❌ factoring - aggregators
+❌ family - negation
+✅ fib
+❌ fib1 - negation
+❌ flights - negation
+❌ flights2 - types
+❌ floydwarshall
+❌ fractional_knapsack - datatypes
+✅ func
+❌ game2 - negation
+✅ grad
+❌ graph - aggregation
+❌ grid - aggregation
+❌ highest_degree - aggregator
+❌ hmmer - negation
+❌ independent_body3 - aggregator
+❌ inline_nats - aggregator
+✅ input_output
+✅ java-pointsto
+❌ josephus - aggregators
+❌ k-permutations - negation
+❌ linksum - aggregation
+❌ longest_path - aggregation
+🔶 lubm - doable but benchmark
+❌ lucas - aggregators
+❌ magic_access-policy - for magic sets
+❌ magic_pointsto - for magic sets
+❌ magic_prime2 - for magic sets
+✅ metro
+❌ minesweeper - aggregators
+❌ minimum_spanning_tree - negation, aggregators
+❌ minpath1 - aggregators, negation
+❌ minpath2 - aggregators, negation
+❌ minpath3 - aggregators, negation
+❌ mmult - negation
+❌ movies - aggregators
+❌ nfsa2fsa - aggregators
+❌ not_match - aggregators, negation
+❌ nqueens
+❌ orbits - negation
+❌ orbits1 - negation
+✅ palindrome
+✅ paths (elsewhere)
+❌ peano_arithmetic
+❌ perfect_numbers - aggregators
+❌ planar - aggregators, negation
+✅ po1
+✅ po2
+✅ po3
+✅ po4
+✅ po5
+✅ pointsto
+❌ prime2 - aggregators, negation
+✅ prime
+🔶  profile_default - for logging
+🔶  profile_json
+✅ puzzle
+✅ ranpo
+❌ recipes - aggregators
+❌ rewrite - data types
+✅ rsg
+❌ sequences - aggregators
+ship
+❌ shortest_edges - aggregators
+❌ shortest_path - aggregators
+❌ shortest_path2 - aggregators
+✅ small
+❌ sort - aggregators
+❌ speed - aggregators
+❌ strategies - datatype
+❌ tak - aggregators
+✅ tc
+❌ tic-tac-toe - negation
+✅/❌ topological_ordering - negation
+✅ traffic
+✅ trains
+✅ trans
+✅ tree
+❌ triangle - aggregators, negation
+❌ turing1 - aggregators
+❌ weighted_distances - aggregators
