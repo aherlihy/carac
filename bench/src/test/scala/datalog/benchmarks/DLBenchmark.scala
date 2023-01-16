@@ -38,7 +38,6 @@ abstract class DLBenchmark {
   }
 
   def setup(): Unit = {
-    println("IN SETUP")
     result.clear()
   }
 

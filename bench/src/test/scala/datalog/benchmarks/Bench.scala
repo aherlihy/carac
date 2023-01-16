@@ -50,31 +50,31 @@ class Bench_ci {
     val b = ciBenchs("tc")
     runTest(b, b.programs(p), blackhole)
   }
-//
-//  // collections, naive
-//  @Benchmark def naive_collections(blackhole: Blackhole): Unit = {
-//    val p = "NaiveCollections"
-//    val b = ciBenchs("tc")
-//    runTest(b, b.programs(p), blackhole)
-//  }
-//  // relational, seminaive
-//  @Benchmark def seminaive_collections(blackhole: Blackhole): Unit = {
-//    val p = "SemiNaiveCollections"
-//    val b = ciBenchs("tc")
-//    runTest(b, b.programs(p), blackhole)
-//  }
-//
-//  // staged, naive
-//  @Benchmark def naive_staged(blackhole: Blackhole): Unit = {
-//    val p = "NaiveStagedCollections"
-//    val b = ciBenchs("tc")
-//    runTest(b, b.programs(p), blackhole)
-//  }
-//
-//  // staged, seminaive
-//  @Benchmark def seminaive_staged(blackhole: Blackhole): Unit = {
-//    val p = "SemiNaiveStagedCollections"
-//    val b = ciBenchs("tc")
-//    runTest(b, b.programs(p), blackhole)
-//  }
+
+  // collections, naive
+  @Benchmark def naive_collections(blackhole: Blackhole): Unit = {
+    val p = "NaiveCollections"
+    val b = ciBenchs("tc")
+    runTest(b, b.programs(p), blackhole)
+  }
+  // relational, seminaive
+  @Benchmark def seminaive_collections(blackhole: Blackhole): Unit = {
+    val p = "SemiNaiveCollections"
+    val b = ciBenchs("tc")
+    runTest(b, b.programs(p), blackhole)
+  }
+
+  // staged, naive
+  @Benchmark def naive_staged(blackhole: Blackhole): Unit = {
+    val p = "NaiveStagedCollections"
+    val b = ciBenchs("tc")
+    runTest(b, b.programs(p), blackhole)
+  }
+
+  // staged, seminaive
+  @Benchmark def seminaive_staged(blackhole: Blackhole): Unit = {
+    val p = "SemiNaiveStagedCollections"
+    val b = ciBenchs("tc")
+    runTest(b, b.programs(p), blackhole)
+  }
 }
