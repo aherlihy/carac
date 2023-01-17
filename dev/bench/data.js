@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1673893007723,
+  "lastUpdate": 1673962581379,
   "repoUrl": "https://github.com/aherlihy/carac",
   "entries": {
     "Benchmark": [
@@ -2646,6 +2646,59 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/aherlihy/carac/commit/53c4efcb727a35a2a2a9cbd36d8d29333f7dee0f"
         },
         "date": 1673893006892,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {}
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "herlihyap@gmail.com",
+            "name": "aherlihy",
+            "username": "aherlihy"
+          },
+          "committer": {
+            "email": "herlihyap@gmail.com",
+            "name": "aherlihy",
+            "username": "aherlihy"
+          },
+          "distinct": true,
+          "id": "bafb1088fff45f88dd5ebf40b3ba661ae141cad9",
+          "message": "negative threshold?",
+          "timestamp": "2023-01-17T14:14:44+01:00",
+          "tree_id": "8810eaf1d75249ee23f83cb7d5d599bcf0dbed7a",
+          "url": "https://github.com/aherlihy/carac/commit/bafb1088fff45f88dd5ebf40b3ba661ae141cad9"
+        },
+        "date": 1673962580901,
         "tool": "customBiggerIsBetter",
         "benches": [
           {},
