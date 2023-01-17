@@ -44,8 +44,6 @@ class TransitiveClosure extends DLBenchmark {
   }
 
   override def finish(): Unit =
-    println("========RESULTS==============")
-    println(result)
     if(result.size != 2)
       throw new Exception(s"Benchmark error in $description: missing result")
     if(result("fourHops") != result("fourHopsJoin"))
