@@ -2,6 +2,8 @@ name: CI
 on:
   pull_request:
   push:
+    branches:
+      - main
 
 jobs:
   test:
@@ -27,7 +29,7 @@ jobs:
       uses: benchmark-action/github-action-benchmark@v1
       with:
       # What benchmark tool the output.txt came from
-        tool: 'customBiggerIsBetter'
+        tool: 'jmh'
         output-file-path: bench/benchmark_out.json
         # GitHub API token to make a commit comment
         github-token: ${{ secrets.GITHUB_TOKEN }}
