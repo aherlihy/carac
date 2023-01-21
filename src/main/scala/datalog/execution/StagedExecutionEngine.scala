@@ -96,14 +96,26 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
 //          case DB.Delta =>
 //            storageManager.deltaDB(ctx.newDbId).exists((k, v) => v.nonEmpty)
 //        }
-//      case ScanOp(rId, db, knowledge) =>
-//        val k = if (knowledge == KNOWLEDGE.Known) ctx.knownDbId else ctx.newDbId
-//        db match {
-//          case DB.Derived =>
-//            '{ storageManager.derivedDB(${k}).getOrElse(${rId}, storageManager.edbs.getOrElse(${rId}, EDB())) }
-//          case DB.Delta =>
-//            '{ storageManager.deltaDB(${k}).getOrElse(${rId}, storageManager.edbs.getOrElse(${rId}, EDB())) }
-//        }
+      case ScanOp(rId, db, knowledge) =>
+        val k = if (knowledge == KNOWLEDGE.Known) ctx.knownDbId else ctx.newDbId
+        lazy val edb =
+          if (storageManager.edbs.contains(rId))
+            '{ ${stagedSM}.edbs(${Expr(rId)}) }
+          else
+            '{ ${stagedSM}.EDB() }
+
+        db match {
+          case DB.Derived =>
+            if (storageManager.derivedDB.contains(rId))
+              '{ ${stagedSM}.derivedDB(${Expr(k)}) }
+            else
+              edb
+          case DB.Delta =>
+            if (storageManager.deltaDB.contains(rId))
+              '{ ${stagedSM}.deltaDB(${Expr(k)}) }
+            else
+              edb
+        }
       case ScanEDBOp(rId) =>
         if (storageManager.edbs.contains(rId))
           '{ ${stagedSM}.edbs(${Expr(rId)}) }
@@ -256,7 +268,6 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
     debug("MINI PROG\n", () => storageManager.printer.printIR(miniprog))
 
     given staging.Compiler = staging.Compiler.make(getClass.getClassLoader)
-
     val compiled: StorageManager => EDB =
       staging.run {
         val res: Expr[StorageManager => Any] =
@@ -266,7 +277,6 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
       }.asInstanceOf[StorageManager => EDB]
 
     val res = compiled(storageManager)
-    println("VAL RES=" + res)
 //    interpretIR(irTree)
 
 //    knownDbId = irCtx.newDbId
