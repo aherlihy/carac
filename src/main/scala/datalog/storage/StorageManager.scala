@@ -37,15 +37,15 @@ trait StorageManager(val ns: NS) {
   }
   type Row [+T] <: IndexedSeq[T] with immutable.IndexedSeqOps[T, Row, Row[T]]
   type Table[T] <: mutable.ArrayBuffer[T]
-  type Relation[T] <: Table[Row[T]]
+  type Relation[T] <: Table[Row[T]] & mutable.ArrayBuffer[Row[T]]
 
   type StorageTerm = StorageVariable | StorageConstant
   type EDB = Relation[StorageTerm]
   def EDB(c: Row[StorageTerm]*): EDB
   type IDB = Relation[StorageAtom]
   type Database[K, V] <: mutable.Map[K, V]
-  type FactDatabase <: Database[Int, EDB]
-  type RuleDatabase <: Database[Int, IDB]
+  type FactDatabase <: Database[Int, EDB] & mutable.Map[Int, EDB]
+  type RuleDatabase <: Database[Int, IDB] & mutable.Map[Int, EDB]
 
   val derivedDB: Database[Int, FactDatabase]
   val deltaDB: Database[Int, FactDatabase]
