@@ -5,7 +5,7 @@ import datalog.tools.Debug.debug
 
 import scala.collection.mutable
 
-class IRTree(using val ctx: InterpreterContext) {
+class IRTreeGenerator(using val ctx: InterpreterContext) {
   def naiveEval(rId: Relation, ruleMap: mutable.Map[Relation, ASTNode]): IROp =
     SequenceOp(
       //      DebugNode("in eval:", () => s"rId=${ctx.storageManager.ns(rId)} relations=${ctx.relations.map(r => ctx.storageManager.ns(r)).mkString("[", ", ", "]")}  incr=${ctx.newDbId} src=${ctx.knownDbId}") +:

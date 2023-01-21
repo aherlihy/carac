@@ -102,7 +102,7 @@ class Printer[S <: StorageManager](val s: S) {
     }
   }
 
-  def printIR(node: IROp, ident: Int = 0): String = {
+  def printIR(node: IROp, ident: Int = 0)(using ctx: InterpreterContext): String = {
     val i = "  "*ident
     i + (node match {
       case ProgramOp(body) => s"PROGRAM:\n${printIR(body, ident+1)}"
@@ -111,15 +111,15 @@ class Printer[S <: StorageManager](val s: S) {
       case SequenceOp(ops) => s"SEQ:${ops.zipWithIndex.map((o, idx) => s"$idx" + printIR(o, ident+1)).mkString("[\n", ",\n", "]")}"
       case CompareOp(db) => s"DIFF:$db"
       case ClearOp() => s"CLEAR"
-      case ScanEDBOp(srcRel) => s"READ(edbs[${node.ctx.storageManager.ns(srcRel)}])"
+      case ScanEDBOp(srcRel) => s"READ(edbs[${ctx.storageManager.ns(srcRel)}])"
       case ScanOp(srcRel, db, knowledge) =>
 //        val name = if (knowledge == known) "known" else "new"
-        s"READ[$db.$knowledge](${node.ctx.storageManager.ns(srcRel)})"
+        s"READ[$db.$knowledge](${ctx.storageManager.ns(srcRel)})"
       case JoinOp(subOps, keys) => s"JOIN${keys.varToString()}${keys.constToString()}${subOps.map(s => printIR(s, ident+1)).mkString("(\n", ",\n", ")")}"
       case ProjectOp(subOp, keys) => s"PROJECT${keys.projToString()}(\n${printIR(subOp, ident+1)})"
       case InsertOp(rId, db, knowledge, subOp, clear) =>
 //        val name = if (knowledge == known) "known" else "new"
-        s"INSERT INTO $db.$knowledge.${node.ctx.storageManager.ns(rId)}\n${printIR(subOp, ident+1)}"
+        s"INSERT INTO $db.$knowledge.${ctx.storageManager.ns(rId)}\n${printIR(subOp, ident+1)}"
       case UnionOp(ops) => s"UNION${ops.map(o => printIR(o, ident+1)).mkString("(\n", ",\n", ")")}"
       case DiffOp(lhs, rhs) => s"DIFF ${printIR(lhs)} - ${printIR(rhs)}"
       case DebugNode(prefix, op) => s"DEBUG: $prefix"

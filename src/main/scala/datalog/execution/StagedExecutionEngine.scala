@@ -19,7 +19,7 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
   private val tCtx = ASTTransformerContext(using precedenceGraph)
   private val transforms: Seq[Transformer] = Seq(CopyEliminationPass()(using tCtx), JoinIndexPass()(using tCtx))
 
-  def createIR(irTree: IRTree, ast: ASTNode): IROp
+  def createIR(ast: ASTNode)(using InterpreterContext): IROp
 
   def initRelation(rId: Int, name: String): Unit = {
     storageManager.ns(rId) = name
@@ -64,38 +64,44 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
     val allRules = ast.rules.getOrElseUpdate(rule.rId, AllRulesNode(ArrayBuffer.empty, rule.rId)).asInstanceOf[AllRulesNode]
     allRules.edb = true
   }
+//
+//  def compileIR(IRTree: IRTree): Any = {
+//    irTree match {
+//
+//    }
+//  }
 
-  def interpretIR(irTree: IROp): Any = {
+  def interpretIR(irTree: IROp)(using ctx: InterpreterContext): Any = {
     irTree match {
       case ProgramOp(body) =>
-        debug(s"precedence graph=", irTree.ctx.precedenceGraph.sortedString)
-        debug(s"solving relation: ${storageManager.ns(irTree.ctx.toSolve)} order of relations=", irTree.ctx.relations.toString)
+        debug(s"precedence graph=", ctx.precedenceGraph.sortedString)
+        debug(s"solving relation: ${storageManager.ns(ctx.toSolve)} order of relations=", ctx.relations.toString)
         debug("initial state @ -1", storageManager.printer.toString)
         interpretIR(body)
       case DoWhileOp(body, cond) =>
         while({
           interpretIR(body)
-          irTree.ctx.count += 1
+          ctx.count += 1
           interpretIR(cond).asInstanceOf[Boolean]
         }) ()
       case SwapOp() =>
-        val t = irTree.ctx.knownDbId
-        irTree.ctx.knownDbId = irTree.ctx.newDbId
-        irTree.ctx.newDbId = t
-        storageManager.printer.known = irTree.ctx.knownDbId
+        val t = ctx.knownDbId
+        ctx.knownDbId = ctx.newDbId
+        ctx.newDbId = t
+        storageManager.printer.known = ctx.knownDbId
       case SequenceOp(ops) =>
         ops.map(interpretIR)
       case ClearOp() =>
-        storageManager.clearDB(true, irTree.ctx.newDbId)
+        storageManager.clearDB(true, ctx.newDbId)
       case CompareOp(db: DB) =>
         db match {
           case DB.Derived =>
-            !storageManager.compareDerivedDBs(irTree.ctx.newDbId, irTree.ctx.knownDbId)
+            !storageManager.compareDerivedDBs(ctx.newDbId, ctx.knownDbId)
           case DB.Delta =>
-            storageManager.deltaDB(irTree.ctx.newDbId).exists((k, v) => v.nonEmpty)
+            storageManager.deltaDB(ctx.newDbId).exists((k, v) => v.nonEmpty)
         }
       case ScanOp(rId, db, knowledge) =>
-        val k = if (knowledge == KNOWLEDGE.Known) irTree.ctx.knownDbId else irTree.ctx.newDbId
+        val k = if (knowledge == KNOWLEDGE.Known) ctx.knownDbId else ctx.newDbId
         db match {
           case DB.Derived =>
             storageManager.derivedDB(k).getOrElse(rId, storageManager.edbs.getOrElse(rId, EDB()))
@@ -120,7 +126,7 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
           )
         )
       case InsertOp(rId, db, knowledge, subOp, subOp2) =>
-        val k = if (knowledge == KNOWLEDGE.Known) irTree.ctx.knownDbId else irTree.ctx.newDbId
+        val k = if (knowledge == KNOWLEDGE.Known) ctx.knownDbId else ctx.newDbId
         val res = interpretIR(subOp)
         val res2 = if (subOp2.isEmpty) EDB() else interpretIR(subOp2.get)
         db match {
@@ -151,7 +157,7 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
     if (!precedenceGraph.idbs.contains(rId)) {
       throw new Error("Solving for rule without body")
     }
-    val transformedAST = transforms.foldLeft(ast.asInstanceOf[ASTNode])((t, pass) => pass.transform(t)) // TODO: need cast?
+    val transformedAST = transforms.foldLeft(ast: ASTNode)((t, pass) => pass.transform(t))
 
     var toSolve = rId
     if (tCtx.aliases.contains(rId))
@@ -165,8 +171,8 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
     debug("AST: ", () => storageManager.printer.printAST(ast))
     debug("TRANSFORMED: ", () => storageManager.printer.printAST(transformedAST))
 
-    val irCtx = InterpreterContext(storageManager, precedenceGraph, toSolve)
-    val irTree = createIR(IRTree(using irCtx), transformedAST)
+    given irCtx: InterpreterContext = InterpreterContext(storageManager, precedenceGraph, toSolve)
+    val irTree = createIR(transformedAST)
 
     debug("PROGRAM:\n", () => storageManager.printer.printIR(irTree))
 
