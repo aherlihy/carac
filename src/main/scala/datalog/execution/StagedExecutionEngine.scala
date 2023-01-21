@@ -8,16 +8,16 @@ import datalog.storage.{SimpleStorageManager, StorageManager}
 import datalog.tools.Debug.debug
 
 import scala.collection.mutable
-import scala.collection.mutable.ArrayBuffer
+import scala.quoted.*
 
 abstract class StagedExecutionEngine(val storageManager: StorageManager) extends ExecutionEngine {
   import storageManager.EDB
   val precedenceGraph = new PrecedenceGraph(using storageManager.ns)
-  val prebuiltOpKeys: mutable.Map[Int, ArrayBuffer[JoinIndexes]] = mutable.Map[Int, mutable.ArrayBuffer[JoinIndexes]]()
+  val prebuiltOpKeys: mutable.Map[Int, mutable.ArrayBuffer[JoinIndexes]] = mutable.Map[Int, mutable.ArrayBuffer[JoinIndexes]]()
   val ast: ProgramNode = ProgramNode()
   private var knownDbId = -1
   private val tCtx = ASTTransformerContext(using precedenceGraph)
-  private val transforms: Seq[Transformer] = Seq(CopyEliminationPass()(using tCtx), JoinIndexPass()(using tCtx))
+  private val transforms: Seq[Transformer] = Seq(CopyEliminationPass(using tCtx), JoinIndexPass(using tCtx))
 
   def createIR(ast: ASTNode)(using InterpreterContext): IROp
 
@@ -41,7 +41,7 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
 
   def insertIDB(rId: Int, rule: Seq[Atom]): Unit = {
     precedenceGraph.idbs.addOne(rId)
-    val allRules = ast.rules.getOrElseUpdate(rId, AllRulesNode(ArrayBuffer.empty, rId)).asInstanceOf[AllRulesNode]
+    val allRules = ast.rules.getOrElseUpdate(rId, AllRulesNode(mutable.ArrayBuffer.empty, rId)).asInstanceOf[AllRulesNode]
 
     allRules.rules.append(
       RuleNode(
@@ -61,7 +61,7 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
 
   def insertEDB(rule: Atom): Unit = {
     storageManager.insertEDB(rule)
-    val allRules = ast.rules.getOrElseUpdate(rule.rId, AllRulesNode(ArrayBuffer.empty, rule.rId)).asInstanceOf[AllRulesNode]
+    val allRules = ast.rules.getOrElseUpdate(rule.rId, AllRulesNode(mutable.ArrayBuffer.empty, rule.rId)).asInstanceOf[AllRulesNode]
     allRules.edb = true
   }
 //
