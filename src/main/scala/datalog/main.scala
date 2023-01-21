@@ -39,7 +39,7 @@ def run(program: Program): Unit = {
 //  println(s"graph to string ${program.ee.precedenceGraph.toString()}")
 //  program.ee.precedenceGraph.topSort()
 //  println(program.ee.precedenceGraph.sortedString())
-  println(queryA.solve())
+  println(edge.solve())
 }
 
 @main def main = {
