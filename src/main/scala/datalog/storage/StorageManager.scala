@@ -45,7 +45,7 @@ trait StorageManager(val ns: NS) {
   type IDB = Relation[StorageAtom]
   type Database[K, V] <: mutable.Map[K, V]
   type FactDatabase <: Database[Int, EDB] & mutable.Map[Int, EDB]
-  type RuleDatabase <: Database[Int, IDB] & mutable.Map[Int, EDB]
+  type RuleDatabase <: Database[Int, IDB] & mutable.Map[Int, IDB]
 
   val derivedDB: Database[Int, FactDatabase]
   val deltaDB: Database[Int, FactDatabase]
