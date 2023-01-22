@@ -11,7 +11,7 @@ import scala.collection.mutable
 def run(program: Program): Unit = {
   val edge = program.relation[Constant]("edge")
   val oneHop = program.relation[Constant]("oneHop")
-//  val twoHops = program.relation[Constant]("twoHops")
+  val twoHops = program.relation[Constant]("twoHops")
 //  val threeHops = program.relation[Constant]("threeHops")
 
   val queryA = program.relation[Constant]("queryA")
@@ -19,7 +19,7 @@ def run(program: Program): Unit = {
   val x, y, z, w, q = program.variable()
 
   oneHop(x, y) :- edge(x, y)
-//  twoHops(x, z) :- (edge(x, y), edge(y, z))
+  twoHops(x, z) :- (edge(x, y), edge(y, z))
 //  threeHops(x, y) :- (twoHops(x, z), edge(z, y))
 
   edge("a", "a") :- ()
@@ -27,8 +27,8 @@ def run(program: Program): Unit = {
   edge("b", "c") :- ()
   edge("c", "d") :- ()
 
-  queryA(x) :- oneHop("a", x)
-//  queryA(x) :- twoHops("a", x)
+//  queryA(x) :- oneHop("a", x)
+  queryA(x) :- twoHops("a", x)
 
 //  queryB(x) :- (oneHop("a", x), oneHop(x, "c"))
 //
@@ -39,7 +39,7 @@ def run(program: Program): Unit = {
 //  println(s"graph to string ${program.ee.precedenceGraph.toString()}")
 //  program.ee.precedenceGraph.topSort()
 //  println(program.ee.precedenceGraph.sortedString())
-  println(edge.solve())
+  println(queryA.solve())
 }
 
 @main def main = {

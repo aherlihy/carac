@@ -65,6 +65,7 @@ class SemiNaiveExecutionEngine(override val storageManager: StorageManager) exte
       newDbId = t // swap new and known DBs
       storageManager.clearDB(true, newDbId)
       storageManager.printer.known = knownDbId // TODO: get rid of
+      storageManager.printer.newId = newDbId
 
       debug(s"initial state @ $count", storageManager.printer.toString)
       count += 1

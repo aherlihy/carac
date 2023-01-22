@@ -85,7 +85,7 @@ abstract class SimpleStorageManager(override val ns: NS) extends StorageManager(
     derivedDB.addOne(dbId, FactDatabase())
     deltaDB.addOne(dbId, FactDatabase())
 
-    idbs.foreach((k, relation) => {
+    idbs.foreach((k, relation) => { // TODO: is ignored in staged, mb remove
       derivedDB(dbId)(k) = EDB()
       deltaDB(dbId)(k) = EDB()
     })

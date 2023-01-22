@@ -9,6 +9,7 @@ import scala.collection.{immutable, mutable}
 // Keep pretty print stuff separate bc long and ugly, mb put it in a macro
 class Printer[S <: StorageManager](val s: S) {
   var known = 0
+  var newId = 1
 
   def factToString(r: s.EDB): String = {
     r.map(s => s.mkString("(", ", ", ")")).mkString("[", ", ", "]")
@@ -73,7 +74,7 @@ class Printer[S <: StorageManager](val s: S) {
 
   override def toString() = {
     def printHelperRelation(i: Int, db: s.FactDatabase): String = {
-      val name = if (i == known) "known" else "new"
+      val name = if (i == known) "known" else if (i == newId) "new" else s"!!!OTHER($i)"
       "\n" + name + ": " + edbToString(db)
     }
     "+++++\n" +
@@ -102,26 +103,26 @@ class Printer[S <: StorageManager](val s: S) {
     }
   }
 
-  def printIR(node: IROp, ident: Int = 0)(using ctx: InterpreterContext): String = {
-    val i = "  "*ident
+  def printIR(node: IROp, ident: Int = 0, seq: Int = 0)(using ctx: InterpreterContext): String = {
+    val i = "\t"*ident
     i + (node match {
       case ProgramOp(body) => s"PROGRAM:\n${printIR(body, ident+1)}"
       case SwapOp() => "SWAP"
-      case DoWhileOp(body, cond) => s"DO {\n${printIR(body, ident+1)}}\n${i}WHILE {${printIR(cond, ident)}}\n"
-      case SequenceOp(ops) => s"SEQ:${ops.zipWithIndex.map((o, idx) => s"$idx" + printIR(o, ident+1)).mkString("[\n", ",\n", "]")}"
-      case CompareOp(db) => s"DIFF:$db"
+      case DoWhileOp(body, cond) => s"DO {\n${printIR(body, ident+1)}}\n${i}WHILE {${printIR(cond)}}\n"
+      case SequenceOp(ops) => s"SEQ{${seq+1}}:${ops.zipWithIndex.map((o, idx) => s"${seq+1}.$idx" + printIR(o, ident+1, seq+1)).mkString("[\n", ",\n", "]")}"
+      case CompareOp(db) => s"CMP:$db"
       case ClearOp() => s"CLEAR"
-      case ScanEDBOp(srcRel) => s"READ(edbs[${ctx.storageManager.ns(srcRel)}])"
+      case ScanEDBOp(srcRel) => s"SCAN(edbs[${ctx.storageManager.ns(srcRel)}])"
       case ScanOp(srcRel, db, knowledge) =>
 //        val name = if (knowledge == known) "known" else "new"
-        s"READ[$db.$knowledge](${ctx.storageManager.ns(srcRel)})"
+        s"SCAN[$db.$knowledge](${ctx.storageManager.ns(srcRel)})"
       case JoinOp(subOps, keys) => s"JOIN${keys.varToString()}${keys.constToString()}${subOps.map(s => printIR(s, ident+1)).mkString("(\n", ",\n", ")")}"
       case ProjectOp(subOp, keys) => s"PROJECT${keys.projToString()}(\n${printIR(subOp, ident+1)})"
       case InsertOp(rId, db, knowledge, subOp, clear) =>
 //        val name = if (knowledge == known) "known" else "new"
         s"INSERT INTO $db.$knowledge.${ctx.storageManager.ns(rId)}\n${printIR(subOp, ident+1)}"
       case UnionOp(ops) => s"UNION${ops.map(o => printIR(o, ident+1)).mkString("(\n", ",\n", ")")}"
-      case DiffOp(lhs, rhs) => s"DIFF ${printIR(lhs)} - ${printIR(rhs)}"
+      case DiffOp(lhs, rhs) => s"DIFF\n${printIR(lhs, ident+1)}\n-${printIR(rhs, ident+1)}"
       case DebugNode(prefix, op) => s"DEBUG: $prefix"
       case DebugPeek(prefix, msg, op) => s"DEBUG PEEK: $prefix into: ${printIR(op)}"
     })

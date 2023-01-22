@@ -81,6 +81,8 @@ class NaiveExecutionEngine(val storageManager: StorageManager) extends Execution
       newDbId = t
       storageManager.clearDB(true, newDbId)
       storageManager.printer.known = knownDbId // TODO: get rid of
+      storageManager.printer.newId = newDbId
+
       debug(s"initial state @ $count", storageManager.printer.toString)
       count += 1
       eval(toSolve, relations, newDbId, knownDbId)
