@@ -135,4 +135,6 @@ abstract class SimpleStorageManager(override val ns: NS) extends StorageManager(
   def compareDerivedDBs(dbId1: Int, dbId2: Int): Boolean =
     derivedDB(dbId1) == derivedDB(dbId2)
 
+  def union(edbs: Seq[EDB]): EDB =
+    edbs.flatten.distinct.to(mutable.ArrayBuffer)
 }

@@ -65,7 +65,8 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
     allRules.edb = true
   }
 
-  def compileIR(irTree: IROp)(using stagedSM: Expr[StorageManager])(using ctx: InterpreterContext)(using Quotes): Expr[Any] = {
+  def compileIR[T](irTree: IROp)(using stagedSM: Expr[StorageManager { type EDB = T}], t: Type[T])(using ctx: InterpreterContext)(using Quotes): Expr[T] = { // TODO: Instead of parameterizing, use staged path dependent type: i.e. stagedSM.EDB
+    val noop = '{${stagedSM}.EDB()}
     irTree match {
       case ProgramOp(body) =>
         debug(s"precedence graph=", ctx.precedenceGraph.sortedString)
@@ -79,17 +80,21 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
 //            ctx.count += 1
             ${compileIR(cond).asInstanceOf[Expr[Boolean]]}
           }) ()
+          ${noop}
         }
       case SwapOp() =>
         val t = ctx.knownDbId
         ctx.knownDbId = ctx.newDbId
         ctx.newDbId = t
         storageManager.printer.known = ctx.knownDbId
-        '{}
-//      case SequenceOp(ops) => // TODO: how to concatenate seq[quotes] into one quote?
-//        '{ ${Expr(ops.map(compileIR))} }
+        noop
+      case SequenceOp(ops) => // TODO: how to concatenate seq[quotes] into one quote?
+        val cOps = ops.map(compileIR)
+        cOps.reduceLeft((acc, next) => // TODO[future]: make a block instead of reduceLeft for efficiency
+          '{ ${acc}; ${next} }
+        )
       case ClearOp() =>
-        '{ ${stagedSM}.clearDB(${Expr(true)}, ${Expr(ctx.newDbId)}) }
+        '{ ${stagedSM}.clearDB(${Expr(true)}, ${Expr(ctx.newDbId)}); $noop }
 //      case CompareOp(db: DB) => // TODO: Unknown type ?1.EDB when trying to call nonempty, plus nonempty not member of EDB
 //        db match {
 //          case DB.Derived =>
@@ -134,29 +139,31 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
 //            }
 //          )
 //        )
-//      case InsertOp(rId, db, knowledge, subOp, subOp2) =>  // TODO: need to cast Expr[Any] to Expr[EDB] pass to resetDerived
-//        val k = if (knowledge == KNOWLEDGE.Known) ctx.knownDbId else ctx.newDbId
-//        val res = compileIR(subOp)
-//        val res2 = if (subOp2.isEmpty) '{ ${stagedSM}.EDB() } else compileIR(subOp2.get)
-//        db match {
-//          case DB.Derived =>
-//            '{ ${stagedSM}.resetDerived(${Expr(rId)}, ${Expr(k)}, ${res.asInstanceOf[Expr[EDB]]}, ${res2.asInstanceOf[Expr[EDB]]}) }
-//          case DB.Delta =>
-//            '{ ${stagedSM}.resetDelta(${Expr(rId)}, ${Expr(k)}, ${res.asInstanceOf[Expr[EDB]]}) }
-//        }
-//      case UnionOp(ops) =>  // TODO: need to cast Expr[Any] to Expr[EDB] in order to flatmap
-//        val compiledOps = ops.map(o => compileIR(o).asInstanceOf[Expr[EDB]])
-//        '{
-//          ${Expr(compiledOps)}
-//        }
-//        compiledOps.head
+      case InsertOp(rId, db, knowledge, subOp, subOp2) =>  // TODO: need to cast Expr[Any] to Expr[EDB] pass to resetDerived
+        val k = if (knowledge == KNOWLEDGE.Known) ctx.knownDbId else ctx.newDbId
+        val res = compileIR(subOp)
+        val res2 = if (subOp2.isEmpty) '{ ${stagedSM}.EDB() } else compileIR(subOp2.get)
+        db match {
+          case DB.Derived =>
+            '{ ${stagedSM}.resetDerived(${Expr(rId)}, ${Expr(k)}, ${res}, ${res2}); $noop }
+          case DB.Delta =>
+            '{ ${stagedSM}.resetDelta(${Expr(rId)}, ${Expr(k)}, ${res}); $noop }
+        }
+      case UnionOp(ops) =>
+        val compiledOps = Expr.ofSeq(ops.map(compileIR))
+        '{
+          $stagedSM.union($compiledOps)
+        }
 //        ops.flatMap(o => interpretIR(o).asInstanceOf[EDB]).toSet.toBuffer
-//      case DiffOp(lhs, rhs) =>
-//        val clhs = compileIR(lhs).asInstanceOf[Expr[EDB]]
-//        val crhs = compileIR(rhs).asInstanceOf[Expr[EDB]]
-//        '{
-//          ${clhs} diff ${crhs} // TODO: need to cast Expr[Any] to Expr[EDB] in order to diff
-//        }
+      case DiffOp(lhs, rhs) =>
+        val clhs = compileIR(lhs)
+        val crhs = compileIR(rhs)
+        '{ ${stagedSM}.getDiff(${clhs}, ${crhs}) } // TODO: need to cast Expr[Any] to Expr[EDB] in order to diff
+//        import quotes.reflect.*
+//        TermRef(TypeRepr.of[stagedSM.type], "EDB").asType match
+//          case '[t] =>
+//            '{
+//            }
 //        interpretIR(lhs).asInstanceOf[EDB] diff interpretIR(rhs).asInstanceOf[EDB]
 //      case DebugNode(prefix, msg) => debug(prefix, msg)
 //      case DebugPeek(prefix, msg, op) =>

@@ -88,4 +88,6 @@ trait StorageManager(val ns: NS) {
 
   def verifyEDBs(idbList: mutable.Set[Int]): Unit
   def verifyEDBs(): Unit
+
+  def union(edbs: Seq[EDB]): EDB
 }

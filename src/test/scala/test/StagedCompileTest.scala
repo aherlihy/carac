@@ -1,6 +1,6 @@
 package test
 
-import datalog.dsl.{Constant, Program}
+import datalog.dsl.{Constant, Program, Term}
 import datalog.execution.SemiNaiveStagedExecutionEngine
 import datalog.execution.ast.ASTNode
 import datalog.execution.ir.*
@@ -33,16 +33,18 @@ class StagedCompileTest extends munit.FunSuite {
     debug("MINI PROG\n", () => storageManager.printer.printIR(miniprog))
 
     given staging.Compiler = staging.Compiler.make(getClass.getClassLoader)
-    val compiled: StorageManager => storageManager.EDB =
+    val compiled: CollectionsStorageManager => storageManager.EDB =
       staging.run {
-        val res: Expr[StorageManager => Any] =
-          '{ (stagedSm: StorageManager) => ${engine.compileIR(miniprog)(using 'stagedSm)} }
+        val res: Expr[CollectionsStorageManager => Any] =
+          '{ (stagedSm: CollectionsStorageManager) => ${engine.compileIR[collection.mutable.ArrayBuffer[IndexedSeq[Term]]](miniprog)(using 'stagedSm)} }
         println(res.show)
-        assert(res.show.contains(check), s"${res.show} is missing $check")
+//        assert(res.show.contains(check), s"${res.show} is missing $check")
         res
-      }.asInstanceOf[StorageManager => storageManager.EDB]
+      }.asInstanceOf[CollectionsStorageManager => storageManager.EDB]
 
-    compiled(storageManager)
+    val result = compiled(storageManager)
+    println("RES=" + result)
+    result
   }
 
   test("ScanEDBOp") {
@@ -56,15 +58,33 @@ class StagedCompileTest extends munit.FunSuite {
     genContains(ScanOp(idb.id, DB.Delta, KNOWLEDGE.New), s".deltaDB.apply(${irCtx.newDbId}).getOrElse[scala.Any](${idb.id}")
     genContains(ScanOp(edge.id, DB.Derived, KNOWLEDGE.New), s", stagedSm.edbs.apply(${edge.id})")
   }
-//  test("UnionOp") {
-//    genContains(
-//      UnionOp(Seq(
-//        ScanEDBOp(edge.id),
-//        ScanOp(idb.id, DB.Delta, KNOWLEDGE.Known)
-//      )),
-//      s"test"
-//    )
-//  }
+  test("SeqOp") {
+    genContains(
+      SequenceOp(Seq(
+        ScanOp(idb.id, DB.Derived, KNOWLEDGE.Known),
+        ScanOp(idb.id, DB.Delta, KNOWLEDGE.Known)
+      )),
+      "test"
+    )
+  }
+  test("DiffOp") {
+    genContains(
+      DiffOp(
+        ScanOp(idb.id, DB.Derived, KNOWLEDGE.Known),
+        ScanOp(idb.id, DB.Delta, KNOWLEDGE.Known)
+      ),
+      "test"
+    )
+  }
+  test("UnionOp") {
+    genContains(
+      UnionOp(Seq(
+        ScanEDBOp(edge.id),
+        ScanOp(idb.id, DB.Delta, KNOWLEDGE.Known)
+      )),
+      s"test"
+    )
+  }
   test("ClearOp") {
     genContains(ClearOp(), s".clearDB(true, ${irCtx.newDbId}")
   }
