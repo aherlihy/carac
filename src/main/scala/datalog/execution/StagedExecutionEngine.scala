@@ -238,23 +238,23 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
   override def solve(rId: Int): Set[Seq[Term]] = {
     // verify setup
     storageManager.verifyEDBs(precedenceGraph.idbs)
-//    if (storageManager.edbs.contains(rId) && !precedenceGraph.idbs.contains(rId)) { // if just an edb predicate then return
-//      debug("Returning EDB without any IDB rule: ", () => storageManager.ns(rId))
-//      return storageManager.getEDBResult(rId)
-//    }
-//    if (!precedenceGraph.idbs.contains(rId)) {
-//      throw new Error("Solving for rule without body")
-//    }
+    if (storageManager.edbs.contains(rId) && !precedenceGraph.idbs.contains(rId)) { // if just an edb predicate then return
+      debug("Returning EDB without any IDB rule: ", () => storageManager.ns(rId))
+      return storageManager.getEDBResult(rId)
+    }
+    if (!precedenceGraph.idbs.contains(rId)) {
+      throw new Error("Solving for rule without body")
+    }
     val transformedAST = transforms.foldLeft(ast: ASTNode)((t, pass) => pass.transform(t))
 
     var toSolve = rId
-//    if (tCtx.aliases.contains(rId))
-//      toSolve = tCtx.aliases.getOrElse(rId, rId)
-//      debug("aliased:", () => s"${storageManager.ns(rId)} => ${storageManager.ns(toSolve)}")
-//      if (storageManager.edbs.contains(toSolve) && !precedenceGraph.idbs.contains(toSolve)) { // if just an edb predicate then return
-//        debug("Returning EDB as IDB aliased to EDB: ", () => storageManager.ns(toSolve))
-//        return storageManager.getEDBResult(toSolve)
-//      }
+    if (tCtx.aliases.contains(rId))
+      toSolve = tCtx.aliases.getOrElse(rId, rId)
+      debug("aliased:", () => s"${storageManager.ns(rId)} => ${storageManager.ns(toSolve)}")
+      if (storageManager.edbs.contains(toSolve) && !precedenceGraph.idbs.contains(toSolve)) { // if just an edb predicate then return
+        debug("Returning EDB as IDB aliased to EDB: ", () => storageManager.ns(toSolve))
+        return storageManager.getEDBResult(toSolve)
+      }
 
     debug("AST: ", () => storageManager.printer.printAST(ast))
     debug("TRANSFORMED: ", () => storageManager.printer.printAST(transformedAST))
@@ -264,24 +264,24 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
 
 //    debug("PROGRAM:\n", () => storageManager.printer.printIR(irTree))
 
-    val miniprog = ScanEDBOp(rId)
-    debug("MINI PROG\n", () => storageManager.printer.printIR(miniprog))
+//    val miniprog = ScanEDBOp(rId)
+//    debug("MINI PROG\n", () => storageManager.printer.printIR(miniprog))
 
-    given staging.Compiler = staging.Compiler.make(getClass.getClassLoader)
-    val compiled: StorageManager => EDB =
-      staging.run {
-        val res: Expr[StorageManager => Any] =
-          '{ (stagedSm: StorageManager) => ${compileIR(miniprog)(using 'stagedSm)} }
-        println(res.show)
-        res
-      }.asInstanceOf[StorageManager => EDB]
+//    given staging.Compiler = staging.Compiler.make(getClass.getClassLoader)
+//    val compiled: StorageManager => EDB =
+//      staging.run {
+//        val res: Expr[StorageManager => Any] =
+//          '{ (stagedSm: StorageManager) => ${compileIR(miniprog)(using 'stagedSm)} }
+//        println(res.show)
+//        res
+//      }.asInstanceOf[StorageManager => EDB]
+//
+//    val res = compiled(storageManager)
+    interpretIR(irTree)
 
-    val res = compiled(storageManager)
-//    interpretIR(irTree)
-
-//    knownDbId = irCtx.newDbId
-//    debug(s"final state @${irCtx.count} res@${irCtx.newDbId}", storageManager.printer.toString)
-//    storageManager.getIDBResult(toSolve, irCtx.newDbId)
-    res.toSet.asInstanceOf[Set[Seq[Term]]]
+    knownDbId = irCtx.newDbId
+    debug(s"final state @${irCtx.count} res@${irCtx.newDbId}", storageManager.printer.toString)
+    storageManager.getIDBResult(toSolve, irCtx.newDbId)
+//    res.toSet.asInstanceOf[Set[Seq[Term]]]
   }
 }
