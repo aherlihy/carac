@@ -116,7 +116,7 @@ class IRTreeGenerator(using val ctx: InterpreterContext) {
             ClearOp(),
             naiveEval(ctx.toSolve, ruleMap)
           )),
-          CompareOp(DB.Derived)
+          DB.Derived
         )
       case _ => throw new Exception("Non-root passed to IR Program")
     }
@@ -143,7 +143,7 @@ class IRTreeGenerator(using val ctx: InterpreterContext) {
               ClearOp(),
               semiNaiveEval(ctx.toSolve, ruleMap)
             )),
-            CompareOp(DB.Delta)
+            DB.Delta
           )
         )))
       case _ => throw new Exception("Non-root passed to IR Program")

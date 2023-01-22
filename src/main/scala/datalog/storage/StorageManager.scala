@@ -73,16 +73,13 @@ trait StorageManager(val ns: NS) {
   def getIDBResult(rId: Int, dbId: Int): Set[Seq[Term]]
   def getEDBResult(rId: Int): Set[Seq[Term]]
 
-  def swapDerivedDBs(dbId1: Int, dbId2: Int): Unit
-  def swapDeltaDBs(dbId1: Int, dbId2: Int): Unit
-
-//  def tableToString[T](r: Relation[T]): String
   def joinHelper(inputs: Seq[EDB], k: JoinIndexes): EDB
+  def projectHelper(input: EDB, k: JoinIndexes): EDB
 
   def getDiff(lhs: EDB, rhs: EDB): EDB
   def resetDerived(rId: Int, dbId: Int, rules: EDB, prev: EDB = EDB()): Unit
   def resetDelta(rId: Int, dbId: Int, rules: EDB): Unit
-  def compareDeltaDBs(dbId1: Int, dbId2: Int): Boolean
+  def compareDeltaDBs(dbId1: Int): Boolean
   def compareDerivedDBs(dbId1: Int, dbId2: Int): Boolean
   def clearDB(derived: Boolean, dbId: Int): Unit
 

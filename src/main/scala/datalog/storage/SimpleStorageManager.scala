@@ -56,9 +56,6 @@ abstract class SimpleStorageManager(override val ns: NS) extends StorageManager(
       edbs(rule.rId).addOne(rule.terms)
   }
 
-  def getDiff(lhs: EDB, rhs: EDB): EDB =
-    lhs diff rhs
-
   def initRelation(rId: Int, name: String): Unit = {
     ns(rId) = name
   }
@@ -102,10 +99,6 @@ abstract class SimpleStorageManager(override val ns: NS) extends StorageManager(
     else
       deltaDB(dbId).foreach((i, e) => e.clear())
 
-//  def cloneDerivedDB(from: Int, to: Int): Unit = {
-//    derivedDB(to).foreach()
-//  }
-
   def getIDBResult(rId: Int, dbId: Int): Set[Seq[Term]] =
     debug("Final IDB Result: ", () => s"@$dbId")
     getDerivedDB(rId, dbId).map(s => s.toSeq).toSet
@@ -119,22 +112,14 @@ abstract class SimpleStorageManager(override val ns: NS) extends StorageManager(
   def resetDelta(rId: Int, dbId: Int, rules: Relation[StorageTerm]): Unit =
     deltaDB(dbId)(rId) = rules
 
-  def swapDeltaDBs(dbId1: Int, dbId2: Int): Unit = {
-    val t1 = deltaDB(dbId1)
-    deltaDB(dbId1) = deltaDB(dbId2)
-    deltaDB(dbId2) = t1
-  }
-  def swapDerivedDBs(dbId1: Int, dbId2: Int): Unit = {
-    val t1 = derivedDB(dbId1)
-    derivedDB(dbId1) = derivedDB(dbId2)
-    derivedDB(dbId2) = t1
-  }
-
-  def compareDeltaDBs(dbId1: Int, dbId2: Int): Boolean =
-    deltaDB(dbId1) == deltaDB(dbId2)
+  def compareDeltaDBs(dbId1: Int): Boolean =
+    deltaDB(dbId1).exists((k, v) => v.nonEmpty)
   def compareDerivedDBs(dbId1: Int, dbId2: Int): Boolean =
     derivedDB(dbId1) == derivedDB(dbId2)
 
   def union(edbs: Seq[EDB]): EDB =
     edbs.flatten.distinct.to(mutable.ArrayBuffer)
+
+  def getDiff(lhs: EDB, rhs: EDB): EDB =
+    lhs diff rhs
 }

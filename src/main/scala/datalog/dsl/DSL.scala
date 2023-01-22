@@ -3,6 +3,7 @@ package datalog.dsl
 import datalog.execution.ExecutionEngine
 
 import scala.collection.mutable
+import scala.quoted.{Expr, Quotes}
 
 trait AbstractProgram // TODO: alternate program?
 

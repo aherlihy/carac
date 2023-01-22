@@ -23,11 +23,9 @@ case class ProgramOp(body: IROp) extends IROp {}
 
 case class SwapOp() extends IROp {}
 
-case class DoWhileOp(body: IROp, cond: IROp) extends IROp {}
+case class DoWhileOp(body: IROp, toCmp: DB) extends IROp {}
 
 case class SequenceOp(ops: Seq[IROp]) extends IROp {}
-
-case class CompareOp(db: DB) extends IROp {}
 
 case class ClearOp() extends IROp {}
 

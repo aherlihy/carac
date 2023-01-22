@@ -139,7 +139,7 @@ class RelationalOperators[S <: StorageManager](val storageManager: S) {
   }
 
   case class Join(inputs: Seq[RelOperator],
-                     variables: IndexedSeq[IndexedSeq[Int]],
+                     variables: Seq[Seq[Int]],
                      constants: Map[Int, Constant]) extends RelOperator {
 
     private var outputRelation= mutable.ArrayBuffer[edbRow]()

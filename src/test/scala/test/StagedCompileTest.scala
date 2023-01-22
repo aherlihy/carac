@@ -29,7 +29,7 @@ class StagedCompileTest extends munit.FunSuite {
   storageManager.resetDelta(idb.id, irCtx.newDbId, storageManager.EDB(Vector("NewDelta")))
 
   // TODO: string compare prob too brittle but ok for dev
-  def genContains(miniprog: IROp, check: String): Any = {
+  def genContains(miniprog: IROp, checks: String*): Any = {
     debug("MINI PROG\n", () => storageManager.printer.printIR(miniprog))
 
     given staging.Compiler = staging.Compiler.make(getClass.getClassLoader)
@@ -37,8 +37,14 @@ class StagedCompileTest extends munit.FunSuite {
       staging.run {
         val res: Expr[CollectionsStorageManager => Any] =
           '{ (stagedSm: CollectionsStorageManager) => ${engine.compileIR[collection.mutable.ArrayBuffer[IndexedSeq[Term]]](miniprog)(using 'stagedSm)} }
-        println(res.show)
-//        assert(res.show.contains(check), s"${res.show} is missing $check")
+        val strRes = res.show
+        println(strRes)
+        val order = checks.map(c =>
+          val idx = strRes.indexOf(c)
+          assert(idx != -1, s"$strRes is missing $c")
+          idx
+        )
+        assert(order == order.sorted, "Checks did not happen in the right order")
         res
       }.asInstanceOf[CollectionsStorageManager => storageManager.EDB]
 
@@ -88,30 +94,24 @@ class StagedCompileTest extends munit.FunSuite {
   test("ClearOp") {
     genContains(ClearOp(), s".clearDB(true, ${irCtx.newDbId}")
   }
-//  test("CompareOp") {
-//    genContains(CompareOp(DB.Derived), s".compareDerivedDBs(${irCtx.newDbId}, ${irCtx.knownDbId})")
-//    genContains(CompareOp(DB.Delta), s".deltaDB(${irCtx.newDbId}).exists((k, v) => v.nonEmpty)")
-//  }
-//  test("DoWhileOp") {
-//    genContains(
-//      DoWhileOp(
-//        ScanOp(idb.id, DB.Derived, KNOWLEDGE.Known),
-//        CompareOp(irCtx.newDbId)
-//      )
-//    )
-//  }
-//  test("SwapOp") {
-//    val oldKnown = irCtx.knownDbId
-//    val oldNew = irCtx.newDbId
-//    genContains(
-//      SequenceOp(Seq(
-//        ScanOp(idb.id, DB.Derived, KNOWLEDGE.Known),
-//        SwapOp(),
-//        ScanOp(idb.id, DB.Derived, KNOWLEDGE.Known)
-//      )),
-//      s".derivedDB.apply($oldKnown)...; {.derivedDB.apply($oldNew)}; "
-//    )
-//  }
-
-
+  test("DoWhileOp") {
+    genContains(
+      DoWhileOp(
+        ScanOp(idb.id, DB.Derived, KNOWLEDGE.Known),
+        DB.Derived
+      )
+    )
+  }
+  test("SwapOp") {
+    val oldKnown = irCtx.knownDbId
+    val oldNew = irCtx.newDbId
+    genContains(
+      SequenceOp(Seq(
+        ScanOp(idb.id, DB.Derived, KNOWLEDGE.Known),
+        SwapOp(),
+        ScanOp(idb.id, DB.Derived, KNOWLEDGE.Known)
+      )),
+      s".derivedDB.apply($oldKnown)...; {.derivedDB.apply($oldNew)}; "
+    )
+  }
 }

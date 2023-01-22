@@ -1,6 +1,9 @@
 package datalog.execution
+
 import datalog.dsl.Constant
 import datalog.storage.NS
+
+import scala.quoted.*
 
 /**
  * Wrapper object for join keys for IDB rules
@@ -11,9 +14,9 @@ import datalog.storage.NS
  * @param deps - set of relations directly depended upon by this rule
  * @param edb - for rules that have EDBs defined on the same predicate, just read
  */
-case class JoinIndexes(varIndexes: IndexedSeq[IndexedSeq[Int]],
+case class JoinIndexes(varIndexes: Seq[Seq[Int]],
                        constIndexes: Map[Int, Constant],
-                       projIndexes: IndexedSeq[(String, Constant)],
+                       projIndexes: Seq[(String, Constant)],
                        deps: Seq[Int],
                        edb: Boolean = false) {
   override def toString(): String = toStringWithNS(null)
@@ -30,3 +33,10 @@ case class JoinIndexes(varIndexes: IndexedSeq[IndexedSeq[Int]],
   def projToString(): String = projIndexes.map((typ, v) => f"$typ$v").mkString("[", " ", "]")
   def depsToString(ns: NS): String = deps.map(d => if (ns != null) ns(d) else d).mkString("[", ", ", "]")
 }
+
+
+
+//given ToExpr[JoinIndexes] with {
+//  def apply(joinIndexes: JoinIndexes)(using Quotes) =
+
+//}

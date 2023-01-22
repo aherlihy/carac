@@ -42,6 +42,17 @@ class CollectionsStorageManager(ns: NS = new NS()) extends SimpleStorageManager(
       .filter(r => scanFilter(k, r.size)(r))
   }
 
+  def projectHelper(input: EDB, k: JoinIndexes): EDB = {
+    input.map(t =>
+      k.projIndexes.flatMap((typ, idx) =>
+        typ match {
+          case "v" => t.lift(idx.asInstanceOf[Int])
+          case "c" => Some(idx)
+          case _ => throw new Exception("Internal error: projecting something that is not a constant nor a variable")
+        }).toIndexedSeq
+    )
+  }
+
   /**
    * Use iterative collection operators to evaluate an IDB rule using Semi-Naive algo
    *
@@ -58,25 +69,19 @@ class CollectionsStorageManager(ns: NS = new NS()) extends SimpleStorageManager(
           var idx = -1 // if dep is featured more than once, only us delta once, but at a different pos each time
           k.deps.flatMap(d => {
             var found = false // TODO: perhaps need entry in derived/delta for each atom instead of each relation?
-            joinHelper(
-              k.deps.zipWithIndex.map((r, i) =>
-                if (r == d && !found && i > idx) {
-                  found = true
-                  idx = i
-                  deltaDB(knownDbId)(r)
-                }
-                else {
-                  derivedDB(knownDbId).getOrElse(r, edbs.getOrElse(r, EDB())) // TODO: warn if EDB is empty? Right now can't tell the difference between undeclared and empty EDB
-                }
-              ), k)
-              .map(t =>
-                k.projIndexes.flatMap((typ, idx) =>
-                  typ match {
-                    case "v" => t.lift(idx.asInstanceOf[Int])
-                    case "c" => Some(idx)
-                    case _ => throw new Exception("Internal error: projecting something that is not a constant nor a variable")
-                  })
-              )
+            projectHelper(
+              joinHelper(
+                k.deps.zipWithIndex.map((r, i) =>
+                  if (r == d && !found && i > idx) {
+                    found = true
+                    idx = i
+                    deltaDB(knownDbId)(r)
+                  }
+                  else {
+                    derivedDB(knownDbId).getOrElse(r, edbs.getOrElse(r, EDB())) // TODO: warn if EDB is empty? Right now can't tell the difference between undeclared and empty EDB
+                  }
+                ), k), k
+            )
           }).toSet
         )
   }
@@ -87,17 +92,10 @@ class CollectionsStorageManager(ns: NS = new NS()) extends SimpleStorageManager(
       if (k.edb)
         edbs.getOrElse(rId, EDB())
       else
-        joinHelper(
+        projectHelper(
+          joinHelper(
           k.deps.map(r => derivedDB(knownDbId).getOrElse(r, edbs.getOrElse(r, EDB()))), k  // TODO: warn if EDB is empty? Right now can't tell the difference between undeclared and empty EDB)
-        ).map(t =>
-          k.projIndexes.flatMap((typ, idx) =>
-            typ match {
-              case "v" => t.lift(idx.asInstanceOf[Int])
-              case "c" => Some(idx)
-              case _ => throw new Exception("Internal error: projecting something that is not a constant nor a variable")
-            }
-          )
-        ).toSet
+        ), k).toSet
     })
   }
 }

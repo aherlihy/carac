@@ -108,9 +108,8 @@ class Printer[S <: StorageManager](val s: S) {
     i + (node match {
       case ProgramOp(body) => s"PROGRAM:\n${printIR(body, ident+1)}"
       case SwapOp() => "SWAP"
-      case DoWhileOp(body, cond) => s"DO {\n${printIR(body, ident+1)}}\n${i}WHILE {${printIR(cond)}}\n"
+      case DoWhileOp(body, toCmp) => s"DO {\n${printIR(body, ident+1)}}\n${i}WHILE {$toCmp}\n"
       case SequenceOp(ops) => s"SEQ{${seq+1}}:${ops.zipWithIndex.map((o, idx) => s"${seq+1}.$idx" + printIR(o, ident+1, seq+1)).mkString("[\n", ",\n", "]")}"
-      case CompareOp(db) => s"CMP:$db"
       case ClearOp() => s"CLEAR"
       case ScanEDBOp(srcRel) => s"SCAN(edbs[${ctx.storageManager.ns(srcRel)}])"
       case ScanOp(srcRel, db, knowledge) =>

@@ -1,7 +1,7 @@
 package datalog.execution
 
 import datalog.execution.ast.ASTNode
-import datalog.execution.ir.{ClearOp, CompareOp, DoWhileOp, IROp, IRTreeGenerator, InsertOp, InterpreterContext, JoinOp, ProgramOp, ProjectOp, ScanOp, SequenceOp, SwapOp, UnionOp}
+import datalog.execution.ir.{ClearOp, DoWhileOp, IROp, IRTreeGenerator, InsertOp, InterpreterContext, JoinOp, ProgramOp, ProjectOp, ScanOp, SequenceOp, SwapOp, UnionOp}
 import datalog.storage.StorageManager
 import datalog.tools.Debug.debug
 
