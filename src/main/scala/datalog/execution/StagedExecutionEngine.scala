@@ -83,9 +83,6 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
     val noop = '{$stagedSM.EDB()} // TODO: better way to noop?
     irTree match {
       case ProgramOp(body) =>
-        debug(s"precedence graph=", ctx.precedenceGraph.sortedString)
-        debug(s"solving relation: ${storageManager.ns(ctx.toSolve)} order of relations=", ctx.relations.toString)
-        debug("initial state @ -1", storageManager.printer.toString)
         compileIR(body)
       case DoWhileOp(body, toCmp) =>
         val cond = toCmp match {
@@ -96,9 +93,10 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
         }
         '{
           while ( {
-            ${compileIR(body)}
+            ${compileIR(body)};
+            println(${stagedSM}.printer.toString())
 //            ctx.count += 1
-            $cond
+            $cond;
           }) ()
           $noop
         }
@@ -167,11 +165,11 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
 //          case '[t] =>
 //            '{
 //            }
-//      case DebugNode(prefix, msg) => debug(prefix, msg)
-//      case DebugPeek(prefix, msg, op) =>
-//        val res = interpretIR(op)
-//        debug(prefix, () => s"${msg()} ${storageManager.printer.factToString(res.asInstanceOf[EDB])}")
-//        res
+      case DebugNode(prefix, msg) =>
+        '{ debug(${Expr(prefix)}, () => $stagedSM.printer.toString()); $noop }
+      case DebugPeek(prefix, msg, op) =>
+        val res = compileIR(op)
+          '{ debug(${Expr(prefix)}, () => s"${${Expr(msg())}}"); $res }
       case _ => throw new Exception("Not implemented yet")
     }
   }
@@ -276,7 +274,7 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
     val compiled: CollectionsStorageManager => storageManager.EDB =
       staging.run {
         val res: Expr[CollectionsStorageManager => Any] =
-          '{ (stagedSm: CollectionsStorageManager) => ${compileIR[collection.mutable.ArrayBuffer[IndexedSeq[Term]]](irTree)(using 'stagedSm)} }
+          '{ (stagedSm: CollectionsStorageManager) => ${compileIR[CollectionsStorageManager#EDB](irTree)(using 'stagedSm)} }
         println(res.show)
         res
       }.asInstanceOf[CollectionsStorageManager => storageManager.EDB]
