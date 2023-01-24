@@ -8,9 +8,6 @@ import scala.collection.{immutable, mutable}
 
 // Keep pretty print stuff separate bc long and ugly, mb put it in a macro
 class Printer[S <: StorageManager](val s: S) {
-  var known = 0
-  var newId = 1
-
   def factToString(r: s.EDB): String = {
     r.map(s => s.mkString("(", ", ", ")")).mkString("[", ", ", "]")
   }
@@ -74,7 +71,7 @@ class Printer[S <: StorageManager](val s: S) {
 
   override def toString() = {
     def printHelperRelation(i: Int, db: s.FactDatabase): String = {
-      val name = if (i == known) "known" else if (i == newId) "new" else s"!!!OTHER($i)"
+      val name = if (i == s.knownDbId) "known" else if (i == s.newDbId) "new" else s"!!!OTHER($i)"
       "\n" + name + ": " + edbToString(db)
     }
     "+++++\n" +

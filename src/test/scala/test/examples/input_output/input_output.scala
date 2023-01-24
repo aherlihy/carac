@@ -1,10 +1,10 @@
 package test.examples.input_output
 
 import datalog.dsl.{Constant, Program}
-import test.ExampleTestGenerator
+import test.{ExampleTestGenerator, Tags}
 
 import java.nio.file.Paths
-class input_output_test extends ExampleTestGenerator("input_output") with input_output
+class input_output_test extends ExampleTestGenerator("input_output", Set(Tags.SNStaged, Tags.NStaged)) with input_output
 trait input_output {
   def pretest(program: Program): Unit = {
     // input, i.e. defined in facts+here, i.e. named

@@ -1,10 +1,10 @@
 package test.examples.java_pointsto
 
 import datalog.dsl.{Constant, Program}
-import test.ExampleTestGenerator
+import test.{ExampleTestGenerator, Tags}
 
 import java.nio.file.Paths
-class java_pointsto_test extends ExampleTestGenerator("java_pointsto") with java_pointsto
+class java_pointsto_test extends ExampleTestGenerator("java_pointsto", Set(Tags.SNStaged, Tags.NStaged)) with java_pointsto
 trait java_pointsto {
   def pretest(program: Program): Unit = {
     val ActualParam = program.namedRelation[Constant]("ActualParam")

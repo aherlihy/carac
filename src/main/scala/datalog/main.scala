@@ -10,17 +10,11 @@ import scala.collection.mutable
 
 def run(program: Program): Unit = {
   val edge = program.relation[Constant]("edge")
-  val oneHop = program.relation[Constant]("oneHop")
-  val twoHops = program.relation[Constant]("twoHops")
-//  val threeHops = program.relation[Constant]("threeHops")
+  val path = program.relation[Constant]("path")
+  val x, y, z = program.variable()
 
-  val queryA = program.relation[Constant]("queryA")
-//  val queryB = program.relation[Constant]("queryB")
-  val x, y, z, w, q = program.variable()
-
-  oneHop(x, y) :- edge(x, y)
-  twoHops(x, z) :- (edge(x, y), edge(y, z))
-//  threeHops(x, y) :- (twoHops(x, z), edge(z, y))
+  path(x, y) :- edge(x, y)
+  path(x, z) :- (edge(x, y), path(y, z))
 
   edge("a", "a") :- ()
   edge("a", "b") :- ()
@@ -28,7 +22,7 @@ def run(program: Program): Unit = {
   edge("c", "d") :- ()
 
 //  queryA(x) :- oneHop("a", x)
-  queryA(x) :- twoHops("a", x)
+//  queryA(x) :- oneHop("a", x)
 
 //  queryB(x) :- (oneHop("a", x), oneHop(x, "c"))
 //
@@ -39,16 +33,16 @@ def run(program: Program): Unit = {
 //  println(s"graph to string ${program.ee.precedenceGraph.toString()}")
 //  program.ee.precedenceGraph.topSort()
 //  println(program.ee.precedenceGraph.sortedString())
-  println(queryA.solve())
+  println("RES=" + path.solve())
 }
 
 @main def main = {
-  given engine: ExecutionEngine = new SemiNaiveStagedExecutionEngine(new CollectionsStorageManager())
+  given engine: ExecutionEngine = new NaiveStagedExecutionEngine(new CollectionsStorageManager())
   val program = Program(engine)
   println("staged")
-  println("RESULT=" + run(program))
+  run(program)
 
-//  given engine2: ExecutionEngine = new SemiNaiveExecutionEngine(new CollectionsStorageManager())
+//  given engine2: ExecutionEngine = new NaiveExecutionEngine(new CollectionsStorageManager())
 //  val program2 = Program(engine2)
 //  println("seminaive")
 //  run(program2)

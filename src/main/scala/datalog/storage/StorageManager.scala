@@ -10,29 +10,36 @@ import scala.collection.immutable
  * Quick BiMap
  */
 class NS() {
-  private val nameToRid = mutable.Map[String, Int]()
-  private val rIdToName = mutable.Map[Int, String]()
-  def apply(name: String): Int = nameToRid(name)
-  def apply(rId: Int): String = rIdToName(rId)
-  def update(key: String, value: Int): Unit = {
+  private val nameToRid = mutable.Map[String, RelationId]()
+  private val rIdToName = mutable.Map[RelationId, String]()
+  def apply(name: String): RelationId = nameToRid(name)
+  def apply(rId: RelationId): String = rIdToName(rId)
+  def update(key: String, value: RelationId): Unit = {
     nameToRid(key) = value
     rIdToName(value) = key
   }
-  def update(key: Int, value: String): Unit = {
+  def update(key: RelationId, value: String): Unit = {
     rIdToName(key) = value
     nameToRid(value) = key
   }
   def contains(key: String): Boolean = nameToRid.contains(key)
-  def contains(key: Int): Boolean = rIdToName.contains(key)
-  def rIds(): Iterable[Int] = rIdToName.keys
+  def contains(key: RelationId): Boolean = rIdToName.contains(key)
+  def rIds(): Iterable[RelationId] = rIdToName.keys
 }
+
+type RelationId = Int
+type KnowledgeId = Int
+enum DB:
+  case Derived, Delta
+enum KNOWLEDGE:
+  case New, Known
 
 trait StorageManager(val ns: NS) {
   /* A bit repetitive to have these types also defined in dsl but good to separate
    * user-facing API class with internal storage */
   type StorageVariable
   type StorageConstant
-  case class StorageAtom(rId: Int, terms: IndexedSeq[StorageTerm]) {
+  case class StorageAtom(rId: RelationId, terms: IndexedSeq[StorageTerm]) {
     override def toString: String = ns(rId) + terms.mkString("(", ", ", ")")
   }
   type Row [+T] <: IndexedSeq[T] with immutable.IndexedSeqOps[T, Row, Row[T]]
@@ -44,47 +51,53 @@ trait StorageManager(val ns: NS) {
   def EDB(c: Row[StorageTerm]*): EDB
   type IDB = Relation[StorageAtom]
   type Database[K, V] <: mutable.Map[K, V]
-  type FactDatabase <: Database[Int, EDB] & mutable.Map[Int, EDB]
-  type RuleDatabase <: Database[Int, IDB] & mutable.Map[Int, IDB]
+  type FactDatabase <: Database[RelationId, EDB] & mutable.Map[RelationId, EDB]
+  type RuleDatabase <: Database[RelationId, IDB] & mutable.Map[RelationId, IDB]
 
-  val derivedDB: Database[Int, FactDatabase]
-  val deltaDB: Database[Int, FactDatabase]
+  val derivedDB: Database[KnowledgeId, FactDatabase]
+  val deltaDB: Database[KnowledgeId, FactDatabase]
   val edbs: FactDatabase
   val idbs: RuleDatabase
+  var knownDbId: KnowledgeId
+  var newDbId: KnowledgeId
 
   val printer: Printer[this.type]
 
-  def initRelation(rId: Int, name: String): Unit
-  def initEvaluation(): Int
+  def initRelation(rId: RelationId, name: String): Unit
+  def initEvaluation(): Unit
 
   def insertEDB(rule: Atom): Unit
+  def insertIDB(rId: RelationId, rule: Seq[Atom]): Unit
 
-  def insertIDB(rId: Int, rule: Seq[Atom]): Unit
+  def idb(rId: RelationId): IDB
+  def edb(rId: RelationId): EDB
 
-  def idb(rId: Int): IDB
+  def getKnownDerivedDB(rId: RelationId, orElse: Option[EDB] = None): EDB
+  def getNewDerivedDB(rId: RelationId, orElse: Option[EDB] = None): EDB
+  def getKnownDeltaDB(rId: RelationId, orElse: Option[EDB] = None): EDB
+  def getNewDeltaDB(rId: RelationId, orElse: Option[EDB] = None): EDB
+  def getKnownIDBResult(rId: RelationId): Set[Seq[Term]]
+  def getNewIDBResult(rId: RelationId): Set[Seq[Term]]
+  def getEDBResult(rId: RelationId): Set[Seq[Term]]
 
-  def edb(rId: Int): EDB
+  def resetKnownDerived(rId: RelationId, rules: EDB, prev: EDB = EDB()): Unit
+  def resetNewDerived(rId: RelationId, rules: EDB, prev: EDB = EDB()): Unit
+  def resetNewDelta(rId: RelationId, rules: EDB): Unit
+  def resetKnownDelta(rId: RelationId, rules: EDB): Unit
+  def clearNewDB(derived: Boolean): Unit
 
-  def SPJU(rId: Int, keys: mutable.ArrayBuffer[JoinIndexes], knownDbId: Int): EDB
-  def naiveSPJU(rId: Int, keys: mutable.ArrayBuffer[JoinIndexes], knownDbId: Int): EDB
+  def swapKnowledge(): Unit
+  def compareNewDeltaDBs(): Boolean
+  def compareDerivedDBs(): Boolean
 
-  def getDerivedDB(rId: Int, dbId: Int): EDB
-  def getDeltaDB(rId: Int, dbId: Int): EDB
-  def getIDBResult(rId: Int, dbId: Int): Set[Seq[Term]]
-  def getEDBResult(rId: Int): Set[Seq[Term]]
+  def verifyEDBs(idbList: mutable.Set[RelationId]): Unit
+  def verifyEDBs(): Unit
 
   def joinHelper(inputs: Seq[EDB], k: JoinIndexes): EDB
   def projectHelper(input: EDB, k: JoinIndexes): EDB
-
-  def getDiff(lhs: EDB, rhs: EDB): EDB
-  def resetDerived(rId: Int, dbId: Int, rules: EDB, prev: EDB = EDB()): Unit
-  def resetDelta(rId: Int, dbId: Int, rules: EDB): Unit
-  def compareDeltaDBs(dbId1: Int): Boolean
-  def compareDerivedDBs(dbId1: Int, dbId2: Int): Boolean
-  def clearDB(derived: Boolean, dbId: Int): Unit
-
-  def verifyEDBs(idbList: mutable.Set[Int]): Unit
-  def verifyEDBs(): Unit
-
+  def diff(lhs: EDB, rhs: EDB): EDB
   def union(edbs: Seq[EDB]): EDB
+
+  def SPJU(rId: RelationId, keys: mutable.ArrayBuffer[JoinIndexes]): EDB
+  def naiveSPJU(rId: RelationId, keys: mutable.ArrayBuffer[JoinIndexes]): EDB
 }

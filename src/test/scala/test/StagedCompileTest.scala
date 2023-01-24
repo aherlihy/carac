@@ -4,7 +4,7 @@ import datalog.dsl.{Constant, Program, Term}
 import datalog.execution.{JoinIndexes, SemiNaiveStagedExecutionEngine}
 import datalog.execution.ast.ASTNode
 import datalog.execution.ir.*
-import datalog.storage.{CollectionsStorageManager, StorageManager}
+import datalog.storage.{CollectionsStorageManager, StorageManager, KNOWLEDGE, DB}
 import datalog.tools.Debug.debug
 
 import scala.collection.mutable
@@ -29,10 +29,11 @@ class StagedCompileTest extends munit.FunSuite {
   edge("c", "d") :- ()
   edge("a", "1") :- ()
 
-  given irCtx: InterpreterContext = InterpreterContext(storageManager, engine.precedenceGraph, -1)
+  val ctx: InterpreterContext = new InterpreterContext(storageManager, engine.precedenceGraph, -1)
+  given irCtx: InterpreterContext = ctx
   storageManager.edbs.foreach((k, relation) => { // necessary so that state is as if it was solved already
-    storageManager.derivedDB(irCtx.knownDbId)(k) = storageManager.EDB()
-    storageManager.derivedDB(irCtx.newDbId)(k) = storageManager.EDB()
+    storageManager.derivedDB(storageManager.knownDbId)(k) = storageManager.EDB()
+    storageManager.derivedDB(storageManager.newDbId)(k) = storageManager.EDB()
   })
   val sVar = "stagedSm"
   val noop = "[\\s\\S]*stagedSm.EDB()[\\s\\S]*"
@@ -91,18 +92,18 @@ class StagedCompileTest extends munit.FunSuite {
   test("DoWhile Derived") {
     val derived = deepClone(storageManager.derivedDB)
     val delta = deepClone(storageManager.deltaDB)
-    storageManager.resetDerived(edb.id, irCtx.newDbId, storageManager.EDB(Vector("1"), Vector("1"), Vector("1")))
-    assertEquals(storageManager.derivedDB(irCtx.knownDbId)(edb.id), ArrayBuffer())
+    storageManager.resetNewDerived(edb.id, storageManager.EDB(Vector("1"), Vector("1"), Vector("1")))
+    assertEquals(storageManager.getKnownDerivedDB(edb.id), ArrayBuffer())
 
     val toRun = compileCheck(
       DoWhileOp(
         InsertOp(edb.id, DB.Derived, KNOWLEDGE.Known, ScanOp(edb.id, DB.Derived, KNOWLEDGE.Known), Some(ScanEDBOp(edb.id))), // empty => "1"
         DB.Derived
       ),
-      whileMatch(s"$sVar.compareDerivedDBs(${irCtx.newDbId}, ${irCtx.knownDbId}).unary_!")
+      whileMatch(s"$sVar.compareDerivedDBs().unary_!")
     )
     toRun(storageManager)
-    assertEquals(storageManager.derivedDB(irCtx.knownDbId)(edb.id), ArrayBuffer(Vector("1"), Vector("1"), Vector("1")))
+    assertEquals(storageManager.getKnownDerivedDB(edb.id), ArrayBuffer(Vector("1"), Vector("1"), Vector("1")))
 
     storageManager.derivedDB.clear()
     storageManager.deltaDB.clear()
@@ -113,18 +114,18 @@ class StagedCompileTest extends munit.FunSuite {
   test("DoWhile Delta") {
     val derived = deepClone(storageManager.derivedDB)
     val delta = deepClone(storageManager.deltaDB)
-    storageManager.resetDelta(edb.id, irCtx.newDbId, storageManager.EDB(Vector("1"), Vector("1"), Vector("1")))
-    assertEquals(storageManager.deltaDB(irCtx.newDbId)(edb.id), ArrayBuffer(Vector("1"), Vector("1"), Vector("1")))
+    storageManager.resetNewDelta(edb.id, storageManager.EDB(Vector("1"), Vector("1"), Vector("1")))
+    assertEquals(storageManager.getNewDeltaDB(edb.id), ArrayBuffer(Vector("1"), Vector("1"), Vector("1")))
 
     val toRun = compileCheck(
       DoWhileOp(
         InsertOp(edb.id, DB.Delta, KNOWLEDGE.New, ScanEDBOp(idb.id)), // empty => "1"
         DB.Delta
       ),
-      whileMatch(s"$sVar.compareDeltaDBs(${irCtx.newDbId})")
+      whileMatch(s"$sVar.compareNewDeltaDBs()")
     )
     toRun(storageManager)
-    assertEquals(storageManager.deltaDB(irCtx.newDbId)(edb.id), ArrayBuffer())
+    assertEquals(storageManager.getNewDeltaDB(edb.id), ArrayBuffer())
 
     storageManager.derivedDB.clear()
     storageManager.deltaDB.clear()
@@ -133,19 +134,21 @@ class StagedCompileTest extends munit.FunSuite {
   }
 
   test("SwapOp") {
-    val oldKnown = irCtx.knownDbId
-    val oldNew = irCtx.newDbId
+    val oldKnown = storageManager.knownDbId
+    val oldNew = storageManager.newDbId
     val toRun = compileCheck(
       SequenceOp(Seq(
         ScanOp(idb.id, DB.Derived, KNOWLEDGE.Known),
         SwapOp(),
         ScanOp(idb.id, DB.Derived, KNOWLEDGE.Known)
       )),
-      generalMatch(s"$any$sVar.derivedDB.apply\\($oldKnown\\).getOrElse\\[$any\\]\\(${idb.id}, $sVar\\.EDB\\(\\)$anyCapture".r),
-      generalMatch(s"$any$sVar.derivedDB.apply\\($oldNew\\).getOrElse\\[$any\\]\\(${idb.id}, $sVar\\.EDB\\(\\)$anyCapture".r)
+      generalMatch(s"$any$sVar.getKnownDerivedDB\\(${idb.id}, scala.Some.apply\\[$any\\]\\($sVar\\.EDB\\(\\)$anyCapture".r),
+      generalMatch(s"$any$sVar.swapKnowledge\\(\\)$anyCapture".r),
+      generalMatch(s"$any$sVar.getKnownDerivedDB\\(${idb.id}, scala.Some.apply\\[$any\\]\\($sVar\\.EDB\\(\\)$anyCapture".r)
     )
-    assertNotEquals(oldNew, irCtx.newDbId)
-    assertNotEquals(oldKnown, irCtx.knownDbId)
+    toRun(storageManager)
+    assertNotEquals(oldNew, storageManager.newDbId)
+    assertNotEquals(oldKnown, storageManager.knownDbId)
   }
 
   test("SeqOp") {
@@ -156,12 +159,12 @@ class StagedCompileTest extends munit.FunSuite {
         InsertOp(idb.id, DB.Derived, KNOWLEDGE.New, ScanEDBOp(edb.id)),
         InsertOp(idb.id, DB.Delta, KNOWLEDGE.New, ScanEDBOp(edb.id)),
       )),
-      generalMatch(s"$any$sVar.resetDerived\\(${idb.id}, ${irCtx.newDbId}, $sVar.edbs.apply\\(${edb.id}\\), $sVar.EDB\\(\\)\\)$anyCapture".r),
-      generalMatch(s"$any$sVar.resetDelta\\(${idb.id}, ${irCtx.newDbId}, $sVar.edbs.apply\\(${edb.id}\\)\\)$anyCapture".r)
+      generalMatch(s"$any$sVar.resetNewDerived\\(${idb.id}, $sVar.edbs.apply\\(${edb.id}\\), $sVar.EDB\\(\\)\\)$anyCapture".r),
+      generalMatch(s"$any$sVar.resetNewDelta\\(${idb.id}, $sVar.edbs.apply\\(${edb.id}\\)\\)$anyCapture".r)
     )
     toRun(storageManager)
-    assertEquals(storageManager.derivedDB(irCtx.newDbId)(idb.id), ArrayBuffer(Vector("1")))
-    assertEquals(storageManager.deltaDB(irCtx.newDbId)(idb.id), ArrayBuffer(Vector("1")))
+    assertEquals(storageManager.getNewDerivedDB(idb.id), ArrayBuffer(Vector("1")))
+    assertEquals(storageManager.getNewDeltaDB(idb.id), ArrayBuffer(Vector("1")))
 
     storageManager.derivedDB.clear()
     storageManager.deltaDB.clear()
@@ -173,16 +176,16 @@ class StagedCompileTest extends munit.FunSuite {
     val derived = deepClone(storageManager.derivedDB)
     val delta = deepClone(storageManager.deltaDB)
 
-    storageManager.resetDerived(idb.id, irCtx.newDbId, storageManager.EDB(Vector("NewDerived")))
-    storageManager.resetDelta(idb.id, irCtx.newDbId, storageManager.EDB(Vector("NewDelta")))
+    storageManager.resetNewDerived(idb.id, storageManager.EDB(Vector("NewDerived")))
+    storageManager.resetNewDelta(idb.id, storageManager.EDB(Vector("NewDelta")))
 
     val toRun = compileCheck(
       ClearOp(),
-      generalMatch(s"$any$sVar.clearDB\\(true, ${irCtx.newDbId}\\)$anyCapture".r)
+      generalMatch(s"$any$sVar.clearNewDB\\(true\\)$anyCapture".r)
     )
     toRun(storageManager)
-    assertEquals(storageManager.derivedDB(irCtx.newDbId)(idb.id), ArrayBuffer.empty)
-    assertEquals(storageManager.deltaDB(irCtx.newDbId)(idb.id), ArrayBuffer(Vector("NewDelta")))
+    assertEquals(storageManager.getNewDerivedDB(idb.id), ArrayBuffer.empty)
+    assertEquals(storageManager.getNewDeltaDB(idb.id), ArrayBuffer(Vector("NewDelta")))
 
     storageManager.derivedDB.clear()
     storageManager.deltaDB.clear()
@@ -207,33 +210,33 @@ class StagedCompileTest extends munit.FunSuite {
     val derived = deepClone(storageManager.derivedDB)
     val delta = deepClone(storageManager.deltaDB)
 
-    storageManager.resetDerived(idb.id, irCtx.knownDbId, storageManager.EDB(Vector("KnownDerived")))
-    storageManager.resetDelta(idb.id, irCtx.knownDbId, storageManager.EDB(Vector("KnownDelta")))
-    storageManager.resetDerived(idb.id, irCtx.newDbId, storageManager.EDB(Vector("NewDerived")))
-    storageManager.resetDelta(idb.id, irCtx.newDbId, storageManager.EDB(Vector("NewDelta")))
+    storageManager.resetKnownDerived(idb.id, storageManager.EDB(Vector("KnownDerived")))
+    storageManager.resetKnownDelta(idb.id,  storageManager.EDB(Vector("KnownDelta")))
+    storageManager.resetNewDerived(idb.id, storageManager.EDB(Vector("NewDerived")))
+    storageManager.resetNewDelta(idb.id, storageManager.EDB(Vector("NewDelta")))
 
     var toRun = compileCheck(
       ScanOp(idb.id, DB.Derived, KNOWLEDGE.Known),
-      generalMatch(s"$any$sVar.derivedDB.apply\\(${irCtx.knownDbId}\\).getOrElse\\[$any\\]\\(${idb.id}, $sVar\\.EDB\\(\\)$anyCapture".r)
+      generalMatch(s"$any$sVar.getKnownDerivedDB\\(${idb.id}, scala.Some.apply\\[$any\\]\\($sVar.EDB\\(\\)$anyCapture".r)
     )
     assertEquals(toRun(storageManager), ArrayBuffer(Vector("KnownDerived")))
     toRun = compileCheck(
       ScanOp(idb.id, DB.Delta, KNOWLEDGE.Known),
-      generalMatch(s"$any$sVar.deltaDB.apply\\(${irCtx.knownDbId}\\).getOrElse\\[$any\\]\\(${idb.id}, $sVar\\.EDB\\(\\)$anyCapture".r)
+      generalMatch(s"$any$sVar.getKnownDeltaDB\\(${idb.id}, scala.Some.apply\\[$any\\]\\($sVar.EDB\\(\\)$anyCapture".r)
     )
     assertEquals(toRun(storageManager), ArrayBuffer(Vector("KnownDelta")))
     toRun = compileCheck(
       ScanOp(idb.id, DB.Derived, KNOWLEDGE.New),
-      generalMatch(s"$any$sVar.derivedDB.apply\\(${irCtx.newDbId}\\).getOrElse\\[$any\\]\\(${idb.id}, $sVar\\.EDB\\(\\)$anyCapture".r)
+      generalMatch(s"$any$sVar.getNewDerivedDB\\(${idb.id}, scala.Some.apply\\[$any\\]\\($sVar.EDB\\(\\)$anyCapture".r)
     )
     assertEquals(toRun(storageManager), ArrayBuffer(Vector("NewDerived")))
     toRun = compileCheck(
       ScanOp(idb.id, DB.Delta, KNOWLEDGE.New),
-      generalMatch(s"$any$sVar.deltaDB.apply\\(${irCtx.newDbId}\\).getOrElse\\[$any\\]\\(${idb.id}, $sVar\\.EDB\\(\\)$anyCapture".r)
+      generalMatch(s"$any$sVar.getNewDeltaDB\\(${idb.id}, scala.Some.apply\\[$any\\]\\($sVar.EDB\\(\\)$anyCapture".r)
     )
     assertEquals(toRun(storageManager), ArrayBuffer(Vector("NewDelta")))
 
-    storageManager.derivedDB(irCtx.newDbId).remove(edge.id)
+    storageManager.derivedDB(storageManager.newDbId).remove(edge.id)
     toRun = compileCheck(
       ScanOp(edge.id, DB.Derived, KNOWLEDGE.New),
       generalMatch(s"$any$sVar.edbs.apply\\(${edge.id}\\)$anyCapture".r)
@@ -281,39 +284,39 @@ class StagedCompileTest extends munit.FunSuite {
     val delta = deepClone(storageManager.deltaDB)
 
     // insert into known, delta from edb
-    assertEquals(storageManager.deltaDB(irCtx.knownDbId)(edb.id), ArrayBuffer())
+    assertEquals(storageManager.getKnownDeltaDB(edb.id), ArrayBuffer())
     val scanEdb = s"$sVar.edbs.apply\\(${edb.id}\\)"
     var toRun = compileCheck(
       InsertOp(edb.id, DB.Delta, KNOWLEDGE.Known, ScanEDBOp(edb.id)),
-      generalMatch(s"$any$sVar.resetDelta\\(${edb.id}, ${irCtx.knownDbId}, $scanEdb\\)$anyCapture".r)
+      generalMatch(s"$any$sVar.resetKnownDelta\\(${edb.id}, $scanEdb\\)$anyCapture".r)
     )
     toRun(storageManager)
-    assertEquals(storageManager.deltaDB(irCtx.knownDbId)(edb.id), ArrayBuffer(Vector("1")))
+    assertEquals(storageManager.getKnownDeltaDB(edb.id), ArrayBuffer(Vector("1")))
 
     // insert again to show that it fully resets
     toRun = compileCheck(
       InsertOp(edb.id, DB.Delta, KNOWLEDGE.Known, ScanEDBOp(edb.id)),
-      generalMatch(s"$any$sVar.resetDelta\\(${edb.id}, ${irCtx.knownDbId}, $scanEdb\\)$anyCapture".r)
+      generalMatch(s"$any$sVar.resetKnownDelta\\(${edb.id}, $scanEdb\\)$anyCapture".r)
     )
     toRun(storageManager)
-    assertEquals(storageManager.deltaDB(irCtx.knownDbId)(edb.id), ArrayBuffer(Vector("1")))
+    assertEquals(storageManager.getKnownDeltaDB(edb.id), ArrayBuffer(Vector("1")))
 
     // insert into new, delta from edb
-    assertEquals(storageManager.deltaDB(irCtx.newDbId)(edb.id), ArrayBuffer())
+    assertEquals(storageManager.getNewDeltaDB(edb.id), ArrayBuffer())
     toRun = compileCheck(
       InsertOp(edb.id, DB.Delta, KNOWLEDGE.New, ScanEDBOp(edb.id)), // insert into new, delta from edb
-      generalMatch(s"$any$sVar.resetDelta\\(${edb.id}, ${irCtx.newDbId}, $scanEdb\\)$anyCapture".r)
+      generalMatch(s"$any$sVar.resetNewDelta\\(${edb.id}, $scanEdb\\)$anyCapture".r)
     )
     toRun(storageManager)
-    assertEquals(storageManager.deltaDB(irCtx.newDbId)(edb.id), ArrayBuffer(Vector("1")))
+    assertEquals(storageManager.getNewDeltaDB(edb.id), ArrayBuffer(Vector("1")))
 
     // insert again to show that it fully resets
     toRun = compileCheck(
       InsertOp(edb.id, DB.Delta, KNOWLEDGE.New, ScanEDBOp(edb.id)), // insert into new, delta from edb
-      generalMatch(s"$any$sVar.resetDelta\\(${edb.id}, ${irCtx.newDbId}, $scanEdb\\)$anyCapture".r)
+      generalMatch(s"$any$sVar.resetNewDelta\\(${edb.id}, $scanEdb\\)$anyCapture".r)
     )
     toRun(storageManager)
-    assertEquals(storageManager.deltaDB(irCtx.newDbId)(edb.id), ArrayBuffer(Vector("1")))
+    assertEquals(storageManager.getNewDeltaDB(edb.id), ArrayBuffer(Vector("1")))
 
     storageManager.derivedDB.clear()
     storageManager.deltaDB.clear()
@@ -325,41 +328,41 @@ class StagedCompileTest extends munit.FunSuite {
     val derived = deepClone(storageManager.derivedDB)
     val delta = deepClone(storageManager.deltaDB)
 
-    assertEquals(storageManager.derivedDB(irCtx.knownDbId)(edb.id), ArrayBuffer())
+    assertEquals(storageManager.getKnownDerivedDB(edb.id), ArrayBuffer())
     // insert into known, derived from edb
     val scanEdb = s"$sVar.edbs.apply\\(${edb.id}\\)"
     val edbS = s"$sVar.EDB\\(\\)"
     var toRun = compileCheck(
       InsertOp(edb.id, DB.Derived, KNOWLEDGE.Known, ScanEDBOp(edb.id)),
-      generalMatch(s"$any$sVar.resetDerived\\(${edb.id}, ${irCtx.knownDbId}, $scanEdb, $edbS\\)$anyCapture".r)
+      generalMatch(s"$any$sVar.resetKnownDerived\\(${edb.id}, $scanEdb, $edbS\\)$anyCapture".r)
     )
     toRun(storageManager)
-    assertEquals(storageManager.derivedDB(irCtx.knownDbId)(edb.id), ArrayBuffer(Vector("1")))
+    assertEquals(storageManager.getKnownDerivedDB(edb.id), ArrayBuffer(Vector("1")))
 
     // insert again to show that it fully resets
     toRun = compileCheck(
       InsertOp(edb.id, DB.Derived, KNOWLEDGE.Known, ScanEDBOp(edb.id)),
-      generalMatch(s"$any$sVar.resetDerived\\(${edb.id}, ${irCtx.knownDbId}, $scanEdb, $edbS\\)$anyCapture".r)
+      generalMatch(s"$any$sVar.resetKnownDerived\\(${edb.id}, $scanEdb, $edbS\\)$anyCapture".r)
     )
     toRun(storageManager)
-    assertEquals(storageManager.derivedDB(irCtx.knownDbId)(edb.id), ArrayBuffer(Vector("1")))
+    assertEquals(storageManager.getKnownDerivedDB(edb.id), ArrayBuffer(Vector("1")))
 
     // insert into new, derived from edb
-    assertEquals(storageManager.derivedDB(irCtx.newDbId)(edb.id), ArrayBuffer())
+    assertEquals(storageManager.getNewDerivedDB(edb.id), ArrayBuffer())
     toRun = compileCheck(
       InsertOp(edb.id, DB.Derived, KNOWLEDGE.New, ScanEDBOp(edb.id)), // insert into new, derived from edb
-      generalMatch(s"$any$sVar.resetDerived\\(${edb.id}, ${irCtx.newDbId}, $scanEdb, $edbS\\)$anyCapture".r)
+      generalMatch(s"$any$sVar.resetNewDerived\\(${edb.id}, $scanEdb, $edbS\\)$anyCapture".r)
     )
     toRun(storageManager)
-    assertEquals(storageManager.derivedDB(irCtx.newDbId)(edb.id), ArrayBuffer(Vector("1")))
+    assertEquals(storageManager.getNewDerivedDB(edb.id), ArrayBuffer(Vector("1")))
 
     // insert again to show that it fully resets
     toRun = compileCheck(
       InsertOp(edb.id, DB.Derived, KNOWLEDGE.New, ScanEDBOp(edb.id)), // insert into new, derived from edb
-      generalMatch(s"$any$sVar.resetDerived\\(${edb.id}, ${irCtx.newDbId}, $scanEdb, $edbS\\)$anyCapture".r)
+      generalMatch(s"$any$sVar.resetNewDerived\\(${edb.id}, $scanEdb, $edbS\\)$anyCapture".r)
     )
     toRun(storageManager)
-    assertEquals(storageManager.derivedDB(irCtx.newDbId)(edb.id), ArrayBuffer(Vector("1")))
+    assertEquals(storageManager.getNewDerivedDB(edb.id), ArrayBuffer(Vector("1")))
 
     storageManager.derivedDB.clear()
     storageManager.deltaDB.clear()
@@ -371,75 +374,75 @@ class StagedCompileTest extends munit.FunSuite {
     val derived = deepClone(storageManager.derivedDB)
     val delta = deepClone(storageManager.deltaDB)
 
-    assertEquals(storageManager.derivedDB(irCtx.knownDbId)(edb.id), ArrayBuffer())
+    assertEquals(storageManager.getKnownDerivedDB(edb.id), ArrayBuffer())
 
     // insert into known, derived from edb
     val scanEdb = s"$sVar.edbs.apply\\(${edb.id}\\)"
     val emptyEDB = s"$sVar.EDB\\(\\)"
-    val scanEdbDerived = s"$sVar.derivedDB.apply\\(${irCtx.knownDbId}\\).getOrElse\\[$any\\]\\]\\]\\(${edb.id}, $scanEdb\\)".r
+    val scanEdbDerived = s"$sVar.getKnownDerivedDB\\(${edb.id}, scala.Some.apply\\[$any\\]\\($scanEdb\\)".r
     var toRun = compileCheck(
       InsertOp(edb.id, DB.Derived, KNOWLEDGE.Known, ScanEDBOp(edb.id)),
-      generalMatch(s"$any$sVar.resetDerived\\(${edb.id}, ${irCtx.knownDbId}, $scanEdb, $emptyEDB\\)$anyCapture".r)
+      generalMatch(s"$any$sVar.resetKnownDerived\\(${edb.id}, $scanEdb, $emptyEDB\\)$anyCapture".r)
     )
     toRun(storageManager)
-    assertEquals(storageManager.derivedDB(irCtx.knownDbId)(edb.id), ArrayBuffer(Vector("1")))
+    assertEquals(storageManager.getKnownDerivedDB(edb.id), ArrayBuffer(Vector("1")))
 
     // insert again to show that it appends
     toRun = compileCheck(
       InsertOp(edb.id, DB.Derived, KNOWLEDGE.Known, ScanEDBOp(edb.id), Some(ScanOp(edb.id, DB.Derived, KNOWLEDGE.Known))),
-      generalMatch(s"$any$sVar.resetDerived\\(${edb.id}, ${irCtx.knownDbId}, $scanEdb, $scanEdbDerived\\)$anyCapture".r)
+      generalMatch(s"$any$sVar.resetKnownDerived\\(${edb.id}, $scanEdb, $scanEdbDerived\\)$anyCapture".r)
     )
     toRun(storageManager)
-    assertEquals(storageManager.derivedDB(irCtx.knownDbId)(edb.id), ArrayBuffer(Vector("1"), Vector("1")))
+    assertEquals(storageManager.getKnownDerivedDB(edb.id), ArrayBuffer(Vector("1"), Vector("1")))
 
     // insert with self to double
     toRun = compileCheck(
       InsertOp(edb.id, DB.Derived, KNOWLEDGE.Known, ScanOp(edb.id, DB.Derived, KNOWLEDGE.Known), Some(ScanOp(edb.id, DB.Derived, KNOWLEDGE.Known))),
-      generalMatch(s"$any$sVar.resetDerived\\(${edb.id}, ${irCtx.knownDbId}, $scanEdbDerived, $scanEdbDerived\\)$anyCapture".r)
+      generalMatch(s"$any$sVar.resetKnownDerived\\(${edb.id}, $scanEdbDerived\\), $scanEdbDerived\\)$anyCapture".r)
     )
     toRun(storageManager)
-    assertEquals(storageManager.derivedDB(irCtx.knownDbId)(edb.id), ArrayBuffer(Vector("1"), Vector("1"), Vector("1"), Vector("1")))
+    assertEquals(storageManager.getKnownDerivedDB(edb.id), ArrayBuffer(Vector("1"), Vector("1"), Vector("1"), Vector("1")))
 
     // insert with empty to show it rewrites
     toRun = compileCheck(
       InsertOp(edb.id, DB.Derived, KNOWLEDGE.Known, ScanEDBOp(idb.id)),
-      generalMatch(s"$any$sVar.resetDerived\\(${edb.id}, ${irCtx.knownDbId}, $emptyEDB, $emptyEDB\\)$anyCapture".r)
+      generalMatch(s"$any$sVar.resetKnownDerived\\(${edb.id}, $emptyEDB, $emptyEDB\\)$anyCapture".r)
     )
     toRun(storageManager)
-    assertEquals(storageManager.derivedDB(irCtx.knownDbId)(edb.id), ArrayBuffer())
+    assertEquals(storageManager.getKnownDerivedDB(edb.id), ArrayBuffer())
 
     // NEW
-    val scanEdbDerivedNew = s"$sVar.derivedDB.apply\\(${irCtx.newDbId}\\).getOrElse\\[$any\\]\\]\\]\\(${edb.id}, $scanEdb\\)".r
+    val scanEdbDerivedNew = s"$sVar.getNewDerivedDB\\(${edb.id}, scala.Some.apply\\[$any\\]\\($scanEdb\\)".r
     toRun = compileCheck(
       InsertOp(edb.id, DB.Derived, KNOWLEDGE.New, ScanEDBOp(edb.id)),
-      generalMatch(s"$any$sVar.resetDerived\\(${edb.id}, ${irCtx.newDbId}, $scanEdb, $emptyEDB\\)$anyCapture".r)
+      generalMatch(s"$any$sVar.resetNewDerived\\(${edb.id}, $scanEdb, $emptyEDB\\)$anyCapture".r)
     )
     toRun(storageManager)
-    assertEquals(storageManager.derivedDB(irCtx.newDbId)(edb.id), ArrayBuffer(Vector("1")))
+    assertEquals(storageManager.getNewDerivedDB(edb.id), ArrayBuffer(Vector("1")))
 
     // insert again to show that it appends
     toRun = compileCheck(
       InsertOp(edb.id, DB.Derived, KNOWLEDGE.New, ScanEDBOp(edb.id), Some(ScanOp(edb.id, DB.Derived, KNOWLEDGE.New))),
-      generalMatch(s"$any$sVar.resetDerived\\(${edb.id}, ${irCtx.newDbId}, $scanEdb, $scanEdbDerivedNew\\)$anyCapture".r)
+      generalMatch(s"$any$sVar.resetNewDerived\\(${edb.id}, $scanEdb, $scanEdbDerivedNew$anyCapture".r)
     )
     toRun(storageManager)
-    assertEquals(storageManager.derivedDB(irCtx.newDbId)(edb.id), ArrayBuffer(Vector("1"), Vector("1")))
+    assertEquals(storageManager.getNewDerivedDB(edb.id), ArrayBuffer(Vector("1"), Vector("1")))
 
     // insert with self to double
     toRun = compileCheck(
       InsertOp(edb.id, DB.Derived, KNOWLEDGE.New, ScanOp(edb.id, DB.Derived, KNOWLEDGE.New), Some(ScanOp(edb.id, DB.Derived, KNOWLEDGE.New))),
-      generalMatch(s"$any$sVar.resetDerived\\(${edb.id}, ${irCtx.newDbId}, $scanEdbDerivedNew, $scanEdbDerivedNew\\)$anyCapture".r)
+      generalMatch(s"$any$sVar.resetNewDerived\\(${edb.id}, $scanEdbDerivedNew\\), $scanEdbDerivedNew\\)$anyCapture".r)
     )
     toRun(storageManager)
-    assertEquals(storageManager.derivedDB(irCtx.newDbId)(edb.id), ArrayBuffer(Vector("1"), Vector("1"), Vector("1"), Vector("1")))
+    assertEquals(storageManager.getNewDerivedDB(edb.id), ArrayBuffer(Vector("1"), Vector("1"), Vector("1"), Vector("1")))
 
     // insert with empty to show it rewrites
     toRun = compileCheck(
       InsertOp(edb.id, DB.Derived, KNOWLEDGE.New, ScanEDBOp(idb.id)),
-      generalMatch(s"$any$sVar.resetDerived\\(${edb.id}, ${irCtx.newDbId}, $emptyEDB, $emptyEDB\\)$anyCapture".r)
+      generalMatch(s"$any$sVar.resetNewDerived\\(${edb.id}, $emptyEDB, $emptyEDB\\)$anyCapture".r)
     )
     toRun(storageManager)
-    assertEquals(storageManager.derivedDB(irCtx.newDbId)(edb.id), ArrayBuffer())
+    assertEquals(storageManager.getNewDerivedDB(edb.id), ArrayBuffer())
 
 
     storageManager.derivedDB.clear()
@@ -470,7 +473,7 @@ class StagedCompileTest extends munit.FunSuite {
         ScanEDBOp(edge.id),
         ScanEDBOp(edb.id)
       ),
-      generalMatch(s"$any$sVar.getDiff\\($scanEdge, $scanEdb\\)$anyCapture".r)
+      generalMatch(s"$any$sVar.diff\\($scanEdge, $scanEdb\\)$anyCapture".r)
     )
     assertEquals(toRun(storageManager), ArrayBuffer(Vector("a", "a"), Vector("a", "b"), Vector("b", "c"), Vector("c", "d"), Vector("a", "1")))
   }

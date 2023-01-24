@@ -1,7 +1,7 @@
 package datalog.execution
 
 import datalog.dsl.{Atom, Term, Variable, Constant}
-import datalog.storage.StorageManager
+import datalog.storage.{StorageManager, RelationId}
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
@@ -9,14 +9,14 @@ import scala.collection.mutable.ArrayBuffer
 trait ExecutionEngine {
   val precedenceGraph: PrecedenceGraph
   val storageManager: StorageManager // TODO: exposed for testing, for now
-  val prebuiltOpKeys: mutable.Map[Int, mutable.ArrayBuffer[JoinIndexes]]
-  def initRelation(rId: Int, name: String): Unit
+  val prebuiltOpKeys: mutable.Map[RelationId, mutable.ArrayBuffer[JoinIndexes]]
+  def initRelation(rId: RelationId, name: String): Unit
 
-  def insertIDB(rId: Int, rule: Seq[Atom]): Unit
+  def insertIDB(rId: RelationId, rule: Seq[Atom]): Unit
   def insertEDB(body: Atom): Unit
 
-  def solve(rId: Int): Set[Seq[Term]]
-  def get(rId: Int): Set[Seq[Term]]
+  def solve(rId: RelationId): Set[Seq[Term]]
+  def get(rId: RelationId): Set[Seq[Term]]
   def get(name: String): Set[Seq[Term]]
 
   /**
@@ -66,7 +66,7 @@ trait ExecutionEngine {
     JoinIndexes(bodyVars, constants.toMap, projects, deps)
   }
 
-  def getOperatorKeys(rId: Int): mutable.ArrayBuffer[JoinIndexes] = {
+  def getOperatorKeys(rId: RelationId): mutable.ArrayBuffer[JoinIndexes] = {
     prebuiltOpKeys.getOrElseUpdate(rId, mutable.ArrayBuffer[JoinIndexes]())
   }
 }

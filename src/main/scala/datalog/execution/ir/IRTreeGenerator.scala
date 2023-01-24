@@ -1,12 +1,13 @@
 package datalog.execution.ir
 
 import datalog.execution.ast.{ASTNode, AllRulesNode, LogicAtom, ProgramNode, RuleNode}
+import datalog.storage.{DB, RelationId, KNOWLEDGE}
 import datalog.tools.Debug.debug
 
 import scala.collection.mutable
 
 class IRTreeGenerator(using val ctx: InterpreterContext) {
-  def naiveEval(rId: Relation, ruleMap: mutable.Map[Relation, ASTNode]): IROp =
+  def naiveEval(rId: RelationId, ruleMap: mutable.Map[RelationId, ASTNode]): IROp =
     SequenceOp(
       //      DebugNode("in eval:", () => s"rId=${ctx.storageManager.ns(rId)} relations=${ctx.relations.map(r => ctx.storageManager.ns(r)).mkString("[", ", ", "]")}  incr=${ctx.newDbId} src=${ctx.knownDbId}") +:
       ctx.relations
@@ -16,7 +17,7 @@ class IRTreeGenerator(using val ctx: InterpreterContext) {
         )
     )
 
-  def semiNaiveEval(rId: Relation, ruleMap: mutable.Map[Relation, ASTNode]): IROp =
+  def semiNaiveEval(rId: RelationId, ruleMap: mutable.Map[RelationId, ASTNode]): IROp =
     SequenceOp(
       //      DebugNode("initial state ", () => s"@ ${ctx.count} ${ctx.storageManager.printer.toString()}") +:
       //      DebugNode("evalSN for ", () => ctx.storageManager.ns(rId)) +:
