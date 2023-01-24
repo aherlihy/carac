@@ -84,6 +84,7 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
     irTree match {
       case ProgramOp(body) =>
         compileIR(body)
+
       case DoWhileOp(body, toCmp) =>
         val cond = toCmp match {
           case DB.Derived =>
@@ -94,25 +95,28 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
         '{
           while ( {
             ${compileIR(body)};
-            println(${stagedSM}.printer.toString())
 //            ctx.count += 1
             $cond;
           }) ()
           $noop
         }
+
       case SwapOp() =>
         val t = ctx.knownDbId
         ctx.knownDbId = ctx.newDbId
         ctx.newDbId = t
         storageManager.printer.known = ctx.knownDbId
         noop
+
       case SequenceOp(ops) =>
         val cOps = ops.map(compileIR)
         cOps.reduceLeft((acc, next) => // TODO[future]: make a block w reflection instead of reduceLeft for efficiency
           '{ $acc; $next }
         )
+
       case ClearOp() =>
         '{ $stagedSM.clearDB(${Expr(true)}, ${Expr(ctx.newDbId)}); $noop }
+
       case ScanOp(rId, db, knowledge) =>
         val k = if (knowledge == KNOWLEDGE.Known) ctx.knownDbId else ctx.newDbId
         lazy val edb =
@@ -127,11 +131,13 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
           case DB.Delta =>
             '{ $stagedSM.deltaDB(${Expr(k)}).getOrElse(${Expr(rId)}, ${edb}) }
         }
+
       case ScanEDBOp(rId) =>
         if (storageManager.edbs.contains(rId))
           '{ $stagedSM.edbs(${Expr(rId)}) }
         else
           '{ $stagedSM.EDB() }
+
       case JoinOp(subOps, keys) =>
         val compiledOps = Expr.ofSeq(subOps.map(compileIR))
         // TODO[future]: inspect keys and optimize join algo
@@ -141,8 +147,10 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
             ${Expr(keys)}
           )
         }
+
       case ProjectOp(subOp, keys) =>
         '{ $stagedSM.projectHelper(${compileIR(subOp)}, ${Expr(keys)}) }
+
       case InsertOp(rId, db, knowledge, subOp, subOp2) =>  // TODO: need to cast Expr[Any] to Expr[EDB] pass to resetDerived
         val k = if (knowledge == KNOWLEDGE.Known) ctx.knownDbId else ctx.newDbId
         val res = compileIR(subOp)
@@ -153,9 +161,11 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
           case DB.Delta =>
             '{ $stagedSM.resetDelta(${Expr(rId)}, ${Expr(k)}, $res); $noop }
         }
+
       case UnionOp(ops) =>
         val compiledOps = Expr.ofSeq(ops.map(compileIR))
         '{ $stagedSM.union($compiledOps) }
+
       case DiffOp(lhs, rhs) =>
         val clhs = compileIR(lhs)
         val crhs = compileIR(rhs)
@@ -165,8 +175,10 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
 //          case '[t] =>
 //            '{
 //            }
+
       case DebugNode(prefix, msg) =>
         '{ debug(${Expr(prefix)}, () => $stagedSM.printer.toString()); $noop }
+
       case DebugPeek(prefix, msg, op) =>
         val res = compileIR(op)
           '{ debug(${Expr(prefix)}, () => s"${${Expr(msg())}}"); $res }
@@ -181,6 +193,7 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
         debug(s"solving relation: ${storageManager.ns(ctx.toSolve)} order of relations=", ctx.relations.toString)
         debug("initial state @ -1", storageManager.printer.toString)
         interpretIR(body)
+
       case DoWhileOp(body, toCmp) =>
         while({
           interpretIR(body)
@@ -192,16 +205,20 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
               storageManager.compareDeltaDBs(ctx.newDbId)
           }
         }) ()
+
       case SwapOp() =>
         val t = ctx.knownDbId
         ctx.knownDbId = ctx.newDbId
         ctx.newDbId = t
         storageManager.printer.known = ctx.knownDbId
         storageManager.printer.newId = ctx.newDbId
+
       case SequenceOp(ops) =>
         ops.map(interpretIR)
+
       case ClearOp() =>
         storageManager.clearDB(true, ctx.newDbId)
+
       case ScanOp(rId, db, knowledge) =>
         val k = if (knowledge == KNOWLEDGE.Known) ctx.knownDbId else ctx.newDbId
         db match {
@@ -210,15 +227,19 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
           case DB.Delta =>
             storageManager.deltaDB(k).getOrElse(rId, storageManager.edbs.getOrElse(rId, EDB()))
         }
+
       case ScanEDBOp(rId) =>
         storageManager.edbs.getOrElse(rId, EDB())
+
       case JoinOp(subOps, keys) =>
         storageManager.joinHelper(
           subOps.map(interpretIR).asInstanceOf[Seq[EDB]],
           keys
         )
+
       case ProjectOp(subOp, keys) =>
         storageManager.projectHelper(interpretIR(subOp).asInstanceOf[EDB], keys)
+
       case InsertOp(rId, db, knowledge, subOp, subOp2) =>
         val k = if (knowledge == KNOWLEDGE.Known) ctx.knownDbId else ctx.newDbId
         val res = interpretIR(subOp)
@@ -229,11 +250,15 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
           case DB.Delta =>
             storageManager.resetDelta(rId, k, res.asInstanceOf[EDB])
         }
+
       case UnionOp(ops) =>
         ops.flatMap(o => interpretIR(o).asInstanceOf[EDB]).toSet.toBuffer
+
       case DiffOp(lhs, rhs) =>
         interpretIR(lhs).asInstanceOf[EDB] diff interpretIR(rhs).asInstanceOf[EDB]
+
       case DebugNode(prefix, msg) => debug(prefix, msg)
+
       case DebugPeek(prefix, msg, op) =>
         val res = interpretIR(op)
         debug(prefix, () => s"${msg()} ${storageManager.printer.factToString(res.asInstanceOf[EDB])}")

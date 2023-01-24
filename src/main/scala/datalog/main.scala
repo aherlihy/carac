@@ -46,7 +46,7 @@ def run(program: Program): Unit = {
   given engine: ExecutionEngine = new SemiNaiveStagedExecutionEngine(new CollectionsStorageManager())
   val program = Program(engine)
   println("staged")
-  run(program)
+  println("RESULT=" + run(program))
 
 //  given engine2: ExecutionEngine = new SemiNaiveExecutionEngine(new CollectionsStorageManager())
 //  val program2 = Program(engine2)
