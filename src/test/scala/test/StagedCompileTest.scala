@@ -36,7 +36,6 @@ class StagedCompileTest extends munit.FunSuite {
     storageManager.derivedDB(storageManager.newDbId)(k) = storageManager.EDB()
   })
   val sVar = "stagedSm"
-  val noop = "[\\s\\S]*stagedSm.EDB()[\\s\\S]*"
   val any = "[\\s\\S]*?"
   val anyCapture = "([\\s\\S]*?)"
 
@@ -68,9 +67,9 @@ class StagedCompileTest extends munit.FunSuite {
     }
 
   def whileMatch(cond: String)(generatedString: String): String =
-    val whileR = raw"[\s\S]*\{\s+while \(\{([\s\S]*)}\) \(\)([\s\S]*)".r
+    val whileR = s"$any while \\(\\{$anyCapture\\}\\) \\(\\)$any".r
     generatedString match {
-      case whileR(body, noop) =>
+      case whileR(body) =>
         assert(body.trim().endsWith(cond), s"generated code '${body.trim()}' missing cond $cond")
         body
       case _ =>

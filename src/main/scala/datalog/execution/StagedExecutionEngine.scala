@@ -79,40 +79,8 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
     allRules.edb = true
   }
 
-  def compileIR[T](irTree: IROp)(using stagedSM: Expr[StorageManager { type EDB = T}], t: Type[T])(using ctx: InterpreterContext)(using Quotes): Expr[T] = { // TODO: Instead of parameterizing, use staged path dependent type: i.e. stagedSM.EDB
-    val noop = '{$stagedSM.EDB()} // TODO: better way to noop?
+  def compileRelOp[T](irTree: IROp)(using stagedSM: Expr[StorageManager { type EDB = T }], t: Type[T])(using ctx: InterpreterContext)(using Quotes): Expr[T] = { // TODO: Instead of parameterizing, use staged path dependent type: i.e. stagedSM.EDB
     irTree match {
-      case ProgramOp(body) =>
-        compileIR(body)
-
-      case DoWhileOp(body, toCmp) =>
-        val cond = toCmp match {
-          case DB.Derived =>
-            '{ !$stagedSM.compareDerivedDBs() }
-          case DB.Delta =>
-            '{ $stagedSM.compareNewDeltaDBs() }
-        }
-        '{
-          while ( {
-            ${compileIR(DebugNode("Start iteration, debug node", () => ""))}
-            ${compileIR(body)};
-            $cond;
-          }) ()
-          $noop
-        }
-
-      case SwapOp() =>
-        '{ $stagedSM.swapKnowledge(); $noop }
-
-      case SequenceOp(ops) =>
-        val cOps = ops.map(compileIR)
-        cOps.reduceLeft((acc, next) => // TODO[future]: make a block w reflection instead of reduceLeft for efficiency
-          '{ $acc; $next }
-        )
-
-      case ClearOp() =>
-        '{ $stagedSM.clearNewDB(${Expr(true)}); $noop }
-
       case ScanOp(rId, db, knowledge) =>
         lazy val edb =
           if (storageManager.edbs.contains(rId))
@@ -144,54 +112,91 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
           '{ $stagedSM.EDB() }
 
       case JoinOp(subOps, keys) =>
-        val compiledOps = Expr.ofSeq(subOps.map(compileIR))
+        val compiledOps = Expr.ofSeq(subOps.map(compileRelOp))
         // TODO[future]: inspect keys and optimize join algo
         '{
-          $stagedSM.joinHelper(
-            $compiledOps,
-            ${Expr(keys)}
-          )
+        $stagedSM.joinHelper(
+          $compiledOps,
+          ${Expr(keys)}
+        )
         }
 
       case ProjectOp(subOp, keys) =>
-        '{ $stagedSM.projectHelper(${compileIR(subOp)}, ${Expr(keys)}) }
+        '{ $stagedSM.projectHelper(${compileRelOp(subOp)}, ${Expr(keys)}) }
 
-      case InsertOp(rId, db, knowledge, subOp, subOp2) =>  // TODO: need to cast Expr[Any] to Expr[EDB] pass to resetDerived
-        val res = compileIR(subOp)
-        val res2 = if (subOp2.isEmpty) '{ $stagedSM.EDB() } else compileIR(subOp2.get)
+      case UnionOp(ops) =>
+        val compiledOps = Expr.ofSeq(ops.map(compileRelOp))
+        '{ $stagedSM.union($compiledOps) }
+
+      case DiffOp(lhs, rhs) =>
+        val clhs = compileRelOp(lhs)
+        val crhs = compileRelOp(rhs)
+        '{ $stagedSM.diff($clhs, $crhs) } // TODO: need to cast Expr[Any] to Expr[EDB] in order to diff
+
+      case DebugPeek(prefix, msg, op) =>
+        val res = compileRelOp(op)
+        '{ debug(${Expr(prefix)}, () => s"${${Expr(msg())}}"); $res }
+
+      case _ => throw new Exception("Error: compileRelOp called with noop")
+    }
+  }
+
+  def compileIR[T](irTree: IROp)(using stagedSM: Expr[StorageManager { type EDB = T }], t: Type[T])(using ctx: InterpreterContext)(using Quotes): Expr[Any] = { // TODO: Instead of parameterizing, use staged path dependent type: i.e. stagedSM.EDB
+    irTree match {
+      case ProgramOp(body) =>
+        compileIR(body)
+
+      case DoWhileOp(body, toCmp) =>
+        val cond = toCmp match {
+          case DB.Derived =>
+            '{ !$stagedSM.compareDerivedDBs() }
+          case DB.Delta =>
+            '{ $stagedSM.compareNewDeltaDBs() }
+        }
+        '{
+          while ( {
+            ${compileIR(DebugNode("Start iteration, debug node", () => ""))}
+            ${compileIR(body)};
+            $cond;
+          }) ()
+        }
+
+      case SwapOp() =>
+        '{ $stagedSM.swapKnowledge() }
+
+      case SequenceOp(ops) =>
+        val cOps = ops.map(compileIR)
+        cOps.reduceLeft((acc, next) => // TODO[future]: make a block w reflection instead of reduceLeft for efficiency
+          '{ $acc; $next }
+        )
+
+      case ClearOp() =>
+        '{ $stagedSM.clearNewDB(${Expr(true)}) }
+
+      case InsertOp(rId, db, knowledge, subOp, subOp2) =>
+        val res = compileRelOp(subOp)
+        val res2 = if (subOp2.isEmpty) '{ $stagedSM.EDB() } else compileRelOp(subOp2.get)
         db match {
           case DB.Derived =>
             knowledge match {
               case KNOWLEDGE.New =>
-                '{ $stagedSM.resetNewDerived(${Expr(rId)}, $res, $res2); $noop }
+                '{ $stagedSM.resetNewDerived(${Expr(rId)}, $res, $res2) }
               case KNOWLEDGE.Known =>
-                '{ $stagedSM.resetKnownDerived(${Expr(rId)}, $res, $res2); $noop }
+                '{ $stagedSM.resetKnownDerived(${Expr(rId)}, $res, $res2) }
             }
           case DB.Delta =>
             knowledge match {
               case KNOWLEDGE.New =>
-                '{ $stagedSM.resetNewDelta(${Expr(rId)}, $res); $noop }
+                '{ $stagedSM.resetNewDelta(${Expr(rId)}, $res) }
               case KNOWLEDGE.Known =>
-                '{ $stagedSM.resetKnownDelta(${Expr(rId)}, $res); $noop }
+                '{ $stagedSM.resetKnownDelta(${Expr(rId)}, $res) }
             }
         }
 
-      case UnionOp(ops) =>
-        val compiledOps = Expr.ofSeq(ops.map(compileIR))
-        '{ $stagedSM.union($compiledOps) }
-
-      case DiffOp(lhs, rhs) =>
-        val clhs = compileIR(lhs)
-        val crhs = compileIR(rhs)
-        '{ $stagedSM.diff($clhs, $crhs) } // TODO: need to cast Expr[Any] to Expr[EDB] in order to diff
-
       case DebugNode(prefix, msg) =>
-        '{ debug(${Expr(prefix)}, () => $stagedSM.printer.toString()); $noop }
+        '{ debug(${Expr(prefix)}, () => $stagedSM.printer.toString()) }
 
-      case DebugPeek(prefix, msg, op) =>
-        val res = compileIR(op)
-          '{ debug(${Expr(prefix)}, () => s"${${Expr(msg())}}"); $res }
-      case _ => throw new Exception("Not implemented yet")
+      case _ => compileRelOp(irTree) //throw new Exception("Error: compileIR called with RelOp")
     }
   }
 
