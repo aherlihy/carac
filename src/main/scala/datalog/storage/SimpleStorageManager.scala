@@ -51,7 +51,6 @@ abstract class SimpleStorageManager(override val ns: NS) extends StorageManager(
    * @return
    */
   def initEvaluation(): Unit = {
-    println("in initEval")
     knownDbId = dbId
     derivedDB.addOne(dbId, FactDatabase())
     deltaDB.addOne(dbId, FactDatabase())
@@ -77,7 +76,6 @@ abstract class SimpleStorageManager(override val ns: NS) extends StorageManager(
       deltaDB(dbId)(k) = EDB()
     }) // Delta-EDB is just empty sets
     dbId += 1
-    println(s"done eval, $knownDbId $newDbId")
   }
 
   override def insertEDB(rule: Atom): Unit = {
@@ -96,13 +94,13 @@ abstract class SimpleStorageManager(override val ns: NS) extends StorageManager(
   def idb(rId: RelationId): IDB = idbs(rId)
   def edb(rId: RelationId): EDB = edbs(rId)
 
-  def getHelper(db: FactDatabase, rId: RelationId, orElse: Option[EDB]): EDB =
+  def getHelper(db: FactDatabase, rId: RelationId, orElse: Option[EDB], whichDb: DB, knowledgeId: KNOWLEDGE): EDB =
     orElse match {
       case Some(value) =>
         db.getOrElse(rId, value)
       case _ =>
         if (!db.contains(rId)) // annoying but good for error reporting
-          throw new Exception(s"Attempting to access rId $rId (${ns(rId)})")
+          throw new Exception(s"DB $whichDb[$knowledgeId] does not contain relation ${ns(rId)} (#$rId)")
         else
           db(rId)
     }
@@ -111,25 +109,29 @@ abstract class SimpleStorageManager(override val ns: NS) extends StorageManager(
     getHelper(
       derivedDB(knownDbId),
       rId,
-      orElse
+      orElse,
+      DB.Derived, KNOWLEDGE.Known
     )
   def getNewDerivedDB(rId: RelationId, orElse: Option[EDB]): EDB =
     getHelper(
       derivedDB(newDbId),
       rId,
-      orElse
+      orElse,
+      DB.Derived, KNOWLEDGE.New
     )
   def getKnownDeltaDB(rId: RelationId, orElse: Option[EDB]): EDB =
     getHelper(
       deltaDB(knownDbId),
       rId,
-      orElse
+      orElse,
+      DB.Delta, KNOWLEDGE.Known
     )
   def getNewDeltaDB(rId: RelationId, orElse: Option[EDB]): EDB =
     getHelper(
       deltaDB(newDbId),
       rId,
-      orElse
+      orElse,
+      DB.Delta, KNOWLEDGE.New
     )
   def getKnownIDBResult(rId: RelationId): Set[Seq[Term]] =
     debug("Final IDB Result[known]: ", () => s"@$knownDbId")

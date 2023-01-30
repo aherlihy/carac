@@ -82,7 +82,7 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
   def compileRelOp[T](irTree: IROp)(using stagedSM: Expr[StorageManager { type EDB = T }], t: Type[T])(using ctx: InterpreterContext)(using Quotes): Expr[T] = { // TODO: Instead of parameterizing, use staged path dependent type: i.e. stagedSM.EDB
     irTree match {
       case ScanOp(rId, db, knowledge) =>
-        lazy val edb =
+        val edb =
           if (storageManager.edbs.contains(rId))
             '{ Some($stagedSM.edbs(${Expr(rId)})) }
           else
@@ -131,13 +131,13 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
       case DiffOp(lhs, rhs) =>
         val clhs = compileRelOp(lhs)
         val crhs = compileRelOp(rhs)
-        '{ $stagedSM.diff($clhs, $crhs) } // TODO: need to cast Expr[Any] to Expr[EDB] in order to diff
+        '{ $stagedSM.diff($clhs, $crhs) }
 
       case DebugPeek(prefix, msg, op) =>
         val res = compileRelOp(op)
         '{ debug(${Expr(prefix)}, () => s"${${Expr(msg())}}"); $res }
 
-      case _ => throw new Exception("Error: compileRelOp called with noop")
+      case _ => throw new Exception("Error: compileRelOp called with unit operation")
     }
   }
 
@@ -294,12 +294,13 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
     }
   }
 
-  override def solve(rId: Int): Set[Seq[Term]] = {
+  def generateProgramTree(rId: Int): (IROp, InterpreterContext) = {
     // verify setup
     storageManager.verifyEDBs(precedenceGraph.idbs)
     if (storageManager.edbs.contains(rId) && !precedenceGraph.idbs.contains(rId)) { // if just an edb predicate then return
       debug("Returning EDB without any IDB rule: ", () => storageManager.ns(rId))
-      return storageManager.getEDBResult(rId)
+//      return storageManager.getEDBResult(rId)
+      return (ScanEDBOp(rId), InterpreterContext(storageManager, precedenceGraph, rId))
     }
     if (!precedenceGraph.idbs.contains(rId)) {
       throw new Error("Solving for rule without body")
@@ -312,28 +313,54 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
       debug("aliased:", () => s"${storageManager.ns(rId)} => ${storageManager.ns(toSolve)}")
       if (storageManager.edbs.contains(toSolve) && !precedenceGraph.idbs.contains(toSolve)) { // if just an edb predicate then return
         debug("Returning EDB as IDB aliased to EDB: ", () => storageManager.ns(toSolve))
-        return storageManager.getEDBResult(toSolve)
+//        return storageManager.getEDBResult(toSolve)
+        return (ScanEDBOp(toSolve), InterpreterContext(storageManager, precedenceGraph, toSolve))
       }
 
     debug("AST: ", () => storageManager.printer.printAST(ast))
     debug("TRANSFORMED: ", () => storageManager.printer.printAST(transformedAST))
 
     given irCtx: InterpreterContext = InterpreterContext(storageManager, precedenceGraph, toSolve)
+
     val irTree = createIR(transformedAST)
 
     debug("PROGRAM:\n", () => storageManager.printer.printIR(irTree))
+    (irTree, irCtx)
+  }
 
+  def getCompiled(irTree: IROp, ctx: InterpreterContext): CollectionsStorageManager => storageManager.EDB = {
+    given irCtx: InterpreterContext = ctx
     given staging.Compiler = staging.Compiler.make(getClass.getClassLoader)
-    val compiled: CollectionsStorageManager => storageManager.EDB =
+//    compiled /*: CollectionsStorageManager => storageManager.EDB*/ =
       staging.run {
         val res: Expr[CollectionsStorageManager => Any] =
           '{ (stagedSm: CollectionsStorageManager) => ${compileIR[CollectionsStorageManager#EDB](irTree)(using 'stagedSm)} }
-        println(res.show)
+        debug("generated code: ", () => res.show)
         res
       }.asInstanceOf[CollectionsStorageManager => storageManager.EDB]
-    compiled(storageManager.asInstanceOf[CollectionsStorageManager]) // TODO: remove cast
-
-    debug(s"final state @${irCtx.count}", storageManager.printer.toString)
-    storageManager.getNewIDBResult(toSolve)
   }
+
+  def solvePreCompiled(compiled: CollectionsStorageManager => storageManager.EDB, ctx: InterpreterContext): Set[Seq[Term]] = {
+    given irCtx: InterpreterContext = ctx
+    compiled(storageManager.asInstanceOf[CollectionsStorageManager]) // TODO: remove cast
+    storageManager.getNewIDBResult(ctx.toSolve)
+  }
+  def solvePreInterpreted(irTree: IROp, ctx: InterpreterContext):  Set[Seq[Term]] = {
+    given irCtx: InterpreterContext = ctx
+    interpretIR(irTree)
+    storageManager.getNewIDBResult(ctx.toSolve)
+  }
+
+  def solveCompiled(rId: Int): Set[Seq[Term]] = {
+    val (irTree, irCtx) = generateProgramTree(rId)
+    val compiled = getCompiled(irTree, irCtx)
+    solvePreCompiled(compiled, irCtx)
+  }
+
+  def solveInterpreted(rId: Int): Set[Seq[Term]] = {
+    val (irTree, irCtx) = generateProgramTree(rId)
+    solvePreInterpreted(irTree, irCtx)
+  }
+
+  override def solve(rId: Int): Set[Seq[Term]] = solveCompiled(rId)
 }

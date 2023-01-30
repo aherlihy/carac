@@ -1,14 +1,15 @@
 package datalog
 
-import datalog.execution.{ExecutionEngine, SemiNaiveExecutionEngine, NaiveExecutionEngine, NaiveStagedExecutionEngine, SemiNaiveStagedExecutionEngine}
+import datalog.execution.{ExecutionEngine, NaiveExecutionEngine, NaiveStagedExecutionEngine, SemiNaiveExecutionEngine, SemiNaiveStagedExecutionEngine}
 import datalog.dsl.{Constant, Program, __}
 import datalog.execution.ast.transform.CopyEliminationPass
+import datalog.execution.ir.InterpreterContext
 import datalog.storage.{CollectionsStorageManager, NS, RelationalStorageManager}
 
 import scala.util.Random
 import scala.collection.mutable
 
-def run(program: Program): Unit = {
+def run(program: Program, ee: SemiNaiveStagedExecutionEngine): Unit = {
   val edge = program.relation[Constant]("edge")
   val path = program.relation[Constant]("path")
   val x, y, z = program.variable()
@@ -33,14 +34,22 @@ def run(program: Program): Unit = {
 //  println(s"graph to string ${program.ee.precedenceGraph.toString()}")
 //  program.ee.precedenceGraph.topSort()
 //  println(program.ee.precedenceGraph.sortedString())
-  println("RES=" + path.solve())
+
+  val (irTree, irCtx) = ee.generateProgramTree(edge.id)
+  val compiled = ee.getCompiled(irTree, irCtx)
+  val res = ee.solvePreCompiled(compiled, irCtx)
+  println("RES=" + res)
+//  ee.solvePreInterpreted(irTree, irCtx)
+//  ee.solveCompiled(path.id)
+//  ee.solveInterpreted(path.id)
+//  println("RES=" + path.solve())
 }
 
 @main def main = {
-  given engine: ExecutionEngine = new NaiveStagedExecutionEngine(new CollectionsStorageManager())
+  val engine = new SemiNaiveStagedExecutionEngine(new CollectionsStorageManager())
   val program = Program(engine)
   println("staged")
-  run(program)
+  run(program, engine)
 
 //  given engine2: ExecutionEngine = new NaiveExecutionEngine(new CollectionsStorageManager())
 //  val program2 = Program(engine2)
