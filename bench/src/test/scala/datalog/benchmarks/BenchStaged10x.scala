@@ -11,8 +11,8 @@ import scala.collection.mutable
 import scala.util.Random
 
 @Fork(1) // # of jvms that it will use
-@Warmup(iterations = 5, time = 5, timeUnit = TimeUnit.SECONDS)
-@Measurement(iterations = 10, time = 10, timeUnit = TimeUnit.SECONDS)
+@Warmup(iterations = 0, time = 5, timeUnit = TimeUnit.SECONDS, batchSize = 1)
+@Measurement(iterations = 1, time = 10, timeUnit = TimeUnit.SECONDS, batchSize = 1)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class BenchStaged10x {
@@ -49,6 +49,7 @@ class BenchStaged10x {
   val interpreted_program1 = Program(interpreted_e1)
   val interpreted_s1 = pretest(interpreted_program1)
   val (interpreted_program1_tree, interpreted_program1_ctx) = interpreted_e1.generateProgramTree(interpreted_s1)
+  println("=======constructor over=========")
 
   def pretest(program: Program): Int = {
     val edge = program.relation[Constant]("edge")
@@ -90,7 +91,7 @@ class BenchStaged10x {
     hops9(x, y) :- (hops1(x, z), hops8(z, y))
     hops10(x, y) :- (hops1(x, z), hops9(z, y))
 
-    for i <- 0 until 150 do
+    for i <- 0 until 200 do
       edge(
         Random.alphanumeric.dropWhile(_.isDigit).dropWhile(_.isUpper).head.toString,
         Random.alphanumeric.dropWhile(_.isDigit).dropWhile(_.isUpper).head.toString
@@ -108,7 +109,7 @@ class BenchStaged10x {
   // measure cost of compiling, running
   @Benchmark def compile_and_run_compiled(blackhole: Blackhole): Unit = {
     blackhole.consume(
-      compiled_e1.solvePreCompiled(compiled_e1.getCompiled(compiled_program1_tree, compiled_program1_ctx), compiled_program1_ctx)
+      compiled_e1.compileAndRun(compiled_program1_tree, compiled_program1_ctx)
     )
   }
   // measure cost of running compiled code

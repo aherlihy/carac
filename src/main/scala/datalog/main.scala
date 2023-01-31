@@ -35,12 +35,12 @@ def run(program: Program, ee: SemiNaiveStagedExecutionEngine): Unit = {
 //  program.ee.precedenceGraph.topSort()
 //  println(program.ee.precedenceGraph.sortedString())
 
-  val (irTree, irCtx) = ee.generateProgramTree(edge.id)
-  val compiled = ee.getCompiled(irTree, irCtx)
-  val res = ee.solvePreCompiled(compiled, irCtx)
-  println("RES=" + res)
+//  val (irTree, irCtx) = ee.generateProgramTree(edge.id)
+//  val compiled = ee.getCompiled(irTree, irCtx)
+//  val res = ee.solvePreCompiled(compiled, irCtx)
+//  println("RES=" + res)
 //  ee.solvePreInterpreted(irTree, irCtx)
-//  ee.solveCompiled(path.id)
+  ee.solveCompiled(path.id)
 //  ee.solveInterpreted(path.id)
 //  println("RES=" + path.solve())
 }

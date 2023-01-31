@@ -144,6 +144,7 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
   def compileIR[T](irTree: IROp)(using stagedSM: Expr[StorageManager { type EDB = T }], t: Type[T])(using ctx: InterpreterContext)(using Quotes): Expr[Any] = { // TODO: Instead of parameterizing, use staged path dependent type: i.e. stagedSM.EDB
     irTree match {
       case ProgramOp(body) =>
+        println("compiling program")
         compileIR(body)
 
       case DoWhileOp(body, toCmp) =>
@@ -203,9 +204,7 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
   def interpretIR(irTree: IROp)(using ctx: InterpreterContext): Any = {
     irTree match {
       case ProgramOp(body) =>
-        debug(s"precedence graph=", ctx.precedenceGraph.sortedString)
-        debug(s"solving relation: ${storageManager.ns(ctx.toSolve)} order of relations=", ctx.relations.toString)
-        debug("initial state @ -1", storageManager.printer.toString)
+        println("interpret program")
         interpretIR(body)
 
       case DoWhileOp(body, toCmp) =>
@@ -295,6 +294,7 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
   }
 
   def generateProgramTree(rId: Int): (IROp, InterpreterContext) = {
+    println("generate program tree")
     // verify setup
     storageManager.verifyEDBs(precedenceGraph.idbs)
     if (storageManager.edbs.contains(rId) && !precedenceGraph.idbs.contains(rId)) { // if just an edb predicate then return
@@ -329,6 +329,7 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
   }
 
   def getCompiled(irTree: IROp, ctx: InterpreterContext): CollectionsStorageManager => storageManager.EDB = {
+    println("getcompiled")
     given irCtx: InterpreterContext = ctx
     given staging.Compiler = staging.Compiler.make(getClass.getClassLoader)
 //    compiled /*: CollectionsStorageManager => storageManager.EDB*/ =
@@ -341,23 +342,32 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
   }
 
   def solvePreCompiled(compiled: CollectionsStorageManager => storageManager.EDB, ctx: InterpreterContext): Set[Seq[Term]] = {
+    println("solve precompiled")
     given irCtx: InterpreterContext = ctx
     compiled(storageManager.asInstanceOf[CollectionsStorageManager]) // TODO: remove cast
     storageManager.getNewIDBResult(ctx.toSolve)
   }
   def solvePreInterpreted(irTree: IROp, ctx: InterpreterContext):  Set[Seq[Term]] = {
+    println("solve preinterpreted")
     given irCtx: InterpreterContext = ctx
     interpretIR(irTree)
     storageManager.getNewIDBResult(ctx.toSolve)
   }
 
   def solveCompiled(rId: Int): Set[Seq[Term]] = {
+    println("solveCompiled")
     val (irTree, irCtx) = generateProgramTree(rId)
-    val compiled = getCompiled(irTree, irCtx)
-    solvePreCompiled(compiled, irCtx)
+    compileAndRun(irTree, irCtx)
+  }
+
+  def compileAndRun(irTree: IROp, ctx: InterpreterContext): Set[Seq[Term]] = {
+    println("compileandrun")
+    val compiled = getCompiled(irTree, ctx)
+    solvePreCompiled(compiled, ctx)
   }
 
   def solveInterpreted(rId: Int): Set[Seq[Term]] = {
+    println("solve interpreted")
     val (irTree, irCtx) = generateProgramTree(rId)
     solvePreInterpreted(irTree, irCtx)
   }
