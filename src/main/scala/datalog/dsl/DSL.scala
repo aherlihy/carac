@@ -7,11 +7,12 @@ import scala.quoted.{Expr, Quotes}
 
 trait AbstractProgram // TODO: alternate program?
 
-type Printer = mutable.Map[Int, String] // TODO: will eventually want bimap
-
 type Constant = Int | String // TODO: other constant types?
 
 val __ = Variable(-1, true)
+
+enum MODE:
+  case Interpret, Compile, JIT
 
 case class Variable(oid: Int, anon: Boolean = false) {
   override def toString = if (anon) "_" else "v" + oid
@@ -49,6 +50,6 @@ case class Relation[T <: Constant](id: Int, name: String)(using ee: ExecutionEng
   // Create a tuple in this relation
   def apply(ts: RelTerm*): RelAtom = RelAtom(ts.toIndexedSeq)
 
-  def solve(): Set[Seq[Term]] = ee.solve(id).map(s => s.toSeq).toSet
+  def solve(mode: MODE = MODE.Compile): Set[Seq[Term]] = ee.solve(id, mode).map(s => s.toSeq).toSet
   def get(): Set[Seq[Term]] = ee.get(id)
 }

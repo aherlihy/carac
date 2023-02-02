@@ -9,50 +9,65 @@ import datalog.storage.{CollectionsStorageManager, NS, RelationalStorageManager}
 import scala.util.Random
 import scala.collection.mutable
 
-def run(program: Program, ee: SemiNaiveStagedExecutionEngine): Unit = {
+def run(program: Program): Unit = {
   val edge = program.relation[Constant]("edge")
   val path = program.relation[Constant]("path")
-  val x, y, z = program.variable()
+  val oneHop = program.relation[Constant]("oh")
+  val twoHops = program.relation[Constant]("th")
+  val threeHops = program.relation[Constant]("threeH")
+  val fourHops = program.relation[Constant]("fourH")
+
+  val x, y, z, w, q = program.variable()
 
   path(x, y) :- edge(x, y)
   path(x, z) :- (edge(x, y), path(y, z))
+
+  oneHop(x, y) :- edge(x, y)
+  twoHops(x, z) :- ( edge(x, y), oneHop(y, z) )
+  threeHops(x, w) :- ( edge(x, y), oneHop(y, z), oneHop(z, w))
+  fourHops(x, q) :- ( edge(x, y), oneHop(y, z), oneHop(z, w), oneHop(w, q))
 
   edge("a", "a") :- ()
   edge("a", "b") :- ()
   edge("b", "c") :- ()
   edge("c", "d") :- ()
 
-//  queryA(x) :- oneHop("a", x)
-//  queryA(x) :- oneHop("a", x)
+  println("RES=" + oneHop.solve())
+}
 
-//  queryB(x) :- (oneHop("a", x), oneHop(x, "c"))
-//
+def reversible(program: Program, engine: ExecutionEngine): Unit = {
+  val assign = program.relation[Constant]("assign")
+  val assignOp = program.relation[Constant]("assignOp")
+  val inverses = program.relation[Constant]("inverses")
+  val equiv = program.relation[Constant]("equiv")
+  val query = program.relation[Constant]("query")
 
-//  threeHops(x, w) :- ( edge(x, y), oneHop(y, z), oneHop(z, w))
-//  fourHops(x, q) :- ( edge(x, y), oneHop(y, z), oneHop(z, w), oneHop(w, q))
+  val a, b, x, y, cst, f2, f1 = program.variable()
 
-//  println(s"graph to string ${program.ee.precedenceGraph.toString()}")
-//  program.ee.precedenceGraph.topSort()
-//  println(program.ee.precedenceGraph.sortedString())
+  assignOp("v1", "+", "v0", 1) :- ()
+  assignOp("v2", "-", "v1", 1) :- ()
+  inverses("+", "-") :- ()
 
-//  val (irTree, irCtx) = ee.generateProgramTree(edge.id)
-//  val compiled = ee.getCompiled(irTree, irCtx)
-//  val res = ee.solvePreCompiled(compiled, irCtx)
-//  println("RES=" + res)
-//  ee.solvePreInterpreted(irTree, irCtx)
-  ee.solveCompiled(path.id)
-//  ee.solveInterpreted(path.id)
-//  println("RES=" + path.solve())
+  equiv(a, b) :- assign(a, b)
+  equiv(a, b) :- ( equiv(a, x), equiv(x, b) )
+//  equiv(a, b) :- ( assignOp(x, f1, a, cst), assignOp(b, f2, y, cst), equiv(x, y), inverses(f1, f2))
+  equiv(a, b) :- ( assignOp(x, f1, a, cst), assignOp(b, f2, x, cst), inverses(f1, f2) )
+
+  query(x) :- equiv(x, "v2")
+
+//  println("RES=" + engine.solveCompiled(query.id))
+  println("RES=" + query.solve())
 }
 
 @main def main = {
   val engine = new SemiNaiveStagedExecutionEngine(new CollectionsStorageManager())
   val program = Program(engine)
   println("staged")
-  run(program, engine)
+  run(program)
+//  reversible(program, engine)
 
-//  given engine2: ExecutionEngine = new NaiveExecutionEngine(new CollectionsStorageManager())
-//  val program2 = Program(engine2)
-//  println("seminaive")
-//  run(program2)
+  given engine2: ExecutionEngine = new NaiveExecutionEngine(new CollectionsStorageManager())
+  val program2 = Program(engine2)
+  println("seminaive")
+  run(program2)
 }

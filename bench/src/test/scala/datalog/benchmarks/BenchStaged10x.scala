@@ -1,7 +1,7 @@
 package datalog.benchmarks
 
-import datalog.dsl.{Constant, Program, Relation, Term}
-import datalog.execution.{ExecutionEngine, SemiNaiveExecutionEngine, SemiNaiveStagedExecutionEngine}
+import datalog.dsl.{Constant, Program, Relation, Term, MODE}
+import datalog.execution.{ExecutionEngine, SemiNaiveExecutionEngine, SemiNaiveStagedExecutionEngine, ir}
 import datalog.storage.CollectionsStorageManager
 import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.Blackhole
@@ -10,48 +10,8 @@ import java.util.concurrent.TimeUnit
 import scala.collection.mutable
 import scala.util.Random
 
-@Fork(1) // # of jvms that it will use
-@Warmup(iterations = 0, time = 5, timeUnit = TimeUnit.SECONDS, batchSize = 1)
-@Measurement(iterations = 1, time = 10, timeUnit = TimeUnit.SECONDS, batchSize = 1)
-@State(Scope.Thread)
-@BenchmarkMode(Array(Mode.AverageTime))
-class BenchStaged10x {
-  // full compiled
-  val compiled_e0 = SemiNaiveStagedExecutionEngine(CollectionsStorageManager())
-  val compiled_program0 = Program(compiled_e0)
-  val compiled_s0 = pretest(compiled_program0)
-
-  // only compile+run compiled
-  val compiled_e1 = SemiNaiveStagedExecutionEngine(CollectionsStorageManager())
-  val compiled_program1 = Program(compiled_e1)
-  val compiled_s1 = pretest(compiled_program1)
-  val (compiled_program1_tree, compiled_program1_ctx) = compiled_e1.generateProgramTree(compiled_s1)
-
-  // only run compiled
-  val compiled_e2 = SemiNaiveStagedExecutionEngine(CollectionsStorageManager())
-  val compiled_program2 = Program(compiled_e2)
-  val compiled_s2 = pretest(compiled_program2)
-  val (compiled_program2_tree, compiled_program2_ctx) = compiled_e2.generateProgramTree(compiled_s2)
-  val compiled_program2_compiled = compiled_e2.getCompiled(compiled_program2_tree, compiled_program2_ctx)
-
-  // og
-  val original_e3 = SemiNaiveExecutionEngine(CollectionsStorageManager())
-  val original_program3 = Program(original_e3)
-  val original_s3 = pretest(original_program3)
-
-  // full interpreted
-  val interpreted_e0 = SemiNaiveStagedExecutionEngine(CollectionsStorageManager())
-  val interpreted_program0 = Program(interpreted_e0)
-  val interpreted_s0 = pretest(interpreted_program0)
-
-  // only run interpreted
-  val interpreted_e1 = SemiNaiveStagedExecutionEngine(CollectionsStorageManager())
-  val interpreted_program1 = Program(interpreted_e1)
-  val interpreted_s1 = pretest(interpreted_program1)
-  val (interpreted_program1_tree, interpreted_program1_ctx) = interpreted_e1.generateProgramTree(interpreted_s1)
-  println("=======constructor over=========")
-
-  def pretest(program: Program): Int = {
+object initialize2 {
+  def pretest(program: Program): Relation[Constant] = {
     val edge = program.relation[Constant]("edge")
     val path = program.relation[Constant]("path")
     val hops1 = program.relation[Constant]("hops1")
@@ -64,16 +24,16 @@ class BenchStaged10x {
     val hops8 = program.relation[Constant]("hops8")
     val hops9 = program.relation[Constant]("hops9")
     val hops10 = program.relation[Constant]("hops10")
-//    val hops11 = program.relation[Constant]("hops11")
-//    val hops12 = program.relation[Constant]("hops12")
-//    val hops13 = program.relation[Constant]("hops13")
-//    val hops14 = program.relation[Constant]("hops14")
-//    val hops15 = program.relation[Constant]("hops15")
-//    val hops16 = program.relation[Constant]("hops16")
-//    val hops17 = program.relation[Constant]("hops17")
-//    val hops18 = program.relation[Constant]("hops18")
-//    val hops19 = program.relation[Constant]("hops19")
-//    val hops20 = program.relation[Constant]("hops20")
+    //    val hops11 = program.relation[Constant]("hops11")
+    //    val hops12 = program.relation[Constant]("hops12")
+    //    val hops13 = program.relation[Constant]("hops13")
+    //    val hops14 = program.relation[Constant]("hops14")
+    //    val hops15 = program.relation[Constant]("hops15")
+    //    val hops16 = program.relation[Constant]("hops16")
+    //    val hops17 = program.relation[Constant]("hops17")
+    //    val hops18 = program.relation[Constant]("hops18")
+    //    val hops19 = program.relation[Constant]("hops19")
+    //    val hops20 = program.relation[Constant]("hops20")
 
     val x, y, z, w, q = program.variable()
 
@@ -96,44 +56,169 @@ class BenchStaged10x {
         Random.alphanumeric.dropWhile(_.isDigit).dropWhile(_.isUpper).head.toString,
         Random.alphanumeric.dropWhile(_.isDigit).dropWhile(_.isUpper).head.toString
       ) :- ()
-    hops10.id
+    hops10
   }
+}
+
+inline val warmup_iterations = 10
+inline val iterations = 5
+inline val warmup_time = 3
+inline val time = 3
+inline val batchSize = 1
+inline val fork = 3
+
+@Fork(fork) // # of jvms that it will use
+@Warmup(iterations = warmup_iterations, time = warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = batchSize)
+@Measurement(iterations = iterations, time = time, timeUnit = TimeUnit.SECONDS, batchSize = batchSize)
+@State(Scope.Thread)
+@BenchmarkMode(Array(Mode.AverageTime))
+class BenchStaged10x_full_compiled {
+  var engine: SemiNaiveStagedExecutionEngine = null
+  var program: Program = null
+  var toSolve: Relation[Constant] = null
+  @Setup(Level.Invocation)
+  def setup(): Unit = {
+    engine = SemiNaiveStagedExecutionEngine(CollectionsStorageManager())
+    program = Program(engine)
+    toSolve = initialize2.pretest(program)
+  }
+  // measure cost of tree gen, compiling, running
+  @Benchmark def run(blackhole: Blackhole): Unit = {
+    blackhole.consume(
+      toSolve.solve(MODE.Compile)
+    )
+  }
+}
+@Fork(fork) // # of jvms that it will use
+@Warmup(iterations = warmup_iterations, time = warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = batchSize)
+@Measurement(iterations = iterations, time = time, timeUnit = TimeUnit.SECONDS, batchSize = batchSize)
+@State(Scope.Thread)
+@BenchmarkMode(Array(Mode.AverageTime))
+class BenchStaged10x_compile_and_run {
+  var engine: SemiNaiveStagedExecutionEngine = null
+  var program: Program = null
+  var toSolve: Relation[Constant] = null
+  var tree: ir.IROp = null
+  var ctx: ir.InterpreterContext = null
+  // measure cost of tree gen, compiling, running
+  @Setup(Level.Invocation)
+  def setup(): Unit = {
+    engine = SemiNaiveStagedExecutionEngine(CollectionsStorageManager())
+    program = Program(engine)
+    toSolve = initialize2.pretest(program)
+    val x1 = engine.generateProgramTree(toSolve.id)
+    tree = x1._1
+    ctx = x1._2
+  }
+  //  measure cost of compiling, running
+  @Benchmark def run(blackhole: Blackhole): Unit = {
+    blackhole.consume(
+      engine.compileAndRun(tree, ctx)
+    )
+  }
+}
+@Fork(fork) // # of jvms that it will use
+@Warmup(iterations = warmup_iterations, time = warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = batchSize)
+@Measurement(iterations = iterations, time = time, timeUnit = TimeUnit.SECONDS, batchSize = batchSize)
+@State(Scope.Thread)
+@BenchmarkMode(Array(Mode.AverageTime))
+class BenchStaged10x_run_only_compiled {
+  var engine: SemiNaiveStagedExecutionEngine = null
+  var program: Program = null
+  var toSolve: Relation[Constant] = null
+  var tree: ir.IROp = null
+  var ctx: ir.InterpreterContext = null
+  var compiled: CollectionsStorageManager => Any = null
 
   // measure cost of tree gen, compiling, running
-  @Benchmark def full_compiled(blackhole: Blackhole): Unit = {
-    ////println("hi")
-    blackhole.consume(
-      compiled_e0.solveCompiled(compiled_s0)
-    )
+  @Setup(Level.Invocation)
+  def setup(): Unit = {
+    engine = SemiNaiveStagedExecutionEngine(CollectionsStorageManager())
+    program = Program(engine)
+    toSolve = initialize2.pretest(program)
+    val x1 = engine.generateProgramTree(toSolve.id)
+    tree = x1._1
+    ctx = x1._2
+    compiled = engine.getCompiled(tree, ctx)
   }
-  // measure cost of compiling, running
-  @Benchmark def compile_and_run_compiled(blackhole: Blackhole): Unit = {
-    blackhole.consume(
-      compiled_e1.compileAndRun(compiled_program1_tree, compiled_program1_ctx)
-    )
-  }
+
   // measure cost of running compiled code
-  @Benchmark def run_only_compiled(blackhole: Blackhole): Unit = {
+  @Benchmark def run(blackhole: Blackhole): Unit = {
+    val e = engine
     blackhole.consume(
-      compiled_e2.solvePreCompiled(compiled_program2_compiled, compiled_program2_ctx)
+      e.solvePreCompiled(compiled.asInstanceOf[CollectionsStorageManager => e.storageManager.EDB], ctx)
     )
   }
-  // measure original
-  @Benchmark def run_original(blackhole: Blackhole): Unit = {
+}
+@Fork(fork) // # of jvms that it will use
+@Warmup(iterations = warmup_iterations, time = warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = batchSize)
+@Measurement(iterations = iterations, time = time, timeUnit = TimeUnit.SECONDS, batchSize = batchSize)
+@State(Scope.Thread)
+@BenchmarkMode(Array(Mode.AverageTime))
+class BenchStaged10x_full_interpreted {
+  var engine: SemiNaiveStagedExecutionEngine = null
+  var program: Program = null
+  var toSolve: Relation[Constant] = null
+  @Setup(Level.Invocation)
+  def setup(): Unit = {
+    engine = SemiNaiveStagedExecutionEngine(CollectionsStorageManager())
+    program = Program(engine)
+    toSolve = initialize2.pretest(program)
+  }
+  // measure cost of tree gen, running interpreted
+  @Benchmark def run(blackhole: Blackhole): Unit = {
     blackhole.consume(
-      original_program3.solve(original_s3)
+      toSolve.solve(MODE.Interpret)
     )
   }
-  // measure cost of tree gen, interpreting
-  @Benchmark def full_interpreted(blackhole: Blackhole): Unit = {
+}
+@Fork(fork) // # of jvms that it will use
+@Warmup(iterations = warmup_iterations, time = warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = batchSize)
+@Measurement(iterations = iterations, time = time, timeUnit = TimeUnit.SECONDS, batchSize = batchSize)
+@State(Scope.Thread)
+@BenchmarkMode(Array(Mode.AverageTime))
+class BenchStaged10x_run_only_interpreted {
+  var engine: SemiNaiveStagedExecutionEngine = null
+  var program: Program = null
+  var toSolve: Relation[Constant] = null
+  var tree: ir.IROp = null
+  var ctx: ir.InterpreterContext = null
+  // measure cost of tree gen, compiling, running
+  @Setup(Level.Invocation)
+  def setup(): Unit = {
+    engine = SemiNaiveStagedExecutionEngine(CollectionsStorageManager())
+    program = Program(engine)
+    toSolve = initialize2.pretest(program)
+    val x1 = engine.generateProgramTree(toSolve.id)
+    tree = x1._1
+    ctx = x1._2
+  }
+  //  measure cost of running interpreted only
+  @Benchmark def run(blackhole: Blackhole): Unit = {
     blackhole.consume(
-      interpreted_e0.solveInterpreted(interpreted_s0)
+      engine.solvePreInterpreted(tree, ctx)
     )
   }
-  // measure cost of running interpreted code
-  @Benchmark def run_only_interpreted(blackhole: Blackhole): Unit = {
+}
+@Fork(fork) // # of jvms that it will use
+@Warmup(iterations = warmup_iterations, time = warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = batchSize)
+@Measurement(iterations = iterations, time = time, timeUnit = TimeUnit.SECONDS, batchSize = batchSize)
+@State(Scope.Thread)
+@BenchmarkMode(Array(Mode.AverageTime))
+class BenchStaged10x_old {
+  var engine: SemiNaiveExecutionEngine = null
+  var program: Program = null
+  var toSolve: Relation[Constant] = null
+  @Setup(Level.Invocation)
+  def setup(): Unit = {
+    engine = SemiNaiveExecutionEngine(CollectionsStorageManager())
+    program = Program(engine)
+    toSolve = initialize2.pretest(program)
+  }
+  // measure cost of old solve
+  @Benchmark def run(blackhole: Blackhole): Unit = {
     blackhole.consume(
-      interpreted_e1.solvePreInterpreted(interpreted_program1_tree, interpreted_program1_ctx)
+      toSolve.solve()
     )
   }
 }

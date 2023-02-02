@@ -1,7 +1,7 @@
 package datalog.execution
 
-import datalog.dsl.{Atom, Constant, Term, Variable}
-import datalog.storage.{SimpleStorageManager, StorageManager, RelationId}
+import datalog.dsl.{Atom, Constant, MODE, Term, Variable}
+import datalog.storage.{RelationId, SimpleStorageManager, StorageManager}
 import datalog.tools.Debug.debug
 
 import scala.collection.mutable
@@ -33,7 +33,7 @@ class SemiNaiveExecutionEngine(override val storageManager: StorageManager) exte
     })
   }
 
-  override def solve(rId: RelationId): Set[Seq[Term]] = {
+  override def solve(rId: RelationId, mode: MODE): Set[Seq[Term]] = {
     storageManager.verifyEDBs()
     if (storageManager.edbs.contains(rId) && !storageManager.idbs.contains(rId)) { // if just an edb predicate then return
       return storageManager.getEDBResult(rId)

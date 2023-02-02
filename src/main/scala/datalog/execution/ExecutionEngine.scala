@@ -1,7 +1,7 @@
 package datalog.execution
 
-import datalog.dsl.{Atom, Term, Variable, Constant}
-import datalog.storage.{StorageManager, RelationId}
+import datalog.dsl.{Atom, Constant, MODE, Term, Variable}
+import datalog.storage.{RelationId, StorageManager}
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
@@ -15,7 +15,7 @@ trait ExecutionEngine {
   def insertIDB(rId: RelationId, rule: Seq[Atom]): Unit
   def insertEDB(body: Atom): Unit
 
-  def solve(rId: RelationId): Set[Seq[Term]]
+  def solve(rId: RelationId, mode: MODE): Set[Seq[Term]]
   def get(rId: RelationId): Set[Seq[Term]]
   def get(name: String): Set[Seq[Term]]
 

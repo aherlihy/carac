@@ -1,10 +1,10 @@
 package datalog.execution
 
-import datalog.dsl.{Atom, Constant, Term, Variable}
+import datalog.dsl.{Atom, Constant, MODE, Term, Variable}
 import datalog.execution.ast.*
 import datalog.execution.ast.transform.{ASTTransformerContext, CopyEliminationPass, JoinIndexPass, Transformer}
 import datalog.execution.ir.*
-import datalog.storage.{CollectionsStorageManager, SimpleStorageManager, StorageManager, DB, KNOWLEDGE}
+import datalog.storage.{CollectionsStorageManager, DB, KNOWLEDGE, SimpleStorageManager, StorageManager}
 import datalog.tools.Debug.debug
 
 import scala.collection.mutable
@@ -144,7 +144,6 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
   def compileIR[T](irTree: IROp)(using stagedSM: Expr[StorageManager { type EDB = T }], t: Type[T])(using ctx: InterpreterContext)(using Quotes): Expr[Any] = { // TODO: Instead of parameterizing, use staged path dependent type: i.e. stagedSM.EDB
     irTree match {
       case ProgramOp(body) =>
-        println("compiling program")
         compileIR(body)
 
       case DoWhileOp(body, toCmp) =>
@@ -204,7 +203,6 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
   def interpretIR(irTree: IROp)(using ctx: InterpreterContext): Any = {
     irTree match {
       case ProgramOp(body) =>
-        println("interpret program")
         interpretIR(body)
 
       case DoWhileOp(body, toCmp) =>
@@ -293,14 +291,13 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
     }
   }
 
+  // NOTE: this method is just for testing to see how much overhead tree processing has. If you
   def generateProgramTree(rId: Int): (IROp, InterpreterContext) = {
-    println("generate program tree")
     // verify setup
     storageManager.verifyEDBs(precedenceGraph.idbs)
     if (storageManager.edbs.contains(rId) && !precedenceGraph.idbs.contains(rId)) { // if just an edb predicate then return
       debug("Returning EDB without any IDB rule: ", () => storageManager.ns(rId))
-//      return storageManager.getEDBResult(rId)
-      return (ScanEDBOp(rId), InterpreterContext(storageManager, precedenceGraph, rId))
+      throw new Exception("NOTE: using generateProgramTree which is only for benchmarking")
     }
     if (!precedenceGraph.idbs.contains(rId)) {
       throw new Error("Solving for rule without body")
@@ -310,29 +307,17 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
     var toSolve = rId
     if (tCtx.aliases.contains(rId))
       toSolve = tCtx.aliases.getOrElse(rId, rId)
-      debug("aliased:", () => s"${storageManager.ns(rId)} => ${storageManager.ns(toSolve)}")
       if (storageManager.edbs.contains(toSolve) && !precedenceGraph.idbs.contains(toSolve)) { // if just an edb predicate then return
-        debug("Returning EDB as IDB aliased to EDB: ", () => storageManager.ns(toSolve))
-//        return storageManager.getEDBResult(toSolve)
-        return (ScanEDBOp(toSolve), InterpreterContext(storageManager, precedenceGraph, toSolve))
+        throw new Exception("NOTE: using generateProgramTree which is only for benchmarking")
       }
-
-    debug("AST: ", () => storageManager.printer.printAST(ast))
-    debug("TRANSFORMED: ", () => storageManager.printer.printAST(transformedAST))
-
     given irCtx: InterpreterContext = InterpreterContext(storageManager, precedenceGraph, toSolve)
-
     val irTree = createIR(transformedAST)
-
-    debug("PROGRAM:\n", () => storageManager.printer.printIR(irTree))
     (irTree, irCtx)
   }
 
   def getCompiled(irTree: IROp, ctx: InterpreterContext): CollectionsStorageManager => storageManager.EDB = {
-    println("getcompiled")
     given irCtx: InterpreterContext = ctx
     given staging.Compiler = staging.Compiler.make(getClass.getClassLoader)
-//    compiled /*: CollectionsStorageManager => storageManager.EDB*/ =
       staging.run {
         val res: Expr[CollectionsStorageManager => Any] =
           '{ (stagedSm: CollectionsStorageManager) => ${compileIR[CollectionsStorageManager#EDB](irTree)(using 'stagedSm)} }
@@ -342,35 +327,58 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
   }
 
   def solvePreCompiled(compiled: CollectionsStorageManager => storageManager.EDB, ctx: InterpreterContext): Set[Seq[Term]] = {
-    println("solve precompiled")
     given irCtx: InterpreterContext = ctx
     compiled(storageManager.asInstanceOf[CollectionsStorageManager]) // TODO: remove cast
     storageManager.getNewIDBResult(ctx.toSolve)
   }
+
   def solvePreInterpreted(irTree: IROp, ctx: InterpreterContext):  Set[Seq[Term]] = {
-    println("solve preinterpreted")
     given irCtx: InterpreterContext = ctx
     interpretIR(irTree)
     storageManager.getNewIDBResult(ctx.toSolve)
   }
 
-  def solveCompiled(rId: Int): Set[Seq[Term]] = {
-    println("solveCompiled")
-    val (irTree, irCtx) = generateProgramTree(rId)
-    compileAndRun(irTree, irCtx)
-  }
-
   def compileAndRun(irTree: IROp, ctx: InterpreterContext): Set[Seq[Term]] = {
-    println("compileandrun")
     val compiled = getCompiled(irTree, ctx)
     solvePreCompiled(compiled, ctx)
   }
 
-  def solveInterpreted(rId: Int): Set[Seq[Term]] = {
-    println("solve interpreted")
-    val (irTree, irCtx) = generateProgramTree(rId)
-    solvePreInterpreted(irTree, irCtx)
-  }
+  override def solve(rId: Int, mode: MODE): Set[Seq[Term]] = {
+    // verify setup
+    storageManager.verifyEDBs(precedenceGraph.idbs)
+    if (storageManager.edbs.contains(rId) && !precedenceGraph.idbs.contains(rId)) { // if just an edb predicate then return
+      debug("Returning EDB without any IDB rule: ", () => storageManager.ns(rId))
+      return storageManager.getEDBResult(rId)
+    }
+    if (!precedenceGraph.idbs.contains(rId)) {
+      throw new Error("Solving for rule without body")
+    }
 
-  override def solve(rId: Int): Set[Seq[Term]] = solveCompiled(rId)
+    // generate and transform tree
+    val transformedAST = transforms.foldLeft(ast: ASTNode)((t, pass) => pass.transform(t))
+    var toSolve = rId
+    if (tCtx.aliases.contains(rId)) {
+      toSolve = tCtx.aliases.getOrElse(rId, rId)
+      debug("aliased:", () => s"${storageManager.ns(rId)} => ${storageManager.ns(toSolve)}")
+      println("SM=" + storageManager.printer.toString())
+      if (storageManager.edbs.contains(toSolve) && !precedenceGraph.idbs.contains(toSolve)) { // if just an edb predicate then return
+        debug("Returning EDB as IDB aliased to EDB: ", () => storageManager.ns(toSolve))
+        return storageManager.getEDBResult(toSolve)
+      }
+    }
+
+    debug("AST: ", () => storageManager.printer.printAST(ast))
+    debug("TRANSFORMED: ", () => storageManager.printer.printAST(transformedAST))
+
+    given irCtx: InterpreterContext = InterpreterContext(storageManager, precedenceGraph, toSolve)
+    val irTree = createIR(transformedAST)
+
+    mode match {
+      case MODE.Compile =>
+        compileAndRun(irTree, irCtx)
+      case MODE.Interpret =>
+        solvePreInterpreted(irTree, irCtx)
+      case _ => throw new Exception(s"Mode $mode not yet implemented")
+    }
+  }
 }
