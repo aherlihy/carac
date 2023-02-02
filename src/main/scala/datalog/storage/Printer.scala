@@ -1,5 +1,6 @@
 package datalog.storage
 
+import datalog.dsl.Atom
 import datalog.execution.ast.*
 import datalog.execution.JoinIndexes
 import datalog.execution.ir.*
@@ -11,18 +12,13 @@ class Printer[S <: StorageManager](val s: S) {
   def factToString(r: s.EDB): String = {
     r.map(s => s.mkString("(", ", ", ")")).mkString("[", ", ", "]")
   }
-  def ruleToString(r: s.IDB): String = {
+  def ruleToString(r: mutable.ArrayBuffer[IndexedSeq[Atom]]): String = {
     r.map(s => if (s.isEmpty) "<empty>" else s.head.toString + s.drop(1).mkString(" :- ", ",", ""))
       .mkString("[", "; ", "]")
   }
   def edbToString(db: s.FactDatabase): String = {
     immutable.ListMap(db.toSeq.sortBy(_._1):_*)
       .map((k, v) => (s.ns(k), factToString(v)))
-      .mkString("[\n  ", ",\n  ", "]")
-  }
-  def idbToString(db: s.RuleDatabase): String = {
-    immutable.ListMap(db.toSeq.sortBy(_._1):_*)
-      .map((k, v) => (s.ns(k), ruleToString(v)))
       .mkString("[\n  ", ",\n  ", "]")
   }
   def naivePlanToString(keys: s.Table[JoinIndexes]): String = {
@@ -35,7 +31,9 @@ class Printer[S <: StorageManager](val s: S) {
             "JOIN" +
             k.varIndexes.map(v => v.mkString("$", "==$", "")).mkString("[", ",", "]") +
             k.constIndexes.map((k, v) => k + "==" + v).mkString("{", "&&", "}") +
-            k.deps.map(n => if(s.idbs.contains(n)) s.ns(n) + s"($n)" else "edbs-" + s.ns(n) + s"($n)").mkString("(", "*", ")") +
+            k.deps.map(n =>
+              if(k.edb) "edbs-" + s.ns(n) + s"($n)" else s.ns(n) + s"($n)"
+            ).mkString("(", "*", ")") +
             " )"
       ).mkString("", ", ", "") +
       " )"
@@ -61,7 +59,10 @@ class Printer[S <: StorageManager](val s: S) {
                     idx = i
                     "delta[known][" + s.ns(n) + s"($n)" + "]"
                   else
-                    if(s.idbs.contains(n)) "derived[known][" + s.ns(n) + s"($n)" + "]" else "edbs[" + s.ns(n) + s"($n)" + "]"
+                    if(k.edb)
+                      "edbs[" + s.ns(n) + s"($n)" + "]"
+                    else
+                      "derived[known][" + s.ns(n) + s"($n)" + "]"
                 }).mkString("(", "*", ")") +
                 " )"
             }).mkString("[ ", ", ", " ]") + " )"
@@ -76,10 +77,20 @@ class Printer[S <: StorageManager](val s: S) {
     }
     "+++++\n" +
       "EDB:" + edbToString(s.edbs) +
-      "\nIDB:" + idbToString(s.idbs) +
       "\nDERIVED:" + s.derivedDB.map(printHelperRelation).mkString("[", ", ", "]") +
       "\nDELTA:" + s.deltaDB.map(printHelperRelation).mkString("[", ", ", "]") +
       "\n+++++"
+  }
+
+  /**
+   * Print IDBs stored in the regular SN/N Execution Engines
+   * @param idbs
+   * @return
+   */
+  def printIDB(idbs: mutable.Map[RelationId, mutable.ArrayBuffer[IndexedSeq[Atom]]]): String = {
+    immutable.ListMap(idbs.toSeq.sortBy(_._1):_*)
+      .map((k, v) => (s.ns(k), ruleToString(v)))
+      .mkString("[\n  ", ",\n  ", "]")
   }
 
   def printAST(node: ASTNode): String = {
@@ -110,12 +121,10 @@ class Printer[S <: StorageManager](val s: S) {
       case ClearOp() => s"CLEAR"
       case ScanEDBOp(srcRel) => s"SCAN(edbs[${ctx.storageManager.ns(srcRel)}])"
       case ScanOp(srcRel, db, knowledge) =>
-//        val name = if (knowledge == known) "known" else "new"
         s"SCAN[$db.$knowledge](${ctx.storageManager.ns(srcRel)})"
       case JoinOp(subOps, keys) => s"JOIN${keys.varToString()}${keys.constToString()}${subOps.map(s => printIR(s, ident+1)).mkString("(\n", ",\n", ")")}"
       case ProjectOp(subOp, keys) => s"PROJECT${keys.projToString()}(\n${printIR(subOp, ident+1)})"
       case InsertOp(rId, db, knowledge, subOp, clear) =>
-//        val name = if (knowledge == known) "known" else "new"
         s"INSERT INTO $db.$knowledge.${ctx.storageManager.ns(rId)}\n${printIR(subOp, ident+1)}"
       case UnionOp(ops) => s"UNION${ops.map(o => printIR(o, ident+1)).mkString("(\n", ",\n", ")")}"
       case DiffOp(lhs, rhs) => s"DIFF\n${printIR(lhs, ident+1)}\n-${printIR(rhs, ident+1)}"

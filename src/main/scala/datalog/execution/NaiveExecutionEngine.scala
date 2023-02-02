@@ -12,6 +12,10 @@ class NaiveExecutionEngine(val storageManager: StorageManager) extends Execution
   val precedenceGraph = new PrecedenceGraph(using storageManager.ns)
   val prebuiltOpKeys: mutable.Map[RelationId, ArrayBuffer[JoinIndexes]] = mutable.Map[RelationId, mutable.ArrayBuffer[JoinIndexes]]()
 
+  /* internal representation of IDBs. Previously used the StorageEngine types to represent IDBs but couldn't think of a
+     good enough reason to deal with more path-dependent types */
+  val idbs: mutable.Map[RelationId, mutable.ArrayBuffer[IndexedSeq[Atom]]] = mutable.Map()
+
   def initRelation(rId: RelationId, name: String): Unit = {
     storageManager.ns(rId) = name
     storageManager.initRelation(rId, name)
@@ -21,7 +25,7 @@ class NaiveExecutionEngine(val storageManager: StorageManager) extends Execution
     if (storageManager.knownDbId == -1)
       throw new Exception("Solve() has not yet been called")
     val edbs = storageManager.getEDBResult(rId)
-    if (storageManager.idbs.contains(rId))
+    if (idbs.contains(rId))
       edbs ++ storageManager.getKnownIDBResult(rId)
     else
       edbs
@@ -33,7 +37,7 @@ class NaiveExecutionEngine(val storageManager: StorageManager) extends Execution
   def insertIDB(rId: RelationId, rule: Seq[Atom]): Unit = {
     precedenceGraph.addNode(rule)
     precedenceGraph.idbs.addOne(rId)
-    storageManager.insertIDB(rId, rule)
+    idbs.getOrElseUpdate(rId, mutable.ArrayBuffer[IndexedSeq[Atom]]()).addOne(rule.toIndexedSeq)
     prebuiltOpKeys.getOrElseUpdate(rId, mutable.ArrayBuffer[JoinIndexes]()).addOne(getOperatorKey(rule))
   }
 
@@ -60,11 +64,11 @@ class NaiveExecutionEngine(val storageManager: StorageManager) extends Execution
   }
 
   def solve(toSolve: RelationId, mode: MODE): Set[Seq[Term]] = {
-    storageManager.verifyEDBs()
-    if (storageManager.edbs.contains(toSolve) && !storageManager.idbs.contains(toSolve)) { // if just an edb predicate then return
+    storageManager.verifyEDBs(idbs.keys.to(mutable.Set))
+    if (storageManager.edbs.contains(toSolve) && !idbs.contains(toSolve)) { // if just an edb predicate then return
       return storageManager.getEDBResult(toSolve)
     }
-    if (!storageManager.idbs.contains(toSolve)) {
+    if (!idbs.contains(toSolve)) {
       throw new Error("Solving for rule without body")
     }
     val relations = precedenceGraph.topSort()

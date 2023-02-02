@@ -34,11 +34,11 @@ class SemiNaiveExecutionEngine(override val storageManager: StorageManager) exte
   }
 
   override def solve(rId: RelationId, mode: MODE): Set[Seq[Term]] = {
-    storageManager.verifyEDBs()
-    if (storageManager.edbs.contains(rId) && !storageManager.idbs.contains(rId)) { // if just an edb predicate then return
+    storageManager.verifyEDBs(idbs.keys.to(mutable.Set))
+    if (storageManager.edbs.contains(rId) && !idbs.contains(rId)) { // if just an edb predicate then return
       return storageManager.getEDBResult(rId)
     }
-    if (!storageManager.idbs.contains(rId)) {
+    if (!idbs.contains(rId)) {
       throw new Error("Solving for rule without body")
     }
     // TODO: if a IDB predicate without vars, then solve all and test contains result?

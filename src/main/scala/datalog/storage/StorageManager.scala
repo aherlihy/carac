@@ -52,12 +52,10 @@ trait StorageManager(val ns: NS) {
   type IDB = Relation[StorageAtom]
   type Database[K, V] <: mutable.Map[K, V]
   type FactDatabase <: Database[RelationId, EDB] & mutable.Map[RelationId, EDB]
-  type RuleDatabase <: Database[RelationId, IDB] & mutable.Map[RelationId, IDB]
 
   val derivedDB: Database[KnowledgeId, FactDatabase]
   val deltaDB: Database[KnowledgeId, FactDatabase]
   val edbs: FactDatabase
-  val idbs: RuleDatabase
   var knownDbId: KnowledgeId
   var newDbId: KnowledgeId
 
@@ -67,9 +65,7 @@ trait StorageManager(val ns: NS) {
   def initEvaluation(): Unit
 
   def insertEDB(rule: Atom): Unit
-  def insertIDB(rId: RelationId, rule: Seq[Atom]): Unit
 
-  def idb(rId: RelationId): IDB
   def edb(rId: RelationId): EDB
 
   def getKnownDerivedDB(rId: RelationId, orElse: Option[EDB] = None): EDB
@@ -91,7 +87,6 @@ trait StorageManager(val ns: NS) {
   def compareDerivedDBs(): Boolean
 
   def verifyEDBs(idbList: mutable.Set[RelationId]): Unit
-  def verifyEDBs(): Unit
 
   def joinHelper(inputs: Seq[EDB], k: JoinIndexes): EDB
   def projectHelper(input: EDB, k: JoinIndexes): EDB

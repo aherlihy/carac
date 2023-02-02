@@ -21,15 +21,11 @@ abstract class SimpleStorageManager(override val ns: NS) extends StorageManager(
 
   type FactDatabase = Database[RelationId, EDB]
   def FactDatabase(e: (RelationId, EDB)*) = mutable.Map[RelationId, EDB](e: _*)
-  type RuleDatabase = Database[RelationId, IDB]
-  def RuleDatabase(e: (RelationId, IDB)*) = mutable.Map[RelationId, IDB](e: _*)
 
   def EDB(c: Row[StorageTerm]*) = Relation[StorageTerm](c: _*)
-  def IDB(c: Row[StorageAtom]*) = Relation[StorageAtom](c: _*)
 
   // "database", i.e. relationID => Relation
   val edbs: FactDatabase = FactDatabase()
-  val idbs: RuleDatabase = RuleDatabase()
   var knownDbId: KnowledgeId = -1
   var newDbId: KnowledgeId = -1
 
@@ -55,10 +51,6 @@ abstract class SimpleStorageManager(override val ns: NS) extends StorageManager(
     derivedDB.addOne(dbId, FactDatabase())
     deltaDB.addOne(dbId, FactDatabase())
 
-    idbs.foreach((k, relation) => { // TODO: is ignored in staged, mb remove
-      derivedDB(dbId)(k) = EDB()
-      deltaDB(dbId)(k) = EDB()
-    })
     edbs.foreach((k, relation) => {
       deltaDB(dbId)(k) = EDB()
     }) // Delta-EDB is just empty sets
@@ -68,10 +60,6 @@ abstract class SimpleStorageManager(override val ns: NS) extends StorageManager(
     derivedDB.addOne(dbId, FactDatabase())
     deltaDB.addOne(dbId, FactDatabase())
 
-    idbs.foreach((k, relation) => { // TODO: is ignored in staged, mb remove
-      derivedDB(dbId)(k) = EDB()
-      deltaDB(dbId)(k) = EDB()
-    })
     edbs.foreach((k, relation) => {
       deltaDB(dbId)(k) = EDB()
     }) // Delta-EDB is just empty sets
@@ -85,13 +73,7 @@ abstract class SimpleStorageManager(override val ns: NS) extends StorageManager(
       edbs(rule.rId) = EDB()
       edbs(rule.rId).addOne(rule.terms)
   }
-  override def insertIDB(rId: RelationId, rule: Seq[Atom]): Unit = {
-    val row = Row(rule.map(a => StorageAtom(a.rId, a.terms))*)
-    idbs.getOrElseUpdate(rId, IDB()).addOne(row)
-    // TODO: could do this in the topsort instead of as inserted
-  }
 
-  def idb(rId: RelationId): IDB = idbs(rId)
   def edb(rId: RelationId): EDB = edbs(rId)
 
   def getHelper(db: FactDatabase, rId: RelationId, orElse: Option[EDB], whichDb: DB, knowledgeId: KNOWLEDGE): EDB =
@@ -165,12 +147,6 @@ abstract class SimpleStorageManager(override val ns: NS) extends StorageManager(
   def compareDerivedDBs(): Boolean =
     derivedDB(knownDbId) == derivedDB(newDbId)
 
-  def verifyEDBs(): Unit = {
-    ns.rIds().foreach(rId =>
-      if (!edbs.contains(rId) && !idbs.contains(rId)) // treat undefined relations as empty edbs
-        edbs(rId) = EDB()
-    )
-  }
   def verifyEDBs(idbList: mutable.Set[RelationId]): Unit = {
     ns.rIds().foreach(rId =>
       if (!edbs.contains(rId) && !idbList.contains(rId)) // treat undefined relations as empty edbs
