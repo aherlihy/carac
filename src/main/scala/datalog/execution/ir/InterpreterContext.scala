@@ -6,7 +6,7 @@ import datalog.tools.Debug.debug
 
 class InterpreterContext(val storageManager: StorageManager, val precedenceGraph: PrecedenceGraph, val toSolve: Int) {
   storageManager.initEvaluation()
-  val relations: Seq[RelationId] = precedenceGraph.topSort()
+  val sortedRelations: Seq[RelationId] = precedenceGraph.topSort()
   var count: Int = 0
 }
 

@@ -10,7 +10,7 @@ class IRTreeGenerator(using val ctx: InterpreterContext) {
   def naiveEval(rId: RelationId, ruleMap: mutable.Map[RelationId, ASTNode]): IROp =
     SequenceOp(
       //      DebugNode("in eval:", () => s"rId=${ctx.storageManager.ns(rId)} relations=${ctx.relations.map(r => ctx.storageManager.ns(r)).mkString("[", ", ", "]")}  incr=${ctx.newDbId} src=${ctx.knownDbId}") +:
-      ctx.relations
+      ctx.sortedRelations
         .filter(ruleMap.contains)
         .map(r =>
           InsertOp(r, DB.Derived, KNOWLEDGE.New, naiveEvalRule(ruleMap(r)))
@@ -21,7 +21,7 @@ class IRTreeGenerator(using val ctx: InterpreterContext) {
     SequenceOp(
       //      DebugNode("initial state ", () => s"@ ${ctx.count} ${ctx.storageManager.printer.toString()}") +:
       //      DebugNode("evalSN for ", () => ctx.storageManager.ns(rId)) +:
-      ctx.relations
+      ctx.sortedRelations
         .filter(ruleMap.contains)
         .map(r =>
           val prev = ScanOp(r, DB.Derived, KNOWLEDGE.Known)
@@ -128,7 +128,7 @@ class IRTreeGenerator(using val ctx: InterpreterContext) {
       case ProgramNode(ruleMap) =>
         ProgramOp(SequenceOp(Seq(
           SequenceOp(
-            ctx.relations
+            ctx.sortedRelations
               .filter(ruleMap.contains)
               .map(r =>
                 SequenceOp(Seq(

@@ -32,7 +32,7 @@ def run(program: Program): Unit = {
   edge("b", "c") :- ()
   edge("c", "d") :- ()
 
-  println("RES=" + oneHop.solve())
+  println("RES=" + twoHops.solve())
 }
 
 def reversible(program: Program, engine: ExecutionEngine): Unit = {
@@ -66,8 +66,8 @@ def reversible(program: Program, engine: ExecutionEngine): Unit = {
   run(program)
 //  reversible(program, engine)
 
-  given engine2: ExecutionEngine = new NaiveExecutionEngine(new CollectionsStorageManager())
-  val program2 = Program(engine2)
-  println("seminaive")
-  run(program2)
+//  given engine2: ExecutionEngine = new NaiveExecutionEngine(new CollectionsStorageManager())
+//  val program2 = Program(engine2)
+//  println("seminaive")
+//  run(program2)
 }

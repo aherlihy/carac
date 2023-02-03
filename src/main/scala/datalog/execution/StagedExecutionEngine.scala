@@ -360,18 +360,18 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
     if (tCtx.aliases.contains(rId)) {
       toSolve = tCtx.aliases.getOrElse(rId, rId)
       debug("aliased:", () => s"${storageManager.ns(rId)} => ${storageManager.ns(toSolve)}")
-      println("SM=" + storageManager.printer.toString())
       if (storageManager.edbs.contains(toSolve) && !precedenceGraph.idbs.contains(toSolve)) { // if just an edb predicate then return
         debug("Returning EDB as IDB aliased to EDB: ", () => storageManager.ns(toSolve))
         return storageManager.getEDBResult(toSolve)
       }
     }
 
+    given irCtx: InterpreterContext = InterpreterContext(storageManager, precedenceGraph, toSolve)
     debug("AST: ", () => storageManager.printer.printAST(ast))
     debug("TRANSFORMED: ", () => storageManager.printer.printAST(transformedAST))
-
-    given irCtx: InterpreterContext = InterpreterContext(storageManager, precedenceGraph, toSolve)
+    debug("PG: ", () => irCtx.sortedRelations.toString())
     val irTree = createIR(transformedAST)
+    debug("IRTree: ", () => storageManager.printer.printIR(irTree))
 
     mode match {
       case MODE.Compile =>

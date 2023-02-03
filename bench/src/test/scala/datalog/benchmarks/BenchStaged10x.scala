@@ -62,8 +62,8 @@ object initialize2 {
 
 inline val warmup_iterations = 10
 inline val iterations = 5
-inline val warmup_time = 3
-inline val time = 3
+inline val warmup_time = 10
+inline val time = 10
 inline val batchSize = 1
 inline val fork = 3
 

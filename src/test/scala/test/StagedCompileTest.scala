@@ -49,7 +49,6 @@ class StagedCompileTest extends munit.FunSuite {
         val res: Expr[CollectionsStorageManager => Any] =
           '{ (stagedSm: CollectionsStorageManager) => ${engine.compileIR[collection.mutable.ArrayBuffer[IndexedSeq[Term]]](miniprog)(using 'stagedSm)} }
         val strRes = res.show
-        println("STR RES=" + strRes)
         check.foldLeft(strRes)((generatedString, op) =>
           op(generatedString)
         )
