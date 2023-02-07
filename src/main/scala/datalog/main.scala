@@ -4,12 +4,12 @@ import datalog.execution.{ExecutionEngine, NaiveExecutionEngine, NaiveStagedExec
 import datalog.dsl.{Constant, Program, __}
 import datalog.execution.ast.transform.CopyEliminationPass
 import datalog.execution.ir.InterpreterContext
-import datalog.storage.{CollectionsStorageManager,  NS, RelationalStorageManager, CollectionsStorageManager2}
+import datalog.storage.{CollectionsStorageManager,  NS, RelationalStorageManager, CollectionsStorageManager2, CollectionsStorageManager3}
 
 import scala.util.Random
 import scala.collection.mutable
 
-def run(program: Program): Unit = {
+def tc(program: Program): Unit = {
   val edge = program.relation[Constant]("edge")
   val path = program.relation[Constant]("path")
   val oneHop = program.relation[Constant]("oneHop")
@@ -134,21 +134,68 @@ def isEqual(program: Program): Unit = {
   println(s"RES LEN=${res.size}; res=$res")
 }
 
+def xJoin5(program: Program): Unit = {
+  val edge = program.relation[Constant]("edge")
+  val path = program.relation[Constant]("path")
+  val hops1 = program.relation[Constant]("hops1")
+  val hops2_join = program.relation[Constant]("hops2_join")
+  val hops3_join = program.relation[Constant]("hops3_join")
+  val hops4_join = program.relation[Constant]("hops4_join")
+  val hops5_join = program.relation[Constant]("hops5_join")
+  val hops6_join = program.relation[Constant]("hops6_join")
+  val hops7_join = program.relation[Constant]("hops7_join")
+  val hops8_join = program.relation[Constant]("hops8_join")
+  val hops9_join = program.relation[Constant]("hops9_join")
+  val hops10_join = program.relation[Constant]("hops10_join")
+
+  val x, y, z, w, q = program.variable()
+  val a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11 = program.variable()
+
+  path(x, y) :- edge(x, y)
+  path(x, z) :- (edge(x, y), path(y, z))
+
+  hops1(x, y) :- edge(x, y)
+  hops2_join(a1, a3) :-   (hops1(a1, a2), hops1(a2, a3))
+  hops3_join(a1, a4) :-   (hops1(a1, a2), hops1(a2, a3), hops1(a3, a4))
+  hops4_join(a1, a5) :-   (hops1(a1, a2), hops1(a2, a3), hops1(a3, a4), hops1(a4, a5))
+  hops5_join(a1, a6) :-   (hops1(a1, a2), hops1(a2, a3), hops1(a3, a4), hops1(a4, a5), hops1(a5, a6))
+  hops6_join(a1, a7) :-   (hops1(a1, a2), hops1(a2, a3), hops1(a3, a4), hops1(a4, a5), hops1(a5, a6), hops1(a6, a7))
+  hops7_join(a1, a8) :-   (hops1(a1, a2), hops1(a2, a3), hops1(a3, a4), hops1(a4, a5), hops1(a5, a6), hops1(a6, a7), hops1(a7, a8))
+  hops8_join(a1, a9) :-   (hops1(a1, a2), hops1(a2, a3), hops1(a3, a4), hops1(a4, a5), hops1(a5, a6), hops1(a6, a7), hops1(a7, a8), hops1(a8, a9))
+  hops9_join(a1, a10) :-  (hops1(a1, a2), hops1(a2, a3), hops1(a3, a4), hops1(a4, a5), hops1(a5, a6), hops1(a6, a7), hops1(a7, a8), hops1(a8, a9), hops1(a9, a10))
+  hops10_join(a1, a11) :- (hops1(a1, a2), hops1(a2, a3), hops1(a3, a4), hops1(a4, a5), hops1(a5, a6), hops1(a6, a7), hops1(a7, a8), hops1(a8, a9), hops1(a9, a10), hops1(a10, a11))
+
+
+  for i <- 0 until 200 do
+    edge(
+      Random.alphanumeric.dropWhile(_.isDigit).dropWhile(_.isUpper).head.toString,
+      Random.alphanumeric.dropWhile(_.isDigit).dropWhile(_.isUpper).head.toString
+    ) :- ()
+  println("RES=" + hops10_join.solve().size)
+}
+
 @main def main = {
   //  val engine = new SemiNaiveStagedExecutionEngine(new CollectionsStorageManager())
 //  val program = Program(engine)
 //  println("staged")
 //  run(program)
 //  reversible(program, engine)
+  val run = tc
 
   given engine1: ExecutionEngine = new SemiNaiveExecutionEngine(new CollectionsStorageManager())
   val program1 = Program(engine1)
   println("seminaive OLD")
-  isEqual(program1)
+  run(program1)
   println("\n\n_______________________\n\n")
 
   given engine2: ExecutionEngine = new SemiNaiveExecutionEngine(new CollectionsStorageManager2())
   val program2 = Program(engine2)
   println("seminaive")
-  isEqual(program2)
+  run(program2)
+  println("\n\n========================\n\n")
+
+  given engine3: ExecutionEngine = new SemiNaiveExecutionEngine(new CollectionsStorageManager3())
+  val program3 = Program(engine3)
+  println("seminaive")
+  run(program3)
 }

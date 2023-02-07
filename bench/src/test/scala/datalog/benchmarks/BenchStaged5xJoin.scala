@@ -2,7 +2,7 @@ package datalog.benchmarks
 
 import datalog.dsl.{Constant, Program, Relation, Term, MODE}
 import datalog.execution.{ExecutionEngine, SemiNaiveExecutionEngine, SemiNaiveStagedExecutionEngine, ir}
-import datalog.storage.CollectionsStorageManager
+import datalog.storage.{CollectionsStorageManager, CollectionsStorageManager2, CollectionsStorageManager3}
 import org.openjdk.jmh.annotations.{Benchmark, BenchmarkMode, Fork, Level, Measurement, Mode, Scope, Setup, State, Warmup}
 import org.openjdk.jmh.infra.Blackhole
 
@@ -191,13 +191,57 @@ class BenchStaged5xJoin_run_only_interpreted {
 @Measurement(iterations = iterations, time = time, timeUnit = TimeUnit.SECONDS, batchSize = batchSize)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
-class BenchStaged5xJoin_old {
+class BenchStaged5xJoinCollections {
   var engine: SemiNaiveExecutionEngine = null
   var program: Program = null
   var toSolve: Relation[Constant] = null
   @Setup(Level.Invocation)
   def setup(): Unit = {
     engine = SemiNaiveExecutionEngine(CollectionsStorageManager())
+    program = Program(engine)
+    toSolve = initialize.pretest(program)
+  }
+  // measure cost of old solve
+  @Benchmark def run(blackhole: Blackhole): Unit = {
+    blackhole.consume(
+      toSolve.solve()
+    )
+  }
+}
+@Fork(fork) // # of jvms that it will use
+@Warmup(iterations = warmup_iterations, time = warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = batchSize)
+@Measurement(iterations = iterations, time = time, timeUnit = TimeUnit.SECONDS, batchSize = batchSize)
+@State(Scope.Thread)
+@BenchmarkMode(Array(Mode.AverageTime))
+class BenchStaged5xJoinCollections2 {
+  var engine: SemiNaiveExecutionEngine = null
+  var program: Program = null
+  var toSolve: Relation[Constant] = null
+  @Setup(Level.Invocation)
+  def setup(): Unit = {
+    engine = SemiNaiveExecutionEngine(CollectionsStorageManager2())
+    program = Program(engine)
+    toSolve = initialize.pretest(program)
+  }
+  // measure cost of old solve
+  @Benchmark def run(blackhole: Blackhole): Unit = {
+    blackhole.consume(
+      toSolve.solve()
+    )
+  }
+}
+@Fork(fork) // # of jvms that it will use
+@Warmup(iterations = warmup_iterations, time = warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = batchSize)
+@Measurement(iterations = iterations, time = time, timeUnit = TimeUnit.SECONDS, batchSize = batchSize)
+@State(Scope.Thread)
+@BenchmarkMode(Array(Mode.AverageTime))
+class BenchStaged5xJoinCollections3 {
+  var engine: SemiNaiveExecutionEngine = null
+  var program: Program = null
+  var toSolve: Relation[Constant] = null
+  @Setup(Level.Invocation)
+  def setup(): Unit = {
+    engine = SemiNaiveExecutionEngine(CollectionsStorageManager3())
     program = Program(engine)
     toSolve = initialize.pretest(program)
   }

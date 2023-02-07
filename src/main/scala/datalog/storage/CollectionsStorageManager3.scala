@@ -4,19 +4,10 @@ import datalog.dsl.{Atom, Constant, Variable}
 import datalog.execution.JoinIndexes
 import datalog.tools.Debug.debug
 
-import scala.collection.{immutable, mutable, View}
+import scala.collection.{View, immutable, mutable}
 
-class CollectionsStorageManager2(ns: NS = new NS()) extends SimpleStorageManager(ns) {
-  override def projectHelper(input: CollectionsStorageManager2.this.EDB, k: JoinIndexes): CollectionsStorageManager2.this.EDB = {
-    input.map(t =>
-      k.projIndexes.flatMap((typ, idx) =>
-        typ match {
-          case "v" => t.lift(idx.asInstanceOf[Int])
-          case "c" => Some(idx)
-          case _ => throw new Exception("Internal error: projecting something that is not a constant nor a variable")
-        }).toIndexedSeq
-    )
-  }
+class CollectionsStorageManager3(ns: NS = new NS()) extends SimpleStorageManager(ns) {
+  override def projectHelper(input: CollectionsStorageManager3.this.EDB, k: JoinIndexes): CollectionsStorageManager3.this.EDB = input
   // to cut down on size, see if you can filter out elements from the outer loop before entering inner loop
   inline def prefilter(consts: Map[Int, Constant], skip: Int, row: Row[StorageTerm]): Boolean = {
     consts.isEmpty || consts.forall((idx, const) => // for each filter // TODO: make sure out of range fails
@@ -38,12 +29,20 @@ class CollectionsStorageManager2(ns: NS = new NS()) extends SimpleStorageManager
 
   def joinHelper(inputs: Seq[EDB], k: JoinIndexes): EDB = {
     if (inputs.length == 1) // just filter
-      inputs.head.filter(e =>
-        val filteredC = k.constIndexes.filter((ind, _) => ind < e.size)
-        prefilter(filteredC, 0, e) && filteredC.size == k.constIndexes.size
-      )
+      inputs.view.head
+        .filter(e =>
+          val filteredC = k.constIndexes.filter((ind, _) => ind < e.size)
+            prefilter(filteredC, 0, e) && filteredC.size == k.constIndexes.size)
+        .map(t =>
+          k.projIndexes.flatMap((typ, idx) =>
+            typ match {
+              case "v" => t.lift(idx.asInstanceOf[Int])
+              case "c" => Some(idx)
+              case _ => throw new Exception("Internal error: projecting something that is not a constant nor a variable")
+            }).toIndexedSeq)
+        .to(mutable.ArrayBuffer)
     else
-      inputs
+      inputs.view
         .map(i => i.view)
         .reduceLeft((outer: View[Row[StorageTerm]], inner: View[Row[StorageTerm]]) =>
           outer
@@ -58,8 +57,15 @@ class CollectionsStorageManager2(ns: NS = new NS()) extends SimpleStorageManager
                 .map(innerTuple => outerTuple ++ innerTuple))
         )
         .filter(edb => k.constIndexes.filter((i, _) => i >= edb.size).isEmpty)
+        .map(t =>
+          k.projIndexes.flatMap((typ, idx) =>
+            typ match {
+              case "v" => t.lift(idx.asInstanceOf[Int])
+              case "c" => Some(idx)
+              case _ => throw new Exception("Internal error: projecting something that is not a constant nor a variable")
+            }).toIndexedSeq
+        )
         .to(mutable.ArrayBuffer)
-    //        .map(i => i.to(mutable.ArrayBuffer[StorageTerm]))
   }
 
   def SPJU(rId: RelationId, keys: mutable.ArrayBuffer[JoinIndexes]): EDB = {
@@ -70,8 +76,7 @@ class CollectionsStorageManager2(ns: NS = new NS()) extends SimpleStorageManager
       else
         var idx = -1 // if dep is featured more than once, only us delta once, but at a different pos each time
           k.deps.flatMap(d => {
-        var found = false // TODO: perhaps need entry in derived/delta for each atom instead of each relation?
-          projectHelper(
+            var found = false // TODO: perhaps need entry in derived/delta for each atom instead of each relation?
             joinHelper(
               k.deps.zipWithIndex.map((r, i) =>
                 if (r == d && !found && i > idx) {
@@ -82,7 +87,7 @@ class CollectionsStorageManager2(ns: NS = new NS()) extends SimpleStorageManager
                 else {
                   derivedDB(knownDbId).getOrElse(r, edbs.getOrElse(r, EDB())) // TODO: warn if EDB is empty? Right now can't tell the difference between undeclared and empty EDB
                 }
-              ), k), k)
+              ), k)
       }).toSet
     )
   }
@@ -93,10 +98,9 @@ class CollectionsStorageManager2(ns: NS = new NS()) extends SimpleStorageManager
       if (k.edb)
         edbs.getOrElse(rId, EDB())
       else
-          projectHelper(
-            joinHelper(
-              k.deps.map(r => derivedDB(knownDbId).getOrElse(r, edbs.getOrElse(r, EDB()))), k  // TODO: warn if EDB is empty? Right now can't tell the difference between undeclared and empty EDB)
-            ), k).toSet
+        joinHelper(
+          k.deps.map(r => derivedDB(knownDbId).getOrElse(r, edbs.getOrElse(r, EDB()))), k  // TODO: warn if EDB is empty? Right now can't tell the difference between undeclared and empty EDB)
+        ).toSet
     })
   }
 }
