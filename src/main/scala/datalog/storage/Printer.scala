@@ -30,9 +30,9 @@ class Printer[S <: StorageManager](val s: S) {
           "Project" + k.projIndexes.map((typ, v) => f"$typ$v").mkString("[", " ", "]") + "( " +
             "JOIN" +
             k.varIndexes.map(v => v.mkString("$", "==$", "")).mkString("[", ",", "]") +
-            k.constIndexes.map((k, v) => k + "==" + v).mkString("{", "&&", "}") +
+            k.constIndexes.map((k, v) => "$" + k + "==" + (if (v.isInstanceOf[String]) s"\"$v\"" else "v")).mkString("{", "&&", "}") +
             k.deps.map(n =>
-              if(k.edb) "edbs-" + s.ns(n) + s"($n)" else s.ns(n) + s"($n)"
+              if(k.edb) "edbs-" + s.ns(n)  else s.ns(n)
             ).mkString("(", "*", ")") +
             " )"
       ).mkString("", ", ", "") +
