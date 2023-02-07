@@ -20,6 +20,8 @@ abstract class DLBenchmark {
       case "SemiNaiveRelational" => Program(SemiNaiveExecutionEngine(RelationalStorageManager()))
       case "NaiveRelational" => Program(NaiveExecutionEngine(RelationalStorageManager()))
       case "SemiNaiveCollections" => Program(SemiNaiveExecutionEngine(CollectionsStorageManager()))
+      case "SemiNaiveCollections2" => Program(SemiNaiveExecutionEngine(CollectionsStorageManager2()))
+      case "SemiNaiveCollections3" => Program(SemiNaiveExecutionEngine(CollectionsStorageManager3()))
       case "NaiveCollections" => Program(NaiveExecutionEngine(CollectionsStorageManager()))
       case "NaiveStagedCollections" => Program(NaiveStagedExecutionEngine(CollectionsStorageManager()))
       case "SemiNaiveStagedCollections" => Program(SemiNaiveStagedExecutionEngine(CollectionsStorageManager()))
