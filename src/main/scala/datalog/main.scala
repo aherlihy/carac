@@ -145,8 +145,8 @@ def multiJoin(program: Program): Unit = {
   val hops6_join = program.relation[Constant]("hops6_join")
   val hops7_join = program.relation[Constant]("hops7_join")
   val hops8_join = program.relation[Constant]("hops8_join")
-  val hops9_join = program.relation[Constant]("hops9_join")
-  val hops10_join = program.relation[Constant]("hops10_join")
+//  val hops9_join = program.relation[Constant]("hops9_join")
+//  val hops10_join = program.relation[Constant]("hops10_join")
 
   val x, y, z, w, q = program.variable()
   val a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11 = program.variable()
@@ -162,8 +162,8 @@ def multiJoin(program: Program): Unit = {
   hops6_join(a1, a7) :-   (hops1(a1, a2), hops1(a2, a3), hops1(a3, a4), hops1(a4, a5), hops1(a5, a6), hops1(a6, a7))
   hops7_join(a1, a8) :-   (hops1(a1, a2), hops1(a2, a3), hops1(a3, a4), hops1(a4, a5), hops1(a5, a6), hops1(a6, a7), hops1(a7, a8))
   hops8_join(a1, a9) :-   (hops1(a1, a2), hops1(a2, a3), hops1(a3, a4), hops1(a4, a5), hops1(a5, a6), hops1(a6, a7), hops1(a7, a8), hops1(a8, a9))
-  hops9_join(a1, a10) :-  (hops1(a1, a2), hops1(a2, a3), hops1(a3, a4), hops1(a4, a5), hops1(a5, a6), hops1(a6, a7), hops1(a7, a8), hops1(a8, a9), hops1(a9, a10))
-  hops10_join(a1, a11) :- (hops1(a1, a2), hops1(a2, a3), hops1(a3, a4), hops1(a4, a5), hops1(a5, a6), hops1(a6, a7), hops1(a7, a8), hops1(a8, a9), hops1(a9, a10), hops1(a10, a11))
+//  hops9_join(a1, a10) :-  (hops1(a1, a2), hops1(a2, a3), hops1(a3, a4), hops1(a4, a5), hops1(a5, a6), hops1(a6, a7), hops1(a7, a8), hops1(a8, a9), hops1(a9, a10))
+//  hops10_join(a1, a11) :- (hops1(a1, a2), hops1(a2, a3), hops1(a3, a4), hops1(a4, a5), hops1(a5, a6), hops1(a6, a7), hops1(a7, a8), hops1(a8, a9), hops1(a9, a10), hops1(a10, a11))
 
 
   for i <- 0 until 200 do
@@ -171,7 +171,7 @@ def multiJoin(program: Program): Unit = {
       Random.alphanumeric.dropWhile(_.isDigit).dropWhile(_.isUpper).head.toString,
       Random.alphanumeric.dropWhile(_.isDigit).dropWhile(_.isUpper).head.toString
     ) :- ()
-  println("RES=" + hops10_join.solve().size)
+  println("RES=" + hops8_join.solve().size)
 }
 
 @main def main = {
@@ -188,10 +188,10 @@ def multiJoin(program: Program): Unit = {
   multiJoin(program1)
   println("\n\n_______________________\n\n")
 
-  given engine2: ExecutionEngine = new SemiNaiveExecutionEngine(new CollectionsStorageManager(fuse = true))
-
-  val program2 = Program(engine2)
-  println("NOT-FUSED")
-  multiJoin(program2)
-  println("\n\n_______________________\n\n")
+//  given engine2: ExecutionEngine = new SemiNaiveExecutionEngine(new CollectionsStorageManager(fuse = true))
+//
+//  val program2 = Program(engine2)
+//  println("NOT-FUSED")
+//  multiJoin(program2)
+//  println("\n\n_______________________\n\n")
 }
