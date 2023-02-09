@@ -182,9 +182,16 @@ def multiJoin(program: Program): Unit = {
 //  reversible(program, engine)
 //  val run = multiJoin
 
-  given engine1: ExecutionEngine = new SemiNaiveExecutionEngine(new CollectionsStorageManager())
+  given engine1: ExecutionEngine = new SemiNaiveExecutionEngine(new CollectionsStorageManager(fuse = true))
   val program1 = Program(engine1)
-  println("seminaive OLD")
+  println("FUSED")
   multiJoin(program1)
+  println("\n\n_______________________\n\n")
+
+  given engine2: ExecutionEngine = new SemiNaiveExecutionEngine(new CollectionsStorageManager(fuse = true))
+
+  val program2 = Program(engine2)
+  println("NOT-FUSED")
+  multiJoin(program2)
   println("\n\n_______________________\n\n")
 }
