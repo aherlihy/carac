@@ -4,7 +4,7 @@ import datalog.execution.{ExecutionEngine, NaiveExecutionEngine, NaiveStagedExec
 import datalog.dsl.{Constant, Program, __}
 import datalog.execution.ast.transform.CopyEliminationPass
 import datalog.execution.ir.InterpreterContext
-import datalog.storage.{CollectionsStorageManager,  NS, RelationalStorageManager, CollectionsStorageManager2, CollectionsStorageManager3}
+import datalog.storage.{CollectionsStorageManager,  NS, RelationalStorageManager}
 
 import scala.util.Random
 import scala.collection.mutable
@@ -134,7 +134,7 @@ def isEqual(program: Program): Unit = {
   println(s"RES LEN=${res.size}; res=$res")
 }
 
-def xJoin5(program: Program): Unit = {
+def multiJoin(program: Program): Unit = {
   val edge = program.relation[Constant]("edge")
   val path = program.relation[Constant]("path")
   val hops1 = program.relation[Constant]("hops1")
@@ -180,22 +180,11 @@ def xJoin5(program: Program): Unit = {
 //  println("staged")
 //  run(program)
 //  reversible(program, engine)
-  val run = tc
+//  val run = multiJoin
 
   given engine1: ExecutionEngine = new SemiNaiveExecutionEngine(new CollectionsStorageManager())
   val program1 = Program(engine1)
   println("seminaive OLD")
-  run(program1)
+  multiJoin(program1)
   println("\n\n_______________________\n\n")
-
-  given engine2: ExecutionEngine = new SemiNaiveExecutionEngine(new CollectionsStorageManager2())
-  val program2 = Program(engine2)
-  println("seminaive")
-  run(program2)
-  println("\n\n========================\n\n")
-
-  given engine3: ExecutionEngine = new SemiNaiveExecutionEngine(new CollectionsStorageManager3())
-  val program3 = Program(engine3)
-  println("seminaive")
-  run(program3)
 }

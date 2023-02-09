@@ -30,6 +30,13 @@ class SemiNaiveExecutionEngine(override val storageManager: StorageManager) exte
         storageManager.getDerivedDB(r, knownDbId)
       ))
       storageManager.resetDerived(r, newDbId, storageManager.getDeltaDB(r, newDbId), storageManager.getDerivedDB(r, knownDbId)) // set derived[new] to derived[known]+delta[new] */
+      val mb = 1024 * 1024
+      val runtime = Runtime.getRuntime
+      println(s"after SPJU for relation ${storageManager.ns(r)}, query=${storageManager.printer.snPlanToString(getOperatorKeys(rId).asInstanceOf[this.storageManager.Table[JoinIndexes]])} results in MB")
+      println("** Used Memory:  " + (runtime.totalMemory - runtime.freeMemory) / mb)
+      println("** Free Memory:  " + runtime.freeMemory / mb)
+      println("** Total Memory: " + runtime.totalMemory / mb)
+      println("** Given memory:   " + runtime.maxMemory / mb)
     })
   }
 
@@ -66,6 +73,13 @@ class SemiNaiveExecutionEngine(override val storageManager: StorageManager) exte
       count += 1
       evalSN(rId, relations)
       setDiff = storageManager.compareNewDeltaDBs()
+      val mb = 1024*1024
+      val runtime = Runtime.getRuntime
+      println(s"END ITERATION iteration $count, results in MB")
+      println("** Used Memory:  " + (runtime.totalMemory - runtime.freeMemory) / mb)
+      println("** Free Memory:  " + runtime.freeMemory / mb)
+      println("** Total Memory: " + runtime.totalMemory / mb)
+      println("** Max Memory:   " + runtime.maxMemory / mb)
     }
     debug(s"final state @$count", storageManager.printer.toString)
     storageManager.getNewIDBResult(rId)

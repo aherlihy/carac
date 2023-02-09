@@ -2,7 +2,7 @@ package test
 
 import datalog.dsl.{Constant, Program, Relation, Term}
 import datalog.execution.{NaiveExecutionEngine, SemiNaiveExecutionEngine, NaiveStagedExecutionEngine, SemiNaiveStagedExecutionEngine}
-import datalog.storage.{CollectionsStorageManager, RelationalStorageManager, CollectionsStorageManager2, CollectionsStorageManager3}
+import datalog.storage.{CollectionsStorageManager, RelationalStorageManager}
 
 import java.nio.file.{Files, Path, Paths}
 import scala.collection.mutable
@@ -95,10 +95,6 @@ abstract class TestGenerator(directory: Path,
           case "NaiveRelational" => Program(NaiveExecutionEngine(RelationalStorageManager()))
           case "SemiNaiveCollections" => Program(SemiNaiveExecutionEngine(CollectionsStorageManager()))
           case "NaiveCollections" => Program(NaiveExecutionEngine(CollectionsStorageManager()))
-          case "NaiveCollections2" => Program(NaiveExecutionEngine(CollectionsStorageManager2()))
-          case "SemiNaiveCollections2" => Program(SemiNaiveExecutionEngine(CollectionsStorageManager2()))
-          case "NaiveCollections3" => Program(NaiveExecutionEngine(CollectionsStorageManager3()))
-          case "SemiNaiveCollections3" => Program(SemiNaiveExecutionEngine(CollectionsStorageManager3()))
           case "NaiveStagedCollections" => Program(NaiveStagedExecutionEngine(CollectionsStorageManager()))
           case "SemiNaiveStagedCollections" => Program(SemiNaiveStagedExecutionEngine(CollectionsStorageManager()))
           case _ => // WARNING: MUnit just returns null pointers everywhere if an error or assert is triggered in beforeEach
@@ -118,7 +114,7 @@ abstract class TestGenerator(directory: Path,
     override def munitFixtures = List(program)
 
     Seq("SemiNaive", "Naive", "NaiveStaged", "SemiNaiveStaged").foreach(execution => {
-      Seq("Relational", "Collections", "Collections2", "Collections3").foreach(storage => {
+      Seq("Relational", "Collections").foreach(storage => {
         if (execution.contains("Staged") && storage == "Relational") {} // skip and don't report as skipped
         else if (
             skip.contains(execution) || skip.contains(storage) ||

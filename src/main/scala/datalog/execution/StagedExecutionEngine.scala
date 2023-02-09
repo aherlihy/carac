@@ -115,14 +115,18 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
         val compiledOps = Expr.ofSeq(subOps.map(compileRelOp))
         // TODO[future]: inspect keys and optimize join algo
         '{
-        $stagedSM.joinHelper(
-          $compiledOps,
-          ${Expr(keys)}
-        )
+          $stagedSM.joinHelper(
+            $compiledOps,
+            ${Expr(keys)}
+          )
         }
 
       case ProjectOp(subOp, keys) =>
-        '{ $stagedSM.projectHelper(${compileRelOp(subOp)}, ${Expr(keys)}) }
+        if (subOp.code == OpCode.JOIN) // merge join+project
+          val compiledOps = Expr.ofSeq(subOp.asInstanceOf[JoinOp].ops.map(compileRelOp))
+          '{ $stagedSM.joinProjectHelper($compiledOps, ${Expr(keys)}) }
+        else
+          '{ $stagedSM.projectHelper(${compileRelOp(subOp)}, ${Expr(keys)}) }
 
       case UnionOp(ops) =>
         val compiledOps = Expr.ofSeq(ops.map(compileRelOp))

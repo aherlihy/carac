@@ -41,18 +41,7 @@ class fib_benchmark() extends ExampleBenchmarkGenerator("fib", Set(), Set("CI"))
     throw new Exception(f"skip test $p for current env")
   blackhole.consume(run(programs(p), result))
  }
- @Benchmark def seminaive_collections2(blackhole: Blackhole): Unit = {
-  val p = "SemiNaiveCollections2"
-  if (!programs.contains(p))
-   throw new Exception(f"skip test $p for current env")
-  blackhole.consume(run(programs(p), result))
- }
- @Benchmark def seminaive_collections3(blackhole: Blackhole): Unit = {
-  val p = "SemiNaiveCollections3"
-  if (!programs.contains(p))
-   throw new Exception(f"skip test $p for current env")
-  blackhole.consume(run(programs(p), result))
- }
+
  // collections, seminaive
  @Benchmark def seminaive_collections(blackhole: Blackhole): Unit = {
   val p = "SemiNaiveCollections"

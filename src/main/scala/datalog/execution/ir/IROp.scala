@@ -8,34 +8,66 @@ import datalog.tools.Debug.debug
 
 import scala.collection.mutable
 
+enum OpCode:
+  case PROGRAM, SWAP, SEQ, CLEAR, SCAN, SCANEDB, PROJECT, JOIN, INSERT, UNION, DIFF, DEBUG, LOOP
+
 /**
  * Intermediate representation based on Souffle's RAM
  */
-abstract class IROp() {}
+abstract class IROp() {
+  val code: OpCode
+}
 
-case class ProgramOp(body: IROp) extends IROp {}
+case class ProgramOp(body: IROp) extends IROp {
+  val code: OpCode = OpCode.PROGRAM
+}
 
-case class SwapOp() extends IROp {}
+case class SwapOp() extends IROp {
+  val code: OpCode = OpCode.SWAP
+}
 
-case class DoWhileOp(body: IROp, toCmp: DB) extends IROp {}
+case class DoWhileOp(body: IROp, toCmp: DB) extends IROp {
+  val code: OpCode = OpCode.LOOP
+}
+case class SequenceOp(ops: Seq[IROp]) extends IROp {
+  val code: OpCode = OpCode.SEQ
+}
 
-case class SequenceOp(ops: Seq[IROp]) extends IROp {}
+case class ClearOp() extends IROp {
+  val code: OpCode = OpCode.CLEAR
+}
 
-case class ClearOp() extends IROp {}
+case class ScanOp(rId: RelationId, db: DB, knowledge: KNOWLEDGE) extends IROp {
+  val code: OpCode = OpCode.SCAN
+}
 
-case class ScanOp(rId: RelationId, db: DB, knowledge: KNOWLEDGE) extends IROp {}
+case class ScanEDBOp(rId: RelationId) extends IROp {
+  val code: OpCode = OpCode.SCANEDB
+}
 
-case class ScanEDBOp(rId: RelationId) extends IROp {}
+case class ProjectOp(op: IROp, keys: JoinIndexes) extends IROp {
+  val code: OpCode = OpCode.PROJECT
+}
 
-case class ProjectOp(op: IROp, keys: JoinIndexes) extends IROp {}
+case class JoinOp(ops: Seq[IROp], keys: JoinIndexes) extends IROp {
+  val code: OpCode = OpCode.JOIN
+}
 
-case class JoinOp(ops: Seq[IROp], keys: JoinIndexes) extends IROp {} // needed?
+case class InsertOp(rId: RelationId, db: DB, knowledge: KNOWLEDGE, value: IROp, value2: Option[IROp] = None) extends IROp {
+  val code: OpCode = OpCode.INSERT
+}
 
-case class InsertOp(rId: RelationId, db: DB, knowledge: KNOWLEDGE, value: IROp, value2: Option[IROp] = None) extends IROp {}
+case class UnionOp(ops: Seq[IROp]) extends IROp {
+  val code: OpCode = OpCode.UNION
+}
 
-case class UnionOp(ops: Seq[IROp]) extends IROp {}
+case class DiffOp(lhs: IROp, rhs: IROp) extends IROp {
+  val code: OpCode = OpCode.DIFF
+}
 
-case class DiffOp(lhs: IROp, rhs: IROp) extends IROp {}
-
-case class DebugNode(prefix: String, debug: () => String) extends IROp {}
-case class DebugPeek(prefix: String, debug: () => String, op: IROp) extends IROp {}
+case class DebugNode(prefix: String, debug: () => String) extends IROp {
+  val code: OpCode = OpCode.DEBUG
+}
+case class DebugPeek(prefix: String, debug: () => String, op: IROp) extends IROp {
+  val code: OpCode = OpCode.DEBUG
+}

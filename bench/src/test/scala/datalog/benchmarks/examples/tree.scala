@@ -48,18 +48,7 @@ class tree_benchmark() extends ExampleBenchmarkGenerator("tree") with tree {
     throw new Exception(f"skip test $p for current env")
   blackhole.consume(run(programs(p), result))
  }
- @Benchmark def seminaive_collections2(blackhole: Blackhole): Unit = {
-  val p = "SemiNaiveCollections2"
-  if (!programs.contains(p))
-   throw new Exception(f"skip test $p for current env")
-  blackhole.consume(run(programs(p), result))
- }
- @Benchmark def seminaive_collections3(blackhole: Blackhole): Unit = {
-  val p = "SemiNaiveCollections3"
-  if (!programs.contains(p))
-   throw new Exception(f"skip test $p for current env")
-  blackhole.consume(run(programs(p), result))
- }
+
 
  // staged, naive
  @Benchmark def naive_staged(blackhole: Blackhole): Unit = {
