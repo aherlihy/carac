@@ -171,7 +171,34 @@ def multiJoin(program: Program): Unit = {
       Random.alphanumeric.dropWhile(_.isDigit).dropWhile(_.isUpper).head.toString,
       Random.alphanumeric.dropWhile(_.isDigit).dropWhile(_.isUpper).head.toString
     ) :- ()
-  println("RES=" + hops8_join.solve().size)
+  println("RES=" + hops3_join.solve().size)
+}
+
+def cliquer(program: Program): Unit = {
+  val edge = program.relation[Constant]("edge")
+
+  val leg = program.relation[Constant]("leg")
+
+  val reachable = program.relation[Constant]("reachable")
+
+  val same_clique = program.relation[Constant]("same_clique")
+
+  val X, Y, Z = program.variable()
+
+  leg(X, Z) :- (edge(X, Y), edge(Y, Z))
+
+  reachable(X, Y) :- edge(X, Y)
+  reachable(X, Y) :- (edge(X, Z), reachable(Z, Y))
+  same_clique(X, Y) :- (reachable(X, Y), reachable(Y, X))
+
+  edge("a", "b") :- ()
+  edge("b", "c") :- ()
+  edge("c", "d") :- ()
+  edge("d", "a") :- ()
+
+  reachable("e", "f") :- ()
+
+  println("reachable=" + reachable.solve())
 }
 
 @main def main = {
@@ -185,7 +212,7 @@ def multiJoin(program: Program): Unit = {
   given engine1: ExecutionEngine = new SemiNaiveExecutionEngine(new CollectionsStorageManager(fuse = true))
   val program1 = Program(engine1)
   println("FUSED")
-  multiJoin(program1)
+  cliquer(program1)
   println("\n\n_______________________\n\n")
 
 //  given engine2: ExecutionEngine = new SemiNaiveExecutionEngine(new CollectionsStorageManager(fuse = true))

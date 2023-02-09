@@ -71,7 +71,7 @@ class NaiveExecutionEngine(val storageManager: StorageManager) extends Execution
     if (!idbs.contains(toSolve)) {
       throw new Error("Solving for rule without body")
     }
-    val relations = precedenceGraph.topSort()
+    val relations = precedenceGraph.topSort(toSolve)
     storageManager.initEvaluation() // facts discovered in the previous iteration
     var count = 0
 

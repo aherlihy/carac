@@ -6,6 +6,88 @@ import datalog.dsl.{Program, Constant}
 import datalog.storage.RelationalStorageManager
 
 class PrecedenceGraphTest extends munit.FunSuite {
+  test("tarjan ex") {
+    given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new RelationalStorageManager())
+    val program = Program(engine)
+    val t0 = program.relation[Constant]("t0")
+    val t1 = program.relation[Constant]("t1")
+    val t2 = program.relation[Constant]("t2")
+    val t3 = program.relation[Constant]("t3")
+    val t4 = program.relation[Constant]("t4")
+    val t5 = program.relation[Constant]("t5")
+    val t6 = program.relation[Constant]("t6")
+    val t7 = program.relation[Constant]("t7")
+    val t8 = program.relation[Constant]("t8")
+    val t9 = program.relation[Constant]("t9")
+    val t10 = program.relation[Constant]("t10")
+    val x = program.variable()
+
+    t0(x) :- t1(x)
+    t1(x) :- (t4(x), t6(x), t7(x))
+    t2(x) :- (t4(x), t6(x), t7(x))
+    t3(x) :- (t4(x), t6(x), t7(x))
+    t4(x) :- (t2(x), t3(x))
+    t5(x) :- (t2(x), t3(x))
+    t6(x) :- (t5(x), t8(x))
+    t7(x) :- (t5(x), t8(x))
+    t10(x) :- t10(x)
+
+
+    val res = engine.precedenceGraph.topSort(t4.id) // test against sorted to keep groups
+    println(res)
+    assertEquals(
+      engine.precedenceGraph.sorted,
+      mutable.Queue[mutable.Set[Int]](mutable.Set(8), mutable.Set(2,3,4,5,6,7), mutable.Set(1), mutable.Set(0), mutable.Set(10))
+    )
+    assertEquals(
+      res,
+      Seq(2,3,4,5,6,7)
+    )
+    assertEquals(
+      engine.precedenceGraph.topSort(t8.id),
+      Seq() // TODO: empty
+    )
+  }
+  test("tc with isolated cycle") {
+    given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new RelationalStorageManager())
+
+    val program = Program(engine)
+    val e = program.relation[String]("e")
+    val p = program.relation[String]("p")
+    val other = program.relation[String]("other")
+    val e2 = program.relation[String]("e2")
+    val p2 = program.relation[String]("p2")
+    val other2 = program.relation[String]("other2")
+    val x, y, z = program.variable()
+
+    e("a", "b") :- ()
+    e("b", "c") :- ()
+    e("c", "d") :- ()
+    p(x, y) :- e(x, y)
+    p(x, z) :- (e(x, y), p(y, z))
+    other(x) :- p("a", x)
+
+    e2("a", "b") :- ()
+    e2("b", "c") :- ()
+    e2("c", "d") :- ()
+    p2(x, y) :- e2(x, y)
+    p2(x, z) :- (e2(x, y), p2(y, z))
+    other2(x) :- p2("a", x)
+
+    val res = engine.precedenceGraph.topSort(other.id) // test against sorted to keep groups
+    assertEquals(
+      engine.precedenceGraph.sorted,
+      mutable.Queue[mutable.Set[Int]](mutable.Set(0), mutable.Set(1), mutable.Set(2), mutable.Set(3), mutable.Set(4), mutable.Set(5))
+    )
+    assertEquals(
+      res,
+      Seq(1, 2)
+    )
+//    assertEquals( // TODO: eventually remove all isolated cycles
+//      engine.precedenceGraph.topSort(other2.id),
+//      Seq(3, 4)
+//    )
+  }
   test("transitive closure") {
     given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new RelationalStorageManager())
     val program = Program(engine)
@@ -21,7 +103,7 @@ class PrecedenceGraphTest extends munit.FunSuite {
     p(x, z) :- ( e(x, y), p(y, z) )
     other(x) :- p("a", x)
 
-    engine.precedenceGraph.topSort() // test against sorted to keep groups
+    engine.precedenceGraph.topSort(other.id) // test against sorted to keep groups
     assertEquals(
       engine.precedenceGraph.sorted,
       mutable.Queue[mutable.Set[Int]](mutable.Set(0), mutable.Set(1), mutable.Set(2))
@@ -41,7 +123,7 @@ class PrecedenceGraphTest extends munit.FunSuite {
     c() :- a()
     a() :- other()
 
-    engine.precedenceGraph.topSort()
+    engine.precedenceGraph.topSort(a.id)
     assertEquals(
       engine.precedenceGraph.sorted,
       mutable.Queue(mutable.Set(3), mutable.Set(0, 1, 2))
@@ -62,7 +144,7 @@ class PrecedenceGraphTest extends munit.FunSuite {
     c() :- a()
     a() :- other()
 
-    engine.precedenceGraph.topSort()
+    engine.precedenceGraph.topSort(a.id)
     assertEquals(
       engine.precedenceGraph.sorted,
       mutable.Queue(mutable.Set(3), mutable.Set(0, 1, 2))
@@ -83,7 +165,7 @@ class PrecedenceGraphTest extends munit.FunSuite {
     c() :- a()
     a() :- other()
 
-    engine.precedenceGraph.topSort()
+    engine.precedenceGraph.topSort(a.id)
     assertEquals(
       engine.precedenceGraph.sorted,
       mutable.Queue(mutable.Set(3), mutable.Set(0, 1, 2))

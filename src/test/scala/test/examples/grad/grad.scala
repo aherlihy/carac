@@ -8,7 +8,7 @@ class grad_test extends ExampleTestGenerator("grad") with grad {
   override def toSolve: String = super.toSolve
 }
 trait grad {
-  def toSolve: String = "grad"
+//  def toSolve: String = "grad"
   def pretest(program: Program): Unit = {
     val course = program.relation[Constant]("course")
 

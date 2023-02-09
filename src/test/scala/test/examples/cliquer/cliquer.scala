@@ -8,7 +8,7 @@ class cliquer_test extends ExampleTestGenerator("cliquer") with cliquer {
   override def toSolve: String = super.toSolve
 }
 trait cliquer {
-  def toSolve = "reachable"
+  def toSolve = "same_clique"
   def pretest(program: Program): Unit = {
     val edge = program.relation[Constant]("edge")
 

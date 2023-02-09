@@ -84,13 +84,14 @@ class PrecedenceGraph(using ns: NS /* for debugging */) {
     }
   }
 
-  def topSort(): Seq[Int] = { // TODO: need to indicate recursive anywhere?
+  def topSort(target: Int): Seq[Int] = { // TODO: need to indicate recursive anywhere?
     nodes.foreach((rId, node) => {
       if (node.idx == -1) {
         strongConnect(node)
       }
     })
-    sorted.toSeq.flatMap(s => s.toSeq).filter(r => idbs.contains(r)) // sort and remove edbs
+    val res = sorted.dropRight(sorted.size - 1 - sorted.indexWhere(g => g.contains(target)))
+    res.toSeq.flatMap(s => s.toSeq).filter(r => idbs.contains(r)) // sort and remove edbs
   }
 
   def removeAliases(aliases: mutable.Map[Int, Int]): Unit = {

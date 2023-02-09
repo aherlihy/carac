@@ -34,11 +34,11 @@ class SemiNaiveExecutionEngine(override val storageManager: StorageManager) exte
       System.gc()
       val mb = 1024 * 1024
       val runtime = Runtime.getRuntime
-      println(s"after SPJU for relation ${storageManager.ns(r)}, query=${storageManager.printer.snPlanToString(getOperatorKeys(rId).asInstanceOf[this.storageManager.Table[JoinIndexes]])} results in MB")
-      println("** Used Memory:  " + (runtime.totalMemory - runtime.freeMemory) / mb)
-      println("** Free Memory:  " + runtime.freeMemory / mb)
-      println("** Total Memory: " + runtime.totalMemory / mb)
-      println("** Given memory:   " + runtime.maxMemory / mb)
+//      println(s"after SPJU for relation ${storageManager.ns(r)}, query=${storageManager.printer.snPlanToString(getOperatorKeys(rId).asInstanceOf[this.storageManager.Table[JoinIndexes]])} results in MB")
+//      println("** Used Memory:  " + (runtime.totalMemory - runtime.freeMemory) / mb)
+//      println("** Free Memory:  " + runtime.freeMemory / mb)
+//      println("** Total Memory: " + runtime.totalMemory / mb)
+//      println("** Given memory:   " + runtime.maxMemory / mb)
     })
   }
 
@@ -53,7 +53,7 @@ class SemiNaiveExecutionEngine(override val storageManager: StorageManager) exte
     // TODO: if a IDB predicate without vars, then solve all and test contains result?
     //    if (relations.isEmpty)
     //      return Set()
-    val relations = precedenceGraph.topSort()
+    val relations = precedenceGraph.topSort(rId)
     debug(s"precedence graph=", precedenceGraph.sortedString)
     debug(s"solving relation: ${storageManager.ns(rId)} order of relations=", relations.toString)
     storageManager.initEvaluation()
@@ -75,15 +75,15 @@ class SemiNaiveExecutionEngine(override val storageManager: StorageManager) exte
       count += 1
       evalSN(rId, relations)
       setDiff = storageManager.compareNewDeltaDBs()
-      System.gc()
-      System.gc()
-      val mb = 1024*1024
-      val runtime = Runtime.getRuntime
-      println(s"END ITERATION iteration $count, results in MB")
-      println("** Used Memory:  " + (runtime.totalMemory - runtime.freeMemory) / mb)
-      println("** Free Memory:  " + runtime.freeMemory / mb)
-      println("** Total Memory: " + runtime.totalMemory / mb)
-      println("** Max Memory:   " + runtime.maxMemory / mb)
+//      System.gc()
+//      System.gc()
+//      val mb = 1024*1024
+//      val runtime = Runtime.getRuntime
+//      println(s"END ITERATION iteration $count, results in MB")
+//      println("** Used Memory:  " + (runtime.totalMemory - runtime.freeMemory) / mb)
+//      println("** Free Memory:  " + runtime.freeMemory / mb)
+//      println("** Total Memory: " + runtime.totalMemory / mb)
+//      println("** Max Memory:   " + runtime.maxMemory / mb)
     }
     debug(s"final state @$count", storageManager.printer.toString)
     storageManager.getNewIDBResult(rId)
