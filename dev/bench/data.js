@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1675951139556,
+  "lastUpdate": 1675963564121,
   "repoUrl": "https://github.com/aherlihy/carac",
   "entries": {
     "Benchmark": [
@@ -3268,6 +3268,192 @@ window.BENCHMARK_DATA = {
           {
             "name": "datalog.benchmarks.examples.tree_benchmark.ci_seminaive_staged",
             "value": 5.858869443731743,
+            "unit": "ops/s",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "herlihyap@gmail.com",
+            "name": "aherlihy",
+            "username": "aherlihy"
+          },
+          "committer": {
+            "email": "herlihyap@gmail.com",
+            "name": "aherlihy",
+            "username": "aherlihy"
+          },
+          "distinct": true,
+          "id": "b661d27fc73b37b2fae43f9cb6f30c721cecfa50",
+          "message": "add gc call",
+          "timestamp": "2023-02-09T18:04:39+01:00",
+          "tree_id": "1567bb454e62fe4c3ece7c94f4ac454e40f0bf15",
+          "url": "https://github.com/aherlihy/carac/commit/b661d27fc73b37b2fae43f9cb6f30c721cecfa50"
+        },
+        "date": 1675963563413,
+        "tool": "jmh",
+        "benches": [
+          {
+            "name": "datalog.benchmarks.Bench_ci.naive_collections",
+            "value": 21.158444544684453,
+            "unit": "ops/s",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.Bench_ci.naive_relational",
+            "value": 11.283645782978786,
+            "unit": "ops/s",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.Bench_ci.naive_staged",
+            "value": 2.92886181385004,
+            "unit": "ops/s",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.Bench_ci.seminaive_collections",
+            "value": 0.17182424982397942,
+            "unit": "ops/s",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.Bench_ci.seminaive_relational",
+            "value": 0.12586457508942778,
+            "unit": "ops/s",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.Bench_ci.seminaive_staged",
+            "value": 1.7605165968884773,
+            "unit": "ops/s",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.andersen_benchmark.ci_seminaive_staged",
+            "value": 5.5231915417706094,
+            "unit": "ops/s",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.cba_expr_value_benchmark.ci_seminaive_staged",
+            "value": 3.128831006557887,
+            "unit": "ops/s",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.clique_benchmark.ci_seminaive_staged",
+            "value": 5.566838599828981,
+            "unit": "ops/s",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.cliquer_benchmark.ci_seminaive_staged",
+            "value": 5.062012564895289,
+            "unit": "ops/s",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.equal_benchmark.ci_seminaive_staged",
+            "value": 5.302686202934041,
+            "unit": "ops/s",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.func_benchmark.ci_seminaive_staged",
+            "value": 4.970939586726251,
+            "unit": "ops/s",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.grad_benchmark.ci_seminaive_staged",
+            "value": 6.0865557034812765,
+            "unit": "ops/s",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.metro_benchmark.ci_seminaive_staged",
+            "value": 5.213811678415569,
+            "unit": "ops/s",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.palindrome_benchmark.ci_seminaive_staged",
+            "value": 4.107623277496843,
+            "unit": "ops/s",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.pointsto_benchmark.ci_seminaive_staged",
+            "value": 0.6675142378201478,
+            "unit": "ops/s",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.prime_benchmark.ci_seminaive_staged",
+            "value": 4.836450471893153,
+            "unit": "ops/s",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.puzzle_benchmark.ci_seminaive_staged",
+            "value": 2.3740932991859633,
+            "unit": "ops/s",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.rsg_benchmark.ci_seminaive_staged",
+            "value": 6.168538438964842,
+            "unit": "ops/s",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.ship_benchmark.ci_seminaive_staged",
+            "value": 6.2353500141365075,
+            "unit": "ops/s",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.small_benchmark.ci_seminaive_staged",
+            "value": 5.581020576800823,
+            "unit": "ops/s",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.tc_benchmark.ci_seminaive_staged",
+            "value": 1.6581693926866952,
+            "unit": "ops/s",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.topological_ordering_benchmark.ci_seminaive_staged",
+            "value": 2.4579751841922017,
+            "unit": "ops/s",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.traffic_benchmark.ci_seminaive_staged",
+            "value": 4.7503318874949905,
+            "unit": "ops/s",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.trains_benchmark.ci_seminaive_staged",
+            "value": 1.0400878387004049,
+            "unit": "ops/s",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.trans_benchmark.ci_seminaive_staged",
+            "value": 5.989498389458985,
+            "unit": "ops/s",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.tree_benchmark.ci_seminaive_staged",
+            "value": 5.189592682175397,
             "unit": "ops/s",
             "extra": "iterations: 5\nforks: 1\nthreads: 1"
           }
