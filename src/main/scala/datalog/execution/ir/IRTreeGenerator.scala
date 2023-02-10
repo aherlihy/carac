@@ -49,9 +49,8 @@ class IRTreeGenerator(using val ctx: InterpreterContext) {
         var allRes = rules.map(naiveEvalRule).toSeq
         if (edb)
           allRes = allRes :+ ScanEDBOp(rId)
-        val res = UnionOp(allRes)
         //        DebugPeek("NaiveSPJU: ", () => s"r=${ctx.storageManager.ns(rId)} keys=${ctx.storageManager.printer.printIR(res).replace("\n", " ")} knownDBId ${ctx.knownDbId} \nresult of evalRule: ", res)
-        res
+        if(allRes.size == 1) allRes.head else UnionOp(allRes)
       case RuleNode(head, _, joinIdx) =>
         val r = head.asInstanceOf[LogicAtom].relation
         joinIdx match {
@@ -76,9 +75,8 @@ class IRTreeGenerator(using val ctx: InterpreterContext) {
         var allRes = rules.map(semiNaiveEvalRule).toSeq
         if (edb)
           allRes = allRes :+ ScanEDBOp(rId)
-        val res = UnionOp(allRes)
+        if(allRes.size == 1) allRes.head else UnionOp(allRes)
         //        DebugPeek("SPJU: ", () => s"r=${ctx.storageManager.ns(rId)} keys=${ctx.storageManager.printer.printIR(res).replace("\n", " ")} knownDBId ${ctx.knownDbId} \nevalRuleSN ", res)
-        res
       case RuleNode(head, _, joinIdx) =>
         val r = head.asInstanceOf[LogicAtom].relation
         joinIdx match {

@@ -157,7 +157,6 @@ class StagedCompileTest extends munit.FunSuite {
       generalMatch(s"$any$sVar.getKnownDerivedDB\\(${idb.id}, scala.Some.apply\\[$any\\]\\($sVar\\.EDB\\(\\)$anyCapture".r)
     )
     toRun(storageManager)
-    println(s"sm=${storageManager.printer.toString()}")
     assertNotEquals(oldNew, storageManager.newDbId)
     assertNotEquals(oldKnown, storageManager.knownDbId)
     assertEquals(storageManager.getKnownDerivedDB(idb.id), ArrayBuffer(Vector("NewDerived")))
