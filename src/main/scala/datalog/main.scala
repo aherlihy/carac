@@ -1,10 +1,11 @@
 package datalog
 
-import datalog.execution.{ExecutionEngine, NaiveExecutionEngine, NaiveStagedExecutionEngine, SemiNaiveExecutionEngine, SemiNaiveStagedExecutionEngine}
+import datalog.dsl.MODE.Interpret
+import datalog.execution.{ExecutionEngine, NaiveExecutionEngine, NaiveStagedExecutionEngine, SemiNaiveExecutionEngine, SemiNaiveJITStagedExecutionEngine, SemiNaiveStagedExecutionEngine}
 import datalog.dsl.{Constant, Program, __}
 import datalog.execution.ast.transform.CopyEliminationPass
 import datalog.execution.ir.InterpreterContext
-import datalog.storage.{CollectionsStorageManager,  NS, RelationalStorageManager}
+import datalog.storage.{CollectionsStorageManager, NS, RelationalStorageManager}
 
 import scala.util.Random
 import scala.collection.mutable
@@ -34,7 +35,7 @@ def tc(program: Program): Unit = {
   edge("b", "c", "red") :- ()
   edge("c", "d", "blue") :- ()
 
-  println("RES=" + twoHops.solve())
+  println("RES=" + twoHops.solve(mode = Interpret))
 }
 
 def reversible(program: Program, engine: ExecutionEngine): Unit = {
@@ -58,7 +59,7 @@ def reversible(program: Program, engine: ExecutionEngine): Unit = {
   query(x) :- equiv(x, "v2")
 
 //  println("RES=" + engine.solveCompiled(query.id))
-  println("RES=" + query.solve())
+  println("RES=" + query.solve(mode = Interpret))
 }
 
 def func(program: Program) = {
@@ -198,7 +199,7 @@ def cliquer(program: Program): Unit = {
 
   reachable("e", "f") :- ()
 
-  println("reachable=" + reachable.solve())
+  println("reachable=" + reachable.solve(mode = Interpret))
 }
 
 @main def main = {
@@ -212,12 +213,19 @@ def cliquer(program: Program): Unit = {
 //  println("OLD SN")
 //  given engine1: ExecutionEngine = new SemiNaiveExecutionEngine(new CollectionsStorageManager())
 //  val program1 = Program(engine1)
-//  tc(program1)
+//  multiJoin(program1)
 //  println("\n\n_______________________\n\n")
 
   println("STAGED")
   given engine2: ExecutionEngine = new SemiNaiveStagedExecutionEngine(new CollectionsStorageManager())
   val program2 = Program(engine2)
-  multiJoin(program2)
+  tc(program2)
+  println("\n\n_______________________\n\n")
+
+  println("HIT STAGED")
+
+  given engine3: ExecutionEngine = new SemiNaiveJITStagedExecutionEngine(new CollectionsStorageManager())
+  val program3 = Program(engine3)
+  tc(program3)
   println("\n\n_______________________\n\n")
 }

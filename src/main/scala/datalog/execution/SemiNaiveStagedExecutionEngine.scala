@@ -9,3 +9,7 @@ class SemiNaiveStagedExecutionEngine(storageManager: StorageManager) extends Sta
   import storageManager.EDB
   override def createIR(ast: ASTNode)(using InterpreterContext): IROp = IRTreeGenerator().generateSemiNaive(ast)
 }
+class SemiNaiveJITStagedExecutionEngine(storageManager: StorageManager) extends JITStagedExecutionEngine(storageManager) {
+  import storageManager.EDB
+  override def createIR(ast: ASTNode)(using InterpreterContext): IROp = IRTreeGenerator().generateSemiNaive(ast)
+}

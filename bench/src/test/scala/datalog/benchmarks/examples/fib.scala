@@ -65,5 +65,11 @@ class fib_benchmark() extends ExampleBenchmarkGenerator("fib", Set(), Set("CI"))
     throw new Exception(f"skip test $p for current env")
   blackhole.consume(run(programs(p), result))
  }
+ @Benchmark def ci_seminaive_staged_jit(blackhole: Blackhole): Unit = {
+  val p = "SemiNaiveJITStagedCollections"
+  if(!programs.contains(p))
+    throw new Exception(f"skip test $p for current env")
+  blackhole.consume(run(programs(p), result))
+ }
 }
 import test.examples.fib.fib

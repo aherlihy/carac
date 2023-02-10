@@ -23,6 +23,7 @@ abstract class DLBenchmark {
       case "NaiveCollections" => Program(NaiveExecutionEngine(CollectionsStorageManager()))
       case "NaiveStagedCollections" => Program(NaiveStagedExecutionEngine(CollectionsStorageManager()))
       case "SemiNaiveStagedCollections" => Program(SemiNaiveStagedExecutionEngine(CollectionsStorageManager()))
+      case "SemiNaiveJITStagedCollections" => Program(SemiNaiveJITStagedExecutionEngine(CollectionsStorageManager()))
       case _ => // WARNING: MUnit just returns null pointers everywhere if an error or assert is triggered in beforeEach
         throw new Exception(s"Unknown engine construction ${context}") // TODO: this is reported as passing
     }

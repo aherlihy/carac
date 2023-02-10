@@ -73,7 +73,7 @@ abstract class BenchmarkGenerator(directory: Path,
       reader.close()
     })
 
-  Seq("SemiNaive", "Naive", "NaiveStaged", "SemiNaiveStaged").foreach(execution =>
+  Seq("SemiNaive", "Naive", "NaiveStaged", "SemiNaiveStaged", "SemiNaiveJITStaged").foreach(execution =>
     Seq("Relational", "Collections").foreach(storage =>
       if (
         (execution.contains("Staged") && storage == "Relational") ||

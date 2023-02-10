@@ -7,6 +7,7 @@ import datalog.execution.ir.*
 import datalog.storage.{CollectionsStorageManager, DB, KNOWLEDGE, SimpleStorageManager, StorageManager}
 import datalog.tools.Debug.debug
 
+import java.util.concurrent.atomic.AtomicReference
 import scala.collection.mutable
 import scala.quoted.*
 
@@ -79,7 +80,7 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
     allRules.edb = true
   }
 
-  def compileRelOp[T](irTree: IROp)(using stagedSM: Expr[StorageManager { type EDB = T }], t: Type[T])(using ctx: InterpreterContext)(using Quotes): Expr[T] = { // TODO: Instead of parameterizing, use staged path dependent type: i.e. stagedSM.EDB
+  def compileIRRelOp[T](irTree: IROp)(using stagedSM: Expr[StorageManager { type EDB = T }], t: Type[T])(using ctx: InterpreterContext)(using Quotes): Expr[T] = { // TODO: Instead of parameterizing, use staged path dependent type: i.e. stagedSM.EDB
     irTree match {
       case ScanOp(rId, db, knowledge) =>
         val edb =
@@ -112,7 +113,7 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
           '{ $stagedSM.EDB() }
 
       case JoinOp(subOps, keys) =>
-        val compiledOps = Expr.ofSeq(subOps.map(compileRelOp))
+        val compiledOps = Expr.ofSeq(subOps.map(compileIRRelOp))
         // TODO[future]: inspect keys and optimize join algo
         '{
           $stagedSM.joinHelper(
@@ -123,22 +124,22 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
 
       case ProjectOp(subOp, keys) =>
         if (subOp.code == OpCode.JOIN) // merge join+project
-          val compiledOps = Expr.ofSeq(subOp.asInstanceOf[JoinOp].ops.map(compileRelOp))
+          val compiledOps = Expr.ofSeq(subOp.asInstanceOf[JoinOp].ops.map(compileIRRelOp))
           '{ $stagedSM.joinProjectHelper($compiledOps, ${Expr(keys)}) }
         else
-          '{ $stagedSM.projectHelper(${compileRelOp(subOp)}, ${Expr(keys)}) }
+          '{ $stagedSM.projectHelper(${compileIRRelOp(subOp)}, ${Expr(keys)}) }
 
       case UnionOp(ops) =>
-        val compiledOps = Expr.ofSeq(ops.map(compileRelOp))
+        val compiledOps = Expr.ofSeq(ops.map(compileIRRelOp))
         '{ $stagedSM.union($compiledOps) }
 
       case DiffOp(lhs, rhs) =>
-        val clhs = compileRelOp(lhs)
-        val crhs = compileRelOp(rhs)
+        val clhs = compileIRRelOp(lhs)
+        val crhs = compileIRRelOp(rhs)
         '{ $stagedSM.diff($clhs, $crhs) }
 
       case DebugPeek(prefix, msg, op) =>
-        val res = compileRelOp(op)
+        val res = compileIRRelOp(op)
         '{ debug(${Expr(prefix)}, () => s"${${Expr(msg())}}"); $res }
 
       case _ => throw new Exception("Error: compileRelOp called with unit operation")
@@ -175,8 +176,8 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
         )
 
       case InsertOp(rId, db, knowledge, subOp, subOp2) =>
-        val res = compileRelOp(subOp)
-        val res2 = if (subOp2.isEmpty) '{ $stagedSM.EDB() } else compileRelOp(subOp2.get)
+        val res = compileIRRelOp(subOp)
+        val res2 = if (subOp2.isEmpty) '{ $stagedSM.EDB() } else compileIRRelOp(subOp2.get)
         db match {
           case DB.Derived =>
             knowledge match {
@@ -197,7 +198,7 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
       case DebugNode(prefix, msg) =>
         '{ debug(${Expr(prefix)}, () => $stagedSM.printer.toString()) }
 
-      case _ => compileRelOp(irTree) //throw new Exception("Error: compileIR called with RelOp")
+      case _ => compileIRRelOp(irTree) //throw new Exception("Error: compileIR called with RelOp")
     }
   }
 
@@ -207,6 +208,8 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
         interpretIR(body)
 
       case DoWhileOp(body, toCmp) =>
+        // start compile for body
+//        lazy val compiledBody: AtomicReference[CollectionsStorageManager => storageManager.EDB] = getCompiled(irTree, ctx)
         while({
           interpretIR(body)
           ctx.count += 1
@@ -290,7 +293,7 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
     }
   }
 
-  // NOTE: this method is just for testing to see how much overhead tree processing has. If you
+  // NOTE: this method is just for testing to see how much overhead tree processing has, not used irl.
   def generateProgramTree(rId: Int): (IROp, InterpreterContext) = {
     // verify setup
     storageManager.verifyEDBs(precedenceGraph.idbs)
@@ -372,12 +375,12 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
     val irTree = createIR(transformedAST)
     debug("IRTree: ", () => storageManager.printer.printIR(irTree))
 
-    mode match {
-      case MODE.Compile =>
-        compileAndRun(irTree, irCtx)
-      case MODE.Interpret =>
+//    mode match {
+//      case MODE.Compile =>
+//        compileAndRun(irTree, irCtx)
+//      case MODE.Interpret =>
         solvePreInterpreted(irTree, irCtx)
-      case _ => throw new Exception(s"Mode $mode not yet implemented")
-    }
+//      case _ => throw new Exception(s"Mode $mode not yet implemented")
+//    }
   }
 }
