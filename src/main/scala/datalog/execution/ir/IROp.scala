@@ -9,7 +9,7 @@ import datalog.tools.Debug.debug
 import scala.collection.mutable
 
 enum OpCode:
-  case PROGRAM, SWAP, SEQ, CLEAR, SCAN, SCANEDB, PROJECT, JOIN, INSERT, UNION, DIFF, DEBUG, LOOP
+  case PROGRAM, SWAP_CLEAR, SEQ, SCAN, SCANEDB, PROJECT, JOIN, INSERT, UNION, DIFF, DEBUG, LOOP
 
 /**
  * Intermediate representation based on Souffle's RAM
@@ -21,11 +21,6 @@ abstract class IROp() {
 case class ProgramOp(body: IROp) extends IROp {
   val code: OpCode = OpCode.PROGRAM
 }
-
-case class SwapOp() extends IROp {
-  val code: OpCode = OpCode.SWAP
-}
-
 case class DoWhileOp(body: IROp, toCmp: DB) extends IROp {
   val code: OpCode = OpCode.LOOP
 }
@@ -33,8 +28,9 @@ case class SequenceOp(ops: Seq[IROp]) extends IROp {
   val code: OpCode = OpCode.SEQ
 }
 
-case class ClearOp() extends IROp {
-  val code: OpCode = OpCode.CLEAR
+// Clear only ever happens after swap so merge nodes
+case class SwapAndClearOp() extends IROp {
+  val code: OpCode = OpCode.SWAP_CLEAR
 }
 
 case class ScanOp(rId: RelationId, db: DB, knowledge: KNOWLEDGE) extends IROp {

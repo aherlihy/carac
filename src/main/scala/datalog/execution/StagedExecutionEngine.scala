@@ -165,17 +165,14 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
           }) ()
         }
 
-      case SwapOp() =>
-        '{ $stagedSM.swapKnowledge() }
+      case SwapAndClearOp() =>
+        '{ $stagedSM.swapKnowledge(); $stagedSM.clearNewDB(${Expr(true)}) }
 
       case SequenceOp(ops) =>
         val cOps = ops.map(compileIR)
         cOps.reduceLeft((acc, next) => // TODO[future]: make a block w reflection instead of reduceLeft for efficiency
           '{ $acc; $next }
         )
-
-      case ClearOp() =>
-        '{ $stagedSM.clearNewDB(${Expr(true)}) }
 
       case InsertOp(rId, db, knowledge, subOp, subOp2) =>
         val res = compileRelOp(subOp)
@@ -221,14 +218,12 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
           }
         }) ()
 
-      case SwapOp() =>
-       storageManager.swapKnowledge()
+      case SwapAndClearOp() =>
+        storageManager.swapKnowledge()
+        storageManager.clearNewDB(true)
 
       case SequenceOp(ops) =>
         ops.map(interpretIR)
-
-      case ClearOp() =>
-        storageManager.clearNewDB(true)
 
       case ScanOp(rId, db, knowledge) =>
         db match {

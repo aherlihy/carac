@@ -7,13 +7,19 @@ import datalog.tools.Debug.debug
 import scala.collection.mutable
 
 class IRTreeGenerator(using val ctx: InterpreterContext) {
-  def naiveEval(rId: RelationId, ruleMap: mutable.Map[RelationId, ASTNode]): IROp =
+  def naiveEval(ruleMap: mutable.Map[RelationId, ASTNode], copyToDelta: Boolean = false): IROp =
     SequenceOp(
       //      DebugNode("in eval:", () => s"rId=${ctx.storageManager.ns(rId)} relations=${ctx.relations.map(r => ctx.storageManager.ns(r)).mkString("[", ", ", "]")}  incr=${ctx.newDbId} src=${ctx.knownDbId}") +:
       ctx.sortedRelations
         .filter(ruleMap.contains)
-        .map(r =>
-          InsertOp(r, DB.Derived, KNOWLEDGE.New, naiveEvalRule(ruleMap(r)))
+        .flatMap(r =>
+          if (copyToDelta)
+            Seq(
+              InsertOp(r, DB.Derived, KNOWLEDGE.New, naiveEvalRule(ruleMap(r))),
+              InsertOp(r, DB.Delta, KNOWLEDGE.New, ScanOp(r, DB.Derived, KNOWLEDGE.New))
+            )
+          else
+            Seq(InsertOp(r, DB.Derived, KNOWLEDGE.New, naiveEvalRule(ruleMap(r))))
         )
     )
 
@@ -113,9 +119,8 @@ class IRTreeGenerator(using val ctx: InterpreterContext) {
       case ProgramNode(ruleMap) =>
         DoWhileOp(
           SequenceOp(Seq(
-            SwapOp(),
-            ClearOp(),
-            naiveEval(ctx.toSolve, ruleMap)
+            SwapAndClearOp(),
+            naiveEval(ruleMap)
           )),
           DB.Derived
         )
@@ -127,21 +132,10 @@ class IRTreeGenerator(using val ctx: InterpreterContext) {
     ast match {
       case ProgramNode(ruleMap) =>
         ProgramOp(SequenceOp(Seq(
-          SequenceOp(
-            ctx.sortedRelations
-              .filter(ruleMap.contains)
-              .map(r =>
-                SequenceOp(Seq(
-                  naiveEval(r, ruleMap),
-                  InsertOp(r, DB.Delta, KNOWLEDGE.New,
-                    ScanOp(r, DB.Derived, KNOWLEDGE.New))
-                ))
-              )
-          ),
+          naiveEval(ruleMap, true),
           DoWhileOp(
             SequenceOp(Seq(
-              SwapOp(), // TODO: merge bc always together
-              ClearOp(),
+              SwapAndClearOp(),
               semiNaiveEval(ctx.toSolve, ruleMap)
             )),
             DB.Delta

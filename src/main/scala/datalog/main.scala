@@ -209,16 +209,15 @@ def cliquer(program: Program): Unit = {
 //  reversible(program, engine)
 //  val run = multiJoin
 
-  println("OLD SN")
-  given engine1: ExecutionEngine = new SemiNaiveExecutionEngine(new CollectionsStorageManager())
-  val program1 = Program(engine1)
-  tc(program1)
-  println("\n\n_______________________\n\n")
-
-//  given engine2: ExecutionEngine = new SemiNaiveExecutionEngine(new CollectionsStorageManager(fuse = true))
-//
-//  val program2 = Program(engine2)
-//  println("NOT-FUSED")
-//  multiJoin(program2)
+//  println("OLD SN")
+//  given engine1: ExecutionEngine = new SemiNaiveExecutionEngine(new CollectionsStorageManager())
+//  val program1 = Program(engine1)
+//  tc(program1)
 //  println("\n\n_______________________\n\n")
+
+  println("STAGED")
+  given engine2: ExecutionEngine = new SemiNaiveStagedExecutionEngine(new CollectionsStorageManager())
+  val program2 = Program(engine2)
+  multiJoin(program2)
+  println("\n\n_______________________\n\n")
 }

@@ -60,11 +60,7 @@ class SemiNaiveExecutionEngine(override val storageManager: StorageManager) exte
     var count = 0
 
     debug("initial state @ -1", storageManager.printer.toString)
-    val startRId = relations.head
-    relations.foreach(rel => {
-      eval(rel, relations) // this fills derived[new]
-      storageManager.resetNewDelta(rel, storageManager.getNewDerivedDB(rel)) // copy delta[new] = derived[new]
-    })
+    evalNaive(relations, true) // this fills derived[new] and and delta[new]
 
     var setDiff = true
     while(setDiff) {

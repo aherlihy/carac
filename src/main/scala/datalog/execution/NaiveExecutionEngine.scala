@@ -47,20 +47,23 @@ class NaiveExecutionEngine(val storageManager: StorageManager) extends Execution
     storageManager.insertEDB(rule)
   }
 
-  def evalRule(rId: RelationId):  EDB = {
+  def evalRuleNaive(rId: RelationId):  EDB = {
     storageManager.naiveSPJU(rId, getOperatorKeys(rId).asInstanceOf[storageManager.Table[JoinIndexes]])
   }
 
   /**
    * Take the union of each evalRule for each IDB predicate
    */
-  def eval(rId: RelationId, relations: Seq[RelationId]): Unit = {
-    debug("in eval: ", () => s"rId=${storageManager.ns(rId)} relations=${relations.map(r => storageManager.ns(r)).mkString("[", ", ", "]")}")
-//    relations.foreach(r => { // NOTE: moved union into solve as to not double-union in semi-naive
-      val res = evalRule(rId)
+  def evalNaive(relations: Seq[RelationId], copyToDelta: Boolean = false): Unit = {
+    debug("in eval: ", () => s"relations=${relations.map(r => storageManager.ns(r)).mkString("[", ", ", "]")}")
+    relations.foreach(r => {
+      val res = evalRuleNaive(r)
       debug("result of evalRule=", () => storageManager.printer.factToString(res))
-      storageManager.resetNewDerived(rId, res) // overwrite res to the new derived DB
-//    })
+      storageManager.resetNewDerived(r, res) // overwrite res to the new derived DB
+      if (copyToDelta) {
+        storageManager.resetNewDelta(r, res) // copy delta[new] = derived[new], if this is called from SN
+      }
+    })
   }
 
   def solve(toSolve: RelationId, mode: MODE): Set[Seq[Term]] = {
@@ -83,9 +86,7 @@ class NaiveExecutionEngine(val storageManager: StorageManager) extends Execution
 
       debug(s"initial state @ $count", storageManager.printer.toString)
       count += 1
-      relations.foreach(r =>
-        eval(r, relations)
-      )
+      evalNaive(relations)
 
       setDiff = !storageManager.compareDerivedDBs()
 

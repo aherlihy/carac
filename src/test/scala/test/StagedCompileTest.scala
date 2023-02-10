@@ -12,6 +12,9 @@ import scala.collection.mutable.ArrayBuffer
 import scala.quoted.{Expr, Quotes, staging}
 import scala.util.matching.Regex
 
+/**
+ * TODO: replace regex with reflection
+ */
 class StagedCompileTest extends munit.FunSuite {
   val storageManager = new CollectionsStorageManager()
   val engine = new SemiNaiveStagedExecutionEngine(storageManager)
@@ -131,22 +134,41 @@ class StagedCompileTest extends munit.FunSuite {
     delta.foreach((k, v) => storageManager.deltaDB(k) = v)
   }
 
-  test("SwapOp") {
+  test("SwapAndClearOp") {
+    val derived = deepClone(storageManager.derivedDB)
+    val delta = deepClone(storageManager.deltaDB)
+
+    storageManager.resetNewDerived(idb.id, storageManager.EDB(Vector("NewDerived")))
+    storageManager.resetNewDelta(idb.id, storageManager.EDB(Vector("NewDelta")))
+    storageManager.resetKnownDerived(idb.id, storageManager.EDB(Vector("KnownDerived")))
+    storageManager.resetKnownDelta(idb.id, storageManager.EDB(Vector("KnownDelta")))
+
     val oldKnown = storageManager.knownDbId
     val oldNew = storageManager.newDbId
     val toRun = compileCheck(
       SequenceOp(Seq(
         ScanOp(idb.id, DB.Derived, KNOWLEDGE.Known),
-        SwapOp(),
+        SwapAndClearOp(),
         ScanOp(idb.id, DB.Derived, KNOWLEDGE.Known)
       )),
       generalMatch(s"$any$sVar.getKnownDerivedDB\\(${idb.id}, scala.Some.apply\\[$any\\]\\($sVar\\.EDB\\(\\)$anyCapture".r),
       generalMatch(s"$any$sVar.swapKnowledge\\(\\)$anyCapture".r),
+      generalMatch(s"$any$sVar.clearNewDB\\(true\\)$anyCapture".r),
       generalMatch(s"$any$sVar.getKnownDerivedDB\\(${idb.id}, scala.Some.apply\\[$any\\]\\($sVar\\.EDB\\(\\)$anyCapture".r)
     )
     toRun(storageManager)
+    println(s"sm=${storageManager.printer.toString()}")
     assertNotEquals(oldNew, storageManager.newDbId)
     assertNotEquals(oldKnown, storageManager.knownDbId)
+    assertEquals(storageManager.getKnownDerivedDB(idb.id), ArrayBuffer(Vector("NewDerived")))
+    assertEquals(storageManager.getKnownDeltaDB(idb.id), ArrayBuffer(Vector("NewDelta")))
+    assertEquals(storageManager.getNewDerivedDB(idb.id), ArrayBuffer.empty)
+    assertEquals(storageManager.getNewDeltaDB(idb.id), ArrayBuffer(Vector("KnownDelta")))
+
+    storageManager.derivedDB.clear()
+    storageManager.deltaDB.clear()
+    derived.foreach((k, v) => storageManager.derivedDB(k) = v)
+    delta.foreach((k, v) => storageManager.deltaDB(k) = v)
   }
 
   test("SeqOp") {
@@ -163,27 +185,6 @@ class StagedCompileTest extends munit.FunSuite {
     toRun(storageManager)
     assertEquals(storageManager.getNewDerivedDB(idb.id), ArrayBuffer(Vector("1")))
     assertEquals(storageManager.getNewDeltaDB(idb.id), ArrayBuffer(Vector("1")))
-
-    storageManager.derivedDB.clear()
-    storageManager.deltaDB.clear()
-    derived.foreach((k, v) => storageManager.derivedDB(k) = v)
-    delta.foreach((k, v) => storageManager.deltaDB(k) = v)
-  }
-
-  test("ClearOp") {
-    val derived = deepClone(storageManager.derivedDB)
-    val delta = deepClone(storageManager.deltaDB)
-
-    storageManager.resetNewDerived(idb.id, storageManager.EDB(Vector("NewDerived")))
-    storageManager.resetNewDelta(idb.id, storageManager.EDB(Vector("NewDelta")))
-
-    val toRun = compileCheck(
-      ClearOp(),
-      generalMatch(s"$any$sVar.clearNewDB\\(true\\)$anyCapture".r)
-    )
-    toRun(storageManager)
-    assertEquals(storageManager.getNewDerivedDB(idb.id), ArrayBuffer.empty)
-    assertEquals(storageManager.getNewDeltaDB(idb.id), ArrayBuffer(Vector("NewDelta")))
 
     storageManager.derivedDB.clear()
     storageManager.deltaDB.clear()
