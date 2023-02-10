@@ -140,7 +140,7 @@ class IRTreeGenerator(using val ctx: InterpreterContext) {
           ),
           DoWhileOp(
             SequenceOp(Seq(
-              SwapOp(),
+              SwapOp(), // TODO: merge bc always together
               ClearOp(),
               semiNaiveEval(ctx.toSolve, ruleMap)
             )),

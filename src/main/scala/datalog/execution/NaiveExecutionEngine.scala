@@ -56,11 +56,11 @@ class NaiveExecutionEngine(val storageManager: StorageManager) extends Execution
    */
   def eval(rId: RelationId, relations: Seq[RelationId]): Unit = {
     debug("in eval: ", () => s"rId=${storageManager.ns(rId)} relations=${relations.map(r => storageManager.ns(r)).mkString("[", ", ", "]")}")
-    relations.foreach(r => {
-      val res = evalRule(r)
+//    relations.foreach(r => { // NOTE: moved union into solve as to not double-union in semi-naive
+      val res = evalRule(rId)
       debug("result of evalRule=", () => storageManager.printer.factToString(res))
-      storageManager.resetNewDerived(r, res) // overwrite res to the new derived DB
-    })
+      storageManager.resetNewDerived(rId, res) // overwrite res to the new derived DB
+//    })
   }
 
   def solve(toSolve: RelationId, mode: MODE): Set[Seq[Term]] = {
@@ -83,7 +83,9 @@ class NaiveExecutionEngine(val storageManager: StorageManager) extends Execution
 
       debug(s"initial state @ $count", storageManager.printer.toString)
       count += 1
-      eval(toSolve, relations)
+      relations.foreach(r =>
+        eval(r, relations)
+      )
 
       setDiff = !storageManager.compareDerivedDBs()
 
