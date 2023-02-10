@@ -13,10 +13,10 @@ import scala.collection.mutable
 def tc(program: Program): Unit = {
   val edge = program.relation[Constant]("edge")
   val path = program.relation[Constant]("path")
-  val oneHop = program.relation[Constant]("oneHop")
-  val twoHops = program.relation[Constant]("twoHops")
-  val threeHops = program.relation[Constant]("threeHops")
-  val fourHops = program.relation[Constant]("fourHops")
+//  val oneHop = program.relation[Constant]("oneHop")
+//  val twoHops = program.relation[Constant]("twoHops")
+//  val threeHops = program.relation[Constant]("threeHops")
+//  val fourHops = program.relation[Constant]("fourHops")
 //  val query = program.relation[Constant]("query")
 
   val x, y, z, w, q = program.variable()
@@ -24,10 +24,10 @@ def tc(program: Program): Unit = {
   path(x, y) :- edge(x, y)
   path(x, z) :- (edge(x, y), path(y, z))
 
-  oneHop(x, y) :- edge(x, y, "red")
-  twoHops(x, z) :- ( oneHop(x, y), oneHop(y, z) )
-  threeHops(x, w) :- ( oneHop(x, y), oneHop(y, z), oneHop(z, w))
-  fourHops(x, q) :- ( oneHop(x, y), oneHop(y, z), oneHop(z, w), oneHop(w, q))
+//  oneHop(x, y) :- edge(x, y, "red")
+//  twoHops(x, z) :- ( oneHop(x, y), oneHop(y, z) )
+//  threeHops(x, w) :- ( oneHop(x, y), oneHop(y, z), oneHop(z, w))
+//  fourHops(x, q) :- ( oneHop(x, y), oneHop(y, z), oneHop(z, w), oneHop(w, q))
 
 
   edge("a", "a", "red") :- ()
@@ -35,7 +35,33 @@ def tc(program: Program): Unit = {
   edge("b", "c", "red") :- ()
   edge("c", "d", "blue") :- ()
 
-  println("RES=" + twoHops.solve(mode = Interpret))
+  println("RES=" + path.solve(mode = Interpret))
+}
+
+def tc_long(program: Program): Unit = {
+  val base = program.relation[Constant]("base")
+
+  val tc = program.relation[Constant]("tc")
+
+  val tcl = program.relation[Constant]("tcl")
+
+  val tcr = program.relation[Constant]("tcr")
+
+  val X, Y, Z = program.variable()
+
+  tcl(X, Y) :- (base(X, Y))
+  tcl(X, Y) :- (tcl(X, Z), base(Z, Y))
+
+  tcr(X, Y) :- (base(X, Y))
+  tcr(X, Y) :- (base(X, Z), tcr(Z, Y))
+
+  tc(X, Y) :- (base(X, Y))
+  tc(X, Y) :- (tc(X, Z), tc(Z, Y))
+
+  base("a", "b") :- ()
+  base("b", "c") :- ()
+  base("c", "d") :- ()
+  println("RES=" + tc.solve(mode = Interpret))
 }
 
 def reversible(program: Program, engine: ExecutionEngine): Unit = {
@@ -108,7 +134,7 @@ def isEqual(program: Program): Unit = {
   equal("0", "0", "1") :- ()
   equal(m, n, r) :- ( succ(pm, m) , succ(pn, n), equal(pm, pn, r) )
 
-  isEqual(r) :- equal("5", "7", r)
+  isEqual(r) :- equal("5", "5", r)
 
   succ("0", "1") :- ()
   succ("1", "2") :- ()
@@ -213,19 +239,19 @@ def cliquer(program: Program): Unit = {
 //  println("OLD SN")
 //  given engine1: ExecutionEngine = new SemiNaiveExecutionEngine(new CollectionsStorageManager())
 //  val program1 = Program(engine1)
-//  multiJoin(program1)
+//  isEqual(program1)
 //  println("\n\n_______________________\n\n")
 
-  println("STAGED")
-  given engine2: ExecutionEngine = new SemiNaiveStagedExecutionEngine(new CollectionsStorageManager())
-  val program2 = Program(engine2)
-  tc(program2)
-  println("\n\n_______________________\n\n")
+//  println("STAGED")
+//  given engine2: ExecutionEngine = new SemiNaiveStagedExecutionEngine(new CollectionsStorageManager())
+//  val program2 = Program(engine2)
+//  tc(program2)
+//  println("\n\n_______________________\n\n")
 
   println("HIT STAGED")
 
   given engine3: ExecutionEngine = new SemiNaiveJITStagedExecutionEngine(new CollectionsStorageManager())
   val program3 = Program(engine3)
-  tc(program3)
+  isEqual(program3)
   println("\n\n_______________________\n\n")
 }

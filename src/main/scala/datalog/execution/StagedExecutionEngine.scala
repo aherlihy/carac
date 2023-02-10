@@ -19,6 +19,7 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
   private var knownDbId = -1
   private val tCtx = ASTTransformerContext(using precedenceGraph)
   private val transforms: Seq[Transformer] = Seq(CopyEliminationPass(using tCtx), JoinIndexPass(using tCtx))
+  given staging.Compiler = staging.Compiler.make(getClass.getClassLoader) // TODO: should this be async too?
 
   given ToExpr[Constant] with {
     def apply(x: Constant)(using Quotes) = {
@@ -80,7 +81,7 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
     allRules.edb = true
   }
 
-  def compileIRRelOp[T](irTree: IROp)(using stagedSM: Expr[StorageManager { type EDB = T }], t: Type[T])(using ctx: InterpreterContext)(using Quotes): Expr[T] = { // TODO: Instead of parameterizing, use staged path dependent type: i.e. stagedSM.EDB
+  def compileIRRelOp[T](irTree: IRRelOp)(using stagedSM: Expr[StorageManager { type EDB = T }], t: Type[T])(using ctx: InterpreterContext)(using Quotes): Expr[T] = { // TODO: Instead of parameterizing, use staged path dependent type: i.e. stagedSM.EDB
     irTree match {
       case ScanOp(rId, db, knowledge) =>
         val edb =
@@ -129,7 +130,7 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
         else
           '{ $stagedSM.projectHelper(${compileIRRelOp(subOp)}, ${Expr(keys)}) }
 
-      case UnionOp(ops) =>
+      case UnionOp(ops, _) =>
         val compiledOps = Expr.ofSeq(ops.map(compileIRRelOp))
         '{ $stagedSM.union($compiledOps) }
 
@@ -169,7 +170,7 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
       case SwapAndClearOp() =>
         '{ $stagedSM.swapKnowledge(); $stagedSM.clearNewDB(${Expr(true)}) }
 
-      case SequenceOp(ops) =>
+      case SequenceOp(ops, _) =>
         val cOps = ops.map(compileIR)
         cOps.reduceLeft((acc, next) => // TODO[future]: make a block w reflection instead of reduceLeft for efficiency
           '{ $acc; $next }
@@ -198,7 +199,12 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
       case DebugNode(prefix, msg) =>
         '{ debug(${Expr(prefix)}, () => $stagedSM.printer.toString()) }
 
-      case _ => compileIRRelOp(irTree) //throw new Exception("Error: compileIR called with RelOp")
+      case _ =>
+        irTree match {
+          case op: IRRelOp => compileIRRelOp(op)
+          case _ =>
+            throw new Exception(s"Error: unhandled node type $irTree")
+        }
     }
   }
 
@@ -212,7 +218,7 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
 //        lazy val compiledBody: AtomicReference[CollectionsStorageManager => storageManager.EDB] = getCompiled(irTree, ctx)
         while({
           interpretIR(body)
-          ctx.count += 1
+//          ctx.count += 1
           toCmp match {
             case DB.Derived =>
               !storageManager.compareDerivedDBs()
@@ -225,7 +231,7 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
         storageManager.swapKnowledge()
         storageManager.clearNewDB(true)
 
-      case SequenceOp(ops) =>
+      case SequenceOp(ops, _) =>
         ops.map(interpretIR)
 
       case ScanOp(rId, db, knowledge) =>
@@ -278,7 +284,7 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
             }
         }
 
-      case UnionOp(ops) =>
+      case UnionOp(ops, _) =>
         ops.flatMap(o => interpretIR(o).asInstanceOf[EDB]).toSet.toBuffer
 
       case DiffOp(lhs, rhs) =>
@@ -319,7 +325,6 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
 
   def getCompiled(irTree: IROp, ctx: InterpreterContext): CollectionsStorageManager => storageManager.EDB = {
     given irCtx: InterpreterContext = ctx
-    given staging.Compiler = staging.Compiler.make(getClass.getClassLoader)
       staging.run {
         val res: Expr[CollectionsStorageManager => Any] =
           '{ (stagedSm: CollectionsStorageManager) => ${compileIR[CollectionsStorageManager#EDB](irTree)(using 'stagedSm)} }
@@ -374,7 +379,7 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
     debug("PG: ", () => irCtx.sortedRelations.toString())
     val irTree = createIR(transformedAST)
     debug("IRTree: ", () => storageManager.printer.printIR(irTree))
-
+//    TODO: go back when done w interp
 //    mode match {
 //      case MODE.Compile =>
 //        compileAndRun(irTree, irCtx)

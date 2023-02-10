@@ -118,7 +118,7 @@ class Printer[S <: StorageManager](val s: S) {
       case SwapAndClearOp() => "SWAP & CLEAR"
       case DoWhileOp(body, toCmp) => s"DO {\n${printIR(body, ident+1)}}\n${i}WHILE {$toCmp}\n"
       case SequenceOp(ops) => s"SEQ{${seq+1}}:${ops.zipWithIndex.map((o, idx) => s"${seq+1}.$idx" + printIR(o, ident+1, seq+1)).mkString("[\n", ",\n", "]")}"
-      case ScanEDBOp(srcRel) => s"SCAN(edbs[${ctx.storageManager.ns(srcRel)}])"
+      case ScanEDBOp(srcRel) => s"SCANEDB(edbs[${ctx.storageManager.ns(srcRel)}])"
       case ScanOp(srcRel, db, knowledge) =>
         s"SCAN[$db.$knowledge](${ctx.storageManager.ns(srcRel)})"
       case JoinOp(subOps, keys) => s"JOIN${keys.varToString()}${keys.constToString()}${subOps.map(s => printIR(s, ident+1)).mkString("(\n", ",\n", ")")}"
