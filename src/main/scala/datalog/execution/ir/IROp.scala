@@ -1,12 +1,14 @@
 package datalog.execution.ir
 
-import datalog.execution.{JoinIndexes, PrecedenceGraph, ir}
+import datalog.execution.{JITStagedExecutionEngine, JoinIndexes, PrecedenceGraph, ir}
 import datalog.execution.ast.*
 import datalog.storage.{CollectionsStorageManager, DB, KNOWLEDGE, RelationId, StorageManager}
 import datalog.tools.Debug
 import datalog.tools.Debug.debug
 
+import java.util.concurrent.atomic.AtomicReference
 import scala.collection.mutable
+import scala.concurrent.Future
 
 enum OpCode:
   case PROGRAM, SWAP_CLEAR, SEQ, SCAN, SCANEDB, PROJECT, JOIN, INSERT, UNION, DIFF, DEBUG, LOOP
@@ -22,12 +24,12 @@ type CompiledRelFn = CollectionsStorageManager => CollectionsStorageManager#EDB
 abstract class IROp() {
   val code: OpCode
   val fnCode: FnCode = FnCode.OTHER
-  var compiled: CompiledFn = null
+//  var compiled: AtomicReference[CompiledFn] = new AtomicReference[CompiledFn](
 //  def run(using storageManager: StorageManager): Any
 }
 
 abstract class IRRelOp() extends IROp {
-  var compiledRel: CompiledRelFn = null
+//  var compiledRel: AtomicReference[CompiledRelFn] = new AtomicReference[CompiledRelFn]()
 }
 
 case class ProgramOp(body: IROp) extends IROp {
@@ -89,8 +91,20 @@ case class InsertOp(rId: RelationId, db: DB, knowledge: KNOWLEDGE, subOp: IRRelO
 
 case class ScanOp(rId: RelationId, db: DB, knowledge: KNOWLEDGE) extends IRRelOp {
   val code: OpCode = OpCode.SCAN
+  lazy val compiledRelFn: AtomicReference[CompiledRelFn] = AtomicReference(null) // run
+  def lazySet(doCompile: () => CompiledRelFn): Unit =
+    given scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
+    Future {
+      compiledRelFn.lazySet(doCompile())
+    }
 
-  def run()(using storageManager: CollectionsStorageManager): storageManager.EDB =
+
+//  def jit(ee: JITStagedExecutionEngine) =
+//    val res = ee.getCompiled(this, ???)
+//    compiledRel(ee).lazySet(res)
+
+  def run(storageManager: CollectionsStorageManager): storageManager.EDB =
+    println("****SCANOP RUN :(")
     db match {
       case DB.Derived =>
         knowledge match {

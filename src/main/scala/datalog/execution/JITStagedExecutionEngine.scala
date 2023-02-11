@@ -5,18 +5,23 @@ import datalog.execution.ir.*
 import datalog.storage.{CollectionsStorageManager, DB, KNOWLEDGE, StorageManager}
 import datalog.tools.Debug.debug
 
+import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, Future}
+
 abstract class JITStagedExecutionEngine(override val storageManager: CollectionsStorageManager) extends StagedExecutionEngine(storageManager) {
   import storageManager.EDB
   def interpretIRRelOp(irTree: IRRelOp)(using ctx: InterpreterContext): storageManager.EDB = {
-//    println(s"IN INTERPRET IR, code=${irTree.code}")
+    println(s"IN INTERPRET IR, code=${irTree.code}")
     given CollectionsStorageManager = storageManager
     irTree match {
       case op: ScanOp =>
-        if (op.compiledRel == null)
-          op.compiledRel = getCompiled(op, ctx)
-          op.run()
+        println("__________in scanOp")
+        // TODO: do test to see if compiling makes sense
+        if (op.compiledRelFn.get() == null)
+          op.lazySet(() => compiler.getCompiled(op, ctx)) // TODO: to avoid passing ref to ee to IrOp, maybe better way
+          op.run(storageManager)
         else
-          op.compiledRel(storageManager)
+          op.compiledRelFn.get()(storageManager)
 
       case op: ScanEDBOp =>
         op.run()
@@ -40,7 +45,7 @@ abstract class JITStagedExecutionEngine(override val storageManager: Collections
     }
   }
   override def interpretIR(irTree: IROp)(using ctx: InterpreterContext): Any = {
-//    println(s"IN INTERPRET IR, code=${irTree.code} and fnCode=${irTree.fnCode}")
+    println(s"IN INTERPRET IR, code=${irTree.code} and fnCode=${irTree.fnCode}")
     given CollectionsStorageManager = storageManager
     irTree match {
       case ProgramOp(body) =>
@@ -55,15 +60,15 @@ abstract class JITStagedExecutionEngine(override val storageManager: Collections
         op.run()
 
       case op: SequenceOp =>
-        if (op.fnCode == FnCode.LOOP_BODY) {
-          if (op.compiled == null)
-            op.compiled = getCompiled(op, ctx)
-            op.run(op.ops.map(o => sm => interpretIR(o)))
-          else
-            op.compiled(storageManager)
-        } else {
+//        if (op.fnCode == FnCode.LOOP_BODY) {
+//          if (op.compiled == null)
+//            op.compiled = getCompiled(op, ctx)
+//            op.run(op.ops.map(o => sm => interpretIR(o)))
+//          else
+//            op.compiled(storageManager)
+//        } else {
           op.run(op.ops.map(o => sm => interpretIR(o)))
-        }
+//        }
 
       case op: InsertOp =>
         op.run(sm => interpretIRRelOp(op.subOp), op.subOp2.map(sop => sm => interpretIRRelOp(sop)))
