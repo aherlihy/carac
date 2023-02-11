@@ -1,10 +1,10 @@
 package test
 
 import datalog.dsl.{Constant, Program, Term}
-import datalog.execution.{JoinIndexes, SemiNaiveStagedExecutionEngine}
+import datalog.execution.{JoinIndexes, SemiNaiveStagedExecutionEngine, StagedCompiler}
 import datalog.execution.ast.ASTNode
 import datalog.execution.ir.*
-import datalog.storage.{CollectionsStorageManager, StorageManager, KNOWLEDGE, DB}
+import datalog.storage.{CollectionsStorageManager, DB, KNOWLEDGE, StorageManager}
 import datalog.tools.Debug.debug
 
 import scala.collection.mutable

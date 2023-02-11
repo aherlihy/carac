@@ -7,21 +7,17 @@ import datalog.tools.Debug.debug
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
+import scala.quoted.staging
+import scala.util.{Failure, Success}
 
 abstract class JITStagedExecutionEngine(override val storageManager: CollectionsStorageManager) extends StagedExecutionEngine(storageManager) {
   import storageManager.EDB
   def interpretIRRelOp(irTree: IRRelOp)(using ctx: InterpreterContext): storageManager.EDB = {
-    println(s"IN INTERPRET IR, code=${irTree.code}")
+//    println(s"IN INTERPRET REL_IR, code=${irTree.code}")
     given CollectionsStorageManager = storageManager
     irTree match {
       case op: ScanOp =>
-        println("__________in scanOp")
-        // TODO: do test to see if compiling makes sense
-        if (op.compiledRelFn.get() == null)
-          op.lazySet(() => compiler.getCompiled(op, ctx)) // TODO: to avoid passing ref to ee to IrOp, maybe better way
-          op.run(storageManager)
-        else
-          op.compiledRelFn.get()(storageManager)
+        op.run(storageManager)
 
       case op: ScanEDBOp =>
         op.run()
@@ -45,7 +41,7 @@ abstract class JITStagedExecutionEngine(override val storageManager: Collections
     }
   }
   override def interpretIR(irTree: IROp)(using ctx: InterpreterContext): Any = {
-    println(s"IN INTERPRET IR, code=${irTree.code} and fnCode=${irTree.fnCode}")
+//    println(s"IN INTERPRET IR, code=${irTree.code} and fnCode=${irTree.fnCode}")
     given CollectionsStorageManager = storageManager
     irTree match {
       case ProgramOp(body) =>
@@ -60,15 +56,33 @@ abstract class JITStagedExecutionEngine(override val storageManager: Collections
         op.run()
 
       case op: SequenceOp =>
-//        if (op.fnCode == FnCode.LOOP_BODY) {
-//          if (op.compiled == null)
-//            op.compiled = getCompiled(op, ctx)
-//            op.run(op.ops.map(o => sm => interpretIR(o)))
-//          else
-//            op.compiled(storageManager)
-//        } else {
-          op.run(op.ops.map(o => sm => interpretIR(o)))
-//        }
+        op.fnCode match
+          case FnCode.EVAL_SN =>
+            // test if need to compile, if so:
+            if (op.compiledFn == null) { // need to start compilation
+              debug("starting new compilation", () => "")
+              given scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
+
+              op.compiledFn = Future {
+                given staging.Compiler = dedicatedDotty //staging.Compiler.make(getClass.getClassLoader) // TODO: new dotty per thread, maybe concat
+                compiler.getCompiled(op, ctx)
+              }
+              op.run(op.ops.map(o => sm => interpretIR(o)))
+            } else {
+              op.compiledFn.value match {
+                case Some(Success(op)) =>
+                  debug("COMPILED", () => "")
+                  op(storageManager)
+                case Some(Failure(e)) =>
+                  throw e
+                case None =>
+//                  Thread.sleep(10000)
+                  debug("compilation not ready yet", () => "")
+                  op.run(op.ops.map(o => sm => interpretIR(o)))
+              }
+            }
+          case _ =>
+            op.run(op.ops.map(o => sm => interpretIR(o)))
 
       case op: InsertOp =>
         op.run(sm => interpretIRRelOp(op.subOp), op.subOp2.map(sop => sm => interpretIRRelOp(sop)))

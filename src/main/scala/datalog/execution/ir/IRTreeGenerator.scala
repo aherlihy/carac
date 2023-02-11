@@ -1,7 +1,8 @@
 package datalog.execution.ir
 
+import datalog.execution.StagedCompiler
 import datalog.execution.ast.{ASTNode, AllRulesNode, LogicAtom, ProgramNode, RuleNode}
-import datalog.storage.{DB, RelationId, KNOWLEDGE}
+import datalog.storage.{DB, KNOWLEDGE, RelationId}
 import datalog.tools.Debug.debug
 
 import scala.collection.mutable

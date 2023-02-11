@@ -9,9 +9,7 @@ import scala.quoted.*
 /**
  * Separate out compile logic from StagedExecutionEngine
  */
-class StagedCompiler(val dotty: staging.Compiler, val storageManager: StorageManager) {
-  given staging.Compiler = dotty
-
+class StagedCompiler(val storageManager: StorageManager) {
   given ToExpr[Constant] with {
     def apply(x: Constant)(using Quotes) = {
       x match {
@@ -40,16 +38,16 @@ class StagedCompiler(val dotty: staging.Compiler, val storageManager: StorageMan
           case DB.Derived =>
             knowledge match {
               case KNOWLEDGE.New =>
-                '{ println("IN COMPILED!") ; $stagedSM.getNewDerivedDB(${ Expr(rId) }, $edb) }
+                '{ $stagedSM.getNewDerivedDB(${ Expr(rId) }, $edb) }
               case KNOWLEDGE.Known =>
-                '{ println("IN COMPILED!") ; $stagedSM.getKnownDerivedDB(${ Expr(rId) }, $edb) }
+                '{ $stagedSM.getKnownDerivedDB(${ Expr(rId) }, $edb) }
             }
           case DB.Delta =>
             knowledge match {
               case KNOWLEDGE.New =>
-                '{ println("IN COMPILED!") ; $stagedSM.getNewDeltaDB(${ Expr(rId) }, $edb) }
+                '{ $stagedSM.getNewDeltaDB(${ Expr(rId) }, $edb) }
               case KNOWLEDGE.Known =>
-                '{ println("IN COMPILED!") ; $stagedSM.getKnownDeltaDB(${ Expr(rId) }, $edb) }
+                '{ $stagedSM.getKnownDeltaDB(${ Expr(rId) }, $edb) }
             }
         }
 
@@ -107,7 +105,6 @@ class StagedCompiler(val dotty: staging.Compiler, val storageManager: StorageMan
         }
         '{
           while ( {
-            ${ compileIR(DebugNode("Start iteration, debug node", () => "")) }
             ${ compileIR(body) };
             $cond;
           }) ()
@@ -154,9 +151,8 @@ class StagedCompiler(val dotty: staging.Compiler, val storageManager: StorageMan
     }
   }
 
-  def getCompiled(irTree: IROp, ctx: InterpreterContext): CollectionsStorageManager => CollectionsStorageManager#EDB = {
+  def getCompiled(irTree: IROp, ctx: InterpreterContext)(using staging.Compiler): CollectionsStorageManager => CollectionsStorageManager#EDB = {
     given irCtx: InterpreterContext = ctx
-
     staging.run {
       val res: Expr[CollectionsStorageManager => Any] =
         '{ (stagedSm: CollectionsStorageManager) => ${ compileIR[CollectionsStorageManager#EDB](irTree)(using 'stagedSm) } }

@@ -82,7 +82,6 @@ class SemiNaiveExecutionEngine(override val storageManager: StorageManager) exte
 //      println("** Max Memory:   " + runtime.maxMemory / mb)
     }
     debug(s"final state @$count", storageManager.printer.toString)
-    println(s"FINAL COUNT=$count")
     storageManager.getNewIDBResult(rId)
   }
 }

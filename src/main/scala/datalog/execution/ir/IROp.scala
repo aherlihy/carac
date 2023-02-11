@@ -1,6 +1,6 @@
 package datalog.execution.ir
 
-import datalog.execution.{JITStagedExecutionEngine, JoinIndexes, PrecedenceGraph, ir}
+import datalog.execution.{JITStagedExecutionEngine, JoinIndexes, PrecedenceGraph, StagedCompiler, ir}
 import datalog.execution.ast.*
 import datalog.storage.{CollectionsStorageManager, DB, KNOWLEDGE, RelationId, StorageManager}
 import datalog.tools.Debug
@@ -8,7 +8,9 @@ import datalog.tools.Debug.debug
 
 import java.util.concurrent.atomic.AtomicReference
 import scala.collection.mutable
-import scala.concurrent.Future
+import scala.concurrent.duration.Duration
+import scala.concurrent.{Future, Await}
+import scala.util.{Failure, Success}
 
 enum OpCode:
   case PROGRAM, SWAP_CLEAR, SEQ, SCAN, SCANEDB, PROJECT, JOIN, INSERT, UNION, DIFF, DEBUG, LOOP
@@ -54,6 +56,7 @@ case class DoWhileOp(body: IROp, toCmp: DB) extends IROp {
 }
 case class SequenceOp(ops: Seq[IROp], override val fnCode: FnCode = FnCode.OTHER) extends IROp {
   val code: OpCode = OpCode.SEQ
+  var compiledFn: Future[CompiledFn] = null
   def run(opsFn: Seq[CompiledFn])(using storageManager:  CollectionsStorageManager): Any =
     opsFn.map(o => o(storageManager))
 }
@@ -91,20 +94,12 @@ case class InsertOp(rId: RelationId, db: DB, knowledge: KNOWLEDGE, subOp: IRRelO
 
 case class ScanOp(rId: RelationId, db: DB, knowledge: KNOWLEDGE) extends IRRelOp {
   val code: OpCode = OpCode.SCAN
-  lazy val compiledRelFn: AtomicReference[CompiledRelFn] = AtomicReference(null) // run
-  def lazySet(doCompile: () => CompiledRelFn): Unit =
-    given scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
-    Future {
-      compiledRelFn.lazySet(doCompile())
-    }
-
-
-//  def jit(ee: JITStagedExecutionEngine) =
-//    val res = ee.getCompiled(this, ???)
-//    compiledRel(ee).lazySet(res)
+//  lazy val compiledRelFn: AtomicReference[CompiledRelFn] =
+//    println("in lazy val")
+//    lazySet()
+//    AtomicReference(run) // run
 
   def run(storageManager: CollectionsStorageManager): storageManager.EDB =
-    println("****SCANOP RUN :(")
     db match {
       case DB.Derived =>
         knowledge match {

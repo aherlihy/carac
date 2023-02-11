@@ -248,7 +248,7 @@ def cliquer(program: Program): Unit = {
 //  tc(program2)
 //  println("\n\n_______________________\n\n")
 
-  println("HIT STAGED")
+  println("JIT STAGED")
 
   given engine3: ExecutionEngine = new SemiNaiveJITStagedExecutionEngine(new CollectionsStorageManager())
   val program3 = Program(engine3)

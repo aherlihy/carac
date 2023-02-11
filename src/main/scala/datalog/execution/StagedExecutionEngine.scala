@@ -19,8 +19,8 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
   private var knownDbId = -1
   private val tCtx = ASTTransformerContext(using precedenceGraph)
   private val transforms: Seq[Transformer] = Seq(CopyEliminationPass(using tCtx), JoinIndexPass(using tCtx))
-  val compiler = StagedCompiler(staging.Compiler.make(getClass.getClassLoader), storageManager) // TODO: should this be initialized async too?
-
+  val compiler: StagedCompiler = StagedCompiler(storageManager) // TODO: should this be initialized async too?
+  val dedicatedDotty: staging.Compiler = staging.Compiler.make(getClass.getClassLoader)
 
   def createIR(ast: ASTNode)(using InterpreterContext): IROp
 
@@ -184,7 +184,7 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
   }
 
   def solvePreCompiled(irTree: IROp, ctx: InterpreterContext): Set[Seq[Term]] = {
-    given irCtx: InterpreterContext = ctx
+    given staging.Compiler = dedicatedDotty
     val compiled = compiler.getCompiled(irTree, ctx)
     compiled(storageManager.asInstanceOf[CollectionsStorageManager]) // TODO: remove cast
     storageManager.getNewIDBResult(ctx.toSolve)
@@ -223,7 +223,13 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
     debug("AST: ", () => storageManager.printer.printAST(ast))
     debug("TRANSFORMED: ", () => storageManager.printer.printAST(transformedAST))
     debug("PG: ", () => irCtx.sortedRelations.toString())
+
+
     val irTree = createIR(transformedAST)
+//    val s = ScanOp(0, DB.Derived, KNOWLEDGE.Known)
+//    val irTree = DoWhileOp(SequenceOp(Seq(s, s, s, s, s, s)), DB.Derived)
+
+
     debug("IRTree: ", () => storageManager.printer.printIR(irTree))
 //    TODO: go back when done w interp
 //    mode match {
