@@ -1,7 +1,7 @@
 package datalog
 
 import datalog.dsl.MODE.Interpret
-import datalog.execution.{ExecutionEngine, NaiveExecutionEngine, NaiveStagedExecutionEngine, SemiNaiveExecutionEngine, SemiNaiveJITStagedExecutionEngine, SemiNaiveStagedExecutionEngine}
+import datalog.execution.{ExecutionEngine, NaiveExecutionEngine, NaiveStagedExecutionEngine, SemiNaiveExecutionEngine, SemiNaiveJITStagedExecutionEngine, SemiNaiveStagedExecutionEngine, SemiNaiveInterpretedStagedExecutionEngine}
 import datalog.dsl.{Constant, Program, __}
 import datalog.execution.ast.transform.CopyEliminationPass
 import datalog.execution.ir.InterpreterContext
@@ -517,12 +517,20 @@ def anon_var(program: Program) = {
 //  benchStaged10x(program1)
 //  println("\n\n_______________________\n\n")
 
-  println("STAGED")
+  println("STAGED COMPILE")
   given engine2: ExecutionEngine = new SemiNaiveStagedExecutionEngine(new CollectionsStorageManager())
   val program2 = Program(engine2)
   anon_var(program2)
   println("\n\n_______________________\n\n")
-//
+
+  println("STAGED INTERP")
+
+  given engine3: ExecutionEngine = new SemiNaiveInterpretedStagedExecutionEngine(new CollectionsStorageManager())
+
+  val program3 = Program(engine3)
+  anon_var(program3)
+  println("\n\n_______________________\n\n")
+  //
 //  println("JIT STAGED")
 //
 //  given engine3: ExecutionEngine = new SemiNaiveJITStagedExecutionEngine(new CollectionsStorageManager())

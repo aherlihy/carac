@@ -58,14 +58,21 @@ class cba_expr_value_benchmark() extends ExampleBenchmarkGenerator("cba_expr_val
  }
 
  // staged, seminaive
+ @Benchmark def ci_seminaive_staged_interpreted(blackhole: Blackhole): Unit = {
+   val p = "SemiNaiveStagedCollections"
+   if (!programs.contains(p))
+     throw new Exception(f"skip test $p for current env")
+   blackhole.consume(run(programs(p), result))
+ }
+
  @Benchmark def ci_seminaive_staged(blackhole: Blackhole): Unit = {
-  val p = "SemiNaiveStagedCollections"
+  val p = "SemiNaiveInterpretedStagedCollections"
   if(!programs.contains(p))
     throw new Exception(f"skip test $p for current env")
   blackhole.consume(run(programs(p), result))
  }
  @Benchmark def ci_seminaive_staged_jit(blackhole: Blackhole): Unit = {
-  val p = "SemiNaiveJITStagedCollections"
+   val p = "SemiNaiveJITStagedCollections"
   if(!programs.contains(p))
     throw new Exception(f"skip test $p for current env")
   blackhole.consume(run(programs(p), result))

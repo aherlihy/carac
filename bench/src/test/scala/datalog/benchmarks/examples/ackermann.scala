@@ -14,9 +14,7 @@ import test.examples.ackermann.ackermann
 @Measurement(iterations = examples_iterations, time = examples_time, timeUnit = TimeUnit.SECONDS)
 @State(Scope.Thread)
 class ackermann_benchmark() extends ExampleBenchmarkGenerator(
- "ackermann",
- Set("Naive", "Relational"), // run only SemiNaiveColl
- Set("Slow", "CI")
+ "ackermann"
 ) with ackermann {
  override def toSolve: String = super.toSolve
  @Setup
@@ -40,7 +38,14 @@ class ackermann_benchmark() extends ExampleBenchmarkGenerator(
     throw new Exception(f"skip test $p for current env")
   blackhole.consume(run(programs(p), result))
  }
- @Benchmark def ci_seminaive_staged_jit(blackhole: Blackhole): Unit = {
+  @Benchmark def ci_seminaive_staged_interpreted(blackhole: Blackhole): Unit = {
+    val p = "SemiNaiveInterpretedStagedCollections"
+    if (!programs.contains(p))
+      throw new Exception(f"skip test $p for current env")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  @Benchmark def ci_seminaive_staged_jit(blackhole: Blackhole): Unit = {
   val p = "SemiNaiveJITStagedCollections"
   if(!programs.contains(p))
     throw new Exception(f"skip test $p for current env")

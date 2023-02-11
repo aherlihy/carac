@@ -60,8 +60,15 @@ class pointsto_benchmark() extends ExampleBenchmarkGenerator("pointsto") with po
  }
 
  // staged, seminaive
- @Benchmark def ci_seminaive_staged(blackhole: Blackhole): Unit = {
+ @Benchmark def ci_seminaive_staged_interpreted(blackhole: Blackhole): Unit = {
   val p = "SemiNaiveStagedCollections"
+  if(!programs.contains(p))
+    throw new Exception(f"skip test $p for current env")
+
+  blackhole.consume(run(programs(p), result))
+}
+@Benchmark def ci_seminaive_staged(blackhole: Blackhole): Unit = {
+  val p = "SemiNaiveInterpretedStagedCollections"
   if(!programs.contains(p))
     throw new Exception(f"skip test $p for current env")
   blackhole.consume(run(programs(p), result))

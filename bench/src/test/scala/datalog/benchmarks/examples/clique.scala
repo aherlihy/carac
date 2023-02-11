@@ -59,8 +59,15 @@ class clique_benchmark() extends ExampleBenchmarkGenerator("clique") with clique
  }
 
  // staged, seminaive
+ @Benchmark def ci_seminaive_staged_interpreted(blackhole: Blackhole): Unit = {
+   val p = "SemiNaiveStagedCollections"
+   if (!programs.contains(p))
+     throw new Exception(f"skip test $p for current env")
+   blackhole.consume(run(programs(p), result))
+ }
+
  @Benchmark def ci_seminaive_staged(blackhole: Blackhole): Unit = {
-  val p = "SemiNaiveStagedCollections"
+  val p = "SemiNaiveInterpretedStagedCollections"
   if(!programs.contains(p))
     throw new Exception(f"skip test $p for current env")
   blackhole.consume(run(programs(p), result))
