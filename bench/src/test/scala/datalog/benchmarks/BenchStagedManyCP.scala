@@ -52,9 +52,9 @@ object initialize {
   }
 }
 
-@Fork(fork) // # of jvms that it will use
-@Warmup(iterations = warmup_iterations, time = warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = batchSize)
-@Measurement(iterations = iterations, time = time, timeUnit = TimeUnit.SECONDS, batchSize = batchSize)
+@Fork(staged_fork) // # of jvms that it will use
+@Warmup(iterations = staged_warmup_iterations, time = staged_warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = staged_batchSize)
+@Measurement(iterations = staged_iterations, time = staged_time, timeUnit = TimeUnit.SECONDS, batchSize = staged_batchSize)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class BenchStagedManyCP_full_compiled {
@@ -75,37 +75,37 @@ class BenchStagedManyCP_full_compiled {
     )
   }
 }
-//@Fork(fork) // # of jvms that it will use
-//@Warmup(iterations = warmup_iterations, time = warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = batchSize)
-//@Measurement(iterations = iterations, time = time, timeUnit = TimeUnit.SECONDS, batchSize = batchSize)
-//@State(Scope.Thread)
-//@BenchmarkMode(Array(Mode.AverageTime))
-//class BenchStagedManyCP_compile_and_run {
-//  var engine: SemiNaiveStagedExecutionEngine = null
-//  var program: Program = null
-//  var toSolve: Relation[Constant] = null
-//  var tree: ir.IROp = null
-//  var ctx: ir.InterpreterContext = null
-//  // measure cost of tree gen, compiling, running
-//  @Setup(Level.Invocation)
-//  def setup(): Unit = {
-//    engine = SemiNaiveStagedExecutionEngine(CollectionsStorageManager())
-//    program = Program(engine)
-//    toSolve = initialize.pretest(program)
-//    val x1 = engine.generateProgramTree(toSolve.id)
-//    tree = x1._1
-//    ctx = x1._2
-//  }
-//  //  measure cost of compiling, running
-//  @Benchmark def run(blackhole: Blackhole): Unit = {
-//    blackhole.consume(
-//      engine.compileAndRun(tree, ctx)
-//    )
-//  }
-//}
-@Fork(fork) // # of jvms that it will use
-@Warmup(iterations = warmup_iterations, time = warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = batchSize)
-@Measurement(iterations = iterations, time = time, timeUnit = TimeUnit.SECONDS, batchSize = batchSize)
+@Fork(staged_fork) // # of jvms that it will use
+@Warmup(iterations = staged_warmup_iterations, time = staged_warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = staged_batchSize)
+@Measurement(iterations = staged_iterations, time = staged_time, timeUnit = TimeUnit.SECONDS, batchSize = staged_batchSize)
+@State(Scope.Thread)
+@BenchmarkMode(Array(Mode.AverageTime))
+class BenchStagedManyCP_compile_and_run {
+  var engine: SemiNaiveStagedExecutionEngine = null
+  var program: Program = null
+  var toSolve: Relation[Constant] = null
+  var tree: ir.IROp = null
+  var ctx: ir.InterpreterContext = null
+  // measure cost of tree gen, compiling, running
+  @Setup(Level.Invocation)
+  def setup(): Unit = {
+    engine = SemiNaiveStagedExecutionEngine(CollectionsStorageManager())
+    program = Program(engine)
+    toSolve = initialize.pretest(program)
+    val x1 = engine.generateProgramTree(toSolve.id)
+    tree = x1._1
+    ctx = x1._2
+  }
+  //  measure cost of compiling, running
+  @Benchmark def run(blackhole: Blackhole): Unit = {
+    blackhole.consume(
+      engine.solveCompiled(tree, ctx)
+    )
+  }
+}
+@Fork(staged_fork) // # of jvms that it will use
+@Warmup(iterations = staged_warmup_iterations, time = staged_warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = staged_batchSize)
+@Measurement(iterations = staged_iterations, time = staged_time, timeUnit = TimeUnit.SECONDS, batchSize = staged_batchSize)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class BenchStagedManyCP_run_only_compiled {
@@ -114,7 +114,7 @@ class BenchStagedManyCP_run_only_compiled {
   var toSolve: Relation[Constant] = null
   var tree: ir.IROp = null
   var ctx: ir.InterpreterContext = null
-  var compiled: CollectionsStorageManager => Any = null
+  var compiled: CollectionsStorageManager => CollectionsStorageManager#EDB = null
 
   // measure cost of tree gen, compiling, running
   @Setup(Level.Invocation)
@@ -125,42 +125,42 @@ class BenchStagedManyCP_run_only_compiled {
     val x1 = engine.generateProgramTree(toSolve.id)
     tree = x1._1
     ctx = x1._2
-    compiled = engine.getCompiled(tree, ctx)
+    compiled = engine.preCompile(tree, ctx)
   }
 
   // measure cost of running compiled code
   @Benchmark def run(blackhole: Blackhole): Unit = {
     val e = engine
     blackhole.consume(
-      e.solvePreCompiled(compiled.asInstanceOf[CollectionsStorageManager => e.storageManager.EDB], ctx)
+      e.solvePreCompiled(compiled, ctx)
     )
   }
 }
-//@Fork(fork) // # of jvms that it will use
-//@Warmup(iterations = warmup_iterations, time = warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = batchSize)
-//@Measurement(iterations = iterations, time = time, timeUnit = TimeUnit.SECONDS, batchSize = batchSize)
-//@State(Scope.Thread)
-//@BenchmarkMode(Array(Mode.AverageTime))
-//class BenchStagedManyCP_full_interpreted {
-//  var engine: SemiNaiveStagedExecutionEngine = null
-//  var program: Program = null
-//  var toSolve: Relation[Constant] = null
-//  @Setup(Level.Invocation)
-//  def setup(): Unit = {
-//    engine = SemiNaiveStagedExecutionEngine(CollectionsStorageManager())
-//    program = Program(engine)
-//    toSolve = initialize.pretest(program)
-//  }
-//  // measure cost of tree gen, running interpreted
-//  @Benchmark def run(blackhole: Blackhole): Unit = {
-//    blackhole.consume(
-//      toSolve.solve(MODE.Interpret)
-//    )
-//  }
-//}
-@Fork(fork) // # of jvms that it will use
-@Warmup(iterations = warmup_iterations, time = warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = batchSize)
-@Measurement(iterations = iterations, time = time, timeUnit = TimeUnit.SECONDS, batchSize = batchSize)
+@Fork(staged_fork) // # of jvms that it will use
+@Warmup(iterations = staged_warmup_iterations, time = staged_warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = staged_batchSize)
+@Measurement(iterations = staged_iterations, time = staged_time, timeUnit = TimeUnit.SECONDS, batchSize = staged_batchSize)
+@State(Scope.Thread)
+@BenchmarkMode(Array(Mode.AverageTime))
+class BenchStagedManyCP_full_interpreted {
+  var engine: SemiNaiveStagedExecutionEngine = null
+  var program: Program = null
+  var toSolve: Relation[Constant] = null
+  @Setup(Level.Invocation)
+  def setup(): Unit = {
+    engine = SemiNaiveStagedExecutionEngine(CollectionsStorageManager())
+    program = Program(engine)
+    toSolve = initialize.pretest(program)
+  }
+  // measure cost of tree gen, running interpreted
+  @Benchmark def run(blackhole: Blackhole): Unit = {
+    blackhole.consume(
+      toSolve.solve(MODE.Interpret)
+    )
+  }
+}
+@Fork(staged_fork) // # of jvms that it will use
+@Warmup(iterations = staged_warmup_iterations, time = staged_warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = staged_batchSize)
+@Measurement(iterations = staged_iterations, time = staged_time, timeUnit = TimeUnit.SECONDS, batchSize = staged_batchSize)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class BenchStagedManyCP_run_only_interpreted {
@@ -182,16 +182,16 @@ class BenchStagedManyCP_run_only_interpreted {
   //  measure cost of running interpreted only
   @Benchmark def run(blackhole: Blackhole): Unit = {
     blackhole.consume(
-      engine.solvePreInterpreted(tree, ctx)
+      engine.solveInterpreted(tree, ctx)
     )
   }
 }
-@Fork(fork) // # of jvms that it will use
-@Warmup(iterations = warmup_iterations, time = warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = batchSize)
-@Measurement(iterations = iterations, time = time, timeUnit = TimeUnit.SECONDS, batchSize = batchSize)
+@Fork(staged_fork) // # of jvms that it will use
+@Warmup(iterations = staged_warmup_iterations, time = staged_warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = staged_batchSize)
+@Measurement(iterations = staged_iterations, time = staged_time, timeUnit = TimeUnit.SECONDS, batchSize = staged_batchSize)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
-class BenchStagedManyCPCollections {
+class BenchStagedManyCPCollections_old {
   var engine: SemiNaiveExecutionEngine = null
   var program: Program = null
   var toSolve: Relation[Constant] = null
@@ -209,18 +209,18 @@ class BenchStagedManyCPCollections {
   }
 }
 
-@Fork(fork) // # of jvms that it will use
-@Warmup(iterations = warmup_iterations, time = warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = batchSize)
-@Measurement(iterations = iterations, time = time, timeUnit = TimeUnit.SECONDS, batchSize = batchSize)
+@Fork(staged_fork) // # of jvms that it will use
+@Warmup(iterations = staged_warmup_iterations, time = staged_warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = staged_batchSize)
+@Measurement(iterations = staged_iterations, time = staged_time, timeUnit = TimeUnit.SECONDS, batchSize = staged_batchSize)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
-class BenchStagedManyCPCollections_fused {
+class BenchStagedManyCPCollections_not_fused {
   var engine: SemiNaiveExecutionEngine = null
   var program: Program = null
   var toSolve: Relation[Constant] = null
   @Setup(Level.Invocation)
   def setup(): Unit = {
-    engine = SemiNaiveExecutionEngine(CollectionsStorageManager(fuse = true))
+    engine = SemiNaiveExecutionEngine(CollectionsStorageManager(fuse = false))
     program = Program(engine)
     toSolve = initialize.pretest(program)
   }

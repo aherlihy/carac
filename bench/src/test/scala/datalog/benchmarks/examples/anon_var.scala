@@ -7,13 +7,13 @@ import org.openjdk.jmh.infra.Blackhole
 import test.examples.anon_var.anon_var
 
 import java.nio.file.Paths
-@Fork(1) // # of jvms that it will use
-@Warmup(iterations = 1, time = 1, timeUnit = TimeUnit.SECONDS)
-@Measurement(iterations = 1, time = 1, timeUnit = TimeUnit.SECONDS)
+@Fork(examples_fork) // # of jvms that it will use
+@Warmup(iterations = examples_warmup_iterations, time = examples_warmup_time, timeUnit = TimeUnit.SECONDS)
+@Measurement(iterations = examples_iterations, time = examples_xl_time, timeUnit = TimeUnit.SECONDS)
 @State(Scope.Thread)
 class anon_var_benchmark extends ExampleBenchmarkGenerator(
   "anon_var",
-  Set("Naive", "Relational"), // run only SemiNaiveCollections
+  Set("Naive", "Relational"), // skip naive + rel bc slow
   Set("Slow", "CI")
 ) with anon_var {
  @Setup

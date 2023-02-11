@@ -24,16 +24,16 @@ object initialize2 {
     val hops8 = program.relation[Constant]("hops8")
     val hops9 = program.relation[Constant]("hops9")
     val hops10 = program.relation[Constant]("hops10")
-    //    val hops11 = program.relation[Constant]("hops11")
-    //    val hops12 = program.relation[Constant]("hops12")
-    //    val hops13 = program.relation[Constant]("hops13")
-    //    val hops14 = program.relation[Constant]("hops14")
-    //    val hops15 = program.relation[Constant]("hops15")
-    //    val hops16 = program.relation[Constant]("hops16")
-    //    val hops17 = program.relation[Constant]("hops17")
-    //    val hops18 = program.relation[Constant]("hops18")
-    //    val hops19 = program.relation[Constant]("hops19")
-    //    val hops20 = program.relation[Constant]("hops20")
+    val hops11 = program.relation[Constant]("hops11")
+    val hops12 = program.relation[Constant]("hops12")
+    val hops13 = program.relation[Constant]("hops13")
+    val hops14 = program.relation[Constant]("hops14")
+    val hops15 = program.relation[Constant]("hops15")
+    val hops16 = program.relation[Constant]("hops16")
+    val hops17 = program.relation[Constant]("hops17")
+    val hops18 = program.relation[Constant]("hops18")
+    val hops19 = program.relation[Constant]("hops19")
+    val hops20 = program.relation[Constant]("hops20")
 
     val x, y, z, w, q = program.variable()
 
@@ -50,19 +50,29 @@ object initialize2 {
     hops8(x, y) :- (hops1(x, z), hops7(z, y))
     hops9(x, y) :- (hops1(x, z), hops8(z, y))
     hops10(x, y) :- (hops1(x, z), hops9(z, y))
+    hops11(x, y) :- (hops1(x, z), hops10(z, y))
+    hops12(x, y) :- (hops1(x, z), hops11(z, y))
+    hops13(x, y) :- (hops1(x, z), hops12(z, y))
+    hops14(x, y) :- (hops1(x, z), hops13(z, y))
+    hops15(x, y) :- (hops1(x, z), hops14(z, y))
+    hops16(x, y) :- (hops1(x, z), hops15(z, y))
+    hops17(x, y) :- (hops1(x, z), hops16(z, y))
+    hops18(x, y) :- (hops1(x, z), hops17(z, y))
+    hops19(x, y) :- (hops1(x, z), hops18(z, y))
+    hops20(x, y) :- (hops1(x, z), hops19(z, y))
 
     for i <- 0 until 200 do
       edge(
         Random.alphanumeric.dropWhile(_.isDigit).dropWhile(_.isUpper).head.toString,
         Random.alphanumeric.dropWhile(_.isDigit).dropWhile(_.isUpper).head.toString
       ) :- ()
-    hops10
+    hops20
   }
 }
 
-@Fork(fork) // # of jvms that it will use
-@Warmup(iterations = warmup_iterations, time = warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = batchSize)
-@Measurement(iterations = iterations, time = time, timeUnit = TimeUnit.SECONDS, batchSize = batchSize)
+@Fork(staged_fork) // # of jvms that it will use
+@Warmup(iterations = staged_warmup_iterations, time = staged_warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = staged_batchSize)
+@Measurement(iterations = staged_iterations, time = staged_time, timeUnit = TimeUnit.SECONDS, batchSize = staged_batchSize)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class BenchStaged10x_full_compiled {
@@ -82,9 +92,9 @@ class BenchStaged10x_full_compiled {
     )
   }
 }
-@Fork(fork) // # of jvms that it will use
-@Warmup(iterations = warmup_iterations, time = warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = batchSize)
-@Measurement(iterations = iterations, time = time, timeUnit = TimeUnit.SECONDS, batchSize = batchSize)
+@Fork(staged_fork) // # of jvms that it will use
+@Warmup(iterations = staged_warmup_iterations, time = staged_warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = staged_batchSize)
+@Measurement(iterations = staged_iterations, time = staged_time, timeUnit = TimeUnit.SECONDS, batchSize = staged_batchSize)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class BenchStaged10x_compile_and_run {
@@ -106,13 +116,13 @@ class BenchStaged10x_compile_and_run {
   //  measure cost of compiling, running
   @Benchmark def run(blackhole: Blackhole): Unit = {
     blackhole.consume(
-      engine.compileAndRun(tree, ctx)
+      engine.solveCompiled(tree, ctx)
     )
   }
 }
-@Fork(fork) // # of jvms that it will use
-@Warmup(iterations = warmup_iterations, time = warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = batchSize)
-@Measurement(iterations = iterations, time = time, timeUnit = TimeUnit.SECONDS, batchSize = batchSize)
+@Fork(staged_fork) // # of jvms that it will use
+@Warmup(iterations = staged_warmup_iterations, time = staged_warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = staged_batchSize)
+@Measurement(iterations = staged_iterations, time = staged_time, timeUnit = TimeUnit.SECONDS, batchSize = staged_batchSize)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class BenchStaged10x_run_only_compiled {
@@ -121,7 +131,7 @@ class BenchStaged10x_run_only_compiled {
   var toSolve: Relation[Constant] = null
   var tree: ir.IROp = null
   var ctx: ir.InterpreterContext = null
-  var compiled: CollectionsStorageManager => Any = null
+  var compiled: CollectionsStorageManager => CollectionsStorageManager#EDB = null
 
   // measure cost of tree gen, compiling, running
   @Setup(Level.Invocation)
@@ -132,20 +142,20 @@ class BenchStaged10x_run_only_compiled {
     val x1 = engine.generateProgramTree(toSolve.id)
     tree = x1._1
     ctx = x1._2
-    compiled = engine.getCompiled(tree, ctx)
+    compiled = engine.preCompile(tree, ctx)
   }
 
   // measure cost of running compiled code
   @Benchmark def run(blackhole: Blackhole): Unit = {
     val e = engine
     blackhole.consume(
-      e.solvePreCompiled(compiled.asInstanceOf[CollectionsStorageManager => e.storageManager.EDB], ctx)
+      e.solvePreCompiled(compiled, ctx)
     )
   }
 }
-@Fork(fork) // # of jvms that it will use
-@Warmup(iterations = warmup_iterations, time = warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = batchSize)
-@Measurement(iterations = iterations, time = time, timeUnit = TimeUnit.SECONDS, batchSize = batchSize)
+@Fork(staged_fork) // # of jvms that it will use
+@Warmup(iterations = staged_warmup_iterations, time = staged_warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = staged_batchSize)
+@Measurement(iterations = staged_iterations, time = staged_time, timeUnit = TimeUnit.SECONDS, batchSize = staged_batchSize)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class BenchStaged10x_full_interpreted {
@@ -165,9 +175,9 @@ class BenchStaged10x_full_interpreted {
     )
   }
 }
-@Fork(fork) // # of jvms that it will use
-@Warmup(iterations = warmup_iterations, time = warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = batchSize)
-@Measurement(iterations = iterations, time = time, timeUnit = TimeUnit.SECONDS, batchSize = batchSize)
+@Fork(staged_fork) // # of jvms that it will use
+@Warmup(iterations = staged_warmup_iterations, time = staged_warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = staged_batchSize)
+@Measurement(iterations = staged_iterations, time = staged_time, timeUnit = TimeUnit.SECONDS, batchSize = staged_batchSize)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class BenchStaged10x_run_only_interpreted {
@@ -189,13 +199,13 @@ class BenchStaged10x_run_only_interpreted {
   //  measure cost of running interpreted only
   @Benchmark def run(blackhole: Blackhole): Unit = {
     blackhole.consume(
-      engine.solvePreInterpreted(tree, ctx)
+      engine.solveInterpreted(tree, ctx)
     )
   }
 }
-@Fork(fork) // # of jvms that it will use
-@Warmup(iterations = warmup_iterations, time = warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = batchSize)
-@Measurement(iterations = iterations, time = time, timeUnit = TimeUnit.SECONDS, batchSize = batchSize)
+@Fork(staged_fork) // # of jvms that it will use
+@Warmup(iterations = staged_warmup_iterations, time = staged_warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = staged_batchSize)
+@Measurement(iterations = staged_iterations, time = staged_time, timeUnit = TimeUnit.SECONDS, batchSize = staged_batchSize)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class BenchStaged10x_old {

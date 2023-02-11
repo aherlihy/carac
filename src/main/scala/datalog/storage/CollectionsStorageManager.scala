@@ -6,7 +6,7 @@ import datalog.execution.JoinIndexes
 import scala.collection.{View, immutable, mutable}
 import datalog.tools.Debug.debug
 
-class CollectionsStorageManager(ns: NS = new NS(), fuse: Boolean = false) extends SimpleStorageManager(ns) {
+class CollectionsStorageManager(ns: NS = new NS(), fuse: Boolean = true) extends SimpleStorageManager(ns) {
   inline def scanFilter(k: JoinIndexes, maxIdx: Int)(get: Int => StorageTerm = x => x) = {
     val vCmp = k.varIndexes.isEmpty || k.varIndexes.forall(condition =>
       if (condition.head >= maxIdx)

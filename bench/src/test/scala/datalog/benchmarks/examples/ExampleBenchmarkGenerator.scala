@@ -11,6 +11,14 @@ import scala.io.Source
 import scala.jdk.StreamConverters.*
 import scala.util.Properties
 
+inline val examples_warmup_iterations = 10
+inline val examples_iterations = 5
+inline val examples_warmup_time = 10
+inline val examples_time = 10
+inline val examples_batchSize = 1
+inline val examples_fork = 1
+inline val examples_xl_time = 60
+
 abstract class ExampleBenchmarkGenerator(testname: String,
                                          val skip: Set[String] = Set(),
                                          override val tags: Set[String] = Set()) extends BenchmarkGenerator(

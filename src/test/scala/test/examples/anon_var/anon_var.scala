@@ -6,7 +6,7 @@ import test.{ExampleTestGenerator, Tags}
 import java.nio.file.Paths
 class anon_var_test extends ExampleTestGenerator(
   "anon_var",
-  Set(Tags.Naive, Tags.Relational), // run only NaiveRelational
+  Set(Tags.Naive, Tags.Relational),
   Set(Tags.Slow, Tags.CI)
 ) with anon_var
 

@@ -8,9 +8,9 @@ import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.Blackhole
 import test.examples.input_output.input_output
 
-@Fork(1) // # of jvms that it will use
-@Warmup(iterations = 1, time = 1, timeUnit = TimeUnit.SECONDS)
-@Measurement(iterations = 1, time = 1, timeUnit = TimeUnit.SECONDS)
+@Fork(examples_fork) // # of jvms that it will use
+@Warmup(iterations = examples_warmup_iterations, time = examples_warmup_time, timeUnit = TimeUnit.SECONDS)
+@Measurement(iterations = examples_iterations, time = examples_xl_time, timeUnit = TimeUnit.SECONDS)
 @State(Scope.Thread)
 class input_output_benchmark() extends ExampleBenchmarkGenerator("input_output") with input_output {
  override def toSolve: String = super.toSolve

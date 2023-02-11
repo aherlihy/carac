@@ -7,9 +7,9 @@ import test.examples.equal.equal
 import datalog.dsl.{Constant, Program}
 
 import java.nio.file.Paths
-@Fork(1) // # of jvms that it will use
-@Warmup(iterations = 1, time = 1, timeUnit = TimeUnit.SECONDS)
-@Measurement(iterations = 1, time = 1, timeUnit = TimeUnit.SECONDS)
+@Fork(examples_fork) // # of jvms that it will use
+@Warmup(iterations = examples_warmup_iterations, time = examples_warmup_time, timeUnit = TimeUnit.SECONDS)
+@Measurement(iterations = examples_iterations, time = examples_time, timeUnit = TimeUnit.SECONDS)
 @State(Scope.Thread)
 class equal_benchmark() extends ExampleBenchmarkGenerator("equal") with equal {
  override def toSolve: String = super.toSolve

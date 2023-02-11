@@ -22,7 +22,7 @@ class IRTreeGenerator(using val ctx: InterpreterContext) {
           else
             Seq(InsertOp(r, DB.Derived, KNOWLEDGE.New, naiveEvalRule(ruleMap(r))))
         ),
-      FnCode.EVAL_NAIVE
+      FnLabel.EVAL_NAIVE
     )
 
   def semiNaiveEval(rId: RelationId, ruleMap: mutable.Map[RelationId, ASTNode]): IROp =
@@ -43,7 +43,7 @@ class IRTreeGenerator(using val ctx: InterpreterContext) {
             //            DebugPeek("\tall, i.e. derived[new]", () => s"${ctx.storageManager.ns(r)}] = ", ScanOp(r, DB.Derived, KNOWLEDGE.New)),
           ))
         ),
-      FnCode.EVAL_SN
+      FnLabel.EVAL_SN
     )
 
   def naiveEvalRule(ast: ASTNode): IRRelOp = {
@@ -53,7 +53,7 @@ class IRTreeGenerator(using val ctx: InterpreterContext) {
         if (edb)
           allRes = allRes :+ ScanEDBOp(rId)
         //        DebugPeek("NaiveSPJU: ", () => s"r=${ctx.storageManager.ns(rId)} keys=${ctx.storageManager.printer.printIR(res).replace("\n", " ")} knownDBId ${ctx.knownDbId} \nresult of evalRule: ", res)
-        if(allRes.size == 1) allRes.head else UnionOp(allRes, FnCode.EVAL_RULE_NAIVE)
+        if(allRes.size == 1) allRes.head else UnionOp(allRes, FnLabel.EVAL_RULE_NAIVE)
       case RuleNode(head, _, joinIdx) =>
         val r = head.asInstanceOf[LogicAtom].relation
         joinIdx match {
@@ -78,7 +78,7 @@ class IRTreeGenerator(using val ctx: InterpreterContext) {
         var allRes = rules.map(semiNaiveEvalRule).toSeq
         if (edb)
           allRes = allRes :+ ScanEDBOp(rId)
-        if(allRes.size == 1) allRes.head else UnionOp(allRes, FnCode.EVAL_RULE_SN)
+        if(allRes.size == 1) allRes.head else UnionOp(allRes, FnLabel.EVAL_RULE_SN)
         //        DebugPeek("SPJU: ", () => s"r=${ctx.storageManager.ns(rId)} keys=${ctx.storageManager.printer.printIR(res).replace("\n", " ")} knownDBId ${ctx.knownDbId} \nevalRuleSN ", res)
       case RuleNode(head, _, joinIdx) =>
         val r = head.asInstanceOf[LogicAtom].relation
@@ -138,7 +138,7 @@ class IRTreeGenerator(using val ctx: InterpreterContext) {
             SequenceOp(Seq(
               SwapAndClearOp(),
               semiNaiveEval(ctx.toSolve, ruleMap)
-            ), FnCode.LOOP_BODY),
+            ), FnLabel.LOOP_BODY),
             DB.Delta
           )
         )))

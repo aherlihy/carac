@@ -74,9 +74,17 @@ class StagedCompiler(val storageManager: StorageManager) {
         else
           '{ $stagedSM.projectHelper(${ compileIRRelOp(subOp) }, ${ Expr(keys) }) }
 
-      case UnionOp(ops, _) =>
-        val compiledOps = Expr.ofSeq(ops.map(compileIRRelOp))
-        '{ $stagedSM.union($compiledOps) }
+      case UnionOp(ops, label) =>
+        val compiledOps = ops.map(compileIRRelOp)
+        label match
+          case FnLabel.EVAL_RULE_NAIVE if ops.size > heuristics.max_deps && ctx.sortedRelations.size > heuristics.max_relations =>
+            val lambdaOps = compiledOps.map(e => '{ val eval_rule_lambda = (() => $e); eval_rule_lambda() })
+            '{ $stagedSM.union(${Expr.ofSeq(lambdaOps)}) }
+          case FnLabel.EVAL_RULE_SN if ops.size > heuristics.max_deps && ctx.sortedRelations.size > heuristics.max_relations =>
+            val lambdaOps = compiledOps.map(e => '{ val eval_rule_sn_lambda = (() => $e); eval_rule_sn_lambda() })
+            '{ $stagedSM.union(${ Expr.ofSeq(lambdaOps) }) }
+          case _ =>
+            '{ $stagedSM.union(${Expr.ofSeq(compiledOps)}) }
 
       case DiffOp(lhs, rhs) =>
         val clhs = compileIRRelOp(lhs)
@@ -113,11 +121,21 @@ class StagedCompiler(val storageManager: StorageManager) {
       case SwapAndClearOp() =>
         '{ $stagedSM.swapKnowledge() ; $stagedSM.clearNewDB(${ Expr(true) }) }
 
-      case SequenceOp(ops, _) =>
+      case SequenceOp(ops, label) =>
         val cOps = ops.map(compileIR)
-        cOps.reduceLeft((acc, next) => // TODO[future]: make a block w reflection instead of reduceLeft for efficiency
-          '{ $acc ; $next }
-        )
+        label match
+          case FnLabel.EVAL_NAIVE if ops.length / 2 > heuristics.max_relations =>
+            cOps.reduceLeft((acc, next) =>
+              '{ $acc ; val eval_naive_lambda = () => $next; eval_naive_lambda() }
+            )
+          case FnLabel.EVAL_SN if ops.length > heuristics.max_relations =>
+            cOps.reduceLeft((acc, next) =>
+              '{ $acc ; val eval_sn_lambda = () => $next; eval_sn_lambda() }
+            )
+          case _ =>
+            cOps.reduceLeft((acc, next) => // TODO[future]: make a block w reflection instead of reduceLeft for efficiency
+              '{ $acc ; $next }
+            )
 
       case InsertOp(rId, db, knowledge, subOp, subOp2) =>
         val res = compileIRRelOp(subOp)

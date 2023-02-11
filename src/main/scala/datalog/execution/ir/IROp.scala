@@ -14,7 +14,7 @@ import scala.util.{Failure, Success}
 
 enum OpCode:
   case PROGRAM, SWAP_CLEAR, SEQ, SCAN, SCANEDB, PROJECT, JOIN, INSERT, UNION, DIFF, DEBUG, LOOP
-enum FnCode:
+enum FnLabel: // convenience labels for generating functions
   case EVAL_RULE_NAIVE, EVAL_RULE_SN, EVAL_NAIVE, EVAL_SN, LOOP_BODY, OTHER // TBD if more needed
 
 // TODO: make general SM not collections
@@ -25,7 +25,7 @@ type CompiledRelFn = CollectionsStorageManager => CollectionsStorageManager#EDB
  */
 abstract class IROp() {
   val code: OpCode
-  val fnCode: FnCode = FnCode.OTHER
+  val fnCode: FnLabel = FnLabel.OTHER
 //  var compiled: AtomicReference[CompiledFn] = new AtomicReference[CompiledFn](
 //  def run(using storageManager: StorageManager): Any
 }
@@ -54,7 +54,7 @@ case class DoWhileOp(body: IROp, toCmp: DB) extends IROp {
       }
     }) ()
 }
-case class SequenceOp(ops: Seq[IROp], override val fnCode: FnCode = FnCode.OTHER) extends IROp {
+case class SequenceOp(ops: Seq[IROp], override val fnCode: FnLabel = FnLabel.OTHER) extends IROp {
   val code: OpCode = OpCode.SEQ
   var compiledFn: Future[CompiledFn] = null
   def run(opsFn: Seq[CompiledFn])(using storageManager:  CollectionsStorageManager): Any =
@@ -142,7 +142,7 @@ case class JoinOp(ops: Seq[IRRelOp], keys: JoinIndexes) extends IRRelOp {
     )
 }
 
-case class UnionOp(ops: Seq[IRRelOp], override val fnCode: FnCode = FnCode.OTHER) extends IRRelOp {
+case class UnionOp(ops: Seq[IRRelOp], override val fnCode: FnLabel = FnLabel.OTHER) extends IRRelOp {
   val code: OpCode = OpCode.UNION
   def run(opsFn: Seq[CompiledRelFn])(using storageManager:  CollectionsStorageManager): storageManager.EDB =
     opsFn.flatMap(o => o(storageManager)).toSet.toBuffer.asInstanceOf[storageManager.EDB]

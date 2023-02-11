@@ -19,8 +19,8 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
   private var knownDbId = -1
   private val tCtx = ASTTransformerContext(using precedenceGraph)
   private val transforms: Seq[Transformer] = Seq(CopyEliminationPass(using tCtx), JoinIndexPass(using tCtx))
-  val compiler: StagedCompiler = StagedCompiler(storageManager) // TODO: should this be initialized async too?
-  val dedicatedDotty: staging.Compiler = staging.Compiler.make(getClass.getClassLoader)
+  val compiler: StagedCompiler = StagedCompiler(storageManager)
+  val dedicatedDotty: staging.Compiler = staging.Compiler.make(getClass.getClassLoader)  // TODO: should this be initialized async too?
 
   def createIR(ast: ASTNode)(using InterpreterContext): IROp
 
@@ -74,8 +74,6 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
         interpretIR(body)
 
       case DoWhileOp(body, toCmp) =>
-        // start compile for body
-//        lazy val compiledBody: AtomicReference[CollectionsStorageManager => storageManager.EDB] = getCompiled(irTree, ctx)
         while({
           interpretIR(body)
 //          ctx.count += 1
@@ -183,14 +181,23 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
     (irTree, irCtx)
   }
 
-  def solvePreCompiled(irTree: IROp, ctx: InterpreterContext): Set[Seq[Term]] = {
+  def preCompile(irTree: IROp, ctx: InterpreterContext): CollectionsStorageManager => CollectionsStorageManager#EDB = {
+    given staging.Compiler = dedicatedDotty
+    compiler.getCompiled(irTree, ctx)
+  }
+  def solvePreCompiled(compiled: CollectionsStorageManager => CollectionsStorageManager#EDB, ctx: InterpreterContext): Set[Seq[Term]] = {
+    compiled(storageManager.asInstanceOf[CollectionsStorageManager]) // TODO: remove cast
+    storageManager.getNewIDBResult(ctx.toSolve)
+  }
+
+  def solveCompiled(irTree: IROp, ctx: InterpreterContext): Set[Seq[Term]] = {
     given staging.Compiler = dedicatedDotty
     val compiled = compiler.getCompiled(irTree, ctx)
     compiled(storageManager.asInstanceOf[CollectionsStorageManager]) // TODO: remove cast
     storageManager.getNewIDBResult(ctx.toSolve)
   }
 
-  def solvePreInterpreted(irTree: IROp, ctx: InterpreterContext):  Set[Seq[Term]] = {
+  def solveInterpreted(irTree: IROp, ctx: InterpreterContext):  Set[Seq[Term]] = {
     given irCtx: InterpreterContext = ctx
     interpretIR(irTree)
     storageManager.getNewIDBResult(ctx.toSolve)
@@ -231,13 +238,12 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
 
 
     debug("IRTree: ", () => storageManager.printer.printIR(irTree))
-//    TODO: go back when done w interp
-//    mode match {
-//      case MODE.Compile =>
-//        compileAndRun(irTree, irCtx)
-//      case MODE.Interpret =>
-        solvePreInterpreted(irTree, irCtx)
-//      case _ => throw new Exception(s"Mode $mode not yet implemented")
-//    }
+    mode match {
+      case MODE.Compile =>
+        solveCompiled(irTree, irCtx)
+      case MODE.Interpret =>
+        solveInterpreted(irTree, irCtx)
+      case _ => throw new Exception(s"Mode $mode not yet implemented")
+    }
   }
 }
