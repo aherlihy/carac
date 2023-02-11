@@ -18,7 +18,7 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
   val ast: ProgramNode = ProgramNode()
   private var knownDbId = -1
   private val tCtx = ASTTransformerContext(using precedenceGraph)
-  private val transforms: Seq[Transformer] = Seq(CopyEliminationPass(using tCtx), JoinIndexPass(using tCtx))
+  val transforms: Seq[Transformer] = Seq(CopyEliminationPass(using tCtx), JoinIndexPass(using tCtx))
   val compiler: StagedCompiler = StagedCompiler(storageManager)
   val dedicatedDotty: staging.Compiler = staging.Compiler.make(getClass.getClassLoader)  // TODO: should this be initialized async too?
 

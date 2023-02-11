@@ -32,7 +32,8 @@ class StagedCompileTest extends munit.FunSuite {
   edge("c", "d") :- ()
   edge("a", "1") :- ()
 
-  val ctx: InterpreterContext = new InterpreterContext(storageManager, engine.precedenceGraph, -1)
+  engine.precedenceGraph.addNode(edb.id, Seq(edge.id)) // tree transforms usually populate precedenceGraph
+  val ctx: InterpreterContext = new InterpreterContext(storageManager, engine.precedenceGraph, edb.id)
   given irCtx: InterpreterContext = ctx
   storageManager.edbs.foreach((k, relation) => { // necessary so that state is as if it was solved already
     storageManager.derivedDB(storageManager.knownDbId)(k) = storageManager.EDB()
