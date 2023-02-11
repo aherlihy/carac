@@ -85,7 +85,11 @@ class PrecedenceGraph(using ns: NS /* for debugging */) {
   }
 
   def topSort(target: Int): Seq[Int] = { // TODO: need to indicate recursive anywhere?
-    nodes.foreach((rId, node) => {
+    val targetNode = nodes(target)
+//    val targetPlusEdges = (target, targetNode) +: targetNode.edges.toSeq.map(e => (e.rId, e))
+//    val order = targetPlusEdges ++ nodes.filter((i, n) => i != target && !targetNode.edges.contains(n)).toSeq
+    val order = targetNode +: nodes.filter((i, _) => i != target).values.toSeq // Give tarjan a hint
+    order.foreach(node => {
       if (node.idx == -1) {
         strongConnect(node)
       }

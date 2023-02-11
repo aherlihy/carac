@@ -48,7 +48,7 @@ class PrecedenceGraphTest extends munit.FunSuite {
       Seq() // TODO: empty
     )
   }
-  test("tc with isolated cycle") {
+  test("tc with isolated cycle, 1st") {
     given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new RelationalStorageManager())
 
     val program = Program(engine)
@@ -75,6 +75,7 @@ class PrecedenceGraphTest extends munit.FunSuite {
     other2(x) :- p2("a", x)
 
     val res = engine.precedenceGraph.topSort(other.id) // test against sorted to keep groups
+
     assertEquals(
       engine.precedenceGraph.sorted,
       mutable.Queue[mutable.Set[Int]](mutable.Set(0), mutable.Set(1), mutable.Set(2), mutable.Set(3), mutable.Set(4), mutable.Set(5))
@@ -83,10 +84,44 @@ class PrecedenceGraphTest extends munit.FunSuite {
       res,
       Seq(1, 2)
     )
-//    assertEquals( // TODO: eventually remove all isolated cycles
-//      engine.precedenceGraph.topSort(other2.id),
-//      Seq(3, 4)
-//    )
+  }
+
+  test("tc with isolated cycle, 2nd") {
+    given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new RelationalStorageManager())
+
+    val program = Program(engine)
+    val e = program.relation[String]("e")
+    val p = program.relation[String]("p")
+    val other = program.relation[String]("other")
+    val e2 = program.relation[String]("e2")
+    val p2 = program.relation[String]("p2")
+    val other2 = program.relation[String]("other2")
+    val x, y, z = program.variable()
+
+    e("a", "b") :- ()
+    e("b", "c") :- ()
+    e("c", "d") :- ()
+    p(x, y) :- e(x, y)
+    p(x, z) :- (e(x, y), p(y, z))
+    other(x) :- p("a", x)
+
+    e2("a", "b") :- ()
+    e2("b", "c") :- ()
+    e2("c", "d") :- ()
+    p2(x, y) :- e2(x, y)
+    p2(x, z) :- (e2(x, y), p2(y, z))
+    other2(x) :- p2("a", x)
+
+    val res2 = engine.precedenceGraph.topSort(other2.id) // test against sorted to keep groups
+
+    assertEquals(
+      engine.precedenceGraph.sorted,
+      mutable.Queue[mutable.Set[Int]](mutable.Set(3), mutable.Set(4), mutable.Set(5), mutable.Set(0), mutable.Set(1), mutable.Set(2))
+    )
+    assertEquals(
+      res2,
+      Seq(4, 5)
+    )
   }
   test("transitive closure") {
     given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new RelationalStorageManager())
