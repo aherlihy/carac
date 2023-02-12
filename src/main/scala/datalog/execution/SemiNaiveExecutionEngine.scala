@@ -30,10 +30,10 @@ class SemiNaiveExecutionEngine(override val storageManager: StorageManager) exte
         storageManager.getDerivedDB(r, knownDbId)
       ))
       storageManager.resetDerived(r, newDbId, storageManager.getDeltaDB(r, newDbId), storageManager.getDerivedDB(r, knownDbId)) // set derived[new] to derived[known]+delta[new] */
-      System.gc()
-      System.gc()
-      val mb = 1024 * 1024
-      val runtime = Runtime.getRuntime
+//      System.gc()
+//      System.gc()
+//      val mb = 1024 * 1024
+//      val runtime = Runtime.getRuntime
 //      println(s"after SPJU for relation ${storageManager.ns(r)}, query=${storageManager.printer.snPlanToString(getOperatorKeys(rId).asInstanceOf[this.storageManager.Table[JoinIndexes]])} results in MB")
 //      println("** Used Memory:  " + (runtime.totalMemory - runtime.freeMemory) / mb)
 //      println("** Free Memory:  " + runtime.freeMemory / mb)
