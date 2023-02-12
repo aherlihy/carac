@@ -12,6 +12,7 @@ import test.examples.input_output.input_output
 @Warmup(iterations = examples_warmup_iterations, time = examples_warmup_time, timeUnit = TimeUnit.SECONDS)
 @Measurement(iterations = examples_iterations, time = examples_xl_time, timeUnit = TimeUnit.SECONDS)
 @State(Scope.Thread)
+@BenchmarkMode(Array(Mode.AverageTime))
 class input_output_benchmark() extends ExampleBenchmarkGenerator("input_output") with input_output {
   override def toSolve: String = super.toSolve
   @Setup

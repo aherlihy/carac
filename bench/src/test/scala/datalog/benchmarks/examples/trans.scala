@@ -12,6 +12,7 @@ import test.examples.trans.trans
 @Warmup(iterations = examples_warmup_iterations, time = examples_warmup_time, timeUnit = TimeUnit.SECONDS)
 @Measurement(iterations = examples_iterations, time = examples_time, timeUnit = TimeUnit.SECONDS)
 @State(Scope.Thread)
+@BenchmarkMode(Array(Mode.AverageTime))
 class trans_benchmark() extends ExampleBenchmarkGenerator("trans")  with trans {
   override def toSolve: String = super.toSolve
   @Setup

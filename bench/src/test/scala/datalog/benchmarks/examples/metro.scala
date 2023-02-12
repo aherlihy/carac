@@ -12,6 +12,7 @@ import test.examples.metro.metro
 @Warmup(iterations = examples_warmup_iterations, time = examples_warmup_time, timeUnit = TimeUnit.SECONDS)
 @Measurement(iterations = examples_iterations, time = examples_time, timeUnit = TimeUnit.SECONDS)
 @State(Scope.Thread)
+@BenchmarkMode(Array(Mode.AverageTime))
 class metro_benchmark() extends ExampleBenchmarkGenerator("metro") with metro {
   override def toSolve: String = super.toSolve
   @Setup

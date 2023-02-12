@@ -12,6 +12,7 @@ import test.examples.rsg.rsg
 @Warmup(iterations = examples_warmup_iterations, time = examples_warmup_time, timeUnit = TimeUnit.SECONDS)
 @Measurement(iterations = examples_iterations, time = examples_time, timeUnit = TimeUnit.SECONDS)
 @State(Scope.Thread)
+@BenchmarkMode(Array(Mode.AverageTime))
 class rsg_benchmark() extends ExampleBenchmarkGenerator("rsg") with rsg {
   override def toSolve: String = super.toSolve
   @Setup

@@ -12,6 +12,7 @@ import test.examples.java_pointsto.java_pointsto
 @Warmup(iterations = examples_warmup_iterations, time = examples_warmup_time, timeUnit = TimeUnit.SECONDS)
 @Measurement(iterations = examples_iterations, time = examples_xl_time, timeUnit = TimeUnit.SECONDS)
 @State(Scope.Thread)
+@BenchmarkMode(Array(Mode.AverageTime))
 class java_pointsto_benchmark() extends ExampleBenchmarkGenerator("java_pointsto") with java_pointsto {
   override def toSolve: String = super.toSolve
   @Setup

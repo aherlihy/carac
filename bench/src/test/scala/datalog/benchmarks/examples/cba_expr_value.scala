@@ -11,6 +11,7 @@ import java.nio.file.Paths
 @Warmup(iterations = examples_warmup_iterations, time = examples_warmup_time, timeUnit = TimeUnit.SECONDS)
 @Measurement(iterations = examples_iterations, time = examples_time, timeUnit = TimeUnit.SECONDS)
 @State(Scope.Thread)
+@BenchmarkMode(Array(Mode.AverageTime))
 class cba_expr_value_benchmark() extends ExampleBenchmarkGenerator("cba_expr_value") with cba_expr_value {
   @Setup
   def s(): Unit = setup() // can't add annotations to super, so just call

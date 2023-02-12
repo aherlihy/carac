@@ -14,8 +14,8 @@ import scala.util.Properties
 inline val examples_warmup_iterations = 10
 inline val examples_iterations = 5
 inline val examples_warmup_time = 10
-inline val examples_time = 10
-inline val examples_batchSize = 1
+inline val examples_time = 30
+inline val examples_batchSize = 10
 inline val examples_fork = 1
 inline val examples_xl_time = 60
 

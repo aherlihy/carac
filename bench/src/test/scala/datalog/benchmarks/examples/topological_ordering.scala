@@ -12,6 +12,7 @@ import test.examples.topological_ordering.topological_ordering
 @Warmup(iterations = examples_warmup_iterations, time = examples_warmup_time, timeUnit = TimeUnit.SECONDS)
 @Measurement(iterations = examples_iterations, time = examples_time, timeUnit = TimeUnit.SECONDS)
 @State(Scope.Thread)
+@BenchmarkMode(Array(Mode.AverageTime))
 class topological_ordering_benchmark() extends ExampleBenchmarkGenerator("topological_ordering")  with topological_ordering {
   override def toSolve: String = super.toSolve
   @Setup

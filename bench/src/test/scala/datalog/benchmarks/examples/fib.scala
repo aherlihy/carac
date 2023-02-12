@@ -11,6 +11,7 @@ import java.nio.file.Paths
 @Warmup(iterations = examples_warmup_iterations, time = examples_warmup_time, timeUnit = TimeUnit.SECONDS)
 @Measurement(iterations = examples_iterations, time = examples_time, timeUnit = TimeUnit.SECONDS)
 @State(Scope.Thread)
+@BenchmarkMode(Array(Mode.AverageTime))
 class fib_benchmark() extends ExampleBenchmarkGenerator("fib", Set(), Set("CI")) with fib {
  override def toSolve: String = super.toSolve
  @Setup

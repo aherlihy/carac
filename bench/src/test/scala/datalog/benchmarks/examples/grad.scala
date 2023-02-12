@@ -12,6 +12,7 @@ import test.examples.grad.grad
 @Warmup(iterations = examples_warmup_iterations, time = examples_warmup_time, timeUnit = TimeUnit.SECONDS)
 @Measurement(iterations = examples_iterations, time = examples_time, timeUnit = TimeUnit.SECONDS)
 @State(Scope.Thread)
+@BenchmarkMode(Array(Mode.AverageTime))
 class grad_benchmark() extends ExampleBenchmarkGenerator("grad") with grad {
   override def toSolve: String = super.toSolve
   @Setup

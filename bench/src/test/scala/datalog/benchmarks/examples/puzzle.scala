@@ -12,6 +12,7 @@ import test.examples.puzzle.puzzle
 @Warmup(iterations = examples_warmup_iterations, time = examples_warmup_time, timeUnit = TimeUnit.SECONDS)
 @Measurement(iterations = examples_iterations, time = examples_time, timeUnit = TimeUnit.SECONDS)
 @State(Scope.Thread)
+@BenchmarkMode(Array(Mode.AverageTime))
 class puzzle_benchmark() extends ExampleBenchmarkGenerator("puzzle") with puzzle {
   override def toSolve: String = super.toSolve
   @Setup
