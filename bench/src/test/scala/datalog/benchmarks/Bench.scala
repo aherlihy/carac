@@ -10,12 +10,12 @@ import datalog.storage.{CollectionsStorageManager, NS, RelationalStorageManager}
 import scala.collection.immutable.Map
 import scala.util.Random
 
-inline val staged_warmup_iterations = 0
-inline val staged_iterations = 1
+inline val staged_warmup_iterations = 3
+inline val staged_iterations = 5
 inline val staged_warmup_time = 10
 inline val staged_time = 30
 inline val staged_batchSize = 1
-inline val staged_fork = 3
+inline val staged_fork = 1
 ///**
 // * Benchmarks that are run on all modes
 // */
