@@ -8,8 +8,8 @@ import test.examples.anon_var.anon_var
 
 import java.nio.file.Paths
 @Fork(examples_fork) // # of jvms that it will use
-@Warmup(iterations = examples_warmup_iterations, time = examples_warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = examples_batchsize)
-@Measurement(iterations = examples_iterations, time = examples_xxl_time, timeUnit = TimeUnit.SECONDS, batchSize = examples_batchsize)
+@Warmup(iterations = examples_warmup_iterations, time = examples_warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = 10)
+@Measurement(iterations = examples_iterations, time = examples_xxl_time, timeUnit = TimeUnit.SECONDS, batchSize = 10)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class anon_var_benchmark extends ExampleBenchmarkGenerator(
