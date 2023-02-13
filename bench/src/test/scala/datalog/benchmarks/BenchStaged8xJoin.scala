@@ -10,7 +10,7 @@ import java.util.concurrent.TimeUnit
 import scala.collection.mutable
 import scala.util.Random
 
-object initialize {
+object initialize_8xJoin {
   def pretest(program: Program): Relation[Constant] = {
     val edge = program.relation[Constant]("edge")
     val path = program.relation[Constant]("path")
@@ -65,7 +65,7 @@ class BenchStaged8xJoin_full_compiled {
   def setup(): Unit = {
     engine = SemiNaiveStagedExecutionEngine(CollectionsStorageManager())
     program = Program(engine)
-    toSolve = initialize.pretest(program)
+    toSolve = initialize_8xJoin.pretest(program)
     Thread.sleep(10000)
   }
   // measure cost of tree gen, compiling, running
@@ -91,7 +91,7 @@ class BenchStaged8xJoin_compile_and_run {
   def setup(): Unit = {
     engine = SemiNaiveStagedExecutionEngine(CollectionsStorageManager())
     program = Program(engine)
-    toSolve = initialize.pretest(program)
+    toSolve = initialize_8xJoin.pretest(program)
     val x1 = engine.generateProgramTree(toSolve.id)
     tree = x1._1
     ctx = x1._2
@@ -121,7 +121,7 @@ class BenchStaged8xJoin_run_only_compiled {
   def setup(): Unit = {
     engine = SemiNaiveStagedExecutionEngine(CollectionsStorageManager())
     program = Program(engine)
-    toSolve = initialize.pretest(program)
+    toSolve = initialize_8xJoin.pretest(program)
     val x1 = engine.generateProgramTree(toSolve.id)
     tree = x1._1
     ctx = x1._2
@@ -149,7 +149,7 @@ class BenchStaged8xJoin_full_interpreted {
   def setup(): Unit = {
     engine = SemiNaiveStagedExecutionEngine(CollectionsStorageManager())
     program = Program(engine)
-    toSolve = initialize.pretest(program)
+    toSolve = initialize_8xJoin.pretest(program)
   }
   // measure cost of tree gen, running interpreted
   @Benchmark def run(blackhole: Blackhole): Unit = {
@@ -174,7 +174,7 @@ class BenchStaged8xJoin_run_only_interpreted {
   def setup(): Unit = {
     engine = SemiNaiveStagedExecutionEngine(CollectionsStorageManager())
     program = Program(engine)
-    toSolve = initialize.pretest(program)
+    toSolve = initialize_8xJoin.pretest(program)
     val x1 = engine.generateProgramTree(toSolve.id)
     tree = x1._1
     ctx = x1._2
@@ -199,7 +199,7 @@ class BenchStaged8xJoinCollections_seminaive_collections {
   def setup(): Unit = {
     engine = SemiNaiveExecutionEngine(CollectionsStorageManager())
     program = Program(engine)
-    toSolve = initialize.pretest(program)
+    toSolve = initialize_8xJoin.pretest(program)
   }
   // measure cost of old solve
   @Benchmark def run(blackhole: Blackhole): Unit = {

@@ -152,10 +152,10 @@ class StagedCompileTest extends munit.FunSuite {
         SwapAndClearOp(),
         ScanOp(idb.id, DB.Derived, KNOWLEDGE.Known)
       )),
-      generalMatch(s"$any$sVar.getKnownDerivedDB\\(${idb.id}, scala.Some.apply\\[$any\\]\\($sVar\\.EDB\\(\\)$anyCapture".r),
+      generalMatch(s"$any$sVar.getKnownDerivedDB\\(${idb.id}$anyCapture".r),
       generalMatch(s"$any$sVar.swapKnowledge\\(\\)$anyCapture".r),
       generalMatch(s"$any$sVar.clearNewDB\\(true\\)$anyCapture".r),
-      generalMatch(s"$any$sVar.getKnownDerivedDB\\(${idb.id}, scala.Some.apply\\[$any\\]\\($sVar\\.EDB\\(\\)$anyCapture".r)
+      generalMatch(s"$any$sVar.getKnownDerivedDB\\(${idb.id}$anyCapture".r)
     )
     toRun(storageManager)
     assertNotEquals(oldNew, storageManager.newDbId)
@@ -216,31 +216,24 @@ class StagedCompileTest extends munit.FunSuite {
 
     var toRun = compileCheck(
       ScanOp(idb.id, DB.Derived, KNOWLEDGE.Known),
-      generalMatch(s"$any$sVar.getKnownDerivedDB\\(${idb.id}, scala.Some.apply\\[$any\\]\\($sVar.EDB\\(\\)$anyCapture".r)
+      generalMatch(s"$any$sVar.getKnownDerivedDB\\(${idb.id}$anyCapture".r)
     )
     assertEquals(toRun(storageManager), ArrayBuffer(Vector("KnownDerived")))
     toRun = compileCheck(
       ScanOp(idb.id, DB.Delta, KNOWLEDGE.Known),
-      generalMatch(s"$any$sVar.getKnownDeltaDB\\(${idb.id}, scala.Some.apply\\[$any\\]\\($sVar.EDB\\(\\)$anyCapture".r)
+      generalMatch(s"$any$sVar.getKnownDeltaDB\\(${idb.id}$anyCapture".r)
     )
     assertEquals(toRun(storageManager), ArrayBuffer(Vector("KnownDelta")))
     toRun = compileCheck(
       ScanOp(idb.id, DB.Derived, KNOWLEDGE.New),
-      generalMatch(s"$any$sVar.getNewDerivedDB\\(${idb.id}, scala.Some.apply\\[$any\\]\\($sVar.EDB\\(\\)$anyCapture".r)
+      generalMatch(s"$any$sVar.getNewDerivedDB\\(${idb.id}$anyCapture".r)
     )
     assertEquals(toRun(storageManager), ArrayBuffer(Vector("NewDerived")))
     toRun = compileCheck(
       ScanOp(idb.id, DB.Delta, KNOWLEDGE.New),
-      generalMatch(s"$any$sVar.getNewDeltaDB\\(${idb.id}, scala.Some.apply\\[$any\\]\\($sVar.EDB\\(\\)$anyCapture".r)
+      generalMatch(s"$any$sVar.getNewDeltaDB\\(${idb.id}$anyCapture".r)
     )
     assertEquals(toRun(storageManager), ArrayBuffer(Vector("NewDelta")))
-
-    storageManager.derivedDB(storageManager.newDbId).remove(edge.id)
-    toRun = compileCheck(
-      ScanOp(edge.id, DB.Derived, KNOWLEDGE.New),
-      generalMatch(s"$any$sVar.edbs.apply\\(${edge.id}\\)$anyCapture".r)
-    )
-    assertEquals(toRun(storageManager), storageManager.edbs(edge.id))
 
     storageManager.derivedDB.clear()
     storageManager.deltaDB.clear()
@@ -378,7 +371,7 @@ class StagedCompileTest extends munit.FunSuite {
     // insert into known, derived from edb
     val scanEdb = s"$sVar.edbs.apply\\(${edb.id}\\)"
     val emptyEDB = s"$sVar.EDB\\(\\)"
-    val scanEdbDerived = s"$sVar.getKnownDerivedDB\\(${edb.id}, scala.Some.apply\\[$any\\]\\($scanEdb\\)".r
+    val scanEdbDerived = s"$sVar.getKnownDerivedDB\\(${edb.id}".r
     var toRun = compileCheck(
       InsertOp(edb.id, DB.Derived, KNOWLEDGE.Known, ScanEDBOp(edb.id)),
       generalMatch(s"$any$sVar.resetKnownDerived\\(${edb.id}, $scanEdb, $emptyEDB\\)$anyCapture".r)
@@ -411,7 +404,7 @@ class StagedCompileTest extends munit.FunSuite {
     assertEquals(storageManager.getKnownDerivedDB(edb.id), ArrayBuffer())
 
     // NEW
-    val scanEdbDerivedNew = s"$sVar.getNewDerivedDB\\(${edb.id}, scala.Some.apply\\[$any\\]\\($scanEdb\\)".r
+    val scanEdbDerivedNew = s"$sVar.getNewDerivedDB\\(${edb.id}$anyCapture".r
     toRun = compileCheck(
       InsertOp(edb.id, DB.Derived, KNOWLEDGE.New, ScanEDBOp(edb.id)),
       generalMatch(s"$any$sVar.resetNewDerived\\(${edb.id}, $scanEdb, $emptyEDB\\)$anyCapture".r)

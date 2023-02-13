@@ -78,45 +78,14 @@ abstract class SimpleStorageManager(override val ns: NS) extends StorageManager(
 
   def edb(rId: RelationId): EDB = edbs(rId)
 
-  def getHelper(db: FactDatabase, rId: RelationId, orElse: Option[EDB], whichDb: DB, knowledgeId: KNOWLEDGE): EDB =
-    orElse match {
-      case Some(value) =>
-        db.getOrElse(rId, value)
-      case _ =>
-        if (!db.contains(rId)) // annoying but good for error reporting
-          throw new Exception(s"DB $whichDb[$knowledgeId] does not contain relation ${ns(rId)} (#$rId)")
-        else
-          db(rId)
-    }
-
-  def getKnownDerivedDB(rId: RelationId, orElse: Option[EDB]): EDB =
-    getHelper(
-      derivedDB(knownDbId),
-      rId,
-      orElse,
-      DB.Derived, KNOWLEDGE.Known
-    )
-  def getNewDerivedDB(rId: RelationId, orElse: Option[EDB]): EDB =
-    getHelper(
-      derivedDB(newDbId),
-      rId,
-      orElse,
-      DB.Derived, KNOWLEDGE.New
-    )
-  def getKnownDeltaDB(rId: RelationId, orElse: Option[EDB]): EDB =
-    getHelper(
-      deltaDB(knownDbId),
-      rId,
-      orElse,
-      DB.Delta, KNOWLEDGE.Known
-    )
-  def getNewDeltaDB(rId: RelationId, orElse: Option[EDB]): EDB =
-    getHelper(
-      deltaDB(newDbId),
-      rId,
-      orElse,
-      DB.Delta, KNOWLEDGE.New
-    )
+  def getKnownDerivedDB(rId: RelationId): EDB =
+    derivedDB(knownDbId).getOrElse(rId, edbs.getOrElse(rId, EDB()))
+  def getNewDerivedDB(rId: RelationId): EDB =
+    derivedDB(newDbId).getOrElse(rId, edbs.getOrElse(rId, EDB()))
+  def getKnownDeltaDB(rId: RelationId): EDB =
+    deltaDB(knownDbId).getOrElse(rId, edbs.getOrElse(rId, EDB()))
+  def getNewDeltaDB(rId: RelationId): EDB =
+    deltaDB(newDbId).getOrElse(rId, edbs.getOrElse(rId, EDB()))
   def getKnownIDBResult(rId: RelationId): Set[Seq[Term]] =
     debug("Final IDB Result[known]: ", () => s"@$knownDbId")
     getKnownDerivedDB(rId).map(s => s.toSeq).toSet

@@ -22,7 +22,7 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
   val compiler: StagedCompiler = StagedCompiler(storageManager)
   val dedicatedDotty: staging.Compiler = staging.Compiler.make(getClass.getClassLoader)  // TODO: should this be initialized async too?
 
-  def createIR(ast: ASTNode)(using InterpreterContext): IROp
+  def createIR(ast: ASTNode)(using InterpreterContext): IROp = IRTreeGenerator().generateSemiNaive(ast)
 
   def initRelation(rId: Int, name: String): Unit = {
     storageManager.ns(rId) = name
@@ -97,16 +97,16 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
           case DB.Derived =>
             knowledge match {
               case KNOWLEDGE.Known =>
-                storageManager.getKnownDerivedDB(rId, Some(storageManager.edbs.getOrElse(rId, EDB())))
+                storageManager.getKnownDerivedDB(rId)
               case KNOWLEDGE.New =>
-                storageManager.getNewDerivedDB(rId, Some(storageManager.edbs.getOrElse(rId, EDB())))
+                storageManager.getNewDerivedDB(rId)
             }
           case DB.Delta =>
             knowledge match {
               case KNOWLEDGE.Known =>
-                storageManager.getKnownDeltaDB(rId, Some(storageManager.edbs.getOrElse(rId, EDB())))
+                storageManager.getKnownDeltaDB(rId)
               case KNOWLEDGE.New =>
-                storageManager.getNewDeltaDB(rId, Some(storageManager.edbs.getOrElse(rId, EDB())))
+                storageManager.getNewDeltaDB(rId)
             }
         }
 
@@ -204,6 +204,7 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
   }
 
   override def solve(rId: Int, mode: MODE): Set[Seq[Term]] = {
+    debug("", () => s"solve $rId with mode $mode")
     // verify setup
     storageManager.verifyEDBs(precedenceGraph.idbs)
     if (storageManager.edbs.contains(rId) && !precedenceGraph.idbs.contains(rId)) { // if just an edb predicate then return
@@ -246,4 +247,10 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
       case _ => throw new Exception(s"Mode $mode not yet implemented")
     }
   }
+}
+class InterpretedStagedExecutionEngine(storageManager: StorageManager) extends StagedExecutionEngine(storageManager) {
+  override def solve(rId: Int, mode: MODE): Set[Seq[Term]] = super.solve(rId, MODE.Interpret)
+}
+class CompiledStagedExecutionEngine(storageManager: StorageManager) extends StagedExecutionEngine(storageManager) {
+  override def solve(rId: Int, mode: MODE): Set[Seq[Term]] = super.solve(rId, MODE.Compile)
 }

@@ -1,16 +1,16 @@
 package datalog.benchmarks
 
 import datalog.dsl.{Constant, Program, Relation}
-import datalog.execution.{SemiNaiveStagedExecutionEngine, ir}
+import datalog.execution.{CompiledStagedExecutionEngine, ir}
 import datalog.storage.CollectionsStorageManager
-import org.openjdk.jmh.annotations.{Benchmark, BenchmarkMode, Fork, Level, Measurement, Mode, Scope, Setup, State, Warmup}
+import org.openjdk.jmh.annotations.{Benchmark, BenchmarkMode, Fork, Level, Measurement, Mode, Scope, Setup, State, TearDown, Warmup}
 import org.openjdk.jmh.infra.Blackhole
 
 import java.util.concurrent.TimeUnit
 import scala.quoted.staging
 
 inline val dotty_staged_warmup_iterations = 0
-inline val dotty_staged_iterations = 1
+inline val dotty_staged_iterations = 5
 inline val dotty_staged_warmup_time = 10
 inline val dotty_staged_time = 10
 inline val dotty_staged_batchSize = 50 // setup called even within batch
@@ -21,7 +21,8 @@ inline val dotty_staged_fork = 1
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class BenchStagedDotty_cold {
-  var engine: SemiNaiveStagedExecutionEngine = null
+  var storage: CollectionsStorageManager = null
+  var engine: CompiledStagedExecutionEngine = null
   var program: Program = null
   var toSolve: Relation[Constant] = null
   var tree: ir.IROp = null
@@ -30,19 +31,21 @@ class BenchStagedDotty_cold {
 
   @Setup(Level.Invocation)
   def setup(): Unit = {
-    engine = SemiNaiveStagedExecutionEngine(CollectionsStorageManager())
+    storage = CollectionsStorageManager()
+    engine = CompiledStagedExecutionEngine(storage)
     program = Program(engine)
-    toSolve = initialize2.pretest(program)
+    toSolve = initialize20x.pretest(program)
     val x1 = engine.generateProgramTree(toSolve.id)
     tree = x1._1
     ctx = x1._2
     // manually pick out subtrees to compile
-    naiveEval = tree.asInstanceOf[ir.ProgramOp].body.asInstanceOf[ir.SequenceOp].ops.head // insert + n-SPJU for all rels
-    assert(naiveEval.fnLabel == ir.FnLabel.EVAL_NAIVE)
-    doWhile = tree.asInstanceOf[ir.ProgramOp].body.asInstanceOf[ir.SequenceOp].ops(1) // main loop
-    assert(doWhile.asInstanceOf[ir.DoWhileOp].body.fnLabel == ir.FnLabel.LOOP_BODY)
-    snEval = doWhile.asInstanceOf[ir.DoWhileOp].body.asInstanceOf[ir.SequenceOp].ops(1) // insert + SPJU for all rels
-    assert(snEval.fnLabel == ir.FnLabel.EVAL_SN)
+    val programNode = tree.asInstanceOf[ir.ProgramOp]
+    naiveEval = programNode.getSubTree(ir.OpCode.EVAL_NAIVE) //body.asInstanceOf[ir.SequenceOp].ops.head // insert + n-SPJU for all rels
+    assert(naiveEval.code == ir.OpCode.EVAL_NAIVE)
+    doWhile = programNode.getSubTree(ir.OpCode.LOOP) //tree.asInstanceOf[ir.ProgramOp].body.asInstanceOf[ir.SequenceOp].ops(1) // main loop
+    assert(doWhile.asInstanceOf[ir.DoWhileOp].body.code == ir.OpCode.LOOP_BODY)
+    snEval = programNode.getSubTree(ir.OpCode.EVAL_SN) //doWhile.asInstanceOf[ir.DoWhileOp].body.asInstanceOf[ir.SequenceOp].ops(1) // insert + SPJU for all rels
+    assert(snEval.code == ir.OpCode.EVAL_SN)
     snEvalRule = snEval.asInstanceOf[ir.SequenceOp].ops.head // a insert SPJU + copy
     assert(snEvalRule.isInstanceOf[ir.SequenceOp])
     join = snEvalRule.asInstanceOf[ir.SequenceOp].ops.head.asInstanceOf[ir.InsertOp].subOp.asInstanceOf[ir.DiffOp].lhs.asInstanceOf[ir.UnionOp].ops.head // project+join
@@ -53,6 +56,8 @@ class BenchStagedDotty_cold {
 //    println("subTree=" + engine.storageManager.printer.printIR(snEvalRule))
 
   }
+  @TearDown(Level.Invocation)
+  def cleanup(): Unit = storage.initEvaluation()
   @Benchmark def compile_tree(blackhole: Blackhole): Unit = {
     given staging.Compiler = engine.dedicatedDotty
     blackhole.consume(
@@ -113,7 +118,8 @@ class BenchStagedDotty_cold {
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class BenchStagedDotty_warm {
-  var engine: SemiNaiveStagedExecutionEngine = null
+  var storage: CollectionsStorageManager = null
+  var engine: CompiledStagedExecutionEngine = null
   var program: Program = null
   var toSolve: Relation[Constant] = null
   var tree: ir.IROp = null
@@ -122,19 +128,20 @@ class BenchStagedDotty_warm {
 
   @Setup(Level.Trial)
   def setup(): Unit = {
-    engine = SemiNaiveStagedExecutionEngine(CollectionsStorageManager())
+    engine = CompiledStagedExecutionEngine(CollectionsStorageManager())
     program = Program(engine)
-    toSolve = initialize2.pretest(program)
+    toSolve = initialize20x.pretest(program)
     val x1 = engine.generateProgramTree(toSolve.id)
     tree = x1._1
     ctx = x1._2
     // manually pick out subtrees to compile
-    naiveEval = tree.asInstanceOf[ir.ProgramOp].body.asInstanceOf[ir.SequenceOp].ops.head // insert + n-SPJU for all rels
-    assert(naiveEval.fnLabel == ir.FnLabel.EVAL_NAIVE)
-    doWhile = tree.asInstanceOf[ir.ProgramOp].body.asInstanceOf[ir.SequenceOp].ops(1) // main loop
-    assert(doWhile.asInstanceOf[ir.DoWhileOp].body.fnLabel == ir.FnLabel.LOOP_BODY)
-    snEval = doWhile.asInstanceOf[ir.DoWhileOp].body.asInstanceOf[ir.SequenceOp].ops(1) // insert + SPJU for all rels
-    assert(snEval.fnLabel == ir.FnLabel.EVAL_SN)
+    val programNode = tree.asInstanceOf[ir.ProgramOp]
+    naiveEval = programNode.getSubTree(ir.OpCode.EVAL_NAIVE) //body.asInstanceOf[ir.SequenceOp].ops.head // insert + n-SPJU for all rels
+    assert(naiveEval.code == ir.OpCode.EVAL_NAIVE)
+    doWhile = programNode.getSubTree(ir.OpCode.LOOP_BODY) //tree.asInstanceOf[ir.ProgramOp].body.asInstanceOf[ir.SequenceOp].ops(1) // main loop
+    assert(doWhile.asInstanceOf[ir.DoWhileOp].body.code == ir.OpCode.LOOP_BODY)
+    snEval = programNode.getSubTree(ir.OpCode.EVAL_SN) //doWhile.asInstanceOf[ir.DoWhileOp].body.asInstanceOf[ir.SequenceOp].ops(1) // insert + SPJU for all rels
+    assert(snEval.code == ir.OpCode.EVAL_SN)
     snEvalRule = snEval.asInstanceOf[ir.SequenceOp].ops.head // a insert SPJU + copy
     assert(snEvalRule.isInstanceOf[ir.SequenceOp])
     join = snEvalRule.asInstanceOf[ir.SequenceOp].ops.head.asInstanceOf[ir.InsertOp].subOp.asInstanceOf[ir.DiffOp].lhs.asInstanceOf[ir.UnionOp].ops.head // project+join
@@ -145,6 +152,10 @@ class BenchStagedDotty_warm {
     //    println("subTree=" + engine.storageManager.printer.printIR(snEvalRule))
 
   }
+
+  @TearDown(Level.Invocation)
+  def cleanup(): Unit = storage.initEvaluation()
+
   @Benchmark def compile_tree(blackhole: Blackhole): Unit = {
     given staging.Compiler = engine.dedicatedDotty
     blackhole.consume(

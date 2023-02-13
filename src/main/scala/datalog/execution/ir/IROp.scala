@@ -13,9 +13,8 @@ import scala.concurrent.{Future, Await}
 import scala.util.{Failure, Success}
 
 enum OpCode:
-  case PROGRAM, SWAP_CLEAR, SEQ, SCAN, SCANEDB, PROJECT, JOIN, INSERT, UNION, DIFF, DEBUG, LOOP
-enum FnLabel: // convenience labels for generating functions
-  case EVAL_RULE_NAIVE, EVAL_RULE_SN, EVAL_NAIVE, EVAL_SN, LOOP_BODY, OTHER // TBD if more needed
+  case PROGRAM, SWAP_CLEAR, SEQ, SCAN, SCANEDB, PROJECT, JOIN, INSERT, UNION, DIFF, DEBUG, LOOP,
+  EVAL_RULE_NAIVE, EVAL_RULE_SN, EVAL_NAIVE, EVAL_SN, LOOP_BODY, OTHER // convenience labels for generating functions
 
 // TODO: make general SM not collections
 type CompiledFn = CollectionsStorageManager => Any
@@ -25,7 +24,7 @@ type CompiledRelFn = CollectionsStorageManager => CollectionsStorageManager#EDB
  */
 abstract class IROp() {
   val code: OpCode
-  val fnLabel: FnLabel = FnLabel.OTHER
+  var compiledFn: Future[CompiledFn] = null
 //  var compiled: AtomicReference[CompiledFn] = new AtomicReference[CompiledFn](
 //  def run(using storageManager: StorageManager): Any
 }
@@ -38,6 +37,21 @@ case class ProgramOp(body: IROp) extends IROp {
   val code: OpCode = OpCode.PROGRAM
   def run(bodyFn: CompiledFn)(using storageManager:  CollectionsStorageManager): Any =
     bodyFn(storageManager)
+
+  // convenience methods to get certain subtrees
+  def getSubTree(code: OpCode): IROp =
+    code match
+      case OpCode.EVAL_NAIVE =>
+        body.asInstanceOf[SequenceOp].ops.head
+      case OpCode.LOOP =>
+        body.asInstanceOf[SequenceOp].ops(1)
+      case OpCode.LOOP_BODY =>
+        body.asInstanceOf[SequenceOp].ops(1).asInstanceOf[DoWhileOp].body
+      case OpCode.EVAL_SN =>
+        body.asInstanceOf[SequenceOp].ops(1).asInstanceOf[DoWhileOp].body.asInstanceOf[SequenceOp].ops(1)
+      case _ => // TODO: for non-unique nodes, compile with fresh dotty on separate threads?
+        throw new Exception(s"getSubTree given non-unique subtree code $code")
+
 }
 
 case class DoWhileOp(body: IROp, toCmp: DB) extends IROp {
@@ -54,9 +68,7 @@ case class DoWhileOp(body: IROp, toCmp: DB) extends IROp {
       }
     }) ()
 }
-case class SequenceOp(ops: Seq[IROp], override val fnLabel: FnLabel = FnLabel.OTHER) extends IROp {
-  val code: OpCode = OpCode.SEQ
-  var compiledFn: Future[CompiledFn] = null
+case class SequenceOp(ops: Seq[IROp], override val code: OpCode = OpCode.SEQ) extends IROp {
   def run(opsFn: Seq[CompiledFn])(using storageManager:  CollectionsStorageManager): Any =
     opsFn.map(o => o(storageManager))
 }
@@ -104,16 +116,16 @@ case class ScanOp(rId: RelationId, db: DB, knowledge: KNOWLEDGE) extends IRRelOp
       case DB.Derived =>
         knowledge match {
           case KNOWLEDGE.Known =>
-            storageManager.getKnownDerivedDB(rId, Some(storageManager.edbs.getOrElse(rId, storageManager.EDB())))
+            storageManager.getKnownDerivedDB(rId)
           case KNOWLEDGE.New =>
-            storageManager.getNewDerivedDB(rId, Some(storageManager.edbs.getOrElse(rId, storageManager.EDB())))
+            storageManager.getNewDerivedDB(rId)
         }
       case DB.Delta =>
         knowledge match {
           case KNOWLEDGE.Known =>
-            storageManager.getKnownDeltaDB(rId, Some(storageManager.edbs.getOrElse(rId, storageManager.EDB())))
+            storageManager.getKnownDeltaDB(rId)
           case KNOWLEDGE.New =>
-            storageManager.getNewDeltaDB(rId, Some(storageManager.edbs.getOrElse(rId, storageManager.EDB())))
+            storageManager.getNewDeltaDB(rId)
         }
     }
 }
@@ -142,8 +154,7 @@ case class JoinOp(ops: Seq[IRRelOp], keys: JoinIndexes) extends IRRelOp {
     )
 }
 
-case class UnionOp(ops: Seq[IRRelOp], override val fnLabel: FnLabel = FnLabel.OTHER) extends IRRelOp {
-  val code: OpCode = OpCode.UNION
+case class UnionOp(ops: Seq[IRRelOp], override val code: OpCode = OpCode.UNION) extends IRRelOp {
   def run(opsFn: Seq[CompiledRelFn])(using storageManager:  CollectionsStorageManager): storageManager.EDB =
     opsFn.flatMap(o => o(storageManager)).toSet.toBuffer.asInstanceOf[storageManager.EDB]
 }

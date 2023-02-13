@@ -23,8 +23,21 @@ abstract class DLBenchmark {
       case "NaiveCollections" => Program(NaiveExecutionEngine(CollectionsStorageManager()))
       case "NaiveStagedCollections" => Program(NaiveStagedExecutionEngine(CollectionsStorageManager()))
       case "SemiNaiveStagedCollections" => Program(SemiNaiveStagedExecutionEngine(CollectionsStorageManager()))
-      case "SemiNaiveInterpretedStagedCollections" => Program(SemiNaiveInterpretedStagedExecutionEngine(CollectionsStorageManager()))
-      case "SemiNaiveJITStagedCollections" => Program(SemiNaiveJITStagedExecutionEngine(CollectionsStorageManager()))
+//    case "NaiveStagedCollections" => Program(NaiveStagedExecutionEngine(CollectionsStorageManager()))
+      case "InterpretedStagedCollections" => Program(InterpretedStagedExecutionEngine(CollectionsStorageManager()))
+      case "CompiledStagedCollections" => Program(CompiledStagedExecutionEngine(CollectionsStorageManager()))
+//      case "JITStagedCollections" => Program(JITStagedExecutionEngine(CollectionsStorageManager(), ir.OpCode.OTHER, false))
+      case _ if context.contains("JITStaged") =>
+        val aot = context.contains("AOT")
+        val nonblocking = context.contains("NonBlocking")
+        val label =
+          if (context.contains("NaiveEval")) ir.OpCode.EVAL_NAIVE
+          else if (context.contains("SemiNaiveEval")) ir.OpCode.EVAL_SN
+          else if (context.contains("LoopBody")) ir.OpCode.LOOP_BODY
+          else if (context.contains("Loop")) ir.OpCode.LOOP
+          else if (context.contains("Program")) ir.OpCode.PROGRAM
+          else throw new Exception(s"Unknown type of JIT staged $context")
+        Program(JITStagedExecutionEngine(CollectionsStorageManager(), label, aot, !nonblocking))
       case _ => // WARNING: MUnit just returns null pointers everywhere if an error or assert is triggered in beforeEach
         throw new Exception(s"Unknown engine construction ${context}") // TODO: this is reported as passing
     }

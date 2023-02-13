@@ -10,7 +10,7 @@ import java.util.concurrent.TimeUnit
 import scala.collection.mutable
 import scala.util.Random
 
-object initialize2 {
+object initialize20x {
   def pretest(program: Program): Relation[Constant] = {
     val edge = program.relation[Constant]("edge")
     val path = program.relation[Constant]("path")
@@ -83,7 +83,7 @@ class BenchStaged10x_full_compiled {
   def setup(): Unit = {
     engine = SemiNaiveStagedExecutionEngine(CollectionsStorageManager())
     program = Program(engine)
-    toSolve = initialize2.pretest(program)
+    toSolve = initialize20x.pretest(program)
   }
   // measure cost of tree gen, compiling, running
   @Benchmark def run(blackhole: Blackhole): Unit = {
@@ -108,7 +108,7 @@ class BenchStaged10x_compile_and_run {
   def setup(): Unit = {
     engine = SemiNaiveStagedExecutionEngine(CollectionsStorageManager())
     program = Program(engine)
-    toSolve = initialize2.pretest(program)
+    toSolve = initialize20x.pretest(program)
     val x1 = engine.generateProgramTree(toSolve.id)
     tree = x1._1
     ctx = x1._2
@@ -138,7 +138,7 @@ class BenchStaged10x_run_only_compiled {
   def setup(): Unit = {
     engine = SemiNaiveStagedExecutionEngine(CollectionsStorageManager())
     program = Program(engine)
-    toSolve = initialize2.pretest(program)
+    toSolve = initialize20x.pretest(program)
     val x1 = engine.generateProgramTree(toSolve.id)
     tree = x1._1
     ctx = x1._2
@@ -166,7 +166,7 @@ class BenchStaged10x_full_interpreted {
   def setup(): Unit = {
     engine = SemiNaiveStagedExecutionEngine(CollectionsStorageManager())
     program = Program(engine)
-    toSolve = initialize2.pretest(program)
+    toSolve = initialize20x.pretest(program)
   }
   // measure cost of tree gen, running interpreted
   @Benchmark def run(blackhole: Blackhole): Unit = {
@@ -191,7 +191,7 @@ class BenchStaged10x_run_only_interpreted {
   def setup(): Unit = {
     engine = SemiNaiveStagedExecutionEngine(CollectionsStorageManager())
     program = Program(engine)
-    toSolve = initialize2.pretest(program)
+    toSolve = initialize20x.pretest(program)
     val x1 = engine.generateProgramTree(toSolve.id)
     tree = x1._1
     ctx = x1._2
@@ -216,7 +216,7 @@ class BenchStaged10x_seminaive_collections {
   def setup(): Unit = {
     engine = SemiNaiveExecutionEngine(CollectionsStorageManager())
     program = Program(engine)
-    toSolve = initialize2.pretest(program)
+    toSolve = initialize20x.pretest(program)
   }
   // measure cost of old solve
   @Benchmark def run(blackhole: Blackhole): Unit = {

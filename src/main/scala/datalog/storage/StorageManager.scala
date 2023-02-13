@@ -68,10 +68,10 @@ trait StorageManager(val ns: NS) {
 
   def edb(rId: RelationId): EDB
 
-  def getKnownDerivedDB(rId: RelationId, orElse: Option[EDB] = None): EDB
-  def getNewDerivedDB(rId: RelationId, orElse: Option[EDB] = None): EDB
-  def getKnownDeltaDB(rId: RelationId, orElse: Option[EDB] = None): EDB
-  def getNewDeltaDB(rId: RelationId, orElse: Option[EDB] = None): EDB
+  def getKnownDerivedDB(rId: RelationId): EDB
+  def getNewDerivedDB(rId: RelationId): EDB
+  def getKnownDeltaDB(rId: RelationId): EDB
+  def getNewDeltaDB(rId: RelationId): EDB
   def getKnownIDBResult(rId: RelationId): Set[Seq[Term]]
   def getNewIDBResult(rId: RelationId): Set[Seq[Term]]
   def getEDBResult(rId: RelationId): Set[Seq[Term]]

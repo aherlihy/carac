@@ -1,7 +1,7 @@
 package datalog
 
 import datalog.dsl.MODE.Interpret
-import datalog.execution.{ExecutionEngine, NaiveExecutionEngine, NaiveStagedExecutionEngine, SemiNaiveExecutionEngine, SemiNaiveJITStagedExecutionEngine, SemiNaiveStagedExecutionEngine, SemiNaiveInterpretedStagedExecutionEngine}
+import datalog.execution.{ExecutionEngine, NaiveExecutionEngine, SemiNaiveExecutionEngine, JITStagedExecutionEngine, InterpretedStagedExecutionEngine, CompiledStagedExecutionEngine, ir}
 import datalog.dsl.{Constant, Program, __}
 import datalog.execution.ast.transform.CopyEliminationPass
 import datalog.execution.ir.InterpreterContext
@@ -35,7 +35,7 @@ def tc(program: Program): Unit = {
   edge("b", "c", "red") :- ()
   edge("c", "d", "blue") :- ()
 
-  println("RES=" + path.solve(mode = Interpret))
+  println("RES=" + path.solve())
 }
 
 def tc_long(program: Program): Unit = {
@@ -511,34 +511,36 @@ def anon_var(program: Program) = {
   //  reversible(program, engine)
   //  val run = multiJoin
 
-  println("OLD SN")
-  given engine1: ExecutionEngine = new SemiNaiveExecutionEngine(new CollectionsStorageManager())
-  val program1 = Program(engine1)
-  tc(program1)
-  println("\n\n_______________________\n\n")
+//  println("OLD SN")
+//  given engine1: ExecutionEngine = new SemiNaiveExecutionEngine(new CollectionsStorageManager())
+//  val program1 = Program(engine1)
+//  tc(program1)
+//  println("\n\n_______________________\n\n")
 
 //  println("STAGED COMPILE")
-//  given engine2: ExecutionEngine = new SemiNaiveStagedExecutionEngine(new CollectionsStorageManager())
+//  given engine2: ExecutionEngine = new CompiledStagedExecutionEngine(new CollectionsStorageManager())
 //  val program2 = Program(engine2)
-//  anon_var(program2)
+//  tc(program2)
 //  println("\n\n_______________________\n\n")
 //
 //  println("STAGED INTERP")
-//
-//  given engine3: ExecutionEngine = new SemiNaiveInterpretedStagedExecutionEngine(new CollectionsStorageManager())
-//
+//  given engine3: ExecutionEngine = new InterpretedStagedExecutionEngine(new CollectionsStorageManager())
 //  val program3 = Program(engine3)
-//  anon_var(program3)
+//  tc(program3)
 //  println("\n\n_______________________\n\n")
-  //
-//  println("JIT STAGED")
 //
-//  given engine3: ExecutionEngine = new SemiNaiveJITStagedExecutionEngine(new CollectionsStorageManager())
-//  val program3 = Program(engine3)
-//  anon_var(program3)
-//  println("\n\n_______________________\n\n")
+  println("JIT STAGED: aot Loop Body")
+  val engine4: ExecutionEngine = new JITStagedExecutionEngine(new CollectionsStorageManager(), ir.OpCode.LOOP_BODY, true, true)
+  val program4 = Program(engine4)
+  manyRelations(program4)
+  println("\n\n_______________________\n\n")
 
-//  println("JIT STAGED")
+  println("JIT STAGED: aot EvalSN")
+  val engine5: ExecutionEngine = new JITStagedExecutionEngine(new CollectionsStorageManager(), ir.OpCode.EVAL_SN, true, true)
+  val program5 = Program(engine5)
+  manyRelations(program5)
+  println("\n\n_______________________\n\n")
+  //  println("JIT STAGED")
 //
 //  given engine3: ExecutionEngine = new SemiNaiveJITStagedExecutionEngine(new CollectionsStorageManager())
 //  val program3 = Program(engine3)

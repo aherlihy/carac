@@ -53,12 +53,12 @@ class andersen_benchmark() extends ExampleBenchmarkGenerator("andersen") with an
  }
 
  // staged, naive
- @Benchmark def naive_staged(blackhole: Blackhole): Unit = {
-  val p = "NaiveStagedCollections"
-  if(!programs.contains(p))
-    throw new Exception(f"skip test $p for current env")
-  blackhole.consume(run(programs(p), result))
- }
+// @Benchmark def naive_staged(blackhole: Blackhole): Unit = {
+//  val p = "NaiveStagedCollections"
+//  if(!programs.contains(p))
+//    throw new Exception(f"skip test $p for current env")
+//  blackhole.consume(run(programs(p), result))
+// }
 
  // staged, seminaive
  @Benchmark def ci_seminaive_staged_interpreted(blackhole: Blackhole): Unit = {

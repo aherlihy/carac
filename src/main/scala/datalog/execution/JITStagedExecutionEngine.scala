@@ -1,6 +1,7 @@
 package datalog.execution
 
 import datalog.dsl.{MODE, Term}
+import datalog.execution.ast.ASTNode
 import datalog.execution.ir.*
 import datalog.storage.{CollectionsStorageManager, DB, KNOWLEDGE, StorageManager}
 import datalog.tools.Debug.debug
@@ -10,8 +11,9 @@ import scala.concurrent.{Await, Future}
 import scala.quoted.staging
 import scala.util.{Failure, Success}
 
-abstract class JITStagedExecutionEngine(override val storageManager: CollectionsStorageManager) extends StagedExecutionEngine(storageManager) {
+class JITStagedExecutionEngine(override val storageManager: CollectionsStorageManager, granularity: OpCode, aot: Boolean, block: Boolean) extends StagedExecutionEngine(storageManager) {
   import storageManager.EDB
+  override def solve(rId: Int, mode: MODE): Set[Seq[Term]] = super.solve(rId, MODE.Interpret)
   def interpretIRRelOp(irTree: IRRelOp)(using ctx: InterpreterContext): storageManager.EDB = {
 //    println(s"IN INTERPRET REL_IR, code=${irTree.code}")
     given CollectionsStorageManager = storageManager
@@ -41,23 +43,57 @@ abstract class JITStagedExecutionEngine(override val storageManager: Collections
     }
   }
   override def interpretIR(irTree: IROp)(using ctx: InterpreterContext): Any = {
-//    println(s"IN INTERPRET IR, code=${irTree.code} and fnCode=${irTree.fnCode}")
+//    println(s"IN INTERPRET IR, code=${irTree.code}")
     given CollectionsStorageManager = storageManager
     irTree match {
-      case ProgramOp(body) =>
-        interpretIR(body) // don't really need to call run since it doesn't do anything
+      case op: ProgramOp =>
+        if (aot)
+          aotCompile(op)
+        // test if need to compile, if so:
+        if (op.compiledFn == null) { // don't bother online compile since only 1
+          op.run(sm => interpretIR(op.body))
+        } else {
+          op.compiledFn.value match {
+            case Some(Success(op)) =>
+              debug("COMPILED", () => "")
+              op(storageManager)
+            case Some(Failure(e)) =>
+              throw e
+            case None =>
+              debug("compilation not ready yet", () => "")
+              if (block)
+                debug("blocking!", () => "")
+                Await.result(op.compiledFn, Duration.Inf)(storageManager)
+              else
+                op.run(sm => interpretIR(op.body))
+          }
+        }
 
       case op: DoWhileOp =>
-        // start compile for body
-        //        lazy val compiledBody: AtomicReference[CollectionsStorageManager => storageManager.EDB] = getCompiled(irTree, ctx)
-        op.run(sm => interpretIR(op.body))
-
-      case op: SwapAndClearOp =>
-        op.run()
+        // test if need to compile, if so:
+        if (op.compiledFn == null) { // don't bother online compile since only 1
+          op.run(sm => interpretIR(op.body))
+        } else {
+          op.compiledFn.value match {
+            case Some(Success(op)) =>
+              debug("COMPILED", () => "")
+              op(storageManager)
+            case Some(Failure(e)) =>
+              throw e
+            case None =>
+              debug("compilation not ready yet", () => "")
+              if (block)
+                debug("blocking!", () => "")
+                Await.result(op.compiledFn, Duration.Inf)(storageManager)
+              else
+                op.run(sm => interpretIR(op.body))
+          }
+        }
 
       case op: SequenceOp =>
-        op.fnLabel match
-          case FnLabel.EVAL_SN =>
+        op.code match
+          case OpCode.EVAL_SN | OpCode.EVAL_NAIVE | OpCode.LOOP_BODY if granularity == op.code => {
+            debug("", () => s"found subtree to compile: ${op.code} and gran=$granularity")
             // test if need to compile, if so:
             if (op.compiledFn == null) { // need to start compilation
               debug("starting new compilation", () => "")
@@ -75,12 +111,20 @@ abstract class JITStagedExecutionEngine(override val storageManager: Collections
               case Some(Failure(e)) =>
                 throw e
               case None =>
-//                  Thread.sleep(10000)
                 debug("compilation not ready yet", () => "")
-                op.run(op.ops.map(o => sm => interpretIR(o)))
+//                Thread.sleep(1000)
+                if (block)
+                  debug("blocking!", () => "")
+                  Await.result(op.compiledFn, Duration.Inf)(storageManager)
+                else
+                  op.run(op.ops.map(o => sm => interpretIR(o)))
             }
+          }
           case _ =>
             op.run(op.ops.map(o => sm => interpretIR(o)))
+
+      case op: SwapAndClearOp =>
+        op.run()
 
       case op: InsertOp =>
         op.run(sm => interpretIRRelOp(op.subOp), op.subOp2.map(sop => sm => interpretIRRelOp(sop)))
@@ -94,6 +138,16 @@ abstract class JITStagedExecutionEngine(override val storageManager: Collections
           case _ =>
             throw new Exception(s"Error: unhandled node type $irTree")
         }
+    }
+  }
+  // TODO: this could potentially go as a tree transform phase
+  def aotCompile(tree: ProgramOp)(using ctx: InterpreterContext): Unit = {
+    val subTree = tree.getSubTree(granularity)
+    given scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
+    given staging.Compiler = dedicatedDotty
+
+    subTree.compiledFn = Future {
+      compiler.getCompiled(subTree, ctx)
     }
   }
 }

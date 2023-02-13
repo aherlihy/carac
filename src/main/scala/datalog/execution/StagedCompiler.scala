@@ -28,26 +28,20 @@ class StagedCompiler(val storageManager: StorageManager) {
   def compileIRRelOp[T](irTree: IRRelOp)(using stagedSM: Expr[StorageManager {type EDB = T}], t: Type[T])(using ctx: InterpreterContext)(using Quotes): Expr[T] = { // TODO: Instead of parameterizing, use staged path dependent type: i.e. stagedSM.EDB
     irTree match {
       case ScanOp(rId, db, knowledge) =>
-        val edb =
-          if (storageManager.edbs.contains(rId))
-            '{ Some($stagedSM.edbs(${ Expr(rId) })) }
-          else
-            '{ Some($stagedSM.EDB()) }
-
         db match { // TODO[future]: Since edb is accessed upon first iteration, potentially optimize away getOrElse
           case DB.Derived =>
             knowledge match {
               case KNOWLEDGE.New =>
-                '{ $stagedSM.getNewDerivedDB(${ Expr(rId) }, $edb) }
+                '{ $stagedSM.getNewDerivedDB(${ Expr(rId) }) }
               case KNOWLEDGE.Known =>
-                '{ $stagedSM.getKnownDerivedDB(${ Expr(rId) }, $edb) }
+                '{ $stagedSM.getKnownDerivedDB(${ Expr(rId) }) }
             }
           case DB.Delta =>
             knowledge match {
               case KNOWLEDGE.New =>
-                '{ $stagedSM.getNewDeltaDB(${ Expr(rId) }, $edb) }
+                '{ $stagedSM.getNewDeltaDB(${ Expr(rId) }) }
               case KNOWLEDGE.Known =>
-                '{ $stagedSM.getKnownDeltaDB(${ Expr(rId) }, $edb) }
+                '{ $stagedSM.getKnownDeltaDB(${ Expr(rId) }) }
             }
         }
 
@@ -77,10 +71,10 @@ class StagedCompiler(val storageManager: StorageManager) {
       case UnionOp(ops, label) =>
         val compiledOps = ops.map(compileIRRelOp)
         label match
-          case FnLabel.EVAL_RULE_NAIVE if ops.size > heuristics.max_deps =>
+          case OpCode.EVAL_RULE_NAIVE if ops.size > heuristics.max_deps =>
             val lambdaOps = compiledOps.map(e => '{ val eval_rule_lambda = (() => $e); eval_rule_lambda() })
             '{ $stagedSM.union(${Expr.ofSeq(lambdaOps)}) }
-          case FnLabel.EVAL_RULE_SN if ops.size > heuristics.max_deps =>
+          case OpCode.EVAL_RULE_SN if ops.size > heuristics.max_deps =>
             val lambdaOps = compiledOps.map(e => '{ val eval_rule_sn_lambda = (() => $e); eval_rule_sn_lambda() })
             '{ $stagedSM.union(${ Expr.ofSeq(lambdaOps) }) }
           case _ =>
@@ -124,11 +118,11 @@ class StagedCompiler(val storageManager: StorageManager) {
       case SequenceOp(ops, label) =>
         val cOps = ops.map(compileIR)
         label match
-          case FnLabel.EVAL_NAIVE if ops.length / 2 > heuristics.max_relations =>
+          case OpCode.EVAL_NAIVE if ops.length / 2 > heuristics.max_relations =>
             cOps.reduceLeft((acc, next) =>
               '{ $acc ; val eval_naive_lambda = () => $next; eval_naive_lambda() }
             )
-          case FnLabel.EVAL_SN if ops.length > heuristics.max_relations =>
+          case OpCode.EVAL_SN if ops.length > heuristics.max_relations =>
             cOps.reduceLeft((acc, next) =>
               '{ $acc ; val eval_sn_lambda = () => $next; eval_sn_lambda() }
             )

@@ -1,7 +1,7 @@
 package test
 
 import datalog.dsl.{Constant, Program, Relation, Term}
-import datalog.execution.{NaiveExecutionEngine, SemiNaiveExecutionEngine, NaiveStagedExecutionEngine, SemiNaiveStagedExecutionEngine, SemiNaiveJITStagedExecutionEngine}
+import datalog.execution.{NaiveExecutionEngine, SemiNaiveExecutionEngine, InterpretedStagedExecutionEngine, CompiledStagedExecutionEngine, JITStagedExecutionEngine, ir}
 import datalog.storage.{CollectionsStorageManager, RelationalStorageManager}
 
 import java.nio.file.{Files, Path, Paths}
@@ -95,9 +95,10 @@ abstract class TestGenerator(directory: Path,
           case "NaiveRelational" => Program(NaiveExecutionEngine(RelationalStorageManager()))
           case "SemiNaiveCollections" => Program(SemiNaiveExecutionEngine(CollectionsStorageManager()))
           case "NaiveCollections" => Program(NaiveExecutionEngine(CollectionsStorageManager()))
-          case "NaiveStagedCollections" => Program(NaiveStagedExecutionEngine(CollectionsStorageManager()))
-          case "SemiNaiveStagedCollections" => Program(SemiNaiveStagedExecutionEngine(CollectionsStorageManager()))
-          case "SemiNaiveJITStagedCollections" => Program(SemiNaiveJITStagedExecutionEngine(CollectionsStorageManager()))
+//          case "NaiveStagedCollections" => Program(NaiveStagedExecutionEngine(CollectionsStorageManager()))
+          case "InterpretedStagedCollections" => Program(InterpretedStagedExecutionEngine(CollectionsStorageManager()))
+          case "CompiledStagedCollections" => Program(CompiledStagedExecutionEngine(CollectionsStorageManager()))
+          case "JITStagedCollections" => Program(JITStagedExecutionEngine(CollectionsStorageManager(), ir.OpCode.OTHER, false, false))
           case _ => // WARNING: MUnit just returns null pointers everywhere if an error or assert is triggered in beforeEach
             throw new Exception(s"Unknown engine construction ${context.test.name}") // TODO: this is reported as passing
         }
@@ -114,7 +115,7 @@ abstract class TestGenerator(directory: Path,
 
     override def munitFixtures = List(program)
 
-    Seq("SemiNaive", "Naive", "NaiveStaged", "SemiNaiveStaged", "SemiNaiveJITStaged").foreach(execution => {
+    Seq("SemiNaive", "Naive", "CompiledStaged", "InterpretedStaged", "JITStaged").foreach(execution => {
       Seq("Relational", "Collections").foreach(storage => {
         if (execution.contains("Staged") && storage == "Relational") {} // skip and don't report as skipped
         else if (
