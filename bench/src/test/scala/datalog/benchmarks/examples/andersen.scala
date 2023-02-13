@@ -10,8 +10,8 @@ import org.openjdk.jmh.infra.Blackhole
 import test.examples.andersen.andersen
 
 @Fork(examples_fork) // # of jvms that it will use
-@Warmup(iterations = examples_warmup_iterations, time = examples_warmup_time, timeUnit = TimeUnit.SECONDS)
-@Measurement(iterations = examples_iterations, time = examples_time, timeUnit = TimeUnit.SECONDS)
+@Warmup(iterations = examples_warmup_iterations, time = examples_warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = examples_batchsize)
+@Measurement(iterations = examples_iterations, time = examples_time, timeUnit = TimeUnit.SECONDS, batchSize = examples_batchsize)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class andersen_benchmark() extends ExampleBenchmarkGenerator("andersen") with andersen {

@@ -9,8 +9,8 @@ import org.openjdk.jmh.infra.Blackhole
 import test.examples.input_output.input_output
 
 @Fork(examples_fork) // # of jvms that it will use
-@Warmup(iterations = examples_warmup_iterations, time = examples_warmup_time, timeUnit = TimeUnit.SECONDS)
-@Measurement(iterations = examples_iterations, time = examples_xl_time, timeUnit = TimeUnit.SECONDS)
+@Warmup(iterations = examples_warmup_iterations, time = examples_warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = examples_batchsize)
+@Measurement(iterations = examples_iterations, time = examples_xl_time, timeUnit = TimeUnit.SECONDS, batchSize = examples_batchsize)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class input_output_benchmark() extends ExampleBenchmarkGenerator("input_output") with input_output {

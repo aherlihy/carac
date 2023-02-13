@@ -8,8 +8,8 @@ import test.examples.func.func
 
 import java.nio.file.Paths
 @Fork(examples_fork) // # of jvms that it will use
-@Warmup(iterations = examples_warmup_iterations, time = examples_warmup_time, timeUnit = TimeUnit.SECONDS)
-@Measurement(iterations = examples_iterations, time = examples_time, timeUnit = TimeUnit.SECONDS)
+@Warmup(iterations = examples_warmup_iterations, time = examples_warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = examples_batchsize)
+@Measurement(iterations = examples_iterations, time = examples_time, timeUnit = TimeUnit.SECONDS, batchSize = examples_batchsize)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class func_benchmark() extends ExampleBenchmarkGenerator("func") with func {

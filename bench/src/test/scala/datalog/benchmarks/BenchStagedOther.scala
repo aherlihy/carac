@@ -16,11 +16,11 @@ import scala.io.Source
 import scala.jdk.StreamConverters.*
 import scala.util.Properties
 
-inline val staged_warmup_iterations = 3
+inline val staged_warmup_iterations = 0
 inline val staged_iterations = 5
 inline val staged_warmup_time = 10
 inline val staged_time = 10
-inline val staged_batchSize = 1
+inline val staged_batchSize = 10
 inline val staged_fork = 1
 
 trait OtherBench extends andersen {
@@ -125,38 +125,38 @@ class BenchStagedOther_full_compiled extends OtherBench {
     )
   }
 }
-//@Fork(staged_fork) // # of jvms that it will use
-//@Warmup(iterations = staged_warmup_iterations, time = staged_warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = staged_batchSize)
-//@Measurement(iterations = staged_iterations, time = staged_time, timeUnit = TimeUnit.SECONDS, batchSize = staged_batchSize)
-//@State(Scope.Thread)
-//@BenchmarkMode(Array(Mode.AverageTime))
-//class BenchStagedOther_compile_and_run extends OtherBench {
-//  var engine: SemiNaiveStagedExecutionEngine = null
-//  var program: Program = null
-//  var toSolveR: Relation[Constant] = null
-//  var tree: ir.IROp = null
-//  var ctx: ir.InterpreterContext = null
-//  // measure cost of tree gen, compiling, running
-//  @Setup(Level.Invocation)
-//  def setup(): Unit = {
-//    engine = SemiNaiveStagedExecutionEngine(CollectionsStorageManager())
-//    program = Program(engine)
-//    pretest(program)
-//    toSolveR = program.namedRelation(toSolve)
-//    val x1 = engine.generateProgramTree(toSolveR.id)
-//    tree = x1._1
-//    ctx = x1._2
-//  }
-//
-//  @TearDown
-//  def f(): Unit = finish()
-//  //  measure cost of compiling, running
-//  @Benchmark def run(blackhole: Blackhole): Unit = {
-//    blackhole.consume(
-//      result(toSolve) = engine.solveCompiled(tree, ctx)
-//    )
-//  }
-//}
+@Fork(staged_fork) // # of jvms that it will use
+@Warmup(iterations = staged_warmup_iterations, time = staged_warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = staged_batchSize)
+@Measurement(iterations = staged_iterations, time = staged_time, timeUnit = TimeUnit.SECONDS, batchSize = staged_batchSize)
+@State(Scope.Thread)
+@BenchmarkMode(Array(Mode.AverageTime))
+class BenchStagedOther_compile_and_run extends OtherBench {
+  var engine: SemiNaiveStagedExecutionEngine = null
+  var program: Program = null
+  var toSolveR: Relation[Constant] = null
+  var tree: ir.IROp = null
+  var ctx: ir.InterpreterContext = null
+  // measure cost of tree gen, compiling, running
+  @Setup(Level.Invocation)
+  def setup(): Unit = {
+    engine = SemiNaiveStagedExecutionEngine(CollectionsStorageManager())
+    program = Program(engine)
+    pretest(program)
+    toSolveR = program.namedRelation(toSolve)
+    val x1 = engine.generateProgramTree(toSolveR.id)
+    tree = x1._1
+    ctx = x1._2
+  }
+
+  @TearDown
+  def f(): Unit = finish()
+  //  measure cost of compiling, running
+  @Benchmark def run(blackhole: Blackhole): Unit = {
+    blackhole.consume(
+      result(toSolve) = engine.solveCompiled(tree, ctx)
+    )
+  }
+}
 @Fork(staged_fork) // # of jvms that it will use
 @Warmup(iterations = staged_warmup_iterations, time = staged_warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = staged_batchSize)
 @Measurement(iterations = staged_iterations, time = staged_time, timeUnit = TimeUnit.SECONDS, batchSize = staged_batchSize)
