@@ -38,7 +38,7 @@ class IRTreeGenerator(using val ctx: InterpreterContext) {
 
           SequenceOp(Seq(
             InsertOp(r, DB.Delta, KNOWLEDGE.New, diff),
-            InsertOp(r, DB.Derived, KNOWLEDGE.New, prev, Some(diff)),
+            InsertOp(r, DB.Derived, KNOWLEDGE.New, prev, Some(ScanOp(r, DB.Delta, KNOWLEDGE.New))),
             //            DebugPeek("\tdiff, i.e. delta[new]", () => s"${ctx.storageManager.ns(r)}] = ", ScanOp(r, DB.Delta, KNOWLEDGE.New)),
             //            DebugPeek("\tall, i.e. derived[new]", () => s"${ctx.storageManager.ns(r)}] = ", ScanOp(r, DB.Derived, KNOWLEDGE.New)),
           ))

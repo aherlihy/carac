@@ -1,21 +1,14 @@
-package datalog.benchmarks
-
-import java.util.concurrent.TimeUnit
-import org.openjdk.jmh.annotations.*
-import org.openjdk.jmh.infra.Blackhole
-import datalog.dsl.*
-import datalog.execution.{ExecutionEngine, NaiveExecutionEngine, SemiNaiveExecutionEngine}
-import datalog.storage.{CollectionsStorageManager, NS, RelationalStorageManager}
-
-import scala.collection.immutable.Map
-import scala.util.Random
-
-inline val staged_warmup_iterations = 3
-inline val staged_iterations = 5
-inline val staged_warmup_time = 10
-inline val staged_time = 30
-inline val staged_batchSize = 1
-inline val staged_fork = 1
+//package datalog.benchmarks
+//
+//import java.util.concurrent.TimeUnit
+//import org.openjdk.jmh.annotations.*
+//import org.openjdk.jmh.infra.Blackhole
+//import datalog.dsl.*
+//import datalog.execution.{ExecutionEngine, NaiveExecutionEngine, SemiNaiveExecutionEngine}
+//import datalog.storage.{CollectionsStorageManager, NS, RelationalStorageManager}
+//
+//import scala.collection.immutable.Map
+//import scala.util.Random
 ///**
 // * Benchmarks that are run on all modes
 // */

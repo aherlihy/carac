@@ -153,28 +153,28 @@ class BenchStaged10x_run_only_compiled {
     )
   }
 }
-@Fork(staged_fork) // # of jvms that it will use
-@Warmup(iterations = staged_warmup_iterations, time = staged_warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = staged_batchSize)
-@Measurement(iterations = staged_iterations, time = staged_time, timeUnit = TimeUnit.SECONDS, batchSize = staged_batchSize)
-@State(Scope.Thread)
-@BenchmarkMode(Array(Mode.AverageTime))
-class BenchStaged10x_full_interpreted {
-  var engine: SemiNaiveStagedExecutionEngine = null
-  var program: Program = null
-  var toSolve: Relation[Constant] = null
-  @Setup(Level.Invocation)
-  def setup(): Unit = {
-    engine = SemiNaiveStagedExecutionEngine(CollectionsStorageManager())
-    program = Program(engine)
-    toSolve = initialize2.pretest(program)
-  }
-  // measure cost of tree gen, running interpreted
-  @Benchmark def run(blackhole: Blackhole): Unit = {
-    blackhole.consume(
-      toSolve.solve(MODE.Interpret)
-    )
-  }
-}
+//@Fork(staged_fork) // # of jvms that it will use
+//@Warmup(iterations = staged_warmup_iterations, time = staged_warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = staged_batchSize)
+//@Measurement(iterations = staged_iterations, time = staged_time, timeUnit = TimeUnit.SECONDS, batchSize = staged_batchSize)
+//@State(Scope.Thread)
+//@BenchmarkMode(Array(Mode.AverageTime))
+//class BenchStaged10x_full_interpreted {
+//  var engine: SemiNaiveStagedExecutionEngine = null
+//  var program: Program = null
+//  var toSolve: Relation[Constant] = null
+//  @Setup(Level.Invocation)
+//  def setup(): Unit = {
+//    engine = SemiNaiveStagedExecutionEngine(CollectionsStorageManager())
+//    program = Program(engine)
+//    toSolve = initialize2.pretest(program)
+//  }
+//  // measure cost of tree gen, running interpreted
+//  @Benchmark def run(blackhole: Blackhole): Unit = {
+//    blackhole.consume(
+//      toSolve.solve(MODE.Interpret)
+//    )
+//  }
+//}
 @Fork(staged_fork) // # of jvms that it will use
 @Warmup(iterations = staged_warmup_iterations, time = staged_warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = staged_batchSize)
 @Measurement(iterations = staged_iterations, time = staged_time, timeUnit = TimeUnit.SECONDS, batchSize = staged_batchSize)

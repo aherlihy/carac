@@ -56,7 +56,7 @@ abstract class JITStagedExecutionEngine(override val storageManager: Collections
         op.run()
 
       case op: SequenceOp =>
-        op.fnCode match
+        op.fnLabel match
           case FnLabel.EVAL_SN =>
             // test if need to compile, if so:
             if (op.compiledFn == null) { // need to start compilation
@@ -67,20 +67,17 @@ abstract class JITStagedExecutionEngine(override val storageManager: Collections
                 given staging.Compiler = dedicatedDotty //staging.Compiler.make(getClass.getClassLoader) // TODO: new dotty per thread, maybe concat
                 compiler.getCompiled(op, ctx)
               }
-              // TODO: time op.run to set baseline, then time compiled and de-optimize if slower
-              op.run(op.ops.map(o => sm => interpretIR(o)))
-            } else {
-              op.compiledFn.value match {
-                case Some(Success(op)) =>
-                  debug("COMPILED", () => "")
-                  op(storageManager)
-                case Some(Failure(e)) =>
-                  throw e
-                case None =>
+            }
+            op.compiledFn.value match {
+              case Some(Success(op)) =>
+                debug("COMPILED", () => "")
+                op(storageManager)
+              case Some(Failure(e)) =>
+                throw e
+              case None =>
 //                  Thread.sleep(10000)
-                  debug("compilation not ready yet", () => "")
-                  op.run(op.ops.map(o => sm => interpretIR(o)))
-              }
+                debug("compilation not ready yet", () => "")
+                op.run(op.ops.map(o => sm => interpretIR(o)))
             }
           case _ =>
             op.run(op.ops.map(o => sm => interpretIR(o)))

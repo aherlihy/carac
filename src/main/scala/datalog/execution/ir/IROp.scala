@@ -25,7 +25,7 @@ type CompiledRelFn = CollectionsStorageManager => CollectionsStorageManager#EDB
  */
 abstract class IROp() {
   val code: OpCode
-  val fnCode: FnLabel = FnLabel.OTHER
+  val fnLabel: FnLabel = FnLabel.OTHER
 //  var compiled: AtomicReference[CompiledFn] = new AtomicReference[CompiledFn](
 //  def run(using storageManager: StorageManager): Any
 }
@@ -54,7 +54,7 @@ case class DoWhileOp(body: IROp, toCmp: DB) extends IROp {
       }
     }) ()
 }
-case class SequenceOp(ops: Seq[IROp], override val fnCode: FnLabel = FnLabel.OTHER) extends IROp {
+case class SequenceOp(ops: Seq[IROp], override val fnLabel: FnLabel = FnLabel.OTHER) extends IROp {
   val code: OpCode = OpCode.SEQ
   var compiledFn: Future[CompiledFn] = null
   def run(opsFn: Seq[CompiledFn])(using storageManager:  CollectionsStorageManager): Any =
@@ -142,7 +142,7 @@ case class JoinOp(ops: Seq[IRRelOp], keys: JoinIndexes) extends IRRelOp {
     )
 }
 
-case class UnionOp(ops: Seq[IRRelOp], override val fnCode: FnLabel = FnLabel.OTHER) extends IRRelOp {
+case class UnionOp(ops: Seq[IRRelOp], override val fnLabel: FnLabel = FnLabel.OTHER) extends IRRelOp {
   val code: OpCode = OpCode.UNION
   def run(opsFn: Seq[CompiledRelFn])(using storageManager:  CollectionsStorageManager): storageManager.EDB =
     opsFn.flatMap(o => o(storageManager)).toSet.toBuffer.asInstanceOf[storageManager.EDB]

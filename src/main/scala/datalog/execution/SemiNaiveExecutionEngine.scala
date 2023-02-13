@@ -21,8 +21,8 @@ class SemiNaiveExecutionEngine(override val storageManager: StorageManager) exte
       val res = evalRuleSN(r)
       debug("\tevalRuleSN=", () => storageManager.printer.factToString(res))
       val diff = storageManager.diff(res, prev)
-      storageManager.resetNewDerived(r, diff, prev) // set derived[new] to derived[new]+delta[new]
       storageManager.resetNewDelta(r, diff)
+      storageManager.resetNewDerived(r, storageManager.getKnownDerivedDB(r), storageManager.getNewDeltaDB(r)) // set derived[new] to derived[known]+delta[new]
       debug(s"\tdiff, i.e. delta[new][${storageManager.ns(r)}] =", () => storageManager.printer.factToString(storageManager.getNewDeltaDB(r)))
       debug(s"\tall, i.e. derived[new][${storageManager.ns(r)}] =", () => storageManager.printer.factToString(storageManager.getNewDerivedDB(r)))
       /* storageManager.resetDelta(r, newDbId, storageManager.getDiff(

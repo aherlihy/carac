@@ -389,7 +389,7 @@ def manyRelations(program: Program): Int = {
   hops19(x, y) :- (hops1(x, z), hops18(z, y))
   hops20(x, y) :- (hops1(x, z), hops19(z, y))
 
-  for i <- 0 until 200 do
+  for i <- 0 until 20 do
     edge(
       Random.alphanumeric.dropWhile(_.isDigit).dropWhile(_.isUpper).head.toString,
       Random.alphanumeric.dropWhile(_.isDigit).dropWhile(_.isUpper).head.toString
@@ -511,25 +511,25 @@ def anon_var(program: Program) = {
   //  reversible(program, engine)
   //  val run = multiJoin
 
-  //  println("OLD SN")
-  //  given engine1: ExecutionEngine = new SemiNaiveExecutionEngine(new CollectionsStorageManager())
-//  val program1 = Program(engine1)
-//  benchStaged10x(program1)
+  println("OLD SN")
+  given engine1: ExecutionEngine = new SemiNaiveExecutionEngine(new CollectionsStorageManager())
+  val program1 = Program(engine1)
+  tc(program1)
+  println("\n\n_______________________\n\n")
+
+//  println("STAGED COMPILE")
+//  given engine2: ExecutionEngine = new SemiNaiveStagedExecutionEngine(new CollectionsStorageManager())
+//  val program2 = Program(engine2)
+//  anon_var(program2)
 //  println("\n\n_______________________\n\n")
-
-  println("STAGED COMPILE")
-  given engine2: ExecutionEngine = new SemiNaiveStagedExecutionEngine(new CollectionsStorageManager())
-  val program2 = Program(engine2)
-  anon_var(program2)
-  println("\n\n_______________________\n\n")
-
-  println("STAGED INTERP")
-
-  given engine3: ExecutionEngine = new SemiNaiveInterpretedStagedExecutionEngine(new CollectionsStorageManager())
-
-  val program3 = Program(engine3)
-  anon_var(program3)
-  println("\n\n_______________________\n\n")
+//
+//  println("STAGED INTERP")
+//
+//  given engine3: ExecutionEngine = new SemiNaiveInterpretedStagedExecutionEngine(new CollectionsStorageManager())
+//
+//  val program3 = Program(engine3)
+//  anon_var(program3)
+//  println("\n\n_______________________\n\n")
   //
 //  println("JIT STAGED")
 //
