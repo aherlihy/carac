@@ -47,6 +47,8 @@ abstract class SimpleStorageManager(override val ns: NS) extends StorageManager(
    * @return
    */
   def initEvaluation(): Unit = {
+    // TODO: for now reinit with each solve(), don't keep around previous discovered facts. Future work -> incremental
+    dbId = 0
     knownDbId = dbId
     derivedDB.addOne(dbId, FactDatabase())
     deltaDB.addOne(dbId, FactDatabase())
