@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1676307418188,
+  "lastUpdate": 1676329197300,
   "repoUrl": "https://github.com/aherlihy/carac",
   "entries": {
     "Benchmark": [
@@ -9526,6 +9526,540 @@ window.BENCHMARK_DATA = {
           {
             "name": "datalog.benchmarks.examples.tree_benchmark.ci_seminaive_staged_jit",
             "value": 260.7116393383013,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "herlihyap@gmail.com",
+            "name": "aherlihy",
+            "username": "aherlihy"
+          },
+          "committer": {
+            "email": "herlihyap@gmail.com",
+            "name": "aherlihy",
+            "username": "aherlihy"
+          },
+          "distinct": true,
+          "id": "f575ee2af68a58b6a2efcbad9bcaed5bfbd3d3c0",
+          "message": "Add AOT to jit",
+          "timestamp": "2023-02-13T22:50:26+01:00",
+          "tree_id": "c61cb008ec329246d0997e691f5a48ce1e4b7b1c",
+          "url": "https://github.com/aherlihy/carac/commit/f575ee2af68a58b6a2efcbad9bcaed5bfbd3d3c0"
+        },
+        "date": 1676329196410,
+        "tool": "jmh",
+        "benches": [
+          {
+            "name": "datalog.benchmarks.examples.ackermann_benchmark.ci_seminaive_jit_stagedAOTLoopBodyBlocking",
+            "value": 40.49683105320513,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.ackermann_benchmark.ci_seminaive_jit_stagedAOTLoopBodyNonBlocking",
+            "value": 34.11617342281443,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.ackermann_benchmark.ci_seminaive_jit_stagedAOTSemiNaiveEvalBlocking",
+            "value": 27.57483797385965,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.ackermann_benchmark.ci_seminaive_jit_stagedLoopBodyOnline",
+            "value": 41.165361562307694,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.ackermann_benchmark.ci_seminaive_jit_stagedSemiNaiveEvalOnline",
+            "value": 37.41180224428572,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.ackermann_benchmark.ci_seminaive_jit_staged_AOTNaiveEvalBlocking",
+            "value": 28.202052307836254,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.ackermann_benchmark.ci_seminaive_staged_compiled",
+            "value": 46.404601969090905,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.ackermann_benchmark.ci_seminaive_staged_interpreted",
+            "value": 19.029710278660968,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.func_benchmark.ci_seminaive_jit_stagedAOTLoopBodyNonBlocking",
+            "value": 3.959574762003134,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.func_benchmark.ci_seminaive_jit_stagedAOTSemiNaiveEvalNonBlocking",
+            "value": 4.094156578559755,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.func_benchmark.ci_seminaive_staged_compiled",
+            "value": 274.626408351605,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.func_benchmark.ci_seminaive_staged_interpreted",
+            "value": 1.3238801627039254,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.grad_benchmark.ci_seminaive_jit_stagedAOTLoopBodyNonBlocking",
+            "value": 1.805799043836334,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.grad_benchmark.ci_seminaive_jit_stagedAOTSemiNaiveEvalNonBlocking",
+            "value": 1.8335719175285046,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.grad_benchmark.ci_seminaive_staged_compiled",
+            "value": 331.73994614731123,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.grad_benchmark.ci_seminaive_staged_interpreted",
+            "value": 0.48485601502805215,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.input_output_benchmark.ci_seminaive_jit_stagedAOTLoopBodyNonBlocking",
+            "value": 34.21886922674928,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.input_output_benchmark.ci_seminaive_jit_stagedAOTSemiNaiveEvalNonBlocking",
+            "value": 31.090869563305006,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.input_output_benchmark.ci_seminaive_staged_compiled",
+            "value": 4052.711035318682,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.input_output_benchmark.ci_seminaive_staged_interpreted",
+            "value": 9.825405857518582,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.java_pointsto_benchmark.ci_seminaive_jit_stagedAOTLoopBodyNonBlocking",
+            "value": 0.4614681721037771,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.java_pointsto_benchmark.ci_seminaive_jit_stagedAOTSemiNaiveEvalNonBlocking",
+            "value": 0.4466223476036622,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.java_pointsto_benchmark.ci_seminaive_staged_compiled",
+            "value": 11.702767306185297,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.java_pointsto_benchmark.ci_seminaive_staged_interpreted",
+            "value": 0.274290744801461,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.metro_benchmark.ci_seminaive_jit_stagedAOTLoopBodyNonBlocking",
+            "value": 3.4514686164020913,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.metro_benchmark.ci_seminaive_jit_stagedAOTSemiNaiveEvalNonBlocking",
+            "value": 2.7405951290405666,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.metro_benchmark.ci_seminaive_staged_compiled",
+            "value": 205.00004672050892,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.metro_benchmark.ci_seminaive_staged_interpreted",
+            "value": 1.0150996813904023,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.palindrome_benchmark.ci_seminaive_staged_compiled",
+            "value": 372.55576090521515,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.palindrome_benchmark.ci_seminaive_staged_interpreted",
+            "value": 35.89611927615444,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.pointsto_benchmark.ci_seminaive_jit_stagedAOTLoopBodyBlocking",
+            "value": 87.30070149333332,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.pointsto_benchmark.ci_seminaive_jit_stagedAOTSemiNaiveEvalBlocking",
+            "value": 36.40152587304762,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.pointsto_benchmark.ci_seminaive_jit_stagedLoopBodyOnline",
+            "value": 85.05053146619048,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.pointsto_benchmark.ci_seminaive_jit_stagedSemiNaiveEvalOnline",
+            "value": 34.846095688000005,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.pointsto_benchmark.ci_seminaive_jit_staged_AOTNaiveEvalBlocking",
+            "value": 34.498309361333334,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.pointsto_benchmark.ci_seminaive_staged_compiled",
+            "value": 79.67002924285714,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.pointsto_benchmark.ci_seminaive_staged_interpreted",
+            "value": 26.476322209684213,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.prime_benchmark.ci_seminaive_jit_stagedAOTLoopBodyNonBlocking",
+            "value": 43.95518681854641,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.prime_benchmark.ci_seminaive_jit_stagedAOTSemiNaiveEvalNonBlocking",
+            "value": 44.632950040150405,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.prime_benchmark.ci_seminaive_staged_compiled",
+            "value": 297.234805350192,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.prime_benchmark.ci_seminaive_staged_interpreted",
+            "value": 22.36368550059588,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.puzzle_benchmark.ci_seminaive_jit_stagedAOTLoopBodyNonBlocking",
+            "value": 10.866670558383188,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.puzzle_benchmark.ci_seminaive_jit_stagedAOTSemiNaiveEvalNonBlocking",
+            "value": 10.49426282680751,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.puzzle_benchmark.ci_seminaive_staged_compiled",
+            "value": 511.4300409430815,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.puzzle_benchmark.ci_seminaive_staged_interpreted",
+            "value": 3.9625355637124806,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.rsg_benchmark.ci_seminaive_jit_stagedAOTLoopBodyNonBlocking",
+            "value": 1.999052303253185,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.rsg_benchmark.ci_seminaive_jit_stagedAOTSemiNaiveEvalNonBlocking",
+            "value": 1.619485953120654,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.rsg_benchmark.ci_seminaive_staged_compiled",
+            "value": 172.35251351510016,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.rsg_benchmark.ci_seminaive_staged_interpreted",
+            "value": 0.6971512732520285,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.ship_benchmark.ci_seminaive_jit_stagedAOTLoopBodyNonBlocking",
+            "value": 0.8709052955773305,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.ship_benchmark.ci_seminaive_jit_stagedAOTSemiNaiveEvalNonBlocking",
+            "value": 0.6736488408810312,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.ship_benchmark.ci_seminaive_staged_compiled",
+            "value": 154.00758555223302,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.ship_benchmark.ci_seminaive_staged_interpreted",
+            "value": 0.21659234587240075,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.small_benchmark.ci_seminaive_jit_stagedAOTLoopBodyNonBlocking",
+            "value": 2.3396746955848275,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.small_benchmark.ci_seminaive_jit_stagedAOTSemiNaiveEvalNonBlocking",
+            "value": 2.219787104219282,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.small_benchmark.ci_seminaive_staged_compiled",
+            "value": 205.72739933474622,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.small_benchmark.ci_seminaive_staged_interpreted",
+            "value": 0.6646844858440807,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.tc_benchmark.ci_seminaive_jit_stagedAOTLoopBodyNonBlocking",
+            "value": 12.700066373188694,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.tc_benchmark.ci_seminaive_jit_stagedAOTSemiNaiveEvalNonBlocking",
+            "value": 13.230704261073493,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.tc_benchmark.ci_seminaive_staged_compiled",
+            "value": 648.2529798222348,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.tc_benchmark.ci_seminaive_staged_interpreted",
+            "value": 4.847517235305622,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.topological_ordering_benchmark.ci_seminaive_jit_stagedAOTLoopBodyNonBlocking",
+            "value": 120.6426528432282,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.topological_ordering_benchmark.ci_seminaive_jit_stagedAOTSemiNaiveEvalNonBlocking",
+            "value": 124.35466490856652,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.topological_ordering_benchmark.ci_seminaive_staged_compiled",
+            "value": 515.0694584582135,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.topological_ordering_benchmark.ci_seminaive_staged_interpreted",
+            "value": 60.115797768241634,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.traffic_benchmark.ci_seminaive_jit_stagedAOTLoopBodyNonBlocking",
+            "value": 1.5672248940045292,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.traffic_benchmark.ci_seminaive_jit_stagedAOTSemiNaiveEvalNonBlocking",
+            "value": 1.373236189404456,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.traffic_benchmark.ci_seminaive_staged_compiled",
+            "value": 229.20639293998184,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.traffic_benchmark.ci_seminaive_staged_interpreted",
+            "value": 0.43721033307797336,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.trains_benchmark.ci_seminaive_jit_stagedAOTLoopBodyBlocking",
+            "value": 37.425187326373624,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.trains_benchmark.ci_seminaive_jit_stagedAOTSemiNaiveEvalBlocking",
+            "value": 21.89590912003623,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.trains_benchmark.ci_seminaive_jit_stagedAOTSemiNaiveEvalNonBlocking",
+            "value": 18.560052714523813,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.trains_benchmark.ci_seminaive_jit_stagedLoopBodyOnline",
+            "value": 37.12966194647619,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.trains_benchmark.ci_seminaive_jit_stagedSemiNaiveEvalOnline",
+            "value": 21.6434065347971,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.trains_benchmark.ci_seminaive_jit_staged_AOTNaiveEvalBlocking",
+            "value": 20.77120203522051,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.trains_benchmark.ci_seminaive_staged_compiled",
+            "value": 39.45245104747253,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.trains_benchmark.ci_seminaive_staged_interpreted",
+            "value": 15.9220430220815,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.trans_benchmark.ci_seminaive_jit_stagedAOTLoopBodyNonBlocking",
+            "value": 1.4808413731460615,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.trans_benchmark.ci_seminaive_jit_stagedAOTSemiNaiveEvalNonBlocking",
+            "value": 1.2886357998359372,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.trans_benchmark.ci_seminaive_staged_compiled",
+            "value": 149.70620507807303,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.trans_benchmark.ci_seminaive_staged_interpreted",
+            "value": 0.4420620846431311,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.tree_benchmark.ci_seminaive_jit_stagedAOTLoopBodyNonBlocking",
+            "value": 1.8841874703415382,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.tree_benchmark.ci_seminaive_jit_stagedAOTSemiNaiveEvalNonBlocking",
+            "value": 1.6960940746677007,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.tree_benchmark.ci_seminaive_staged_compiled",
+            "value": 206.58673696455867,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.tree_benchmark.ci_seminaive_staged_interpreted",
+            "value": 0.58226945341128,
             "unit": "s/op",
             "extra": "iterations: 5\nforks: 1\nthreads: 1"
           }
