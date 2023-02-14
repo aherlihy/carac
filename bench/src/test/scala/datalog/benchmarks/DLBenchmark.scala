@@ -67,9 +67,7 @@ abstract class DLBenchmark {
   }
 
   def finish(): Unit = {
-    println("IN FINISH:")
     programs.keys.filter(k => k.contains("JITStaged")).foreach(k =>
-      println("AT K=" + k)
       programs(k).ee.asInstanceOf[JITStagedExecutionEngine].waitForAll()
     )
     assert(result.nonEmpty)

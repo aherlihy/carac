@@ -159,7 +159,6 @@ class JITStagedExecutionEngine(override val storageManager: CollectionsStorageMa
     trees.foreach(t =>
       val subTree = t.getSubTree(granularity)
       if (subTree.compiledFn != null)
-        println(s"awaiting! gran $granularity")
         Await.result(subTree.compiledFn, Duration.Inf)
     )
     trees.clear()
