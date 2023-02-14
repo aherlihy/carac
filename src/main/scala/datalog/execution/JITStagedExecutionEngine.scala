@@ -6,6 +6,7 @@ import datalog.execution.ir.*
 import datalog.storage.{CollectionsStorageManager, DB, KNOWLEDGE, StorageManager}
 import datalog.tools.Debug.debug
 
+import scala.collection.mutable
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
 import scala.quoted.staging
@@ -13,6 +14,7 @@ import scala.util.{Failure, Success}
 
 class JITStagedExecutionEngine(override val storageManager: CollectionsStorageManager, granularity: OpCode, aot: Boolean, block: Boolean) extends StagedExecutionEngine(storageManager) {
   import storageManager.EDB
+  val trees: mutable.Set[ProgramOp] = mutable.Set.empty
   override def solve(rId: Int, mode: MODE): Set[Seq[Term]] = super.solve(rId, MODE.Interpret)
   def interpretIRRelOp(irTree: IRRelOp)(using ctx: InterpreterContext): storageManager.EDB = {
 //    println(s"IN INTERPRET REL_IR, code=${irTree.code}")
@@ -47,6 +49,7 @@ class JITStagedExecutionEngine(override val storageManager: CollectionsStorageMa
     given CollectionsStorageManager = storageManager
     irTree match {
       case op: ProgramOp =>
+        trees.add(op)
         if (aot)
           aotCompile(op)
         // test if need to compile, if so:
@@ -54,17 +57,17 @@ class JITStagedExecutionEngine(override val storageManager: CollectionsStorageMa
           op.run(sm => interpretIR(op.body))
         } else {
           op.compiledFn.value match {
-            case Some(Success(op)) =>
-              debug("COMPILED", () => "")
-              op(storageManager)
+            case Some(Success(run)) =>
+              debug("COMPILED PROGRAM", () => "")
+              run(storageManager)
             case Some(Failure(e)) =>
-              throw e
+              throw Error(s"Error compiling PROGRAM with: $e")
             case None =>
-              debug("compilation not ready yet", () => "")
               if (block)
-                debug("blocking!", () => "")
+                debug("program compilation not ready yet, so blocking", () => "")
                 Await.result(op.compiledFn, Duration.Inf)(storageManager)
               else
+                debug("program compilation not ready yet, so defaulting", () => "")
                 op.run(sm => interpretIR(op.body))
           }
         }
@@ -75,17 +78,17 @@ class JITStagedExecutionEngine(override val storageManager: CollectionsStorageMa
           op.run(sm => interpretIR(op.body))
         } else {
           op.compiledFn.value match {
-            case Some(Success(op)) =>
-              debug("COMPILED", () => "")
-              op(storageManager)
+            case Some(Success(run)) =>
+              debug("COMPILED DOWHILE", () => "")
+              run(storageManager)
             case Some(Failure(e)) =>
-              throw e
+              throw Error(s"Error compiling DOWHILE:${op.code} with: $e")
             case None =>
-              debug("compilation not ready yet", () => "")
               if (block)
-                debug("blocking!", () => "")
+                debug("dowhile compilation not ready yet, so blocking", () => "")
                 Await.result(op.compiledFn, Duration.Inf)(storageManager)
               else
+                debug("dowhile compilation not ready yet, so defaulting", () => "")
                 op.run(sm => interpretIR(op.body))
           }
         }
@@ -96,7 +99,7 @@ class JITStagedExecutionEngine(override val storageManager: CollectionsStorageMa
             debug("", () => s"found subtree to compile: ${op.code} and gran=$granularity")
             // test if need to compile, if so:
             if (op.compiledFn == null) { // need to start compilation
-              debug("starting new compilation", () => "")
+              debug(s"starting online compilation for code ${op.code}", () => "")
               given scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
 
               op.compiledFn = Future {
@@ -105,18 +108,18 @@ class JITStagedExecutionEngine(override val storageManager: CollectionsStorageMa
               }
             }
             op.compiledFn.value match {
-              case Some(Success(op)) =>
-                debug("COMPILED", () => "")
-                op(storageManager)
+              case Some(Success(run)) =>
+                debug(s"COMPILED ${op.code}", () => "")
+                run(storageManager)
               case Some(Failure(e)) =>
-                throw e
+                throw Error(s"Error compiling SEQ:${op.code} with: $e")
               case None =>
-                debug("compilation not ready yet", () => "")
 //                Thread.sleep(1000)
                 if (block)
-                  debug("blocking!", () => "")
+                  debug(s"${op.code} compilation not ready yet, so blocking", () => "")
                   Await.result(op.compiledFn, Duration.Inf)(storageManager)
                 else
+                  debug(s"${op.code} compilation not ready yet, so defaulting", () => "")
                   op.run(op.ops.map(o => sm => interpretIR(o)))
             }
           }
@@ -143,11 +146,22 @@ class JITStagedExecutionEngine(override val storageManager: CollectionsStorageMa
   // TODO: this could potentially go as a tree transform phase
   def aotCompile(tree: ProgramOp)(using ctx: InterpreterContext): Unit = {
     val subTree = tree.getSubTree(granularity)
+    debug("", () => s"ahead-of-time compiling ${subTree.code}")
     given scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
     given staging.Compiler = dedicatedDotty
 
     subTree.compiledFn = Future {
       compiler.getCompiled(subTree, ctx)
     }
+  }
+
+  def waitForAll(): Unit = {
+    trees.foreach(t =>
+      val subTree = t.getSubTree(granularity)
+      if (subTree.compiledFn != null)
+        println(s"awaiting! gran $granularity")
+        Await.result(subTree.compiledFn, Duration.Inf)
+    )
+    trees.clear()
   }
 }

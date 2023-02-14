@@ -395,6 +395,10 @@ def manyRelations(program: Program): Int = {
       Random.alphanumeric.dropWhile(_.isDigit).dropWhile(_.isUpper).head.toString
     ) :- ()
   val res = hops20.solve()
+  hops20.solve()
+  hops20.solve()
+  hops20.solve()
+  hops20.solve()
   println(s"RES=${res.size}")
   hops20.id
 }
@@ -530,16 +534,16 @@ def anon_var(program: Program) = {
 //  println("\n\n_______________________\n\n")
 //
   println("JIT STAGED: aot Loop Body")
-  val engine4: ExecutionEngine = new JITStagedExecutionEngine(new CollectionsStorageManager(), ir.OpCode.LOOP_BODY, true, true)
+  val engine4: ExecutionEngine = new JITStagedExecutionEngine(new CollectionsStorageManager(), ir.OpCode.LOOP_BODY, false, false)
   val program4 = Program(engine4)
   manyRelations(program4)
   println("\n\n_______________________\n\n")
 
-  println("JIT STAGED: aot EvalSN")
-  val engine5: ExecutionEngine = new JITStagedExecutionEngine(new CollectionsStorageManager(), ir.OpCode.EVAL_SN, true, true)
-  val program5 = Program(engine5)
-  manyRelations(program5)
-  println("\n\n_______________________\n\n")
+//  println("JIT STAGED: aot EvalSN")
+//  val engine5: ExecutionEngine = new JITStagedExecutionEngine(new CollectionsStorageManager(), ir.OpCode.EVAL_SN, true, true)
+//  val program5 = Program(engine5)
+//  manyRelations(program5)
+//  println("\n\n_______________________\n\n")
   //  println("JIT STAGED")
 //
 //  given engine3: ExecutionEngine = new SemiNaiveJITStagedExecutionEngine(new CollectionsStorageManager())

@@ -228,9 +228,9 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
     }
 
     given irCtx: InterpreterContext = InterpreterContext(storageManager, precedenceGraph, toSolve)
-    debug("AST: ", () => storageManager.printer.printAST(ast))
-    debug("TRANSFORMED: ", () => storageManager.printer.printAST(transformedAST))
-    debug("PG: ", () => irCtx.sortedRelations.toString())
+//    debug("AST: ", () => storageManager.printer.printAST(ast))
+//    debug("TRANSFORMED: ", () => storageManager.printer.printAST(transformedAST))
+//    debug("PG: ", () => irCtx.sortedRelations.toString())
 
 
     val irTree = createIR(transformedAST)
@@ -238,7 +238,7 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
 //    val irTree = DoWhileOp(SequenceOp(Seq(s, s, s, s, s, s)), DB.Derived)
 
 
-    debug("IRTree: ", () => storageManager.printer.printIR(irTree))
+//    debug("IRTree: ", () => storageManager.printer.printIR(irTree))
     mode match {
       case MODE.Compile =>
         solveCompiled(irTree, irCtx)

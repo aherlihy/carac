@@ -50,34 +50,67 @@ class cliquer_benchmark() extends ExampleBenchmarkGenerator("cliquer") with cliq
   blackhole.consume(run(programs(p), result))
  }
 
-
- // staged, naive
-// @Benchmark def naive_staged(blackhole: Blackhole): Unit = {
-//  val p = "NaiveStagedCollections"
-//  if(!programs.contains(p))
-//    throw new Exception(f"skip test $p for current env")
-//  blackhole.consume(run(programs(p), result))
-// }
-
- // staged, seminaive
- @Benchmark def ci_seminaive_staged_interpreted(blackhole: Blackhole): Unit = {
-  val p = "SemiNaiveStagedCollections"
-  if(!programs.contains(p))
-    throw new Exception(f"skip test $p for current env")
-
-  blackhole.consume(run(programs(p), result))
-}
- @Benchmark def ci_seminaive_staged(blackhole: Blackhole): Unit = {
-  val p = "SemiNaiveInterpretedStagedCollections"
-  if(!programs.contains(p))
-    throw new Exception(f"skip test $p for current env")
+ @Benchmark def staged_compiled(blackhole: Blackhole): Unit = {
+  val p = "CompiledStagedCollections"
+  if (!programs.contains(p))
+   throw new Exception(f"skip test $p for current env")
   blackhole.consume(run(programs(p), result))
  }
- @Benchmark def ci_seminaive_staged_jit(blackhole: Blackhole): Unit = {
-  val p = "SemiNaiveJITStagedCollections"
-  if(!programs.contains(p))
-    throw new Exception(f"skip test $p for current env")
+
+ @Benchmark def staged_interpreted(blackhole: Blackhole): Unit = {
+  val p = "InterpretedStagedCollections"
+  if (!programs.contains(p))
+   throw new Exception(f"skip test $p for current env")
   blackhole.consume(run(programs(p), result))
  }
+
+ @Benchmark def jit_staged_AOTNaiveEvalBlocking(blackhole: Blackhole): Unit = {
+  val p = "JITStagedAOTNaiveEvalBlockingCollections"
+  if (!programs.contains(p))
+   throw new Exception(f"skip test $p for current env")
+  blackhole.consume(run(programs(p), result))
+ }
+
+ @Benchmark def jit_staged_AOTSemiNaiveEvalBlocking(blackhole: Blackhole): Unit = {
+  val p = "JITStagedAOTSemiNaiveEvalBlockingCollections"
+  if (!programs.contains(p))
+   throw new Exception(f"skip test $p for current env")
+  blackhole.consume(run(programs(p), result))
+ }
+
+ @Benchmark def jit_staged_AOTLoopBodyBlocking(blackhole: Blackhole): Unit = {
+  val p = "JITStagedAOTLoopBodyBlockingCollections"
+  if (!programs.contains(p))
+   throw new Exception(f"skip test $p for current env")
+  blackhole.consume(run(programs(p), result))
+ }
+
+ @Benchmark def jit_staged_AOTSemiNaiveEvalNonBlocking(blackhole: Blackhole): Unit = {
+  val p = "JITStagedAOTSemiNaiveEvalNonBlockingCollections"
+  if (!programs.contains(p))
+   throw new Exception(f"skip test $p for current env")
+  blackhole.consume(run(programs(p), result))
+ }
+
+ @Benchmark def jit_staged_AOTLoopBodyNonBlocking(blackhole: Blackhole): Unit = {
+  val p = "JITStagedAOTLoopBodyNonBlockingCollections"
+  if (!programs.contains(p))
+   throw new Exception(f"skip test $p for current env")
+  blackhole.consume(run(programs(p), result))
+ }
+
+ @Benchmark def jit_staged_SemiNaiveEvalOnline(blackhole: Blackhole): Unit = {
+  val p = "JITStagedSemiNaiveEvalOnlineCollections"
+  if (!programs.contains(p))
+   throw new Exception(f"skip test $p for current env")
+  blackhole.consume(run(programs(p), result))
+ }
+
+ @Benchmark def jit_staged_LoopBodyOnline(blackhole: Blackhole): Unit = {
+  val p = "JITStagedLoopBodyOnlineCollections"
+  if (!programs.contains(p))
+   throw new Exception(f"skip test $p for current env")
+  blackhole.consume(run(programs(p), result))
+ }
+
 }
-import test.examples.cliquer.cliquer
