@@ -98,7 +98,7 @@ class JITStagedExecutionEngine(override val storageManager: CollectionsStorageMa
           case OpCode.EVAL_SN | OpCode.EVAL_NAIVE | OpCode.LOOP_BODY if granularity == op.code => {
 //            debug("", () => s"found subtree to compile: ${op.code} and gran=$granularity")
             // test if need to compile, if so:
-            if (op.compiledFn == null) { // need to start compilation
+            if (op.compiledFn == null && !aot) { // need to start compilation
               debug(s"starting online compilation for code ${op.code}", () => "")
               given scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
 
