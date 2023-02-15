@@ -18,7 +18,7 @@ class rsg_benchmark() extends ExampleBenchmarkGenerator("rsg") with rsg {
   @Setup
   def s(): Unit = setup() // can't add annotations to super, so just call
 
-  @TearDown
+  @TearDown(Level.Invocation)
   def f(): Unit = finish()
 
   // relational, naive

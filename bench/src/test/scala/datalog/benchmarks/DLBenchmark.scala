@@ -3,6 +3,7 @@ package datalog.benchmarks
 import datalog.dsl.{Constant, Program, Relation, Term}
 import datalog.execution.*
 import datalog.storage.*
+import datalog.tools.Debug.debug
 
 import scala.collection.mutable
 
@@ -67,6 +68,7 @@ abstract class DLBenchmark {
   }
 
   def finish(): Unit = {
+    debug("in finish: ", () => programs.keys.mkString("[", ", ", "]"))
     programs.keys.filter(k => k.contains("JITStaged")).foreach(k =>
       programs(k).ee.asInstanceOf[JITStagedExecutionEngine].waitForAll()
     )

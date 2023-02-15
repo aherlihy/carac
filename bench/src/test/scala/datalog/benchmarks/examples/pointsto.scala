@@ -18,7 +18,7 @@ class pointsto_benchmark() extends ExampleBenchmarkGenerator("pointsto") with po
   @Setup
   def s(): Unit = setup() // can't add annotations to super, so just call
 
-  @TearDown
+  @TearDown(Level.Invocation)
   def f(): Unit = finish()
 
   // relational, naive

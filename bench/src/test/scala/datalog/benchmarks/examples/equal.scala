@@ -13,42 +13,42 @@ import java.nio.file.Paths
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class equal_benchmark() extends ExampleBenchmarkGenerator("equal") with equal {
- override def toSolve: String = super.toSolve
- @Setup
- def s(): Unit = setup() // can't add annotations to super, so just call
+  override def toSolve: String = super.toSolve
+  @Setup
+  def s(): Unit = setup() // can't add annotations to super, so just call
 
- @TearDown
- def f(): Unit = finish()
+  @TearDown(Level.Invocation)
+  def f(): Unit = finish()
 
- // relational, naive
- @Benchmark def naive_relational(blackhole: Blackhole): Unit = {
-  val p = "NaiveRelational"
-  if(!programs.contains(p))
-    throw new Exception(f"skip test $p for current env")
-  blackhole.consume(run(programs(p), result))
- }
- // relational, seminaive
- @Benchmark def seminaive_relational(blackhole: Blackhole): Unit = {
-  val p = "SemiNaiveRelational"
-  if(!programs.contains(p))
-    throw new Exception(f"skip test $p for current env")
-  blackhole.consume(run(programs(p), result))
- }
+  // relational, naive
+  @Benchmark def naive_relational(blackhole: Blackhole): Unit = {
+    val p = "NaiveRelational"
+    if(!programs.contains(p))
+      throw new Exception(f"skip test $p for current env")
+    blackhole.consume(run(programs(p), result))
+  }
+  // relational, seminaive
+  @Benchmark def seminaive_relational(blackhole: Blackhole): Unit = {
+    val p = "SemiNaiveRelational"
+    if(!programs.contains(p))
+      throw new Exception(f"skip test $p for current env")
+    blackhole.consume(run(programs(p), result))
+  }
 
- // collections, naive
- @Benchmark def naive_collections(blackhole: Blackhole): Unit = {
-  val p = "NaiveCollections"
-  if(!programs.contains(p))
-    throw new Exception(f"skip test $p for current env")
-  blackhole.consume(run(programs(p), result))
- }
- // relational, seminaive
- @Benchmark def seminaive_collections(blackhole: Blackhole): Unit = {
-  val p = "SemiNaiveCollections"
-  if(!programs.contains(p))
-    throw new Exception(f"skip test $p for current env")
-  blackhole.consume(run(programs(p), result))
- }
+  // collections, naive
+  @Benchmark def naive_collections(blackhole: Blackhole): Unit = {
+    val p = "NaiveCollections"
+    if(!programs.contains(p))
+      throw new Exception(f"skip test $p for current env")
+    blackhole.consume(run(programs(p), result))
+  }
+  // relational, seminaive
+  @Benchmark def seminaive_collections(blackhole: Blackhole): Unit = {
+    val p = "SemiNaiveCollections"
+    if(!programs.contains(p))
+      throw new Exception(f"skip test $p for current env")
+    blackhole.consume(run(programs(p), result))
+  }
 
   @Benchmark def staged_compiled(blackhole: Blackhole): Unit = {
     val p = "CompiledStagedCollections"

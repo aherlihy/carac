@@ -18,7 +18,7 @@ class tc_benchmark() extends ExampleBenchmarkGenerator("tc")  with tc {
   @Setup
   def s(): Unit = setup() // can't add annotations to super, so just call
 
-  @TearDown
+  @TearDown(Level.Invocation)
   def f(): Unit = finish()
 
   // relational, naive

@@ -16,7 +16,7 @@ class cba_expr_value_benchmark() extends ExampleBenchmarkGenerator("cba_expr_val
   @Setup
   def s(): Unit = setup() // can't add annotations to super, so just call
 
-  @TearDown
+  @TearDown(Level.Invocation)
   def f(): Unit = finish()
 
   // relational, naive

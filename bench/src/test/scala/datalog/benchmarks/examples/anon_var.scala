@@ -15,11 +15,11 @@ import java.nio.file.Paths
 class anon_var_benchmark extends ExampleBenchmarkGenerator(
   "anon_var"
 ) with anon_var {
- @Setup
- def s(): Unit = setup() // can't add annotations to super, so just call
+  @Setup
+  def s(): Unit = setup() // can't add annotations to super, so just call
 
- @TearDown
- def f(): Unit = finish()
+  @TearDown(Level.Invocation)
+  def f(): Unit = finish()
 
   // collections, seminaive
   @Benchmark def seminaive_collections(blackhole: Blackhole): Unit = {

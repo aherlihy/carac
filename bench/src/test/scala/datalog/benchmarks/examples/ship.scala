@@ -18,7 +18,7 @@ class ship_benchmark() extends ExampleBenchmarkGenerator("ship") with ship {
   @Setup
   def s(): Unit = setup() // can't add annotations to super, so just call
 
-  @TearDown
+  @TearDown(Level.Invocation)
   def f(): Unit = finish()
 
   // relational, naive

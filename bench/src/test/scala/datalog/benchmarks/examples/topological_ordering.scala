@@ -18,7 +18,7 @@ class topological_ordering_benchmark() extends ExampleBenchmarkGenerator("topolo
   @Setup
   def s(): Unit = setup() // can't add annotations to super, so just call
 
-  @TearDown
+  @TearDown(Level.Invocation)
   def f(): Unit = finish()
 
   // relational, naive

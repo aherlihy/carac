@@ -14,7 +14,7 @@ import scala.util.{Failure, Success}
 
 class JITStagedExecutionEngine(override val storageManager: CollectionsStorageManager, granularity: OpCode, aot: Boolean, block: Boolean) extends StagedExecutionEngine(storageManager) {
   import storageManager.EDB
-  val trees: mutable.Set[ProgramOp] = mutable.Set.empty
+  val trees: mutable.Queue[ProgramOp] = mutable.Queue.empty
   override def solve(rId: Int, mode: MODE): Set[Seq[Term]] = super.solve(rId, MODE.Interpret)
   def interpretIRRelOp(irTree: IRRelOp)(using ctx: InterpreterContext): storageManager.EDB = {
 //    println(s"IN INTERPRET REL_IR, code=${irTree.code}")
@@ -49,7 +49,7 @@ class JITStagedExecutionEngine(override val storageManager: CollectionsStorageMa
     given CollectionsStorageManager = storageManager
     irTree match {
       case op: ProgramOp =>
-        trees.add(op)
+        trees.append(op)
         if (aot)
           aotCompile(op)
         // test if need to compile, if so:
@@ -96,7 +96,7 @@ class JITStagedExecutionEngine(override val storageManager: CollectionsStorageMa
       case op: SequenceOp =>
         op.code match
           case OpCode.EVAL_SN | OpCode.EVAL_NAIVE | OpCode.LOOP_BODY if granularity == op.code => {
-            debug("", () => s"found subtree to compile: ${op.code} and gran=$granularity")
+//            debug("", () => s"found subtree to compile: ${op.code} and gran=$granularity")
             // test if need to compile, if so:
             if (op.compiledFn == null) { // need to start compilation
               debug(s"starting online compilation for code ${op.code}", () => "")
@@ -156,10 +156,15 @@ class JITStagedExecutionEngine(override val storageManager: CollectionsStorageMa
   }
 
   def waitForAll(): Unit = {
+    debug(s"awaiting in aot=$aot gran=$granularity block=$block", () => trees.map(t => t.code).mkString("[", ", ", "]"))
     trees.foreach(t =>
       val subTree = t.getSubTree(granularity)
       if (subTree.compiledFn != null)
-        Await.result(subTree.compiledFn, Duration.Inf)
+        try {
+          Await.result(subTree.compiledFn, Duration.Inf)
+        } catch {
+          case e  => throw new Exception(s"Exception cleaning up compiler: $e")
+        }
     )
     trees.clear()
   }

@@ -17,7 +17,7 @@ class func_benchmark() extends ExampleBenchmarkGenerator("func") with func {
   @Setup
   def s(): Unit = setup() // can't add annotations to super, so just call
 
-  @TearDown
+  @TearDown(Level.Invocation)
   def f(): Unit = finish()
 
   // relational, naive

@@ -18,7 +18,7 @@ class metro_benchmark() extends ExampleBenchmarkGenerator("metro") with metro {
   @Setup
   def s(): Unit = setup() // can't add annotations to super, so just call
 
-  @TearDown
+  @TearDown(Level.Invocation)
   def f(): Unit = finish()
 
   // relational, naive
