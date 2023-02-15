@@ -16,7 +16,7 @@ import scala.io.Source
 import scala.jdk.StreamConverters.*
 import scala.util.Properties
 
-inline val staged_warmup_iterations = 0
+inline val staged_warmup_iterations = 3
 inline val staged_iterations = 5
 inline val staged_warmup_time = 10
 inline val staged_time = 10
