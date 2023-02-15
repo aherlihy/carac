@@ -19,24 +19,31 @@ enum OpCode:
 // TODO: make general SM not collections
 type CompiledFn = CollectionsStorageManager => Any
 type CompiledRelFn = CollectionsStorageManager => CollectionsStorageManager#EDB
+type CompiledSnippetFn = (CollectionsStorageManager, Seq[CompiledFn]) => Any
+type CompiledRelSnippetFn = (CollectionsStorageManager, Seq[CompiledRelFn]) => CollectionsStorageManager#EDB
 /**
  * Intermediate representation based on Souffle's RAM
  */
 abstract class IROp() {
   val code: OpCode
   var compiledFn: Future[CompiledFn] = null
+  def run(storageManager: CollectionsStorageManager, opFns: Seq[CompiledFn] = Seq.empty): Any =
+    throw new Exception(s"Error: calling run on likely rel op: $code")
 //  var compiled: AtomicReference[CompiledFn] = new AtomicReference[CompiledFn](
 //  def run(using storageManager: StorageManager): Any
+  var compiledSnippetFn: CompiledSnippetFn = null
 }
 
 abstract class IRRelOp() extends IROp {
 //  var compiledRel: AtomicReference[CompiledRelFn] = new AtomicReference[CompiledRelFn]()
+  def runRel(storageManager: CollectionsStorageManager, opFns: Seq[CompiledRelFn] = Seq.empty): CollectionsStorageManager#EDB
+  var compiledRelSnippetFn: CompiledRelSnippetFn = null
 }
 
 case class ProgramOp(body: IROp) extends IROp {
   val code: OpCode = OpCode.PROGRAM
-  def run(bodyFn: CompiledFn)(using storageManager:  CollectionsStorageManager): Any =
-    bodyFn(storageManager)
+  override def run(storageManager: CollectionsStorageManager, opFns: Seq[CompiledFn] = Seq.empty): Any =
+    opFns.head(storageManager)
 
   // convenience methods to get certain subtrees
   def getSubTree(code: OpCode): IROp =
@@ -56,9 +63,9 @@ case class ProgramOp(body: IROp) extends IROp {
 
 case class DoWhileOp(body: IROp, toCmp: DB) extends IROp {
   val code: OpCode = OpCode.LOOP
-  def run(bodyFn: CompiledFn)(using storageManager:  CollectionsStorageManager): Any =
+  override def run(storageManager: CollectionsStorageManager, opFns: Seq[CompiledFn] = Seq.empty): Any =
     while ( {
-      bodyFn(storageManager)
+      opFns.head(storageManager)
 //      ctx.count += 1 // TODO: do we need this outside debugging?
       toCmp match {
         case DB.Derived =>
@@ -69,23 +76,23 @@ case class DoWhileOp(body: IROp, toCmp: DB) extends IROp {
     }) ()
 }
 case class SequenceOp(ops: Seq[IROp], override val code: OpCode = OpCode.SEQ) extends IROp {
-  def run(opsFn: Seq[CompiledFn])(using storageManager:  CollectionsStorageManager): Any =
-    opsFn.map(o => o(storageManager))
+  override def run(storageManager: CollectionsStorageManager, opFns: Seq[CompiledFn] = Seq.empty): Any =
+    opFns.map(o => o(storageManager))
 }
 
 // Clear only ever happens after swap so merge nodes
 case class SwapAndClearOp() extends IROp {
   val code: OpCode = OpCode.SWAP_CLEAR
-  def run()(using storageManager: StorageManager): Any =
+  override def run(storageManager: CollectionsStorageManager, opFns: Seq[CompiledFn] = Seq.empty): Any =
     storageManager.swapKnowledge()
     storageManager.clearNewDB(true)
 }
 
 case class InsertOp(rId: RelationId, db: DB, knowledge: KNOWLEDGE, subOp: IRRelOp, subOp2: Option[IRRelOp] = None) extends IROp {
   val code: OpCode = OpCode.INSERT
-  def run(subOpFn: CompiledRelFn, subOp2Fn: Option[CompiledRelFn])(using storageManager:  CollectionsStorageManager): Any =
-    val res = subOpFn(storageManager)
-    val res2 = if (subOp2Fn.isEmpty) storageManager.EDB() else subOp2Fn.get(storageManager)
+  override def run(storageManager:  CollectionsStorageManager, opFns: Seq[CompiledFn] = Seq.empty): Any =
+    val res = opFns.head.asInstanceOf[CompiledRelFn](storageManager)
+    val res2 = if (opFns.size == 1) storageManager.EDB() else opFns(1).asInstanceOf[CompiledRelFn](storageManager)
     db match {
       case DB.Derived =>
         knowledge match {
@@ -111,7 +118,7 @@ case class ScanOp(rId: RelationId, db: DB, knowledge: KNOWLEDGE) extends IRRelOp
 //    lazySet()
 //    AtomicReference(run) // run
 
-  def run(storageManager: CollectionsStorageManager): storageManager.EDB =
+  def runRel(storageManager: CollectionsStorageManager, opFns: Seq[CompiledRelFn] = Seq.empty): storageManager.EDB =
     db match {
       case DB.Derived =>
         knowledge match {
@@ -133,48 +140,48 @@ case class ScanOp(rId: RelationId, db: DB, knowledge: KNOWLEDGE) extends IRRelOp
 case class ScanEDBOp(rId: RelationId) extends IRRelOp {
   val code: OpCode = OpCode.SCANEDB
 
-  def run()(using storageManager: CollectionsStorageManager): storageManager.EDB =
+  def runRel(storageManager: CollectionsStorageManager, opFns: Seq[CompiledRelFn] = Seq.empty): storageManager.EDB =
     storageManager.edbs.getOrElse(rId, storageManager.EDB())
 }
 
 case class ProjectOp(subOp: IRRelOp, keys: JoinIndexes) extends IRRelOp {
   val code: OpCode = OpCode.PROJECT
 
-  def run(subOpFn: CompiledRelFn)(using storageManager: CollectionsStorageManager): storageManager.EDB =
-    storageManager.projectHelper(subOpFn(storageManager), keys)
+  def runRel(storageManager: CollectionsStorageManager, opFns: Seq[CompiledRelFn] = Seq.empty): storageManager.EDB =
+    storageManager.projectHelper(opFns.head(storageManager), keys)
 }
 
 case class JoinOp(ops: Seq[IRRelOp], keys: JoinIndexes) extends IRRelOp {
   val code: OpCode = OpCode.JOIN
 
-  def run(opsFn: Seq[CompiledRelFn])(using storageManager: CollectionsStorageManager): storageManager.EDB =
+  def runRel(storageManager: CollectionsStorageManager, opFns: Seq[CompiledRelFn] = Seq.empty): storageManager.EDB =
     storageManager.joinHelper(
-      opsFn.map(s => s(storageManager)),
+      opFns.map(s => s(storageManager)),
       keys
     )
 }
 
 case class UnionOp(ops: Seq[IRRelOp], override val code: OpCode = OpCode.UNION) extends IRRelOp {
-  def run(opsFn: Seq[CompiledRelFn])(using storageManager:  CollectionsStorageManager): storageManager.EDB =
-    opsFn.flatMap(o => o(storageManager)).toSet.toBuffer.asInstanceOf[storageManager.EDB]
+  def runRel(storageManager: CollectionsStorageManager, opFns: Seq[CompiledRelFn] = Seq.empty): storageManager.EDB =
+    opFns.flatMap(o => o(storageManager)).toSet.toBuffer.asInstanceOf[storageManager.EDB]
 }
 
 case class DiffOp(lhs: IRRelOp, rhs: IRRelOp) extends IRRelOp {
   val code: OpCode = OpCode.DIFF
 
-  def run(lhsFn: CompiledRelFn, rhsFn: CompiledRelFn)(using storageManager: CollectionsStorageManager): storageManager.EDB =
-    storageManager.diff(lhsFn(storageManager), rhsFn(storageManager))
+  def runRel(storageManager: CollectionsStorageManager, opFns: Seq[CompiledRelFn] = Seq.empty): storageManager.EDB =
+    storageManager.diff(opFns(0)(storageManager), opFns(1)(storageManager))
 }
 
 case class DebugNode(prefix: String, dbg: () => String) extends IROp {
   val code: OpCode = OpCode.DEBUG
-  def run()(using storageManager:  CollectionsStorageManager): Any =
+  override def run(storageManager: CollectionsStorageManager, opFns: Seq[CompiledFn] = Seq.empty): Any =
     debug(prefix, dbg)
 }
 case class DebugPeek(prefix: String, dbg: () => String, op: IRRelOp) extends IRRelOp {
   val code: OpCode = OpCode.DEBUG
-  def run(opFn: CompiledRelFn)(using storageManager:  CollectionsStorageManager): storageManager.EDB =
-    val res = opFn(storageManager)
+  def runRel(storageManager: CollectionsStorageManager, opFns: Seq[CompiledRelFn] = Seq.empty): storageManager.EDB =
+    val res = opFns.head(storageManager)
     debug(prefix, () => s"${dbg()} ${storageManager.printer.factToString(res)}")
     res
 }

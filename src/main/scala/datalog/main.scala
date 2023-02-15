@@ -527,16 +527,16 @@ def anon_var(program: Program) = {
 //  tc(program2)
 //  println("\n\n_______________________\n\n")
 //
-//  println("STAGED INTERP")
-//  given engine3: ExecutionEngine = new InterpretedStagedExecutionEngine(new CollectionsStorageManager())
-//  val program3 = Program(engine3)
-//  tc(program3)
-//  println("\n\n_______________________\n\n")
-//
+  println("STAGED INTERP")
+  given engine3: ExecutionEngine = new InterpretedStagedExecutionEngine(new CollectionsStorageManager())
+  val program3 = Program(engine3)
+  tc(program3)
+  println("\n\n_______________________\n\n")
+
   println("JIT STAGED: aot Loop Body")
   val engine4: ExecutionEngine = new JITStagedExecutionEngine(new CollectionsStorageManager(), ir.OpCode.LOOP_BODY, false, false)
   val program4 = Program(engine4)
-  manyRelations(program4)
+  tc(program4)
   println("\n\n_______________________\n\n")
 
 //  println("JIT STAGED: aot EvalSN")
