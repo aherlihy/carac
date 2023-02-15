@@ -163,7 +163,7 @@ class JITStagedExecutionEngine(override val storageManager: CollectionsStorageMa
         try {
           Await.result(subTree.compiledFn, Duration.Inf)
         } catch {
-          case e  => throw new Exception(s"Exception cleaning up compiler: $e")
+          case e  => /*throw new Exception*/println(s"Exception cleaning up compiler: $e")
         }
     )
     trees.clear()
