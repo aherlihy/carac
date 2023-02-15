@@ -14,7 +14,7 @@ import test.examples.grad.grad
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class grad_benchmark() extends ExampleBenchmarkGenerator("grad") with grad {
-  override def toSolve: String = super.toSolve
+
   @Setup
   def s(): Unit = setup() // can't add annotations to super, so just call
 

@@ -13,7 +13,7 @@ import java.nio.file.Paths
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class equal_benchmark() extends ExampleBenchmarkGenerator("equal") with equal {
-  override def toSolve: String = super.toSolve
+
   @Setup
   def s(): Unit = setup() // can't add annotations to super, so just call
 

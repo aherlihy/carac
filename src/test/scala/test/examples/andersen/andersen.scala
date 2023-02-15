@@ -6,7 +6,7 @@ import test.ExampleTestGenerator
 import java.nio.file.Paths
 
 trait andersen {
- def toSolve = "pointsTo"
+ val toSolve = "pointsTo"
  def pretest(program: Program): Unit = {
   val addressOf = program.namedRelation("addressOf")
   val assign = program.namedRelation("assign")
@@ -32,6 +32,4 @@ trait andersen {
  }
 }
 
-class andersen_test() extends ExampleTestGenerator("andersen") with andersen {
- override def toSolve: String = super.toSolve
-}
+class andersen_test() extends ExampleTestGenerator("andersen") with andersen

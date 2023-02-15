@@ -17,7 +17,6 @@ import test.examples.ackermann.ackermann
 class ackermann_benchmark() extends ExampleBenchmarkGenerator(
   "ackermann"
 ) with ackermann {
-  override def toSolve: String = super.toSolve
   @Setup
   def s(): Unit = setup() // can't add annotations to super, so just call
 

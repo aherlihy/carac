@@ -4,12 +4,10 @@ import datalog.dsl.{Constant, Program}
 import test.ExampleTestGenerator
 
 import java.nio.file.Paths
-class prime_test extends ExampleTestGenerator("prime") with prime {
-  override def toSolve: String = super.toSolve
-}
+class prime_test extends ExampleTestGenerator("prime") with prime
 trait prime {
 
-  def toSolve: String = "count_all"
+  val toSolve: String = "count_all"
   def pretest(program: Program): Unit = {
     val count_all = program.relation[Constant]("count_all")
 

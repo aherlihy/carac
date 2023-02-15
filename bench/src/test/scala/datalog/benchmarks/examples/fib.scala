@@ -13,7 +13,7 @@ import java.nio.file.Paths
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class fib_benchmark() extends ExampleBenchmarkGenerator("fib", Set(), Set("CI")) with fib {
-  override def toSolve: String = super.toSolve
+
   @Setup
   def s(): Unit = setup() // can't add annotations to super, so just call
 

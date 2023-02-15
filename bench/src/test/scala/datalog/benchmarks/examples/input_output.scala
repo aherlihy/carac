@@ -14,7 +14,7 @@ import test.examples.input_output.input_output
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class input_output_benchmark() extends ExampleBenchmarkGenerator("input_output") with input_output {
-  override def toSolve: String = super.toSolve
+
   @Setup
   def s(): Unit = setup() // can't add annotations to super, so just call
 

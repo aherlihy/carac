@@ -14,7 +14,7 @@ import java.nio.file.Paths
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class clique_benchmark() extends ExampleBenchmarkGenerator("clique") with clique {
-  override def toSolve: String = super.toSolve
+
   @Setup
   def s(): Unit = setup() // can't add annotations to super, so just call
 

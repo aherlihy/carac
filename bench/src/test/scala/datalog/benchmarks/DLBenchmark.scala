@@ -9,7 +9,7 @@ import scala.collection.mutable
 
 abstract class DLBenchmark {
   def pretest(program: Program): Unit
-  def toSolve: String = "_"
+  val toSolve: String
   val description: String
   val inputFacts: mutable.Map[String, Seq[Seq[Term]]] = mutable.Map()
   val expectedFacts: mutable.Map[String, Set[Seq[Term]]] = mutable.Map()

@@ -4,11 +4,9 @@ import datalog.dsl.{Constant, Program}
 import test.ExampleTestGenerator
 
 import java.nio.file.Paths
-class equal_test extends ExampleTestGenerator("equal") with equal {
-  override def toSolve: String = super.toSolve
-}
+class equal_test extends ExampleTestGenerator("equal") with equal
 trait equal {
-  def toSolve: String = "isEqual"
+  val toSolve: String = "isEqual"
   
   def pretest(program: Program): Unit = {
     val equal = program.relation[Constant]("equal")

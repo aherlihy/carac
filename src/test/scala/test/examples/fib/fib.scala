@@ -11,6 +11,7 @@ class fib_test extends ExampleTestGenerator(
 ) with fib
 trait fib {
 
+  val toSolve = "f"
   def pretest(program: Program): Unit = {
     val f = program.relation[Constant]("f")
     val succ = program.namedRelation("succ")

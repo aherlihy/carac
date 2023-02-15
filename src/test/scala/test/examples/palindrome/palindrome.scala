@@ -6,6 +6,7 @@ import test.ExampleTestGenerator
 import java.nio.file.Paths
 class palindrome_test extends ExampleTestGenerator("palindrome") with palindrome
 trait palindrome {
+  val toSolve = "palindrome"
   def pretest(program: Program): Unit = {
     val palindrome = program.relation[Constant]("palindrome")
 

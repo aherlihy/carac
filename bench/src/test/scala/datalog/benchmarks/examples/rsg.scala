@@ -14,7 +14,7 @@ import test.examples.rsg.rsg
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class rsg_benchmark() extends ExampleBenchmarkGenerator("rsg") with rsg {
-  override def toSolve: String = super.toSolve
+
   @Setup
   def s(): Unit = setup() // can't add annotations to super, so just call
 

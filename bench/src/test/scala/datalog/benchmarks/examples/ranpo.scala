@@ -17,7 +17,7 @@ class ranpo_benchmark() extends ExampleBenchmarkGenerator (
   Set(),
   Set("CI")
 ) with ranpo {
-  override def toSolve: String = super.toSolve
+
   @Setup
   def s(): Unit = setup() // can't add annotations to super, so just call
 

@@ -6,7 +6,7 @@ import test.ExampleTestGenerator
 import java.nio.file.Paths
 class metro_test extends ExampleTestGenerator("metro") with metro
 trait metro {
-
+  val toSolve = "platform2_reach"
   def pretest(program: Program): Unit = {
     val platform2_reach = program.relation[Constant]("platform2_reach")
 

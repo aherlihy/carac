@@ -6,7 +6,7 @@ import test.ExampleTestGenerator
 import java.nio.file.Paths
 class puzzle_test extends ExampleTestGenerator("puzzle") with puzzle
 trait puzzle {
-
+  val toSolve = "state"
   def pretest(program: Program): Unit = {
     val opp = program.relation[Constant]("opp")
 

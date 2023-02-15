@@ -6,7 +6,7 @@ import test.ExampleTestGenerator
 import java.nio.file.Paths
 class trains_test extends ExampleTestGenerator("trains") with trains
 trait trains {
-
+  val toSolve = "ReachableStops"
   def pretest(program: Program): Unit = {
     val ReachableStops = program.relation[Constant]("ReachableStops")
     val AdjacentStops = program.relation[Constant]("AdjacentStops")

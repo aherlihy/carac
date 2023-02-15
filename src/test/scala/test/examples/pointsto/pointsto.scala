@@ -4,12 +4,10 @@ import datalog.dsl.{Constant, Program}
 import test.ExampleTestGenerator
 
 import java.nio.file.Paths
-class pointsto_test extends ExampleTestGenerator("pointsto") with pointsto {
-  override def toSolve: String = super.toSolve
-}
+class pointsto_test extends ExampleTestGenerator("pointsto") with pointsto
 trait pointsto {
 
-  def toSolve: String = "VarPointsTo"
+  val toSolve: String = "VarPointsTo"
   def pretest(program: Program): Unit = {
     val Alias = program.relation[Constant]("Alias")
 

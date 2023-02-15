@@ -23,7 +23,7 @@ abstract class TestGenerator(directory: Path,
                              val tags: Set[String] = Set()) extends munit.FunSuite {
   def pretest(program: Program): Unit
   val mTags = tags.map(t => new munit.Tag(t))
-  def toSolve: String = "_"
+  val toSolve: String
 
   val description: String = directory.getFileName.toString
   val inputFacts: mutable.Map[String, Seq[Seq[Term]]] = mutable.Map()

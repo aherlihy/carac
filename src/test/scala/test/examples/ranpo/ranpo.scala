@@ -11,6 +11,7 @@ class ranpo_test extends ExampleTestGenerator(
 ) with ranpo
 trait ranpo {
 
+  val toSolve = "A"
   def pretest(program: Program): Unit = {
     val Check = program.namedRelation[Constant]("Check")
 

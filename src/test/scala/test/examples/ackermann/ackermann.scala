@@ -7,6 +7,8 @@ import java.nio.file.{Path, Paths}
 import scala.util.Properties
 
 trait ackermann {
+
+  val toSolve = "ack"
   def pretest(program: Program): Unit = {
     val succ = program.namedRelation("succ")
     val greaterThanZ = program.namedRelation("greaterThanZ")

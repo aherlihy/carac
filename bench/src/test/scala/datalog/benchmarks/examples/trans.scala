@@ -14,7 +14,7 @@ import test.examples.trans.trans
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class trans_benchmark() extends ExampleBenchmarkGenerator("trans")  with trans {
-  override def toSolve: String = super.toSolve
+
   @Setup
   def s(): Unit = setup() // can't add annotations to super, so just call
 

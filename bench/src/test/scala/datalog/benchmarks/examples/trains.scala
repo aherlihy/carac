@@ -14,7 +14,7 @@ import test.examples.trains.trains
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class trains_benchmark() extends ExampleBenchmarkGenerator("trains")  with trains {
-  override def toSolve: String = super.toSolve
+
   @Setup
   def s(): Unit = setup() // can't add annotations to super, so just call
 

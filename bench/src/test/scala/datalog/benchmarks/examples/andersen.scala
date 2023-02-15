@@ -15,7 +15,7 @@ import test.examples.andersen.andersen
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class andersen_benchmark() extends ExampleBenchmarkGenerator("andersen") with andersen {
-  override def toSolve: String = super.toSolve
+
   @Setup
   def s(): Unit = setup() // can't add annotations to super, so just call
 

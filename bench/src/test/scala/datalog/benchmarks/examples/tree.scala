@@ -13,7 +13,7 @@ import java.nio.file.Paths
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class tree_benchmark() extends ExampleBenchmarkGenerator("tree") with tree {
-  override def toSolve: String = super.toSolve
+
   @Setup
   def s(): Unit = setup() // can't add annotations to super, so just call
 

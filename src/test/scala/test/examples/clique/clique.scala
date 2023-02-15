@@ -5,11 +5,9 @@ import test.ExampleTestGenerator
 
 import java.nio.file.Paths
 
-class clique_test extends ExampleTestGenerator("clique") with clique {
-  override def toSolve: String = super.toSolve
-}
+class clique_test extends ExampleTestGenerator("clique") with clique
 trait clique {
-  def toSolve = "same_clique"
+  val toSolve = "same_clique"
   def pretest(program: Program): Unit = {
     val edge = program.namedRelation("edge")
     val reachable = program.relation[Constant]("reachable")

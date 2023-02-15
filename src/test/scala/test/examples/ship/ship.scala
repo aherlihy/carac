@@ -4,11 +4,9 @@ import datalog.dsl.{Constant, Program}
 import test.ExampleTestGenerator
 
 import java.nio.file.Paths
-class ship_test extends ExampleTestGenerator("ship") with ship {
-  override def toSolve: String = super.toSolve
-}
+class ship_test extends ExampleTestGenerator("ship") with ship
 trait ship {
-  def toSolve: String = "ship_to"
+  val toSolve: String = "ship_to"
   def pretest(program: Program): Unit = {
     val customer_city = program.relation[Constant]("customer_city")
 

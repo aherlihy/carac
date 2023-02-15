@@ -4,11 +4,9 @@ import datalog.dsl.{Constant, Program}
 import test.ExampleTestGenerator
 
 import java.nio.file.Paths
-class rsg_test extends ExampleTestGenerator("rsg") with rsg {
-  override def toSolve: String = super.toSolve
-}
+class rsg_test extends ExampleTestGenerator("rsg") with rsg
 trait rsg {
-  def toSolve: String = "RSG"
+  val toSolve: String = "RSG"
   def pretest(program: Program): Unit = {
     val DOWN = program.relation[Constant]("DOWN")
 

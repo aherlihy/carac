@@ -14,7 +14,7 @@ import test.examples.palindrome.palindrome
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class palindrome_benchmark() extends ExampleBenchmarkGenerator("palindrome") with palindrome {
-  override def toSolve: String = super.toSolve
+
   @Setup
   def s(): Unit = setup() // can't add annotations to super, so just call
 

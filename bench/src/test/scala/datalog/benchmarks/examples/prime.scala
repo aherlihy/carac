@@ -14,7 +14,7 @@ import test.examples.prime.prime
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class prime_benchmark() extends ExampleBenchmarkGenerator("prime") with prime {
-  override def toSolve: String = super.toSolve
+
   @Setup
   def s(): Unit = setup() // can't add annotations to super, so just call
 

@@ -14,7 +14,7 @@ import test.examples.metro.metro
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class metro_benchmark() extends ExampleBenchmarkGenerator("metro") with metro {
-  override def toSolve: String = super.toSolve
+
   @Setup
   def s(): Unit = setup() // can't add annotations to super, so just call
 

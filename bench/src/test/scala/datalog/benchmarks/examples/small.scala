@@ -14,7 +14,7 @@ import test.examples.small.small
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class small_benchmark() extends ExampleBenchmarkGenerator("small") with small {
-  override def toSolve: String = super.toSolve
+
   @Setup
   def s(): Unit = setup() // can't add annotations to super, so just call
 

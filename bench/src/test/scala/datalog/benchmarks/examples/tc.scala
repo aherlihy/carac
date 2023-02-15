@@ -14,7 +14,7 @@ import test.examples.tc.tc
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class tc_benchmark() extends ExampleBenchmarkGenerator("tc")  with tc {
-  override def toSolve: String = super.toSolve
+
   @Setup
   def s(): Unit = setup() // can't add annotations to super, so just call
 

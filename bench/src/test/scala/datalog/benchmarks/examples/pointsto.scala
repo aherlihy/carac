@@ -14,7 +14,7 @@ import test.examples.pointsto.pointsto
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class pointsto_benchmark() extends ExampleBenchmarkGenerator("pointsto") with pointsto {
-  override def toSolve: String = super.toSolve
+
   @Setup
   def s(): Unit = setup() // can't add annotations to super, so just call
 

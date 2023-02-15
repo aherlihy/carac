@@ -14,7 +14,7 @@ import test.examples.traffic.traffic
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class traffic_benchmark() extends ExampleBenchmarkGenerator("traffic") with traffic {
-  override def toSolve: String = super.toSolve
+
   @Setup
   def s(): Unit = setup() // can't add annotations to super, so just call
 

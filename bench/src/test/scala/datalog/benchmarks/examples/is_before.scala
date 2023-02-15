@@ -6,15 +6,14 @@ import java.nio.file.Paths
 import java.util.concurrent.TimeUnit
 import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.Blackhole
-import test.examples.topological_ordering.topological_ordering
+import test.examples.is_before.is_before
 
 @Fork(examples_fork) // # of jvms that it will use
 @Warmup(iterations = examples_warmup_iterations, time = examples_warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = examples_batchsize)
 @Measurement(iterations = examples_iterations, time = examples_time, timeUnit = TimeUnit.SECONDS, batchSize = examples_batchsize)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
-class topological_ordering_benchmark() extends ExampleBenchmarkGenerator("topological_ordering")  with topological_ordering {
-  override def toSolve: String = super.toSolve
+class is_before_benchmark() extends ExampleBenchmarkGenerator("is_before")  with is_before {
   @Setup
   def s(): Unit = setup() // can't add annotations to super, so just call
 

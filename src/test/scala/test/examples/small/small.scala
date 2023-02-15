@@ -5,11 +5,9 @@ import test.ExampleTestGenerator
 
 import java.nio.file.Paths
 
-class small_test extends ExampleTestGenerator("small") with small {
-  override def toSolve: String = super.toSolve
-}
+class small_test extends ExampleTestGenerator("small") with small
 trait small {
-  def toSolve = "ancestor"
+  val toSolve = "ancestor"
   def pretest(program: Program): Unit = {
     val ancestor = program.relation[Constant]("ancestor")
 

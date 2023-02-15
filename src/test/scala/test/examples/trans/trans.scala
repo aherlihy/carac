@@ -6,7 +6,7 @@ import test.ExampleTestGenerator
 import java.nio.file.Paths
 class trans_test extends ExampleTestGenerator("trans") with trans
 trait trans {
-
+  val toSolve = "A"
   def pretest(program: Program): Unit = {
     val A = program.relation[Constant]("A")
 

@@ -14,7 +14,7 @@ import test.examples.ship.ship
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class ship_benchmark() extends ExampleBenchmarkGenerator("ship") with ship {
-  override def toSolve: String = super.toSolve
+
   @Setup
   def s(): Unit = setup() // can't add annotations to super, so just call
 

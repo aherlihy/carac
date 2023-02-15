@@ -6,7 +6,7 @@ import test.ExampleTestGenerator
 import java.nio.file.Paths
 class tc_test extends ExampleTestGenerator("tc") with tc
 trait tc {
-
+  val toSolve = "tc"
   def pretest(program: Program): Unit = {
     val base = program.namedRelation[Constant]("base")
 

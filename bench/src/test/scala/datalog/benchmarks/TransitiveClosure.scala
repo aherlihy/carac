@@ -7,11 +7,11 @@ import scala.collection.mutable
 import scala.util.Random
 
 class TransitiveClosure extends DLBenchmark {
-  override def toSolve: String = "_"
+  val toSolve: String = "fourHops"
   override val description: String = "TransitiveClosure"
   override val expectedFacts: mutable.Map[String, Set[Seq[Term]]] = mutable.Map(
     "fourHops" -> Set.empty,
-    "fourHopsJoin" -> Set.empty
+//    "fourHopsJoin" -> Set.empty
   )
   def pretest(program: Program): Unit = {
     val edge = program.relation[Constant]("edge")

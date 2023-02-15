@@ -6,6 +6,7 @@ import test.ExampleTestGenerator
 import java.nio.file.Paths
 class cba_expr_value_test extends ExampleTestGenerator("cba_expr_value") with cba_expr_value
 trait cba_expr_value {
+  val toSolve = "data_term"
   def pretest(program: Program): Unit = {
     val kind = program.relation[Constant]("kind")
     val term = program.relation[Constant]("term")

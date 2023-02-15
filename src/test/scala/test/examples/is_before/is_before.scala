@@ -1,12 +1,13 @@
-package test.examples.topological_ordering
+package test.examples.is_before
 
 import datalog.dsl.{Constant, Program}
 import test.ExampleTestGenerator
 
 import java.nio.file.Paths
 
-class topological_ordering_test extends ExampleTestGenerator("topological_ordering") with topological_ordering
-trait topological_ordering {
+class is_before_test extends ExampleTestGenerator("is_before") with is_before
+trait is_before {
+  val toSolve = "is_before"
   def pretest(program: Program): Unit = {
     val edge = program.namedRelation("edge")
     val isBefore = program.relation[Constant]("is_before")

@@ -6,7 +6,7 @@ import test.ExampleTestGenerator
 import java.nio.file.Paths
 class func_test extends ExampleTestGenerator("func") with func
 trait func {
-
+  val toSolve = "eq"
   def pretest(program: Program): Unit = {
     val eq = program.relation[Constant]("eq")
     val succ = program.relation[Constant]("succ")
