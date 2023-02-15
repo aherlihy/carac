@@ -1,7 +1,7 @@
 package datalog.benchmarks
 
 import datalog.dsl.{Constant, MODE, Program, Relation, Term}
-import datalog.execution.{ExecutionEngine, SemiNaiveExecutionEngine, SemiNaiveStagedExecutionEngine, ir}
+import datalog.execution.{ExecutionEngine, SemiNaiveExecutionEngine, CompiledStagedExecutionEngine, ir}
 import datalog.storage.CollectionsStorageManager
 import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.Blackhole
@@ -45,11 +45,11 @@ trait OtherBench extends andersen {
               (headers(i) match {
                 case "Int" => s.toInt
                 case "String" => s
-                case _ => throw new Error(s"Unknown type ${headers(i)}")
+                case _ => throw new Exception(s"Unknown type ${headers(i)}")
               }).asInstanceOf[Term]
             ).toSeq
             if (factInput.length != headers.size)
-              throw new Error(s"Input data for fact of length ${factInput.length} but should be ${headers.mkString("[", ", ", "]")}. Line='$l'")
+              throw new Exception(s"Input data for fact of length ${factInput.length} but should be ${headers.mkString("[", ", ", "]")}. Line='$l'")
             factInput
           }).toScala(Seq)
         reader.close()
@@ -69,7 +69,7 @@ trait OtherBench extends andersen {
           (headers(i) match {
             case "Int" => s.toInt
             case "String" => s
-            case _ => throw new Error(s"Unknown type ${headers(i)}")
+            case _ => throw new Exception(s"Unknown type ${headers(i)}")
           }).asInstanceOf[Term]
         ).toSeq)
         .toScala(Set)
@@ -105,12 +105,12 @@ trait OtherBench extends andersen {
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class BenchStagedOther_full_compiled extends OtherBench {
-  var engine: SemiNaiveStagedExecutionEngine = null
+  var engine: CompiledStagedExecutionEngine = null
   var program: Program = null
   var toSolveR: Relation[Constant] = null
   @Setup(Level.Invocation)
   def setup(): Unit = {
-    engine = SemiNaiveStagedExecutionEngine(CollectionsStorageManager())
+    engine = CompiledStagedExecutionEngine(CollectionsStorageManager())
     program = Program(engine)
     pretest(program)
     toSolveR = program.namedRelation(toSolve)
@@ -131,7 +131,7 @@ class BenchStagedOther_full_compiled extends OtherBench {
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class BenchStagedOther_compile_and_run extends OtherBench {
-  var engine: SemiNaiveStagedExecutionEngine = null
+  var engine: CompiledStagedExecutionEngine = null
   var program: Program = null
   var toSolveR: Relation[Constant] = null
   var tree: ir.IROp = null
@@ -139,7 +139,7 @@ class BenchStagedOther_compile_and_run extends OtherBench {
   // measure cost of tree gen, compiling, running
   @Setup(Level.Invocation)
   def setup(): Unit = {
-    engine = SemiNaiveStagedExecutionEngine(CollectionsStorageManager())
+    engine = CompiledStagedExecutionEngine(CollectionsStorageManager())
     program = Program(engine)
     pretest(program)
     toSolveR = program.namedRelation(toSolve)
@@ -163,7 +163,7 @@ class BenchStagedOther_compile_and_run extends OtherBench {
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class BenchStagedOther_run_only_compiled extends OtherBench {
-  var engine: SemiNaiveStagedExecutionEngine = null
+  var engine: CompiledStagedExecutionEngine = null
   var program: Program = null
   var toSolveR: Relation[Constant] = null
   var tree: ir.IROp = null
@@ -173,7 +173,7 @@ class BenchStagedOther_run_only_compiled extends OtherBench {
   // measure cost of tree gen, compiling, running
   @Setup(Level.Invocation)
   def setup(): Unit = {
-    engine = SemiNaiveStagedExecutionEngine(CollectionsStorageManager())
+    engine = CompiledStagedExecutionEngine(CollectionsStorageManager())
     program = Program(engine)
     pretest(program)
     toSolveR = program.namedRelation(toSolve)
@@ -201,12 +201,12 @@ class BenchStagedOther_run_only_compiled extends OtherBench {
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class BenchStagedOther_full_interpreted extends OtherBench {
-  var engine: SemiNaiveStagedExecutionEngine = null
+  var engine: CompiledStagedExecutionEngine = null
   var program: Program = null
   var toSolveR: Relation[Constant] = null
   @Setup(Level.Invocation)
   def setup(): Unit = {
-    engine = SemiNaiveStagedExecutionEngine(CollectionsStorageManager())
+    engine = CompiledStagedExecutionEngine(CollectionsStorageManager())
     program = Program(engine)
     pretest(program)
     toSolveR = program.namedRelation(toSolve)
@@ -227,7 +227,7 @@ class BenchStagedOther_full_interpreted extends OtherBench {
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class BenchStagedOther_run_only_interpreted extends OtherBench {
-  var engine: SemiNaiveStagedExecutionEngine = null
+  var engine: CompiledStagedExecutionEngine = null
   var program: Program = null
   var toSolveR: Relation[Constant] = null
   var tree: ir.IROp = null
@@ -235,7 +235,7 @@ class BenchStagedOther_run_only_interpreted extends OtherBench {
   // measure cost of tree gen, compiling, running
   @Setup(Level.Invocation)
   def setup(): Unit = {
-    engine = SemiNaiveStagedExecutionEngine(CollectionsStorageManager())
+    engine = CompiledStagedExecutionEngine(CollectionsStorageManager())
     program = Program(engine)
     pretest(program)
     toSolveR = program.namedRelation(toSolve)

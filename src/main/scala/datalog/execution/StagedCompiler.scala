@@ -72,10 +72,10 @@ class StagedCompiler(val storageManager: StorageManager) {
         val compiledOps = ops.map(compileIRRelOp)
         label match
           case OpCode.EVAL_RULE_NAIVE if ops.size > heuristics.max_deps =>
-            val lambdaOps = compiledOps.map(e => '{ val eval_rule_lambda = (() => $e); eval_rule_lambda() })
+            val lambdaOps = compiledOps.map(e => '{ def eval_rule_lambda() = $e; eval_rule_lambda() })
             '{ $stagedSM.union(${Expr.ofSeq(lambdaOps)}) }
           case OpCode.EVAL_RULE_SN if ops.size > heuristics.max_deps =>
-            val lambdaOps = compiledOps.map(e => '{ val eval_rule_sn_lambda = (() => $e); eval_rule_sn_lambda() })
+            val lambdaOps = compiledOps.map(e => '{ def eval_rule_sn_lambda() = $e; eval_rule_sn_lambda() })
             '{ $stagedSM.union(${ Expr.ofSeq(lambdaOps) }) }
           case _ =>
             '{ $stagedSM.union(${Expr.ofSeq(compiledOps)}) }
@@ -120,11 +120,11 @@ class StagedCompiler(val storageManager: StorageManager) {
         label match
           case OpCode.EVAL_NAIVE if ops.length / 2 > heuristics.max_relations =>
             cOps.reduceLeft((acc, next) =>
-              '{ $acc ; val eval_naive_lambda = () => $next; eval_naive_lambda() }
+              '{ $acc ; def eval_naive_lambda() = $next; eval_naive_lambda() }
             )
           case OpCode.EVAL_SN if ops.length > heuristics.max_relations =>
             cOps.reduceLeft((acc, next) =>
-              '{ $acc ; val eval_sn_lambda = () => $next; eval_sn_lambda() }
+              '{ $acc ; def eval_sn_lambda() = $next; eval_sn_lambda() }
             )
           case _ =>
             cOps.reduceLeft((acc, next) => // TODO[future]: make a block w reflection instead of reduceLeft for efficiency

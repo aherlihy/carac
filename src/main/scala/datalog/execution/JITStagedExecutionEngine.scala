@@ -61,7 +61,7 @@ class JITStagedExecutionEngine(override val storageManager: CollectionsStorageMa
               debug("COMPILED PROGRAM", () => "")
               run(storageManager)
             case Some(Failure(e)) =>
-              throw Error(s"Error compiling PROGRAM with: $e")
+              throw Exception(s"Error compiling PROGRAM with: ${e.getCause}")
             case None =>
               if (block)
                 debug("program compilation not ready yet, so blocking", () => "")
@@ -82,7 +82,7 @@ class JITStagedExecutionEngine(override val storageManager: CollectionsStorageMa
               debug("COMPILED DOWHILE", () => "")
               run(storageManager)
             case Some(Failure(e)) =>
-              throw Error(s"Error compiling DOWHILE:${op.code} with: $e")
+              throw Exception(s"Error compiling DOWHILE:${op.code} with: ${e.getCause}")
             case None =>
               if (block)
                 debug("dowhile compilation not ready yet, so blocking", () => "")
@@ -112,7 +112,7 @@ class JITStagedExecutionEngine(override val storageManager: CollectionsStorageMa
                 debug(s"COMPILED ${op.code}", () => "")
                 run(storageManager)
               case Some(Failure(e)) =>
-                throw Error(s"Error compiling SEQ:${op.code} with: $e")
+                throw Exception(s"Error compiling SEQ:${op.code} with: ${e.getCause}")
               case None =>
 //                Thread.sleep(1000)
                 if (block)
@@ -163,7 +163,7 @@ class JITStagedExecutionEngine(override val storageManager: CollectionsStorageMa
         try {
           Await.result(subTree.compiledFn, Duration.Inf)
         } catch {
-          case e  => /*throw new Exception*/println(s"Exception cleaning up compiler: $e")
+          case e  => throw new Exception(s"Exception cleaning up compiler: ${e.getCause}")
         }
     )
     trees.clear()

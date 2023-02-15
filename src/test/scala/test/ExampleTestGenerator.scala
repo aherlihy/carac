@@ -1,7 +1,7 @@
 package test
 
 import datalog.dsl.{Constant, Program, Relation, Term}
-import datalog.execution.{NaiveExecutionEngine, SemiNaiveExecutionEngine, InterpretedStagedExecutionEngine, CompiledStagedExecutionEngine, JITStagedExecutionEngine, ir}
+import datalog.execution.{NaiveExecutionEngine, SemiNaiveExecutionEngine, InterpretedStagedExecutionEngine, CompiledStagedExecutionEngine, JITStagedExecutionEngine, ir, NaiveCompiledStagedExecutionEngine}
 import datalog.storage.{CollectionsStorageManager, RelationalStorageManager}
 
 import java.nio.file.{Files, Path, Paths}
@@ -46,11 +46,11 @@ abstract class TestGenerator(directory: Path,
                 (headers(i) match {
                   case "Int" => s.toInt
                   case "String" => s
-                  case _ => throw new Error(s"Unknown type ${headers(i)}")
+                  case _ => throw new Exception(s"Unknown type ${headers(i)}")
                 }).asInstanceOf[Term]
               ).toSeq
             if (factInput.length != headers.size)
-              throw new Error(s"Input data for fact of length ${factInput.length} but should be ${headers.mkString("[", ", ", "]")}. Line='$l'")
+              throw new Exception(s"Input data for fact of length ${factInput.length} but should be ${headers.mkString("[", ", ", "]")}. Line='$l'")
             factInput
           }).toScala(Seq)
         reader.close()
@@ -77,7 +77,7 @@ abstract class TestGenerator(directory: Path,
           (headers(i) match {
             case "Int" => s.toInt
             case "String" => s
-            case _ => throw new Error(s"Unknown type ${headers(i)}")
+            case _ => throw new Exception(s"Unknown type ${headers(i)}")
           }).asInstanceOf[Term]
         ).toSeq)
         .toScala(Set)
@@ -95,7 +95,7 @@ abstract class TestGenerator(directory: Path,
           case "NaiveRelational" => Program(NaiveExecutionEngine(RelationalStorageManager()))
           case "SemiNaiveCollections" => Program(SemiNaiveExecutionEngine(CollectionsStorageManager()))
           case "NaiveCollections" => Program(NaiveExecutionEngine(CollectionsStorageManager()))
-//          case "NaiveStagedCollections" => Program(NaiveStagedExecutionEngine(CollectionsStorageManager()))
+          case "NaiveCompiledStagedCollections" => Program(NaiveCompiledStagedExecutionEngine(CollectionsStorageManager()))
           case "InterpretedStagedCollections" => Program(InterpretedStagedExecutionEngine(CollectionsStorageManager()))
           case "CompiledStagedCollections" => Program(CompiledStagedExecutionEngine(CollectionsStorageManager()))
           case "JITStagedCollections" => Program(JITStagedExecutionEngine(CollectionsStorageManager(), ir.OpCode.OTHER, false, false))

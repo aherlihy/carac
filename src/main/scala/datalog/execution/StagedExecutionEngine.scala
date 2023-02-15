@@ -166,7 +166,7 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
       throw new Exception("NOTE: using generateProgramTree which is only for benchmarking")
     }
     if (!precedenceGraph.idbs.contains(rId)) {
-      throw new Error("Solving for rule without body")
+      throw new Exception("Solving for rule without body")
     }
     val transformedAST = transforms.foldLeft(ast: ASTNode)((t, pass) => pass.transform(t))
 
@@ -212,7 +212,7 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
       return storageManager.getEDBResult(rId)
     }
     if (!precedenceGraph.idbs.contains(rId)) {
-      throw new Error("Solving for rule without body")
+      throw new Exception("Solving for rule without body")
     }
 
     // generate and transform tree
@@ -248,9 +248,20 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
     }
   }
 }
+// Create separate instances for testing
 class InterpretedStagedExecutionEngine(storageManager: StorageManager) extends StagedExecutionEngine(storageManager) {
   override def solve(rId: Int, mode: MODE): Set[Seq[Term]] = super.solve(rId, MODE.Interpret)
 }
 class CompiledStagedExecutionEngine(storageManager: StorageManager) extends StagedExecutionEngine(storageManager) {
+  override def solve(rId: Int, mode: MODE): Set[Seq[Term]] = super.solve(rId, MODE.Compile)
+}
+class NaiveInterpretedStagedExecutionEngine(storageManager: StorageManager) extends StagedExecutionEngine(storageManager) {
+  import storageManager.EDB
+  override def createIR(ast: ASTNode)(using InterpreterContext): IROp = IRTreeGenerator().generateNaive(ast)
+  override def solve(rId: Int, mode: MODE): Set[Seq[Term]] = super.solve(rId, MODE.Interpret)
+}
+class NaiveCompiledStagedExecutionEngine(storageManager: StorageManager) extends StagedExecutionEngine(storageManager) {
+  import storageManager.EDB
+  override def createIR(ast: ASTNode)(using InterpreterContext): IROp = IRTreeGenerator().generateNaive(ast)
   override def solve(rId: Int, mode: MODE): Set[Seq[Term]] = super.solve(rId, MODE.Compile)
 }

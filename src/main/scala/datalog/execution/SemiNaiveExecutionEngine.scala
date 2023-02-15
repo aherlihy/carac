@@ -49,7 +49,7 @@ class SemiNaiveExecutionEngine(override val storageManager: StorageManager) exte
       return storageManager.getEDBResult(rId)
     }
     if (!idbs.contains(rId)) {
-      throw new Error("Solving for rule without body")
+      throw new Exception("Solving for rule without body")
     }
     // TODO: if a IDB predicate without vars, then solve all and test contains result?
     //    if (relations.isEmpty)

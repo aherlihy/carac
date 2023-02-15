@@ -2,7 +2,7 @@ package datalog.benchmarks.examples
 
 import datalog.benchmarks.DLBenchmark
 import datalog.dsl.{Constant, Program, Relation, Term}
-import datalog.execution.{NaiveExecutionEngine, NaiveStagedExecutionEngine, SemiNaiveExecutionEngine, InterpretedStagedExecutionEngine, CompiledStagedExecutionEngine, JITStagedExecutionEngine}
+import datalog.execution.{NaiveExecutionEngine, NaiveCompiledStagedExecutionEngine, SemiNaiveExecutionEngine, InterpretedStagedExecutionEngine, CompiledStagedExecutionEngine, JITStagedExecutionEngine}
 import datalog.storage.{CollectionsStorageManager, RelationalStorageManager}
 
 import java.nio.file.{Files, Path, Paths}
@@ -51,11 +51,11 @@ abstract class BenchmarkGenerator(directory: Path,
                 (headers(i) match {
                   case "Int" => s.toInt
                   case "String" => s
-                  case _ => throw new Error(s"Unknown type ${headers(i)}")
+                  case _ => throw new Exception(s"Unknown type ${headers(i)}")
                 }).asInstanceOf[Term]
               ).toSeq
             if (factInput.length != headers.size)
-              throw new Error(s"Input data for fact of length ${factInput.length} but should be ${headers.mkString("[", ", ", "]")}. Line='$l'")
+              throw new Exception(s"Input data for fact of length ${factInput.length} but should be ${headers.mkString("[", ", ", "]")}. Line='$l'")
             factInput
           }).toScala(Seq)
         reader.close()
@@ -75,7 +75,7 @@ abstract class BenchmarkGenerator(directory: Path,
           (headers(i) match {
             case "Int" => s.toInt
             case "String" => s
-            case _ => throw new Error(s"Unknown type ${headers(i)}")
+            case _ => throw new Exception(s"Unknown type ${headers(i)}")
           }).asInstanceOf[Term]
         ).toSeq)
         .toScala(Set)
@@ -84,7 +84,7 @@ abstract class BenchmarkGenerator(directory: Path,
     })
 
   Seq(
-    "SemiNaive", "Naive", "InterpretedStaged", "CompiledStaged",
+    "SemiNaive", "Naive", "InterpretedStaged", "CompiledStaged", "NaiveCompiledStaged",
     "JITStagedAOTNaiveEvalBlocking", "JITStagedAOTSemiNaiveEvalBlocking", "JITStagedAOTLoopBlocking", "JITStagedAOTLoopBodyBlocking", "JITStagedAOTProgramBlocking",
     "JITStagedAOTSemiNaiveEvalNonBlocking", "JITStagedAOTLoopBodyNonBlocking",
     "JITStagedSemiNaiveEvalOnline", "JITStagedLoopBodyOnline",

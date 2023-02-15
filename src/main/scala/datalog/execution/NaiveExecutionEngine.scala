@@ -72,7 +72,7 @@ class NaiveExecutionEngine(val storageManager: StorageManager) extends Execution
       return storageManager.getEDBResult(toSolve)
     }
     if (!idbs.contains(toSolve)) {
-      throw new Error("Solving for rule without body")
+      throw new Exception("Solving for rule without body")
     }
     val relations = precedenceGraph.topSort(toSolve)
     storageManager.initEvaluation() // facts discovered in the previous iteration

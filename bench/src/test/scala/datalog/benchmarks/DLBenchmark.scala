@@ -22,12 +22,9 @@ abstract class DLBenchmark {
       case "NaiveRelational" => Program(NaiveExecutionEngine(RelationalStorageManager()))
       case "SemiNaiveCollections" => Program(SemiNaiveExecutionEngine(CollectionsStorageManager()))
       case "NaiveCollections" => Program(NaiveExecutionEngine(CollectionsStorageManager()))
-      case "NaiveStagedCollections" => Program(NaiveStagedExecutionEngine(CollectionsStorageManager()))
-      case "SemiNaiveStagedCollections" => Program(SemiNaiveStagedExecutionEngine(CollectionsStorageManager()))
-//    case "NaiveStagedCollections" => Program(NaiveStagedExecutionEngine(CollectionsStorageManager()))
+      case "NaiveCompiledStagedCollections" => Program(NaiveCompiledStagedExecutionEngine(CollectionsStorageManager()))
       case "InterpretedStagedCollections" => Program(InterpretedStagedExecutionEngine(CollectionsStorageManager()))
       case "CompiledStagedCollections" => Program(CompiledStagedExecutionEngine(CollectionsStorageManager()))
-//      case "JITStagedCollections" => Program(JITStagedExecutionEngine(CollectionsStorageManager(), ir.OpCode.OTHER, false))
       case _ if context.contains("JITStaged") =>
         val aot = context.contains("AOT")
         val nonblocking = context.contains("NonBlocking")

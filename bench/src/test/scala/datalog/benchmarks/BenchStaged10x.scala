@@ -1,7 +1,7 @@
 package datalog.benchmarks
 
 import datalog.dsl.{Constant, Program, Relation, Term, MODE}
-import datalog.execution.{ExecutionEngine, SemiNaiveExecutionEngine, SemiNaiveStagedExecutionEngine, ir}
+import datalog.execution.{ExecutionEngine, SemiNaiveExecutionEngine, CompiledStagedExecutionEngine, ir}
 import datalog.storage.CollectionsStorageManager
 import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.Blackhole
@@ -76,12 +76,12 @@ object initialize20x {
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class BenchStaged10x_full_compiled {
-  var engine: SemiNaiveStagedExecutionEngine = null
+  var engine: CompiledStagedExecutionEngine = null
   var program: Program = null
   var toSolve: Relation[Constant] = null
   @Setup(Level.Invocation)
   def setup(): Unit = {
-    engine = SemiNaiveStagedExecutionEngine(CollectionsStorageManager())
+    engine = CompiledStagedExecutionEngine(CollectionsStorageManager())
     program = Program(engine)
     toSolve = initialize20x.pretest(program)
   }
@@ -98,7 +98,7 @@ class BenchStaged10x_full_compiled {
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class BenchStaged10x_compile_and_run {
-  var engine: SemiNaiveStagedExecutionEngine = null
+  var engine: CompiledStagedExecutionEngine = null
   var program: Program = null
   var toSolve: Relation[Constant] = null
   var tree: ir.IROp = null
@@ -106,7 +106,7 @@ class BenchStaged10x_compile_and_run {
   // measure cost of tree gen, compiling, running
   @Setup(Level.Invocation)
   def setup(): Unit = {
-    engine = SemiNaiveStagedExecutionEngine(CollectionsStorageManager())
+    engine = CompiledStagedExecutionEngine(CollectionsStorageManager())
     program = Program(engine)
     toSolve = initialize20x.pretest(program)
     val x1 = engine.generateProgramTree(toSolve.id)
@@ -126,7 +126,7 @@ class BenchStaged10x_compile_and_run {
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class BenchStaged10x_run_only_compiled {
-  var engine: SemiNaiveStagedExecutionEngine = null
+  var engine: CompiledStagedExecutionEngine = null
   var program: Program = null
   var toSolve: Relation[Constant] = null
   var tree: ir.IROp = null
@@ -136,7 +136,7 @@ class BenchStaged10x_run_only_compiled {
   // measure cost of tree gen, compiling, running
   @Setup(Level.Invocation)
   def setup(): Unit = {
-    engine = SemiNaiveStagedExecutionEngine(CollectionsStorageManager())
+    engine = CompiledStagedExecutionEngine(CollectionsStorageManager())
     program = Program(engine)
     toSolve = initialize20x.pretest(program)
     val x1 = engine.generateProgramTree(toSolve.id)
@@ -159,12 +159,12 @@ class BenchStaged10x_run_only_compiled {
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class BenchStaged10x_full_interpreted {
-  var engine: SemiNaiveStagedExecutionEngine = null
+  var engine: CompiledStagedExecutionEngine = null
   var program: Program = null
   var toSolve: Relation[Constant] = null
   @Setup(Level.Invocation)
   def setup(): Unit = {
-    engine = SemiNaiveStagedExecutionEngine(CollectionsStorageManager())
+    engine = CompiledStagedExecutionEngine(CollectionsStorageManager())
     program = Program(engine)
     toSolve = initialize20x.pretest(program)
   }
@@ -181,7 +181,7 @@ class BenchStaged10x_full_interpreted {
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class BenchStaged10x_run_only_interpreted {
-  var engine: SemiNaiveStagedExecutionEngine = null
+  var engine: CompiledStagedExecutionEngine = null
   var program: Program = null
   var toSolve: Relation[Constant] = null
   var tree: ir.IROp = null
@@ -189,7 +189,7 @@ class BenchStaged10x_run_only_interpreted {
   // measure cost of tree gen, compiling, running
   @Setup(Level.Invocation)
   def setup(): Unit = {
-    engine = SemiNaiveStagedExecutionEngine(CollectionsStorageManager())
+    engine = CompiledStagedExecutionEngine(CollectionsStorageManager())
     program = Program(engine)
     toSolve = initialize20x.pretest(program)
     val x1 = engine.generateProgramTree(toSolve.id)
