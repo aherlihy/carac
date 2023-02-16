@@ -163,13 +163,26 @@ class StagedCompiler(val storageManager: StorageManager) {
     }
   }
 
-  def getCompiled(irTree: IROp, ctx: InterpreterContext)(using staging.Compiler): CollectionsStorageManager => CollectionsStorageManager#EDB = {
+  def clearDottyThread(compiler: staging.Compiler) =
+    val driverField = compiler.getClass.getDeclaredField("driver")
+    driverField.setAccessible(true)
+    val driver = driverField.get(compiler)
+    val contextBaseField = driver.getClass.getDeclaredField("contextBase")
+    contextBaseField.setAccessible(true)
+    val contextBase = contextBaseField.get(driver)
+    val threadField = contextBase.getClass.getSuperclass.getDeclaredField("thread")
+    threadField.setAccessible(true)
+    threadField.set(contextBase, null)
+
+  def getCompiled(irTree: IROp, ctx: InterpreterContext)(using compiler: staging.Compiler): CollectionsStorageManager => CollectionsStorageManager#EDB = {
     given irCtx: InterpreterContext = ctx
-    staging.run {
+    val result = staging.run {
       val res: Expr[CollectionsStorageManager => Any] =
         '{ (stagedSm: CollectionsStorageManager) => ${ compileIR[CollectionsStorageManager#EDB](irTree)(using 'stagedSm) } }
       debug("generated code: ", () => res.show)
       res
     }.asInstanceOf[CollectionsStorageManager => CollectionsStorageManager#EDB]
+//    clearDottyThread(compiler)
+    result
   }
 }
