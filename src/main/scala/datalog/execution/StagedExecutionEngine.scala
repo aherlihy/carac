@@ -21,9 +21,6 @@ case class JITOptions(granularity: OpCode = OpCode.PROGRAM, aot: Boolean = true,
   private val unique = Seq(OpCode.LOOP, OpCode.EVAL_NAIVE, OpCode.LOOP_BODY)
   if (!aot && !block && unique.contains(granularity))
     throw new Exception(s"Cannot online, async compile singleton IR nodes: $granularity (theres no point)")
-  private val multiple = Seq(OpCode.EVAL_RULE_NAIVE, OpCode.EVAL_RULE_SN, OpCode.INSERT, OpCode.UNION, OpCode.PROJECT, OpCode.JOIN) // Future work dependent on thread-safe dotty, or pool of dotty's
-  if (!block && multiple.contains(granularity))
-    throw new Exception(s"Currently cannot async compile repeated nodes, like $granularity") // TODO: just make a new dotty per thread
 }
 
 class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defaultJITOptions: JITOptions = JITOptions()) extends ExecutionEngine {
@@ -136,16 +133,33 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
     storageManager.getNewIDBResult(ctx.toSolve)
   }
 
-  def jitRel(irTree: IRRelOp): storageManager.EDB = {
+  def jitRel(irTree: IRRelOp)(using jitOptions: JITOptions): storageManager.EDB = {
     //    println(s"IN INTERPRET REL_IR, code=${irTree.code}")
+    // If async compiling, then make a new dotty for nodes for which there are multiple. TODO: pool?
+    lazy val newDotty = if (jitOptions.block) dedicatedDotty else staging.Compiler.make(getClass.getClassLoader)
     irTree match {
+      case op: UnionOp if jitOptions.granularity == op.code =>
+        if (op.compiledRelFn == null && !jitOptions.aot)
+          startCompileThread(op, newDotty)
+        checkResult(op.compiledRelFn, op, () => op.runRel_continuation(storageManager, op.ops.map(o => sm => jitRel(o))))
+
+      case op: JoinOp if jitOptions.granularity == op.code =>
+        if (op.compiledRelFn == null && !jitOptions.aot)
+          startCompileThread(op, newDotty)
+        checkResult(op.compiledRelFn, op, () => op.runRel_continuation(storageManager, op.ops.map(o => sm => jitRel(o))))
+
+      case op: DiffOp if jitOptions.granularity == op.code =>
+        if (op.compiledRelFn == null && !jitOptions.aot)
+          startCompileThread(op, dedicatedDotty)
+        checkResult(op.compiledRelFn, op, () => op.runRel_continuation(storageManager, Seq(sm => jitRel(op.lhs), sm => jitRel(op.rhs))))
+
       case op: ScanOp =>
         op.runRel_continuation(storageManager)
 
       case op: ScanEDBOp =>
         op.runRel_continuation(storageManager)
 
-      case op: JoinOp =>
+      case op: JoinOp => // TODO: mutex?
         op.runRel_continuation(storageManager, op.ops.map(o => sm => jitRel(o)))
 
       case op: ProjectOp =>
@@ -162,6 +176,26 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
       case _ => throw new Exception("Error: interpretRelOp called with unit operation")
     }
   }
+
+  inline def checkResult(value: Future[CompiledRelFn], op: IRRelOp, default: () => CollectionsStorageManager#EDB)(using jitOptions: JITOptions): CollectionsStorageManager#EDB =
+    value.value match {
+      case Some(Success(run)) =>
+        debug(s"COMPILED ${op.code}", () => "")
+        stragglers.remove(op.compiledRelFn.hashCode()) // TODO: might not work, but jsut end up waiting for completed future
+        run(storageManager)
+      case Some(Failure(e)) =>
+        stragglers.remove(op.compiledRelFn.hashCode())
+        throw Exception(s"Error compiling ${op.code} with: ${e.getCause}")
+      case None =>
+        if (jitOptions.block)
+          debug(s"${op.code} compilation not ready yet, so blocking", () => "")
+          val res = Await.result(op.compiledRelFn, Duration.Inf)(storageManager)
+          stragglers.remove(op.compiledRelFn.hashCode())
+          res
+        else
+          debug(s"${op.code} compilation not ready yet, so defaulting", () => "")
+          default()
+    }
 
   inline def checkResult(value: Future[CompiledFn], op: IROp, default: () => Any)(using jitOptions: JITOptions): Any =
     value.value match {
@@ -182,14 +216,23 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
           debug(s"${op.code} compilation not ready yet, so defaulting", () => "")
           default()
     }
-  inline def startCompileThread(op: IROp): Unit =
+  inline def startCompileThread(op: IROp, dotty: staging.Compiler): Unit =
     debug(s"starting online compilation for code ${op.code}", () => "")
     given scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
     op.compiledFn = Future {
-      given staging.Compiler = dedicatedDotty //staging.Compiler.make(getClass.getClassLoader) // TODO: new dotty per thread, maybe concat
+      given staging.Compiler = dotty; // dedicatedDotty //staging.Compiler.make(getClass.getClassLoader) // TODO: new dotty per thread, maybe concat
       compiler.getCompiled(op)
     }
     stragglers.addOne(op.compiledFn.hashCode(), op.compiledFn)
+
+  inline def startCompileThread(op: IRRelOp, dotty: staging.Compiler): Unit =
+    debug(s"starting online compilation for code ${op.code}", () => "")
+    given scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
+    op.compiledRelFn = Future {
+      given staging.Compiler = dotty; // dedicatedDotty //staging.Compiler.make(getClass.getClassLoader) // TODO: new dotty per thread, maybe concat
+      compiler.getCompiled(op)
+    }
+    stragglers.addOne(op.compiledRelFn.hashCode(), op.compiledFn)
 
 
   def jit(irTree: IROp)(using jitOptions: JITOptions): Any = {
@@ -198,7 +241,7 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
       case op: ProgramOp =>
         if (jitOptions.aot)
           debug("", () => s"ahead-of-time compiling")
-          startCompileThread(op.getSubTree(jitOptions.granularity))
+          startCompileThread(op.getSubTree(jitOptions.granularity), dedicatedDotty)
         // test if need to compile, if so:
         if (op.compiledFn == null) // don't bother online compile since only entered once
           op.run_continuation(storageManager, Seq(sm => jit(op.body)))
@@ -214,12 +257,10 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
 
       case op: SequenceOp =>
         op.code match
-          case OpCode.EVAL_SN | OpCode.EVAL_NAIVE | OpCode.LOOP_BODY if jitOptions.granularity == op.code => {
-            if (op.compiledFn == null && !jitOptions.aot) { // need to start compilation
-              startCompileThread(op)
-            }
+          case OpCode.EVAL_SN | OpCode.EVAL_NAIVE | OpCode.LOOP_BODY if jitOptions.granularity == op.code =>
+            if (op.compiledFn == null && !jitOptions.aot) // need to start compilation
+              startCompileThread(op, dedicatedDotty)
             checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.ops.map(o => sm => jit(o))))
-          }
           case _ =>
             op.run_continuation(storageManager, op.ops.map(o => sm => jit(o)))
 

@@ -186,4 +186,15 @@ class StagedCompiler(val storageManager: StorageManager) {
     clearDottyThread(compiler)
     result
   }
+
+  def getCompiled(irTree: IRRelOp)(using compiler: staging.Compiler): CompiledRelFn = {
+    val result = staging.run {
+      val res: Expr[CompiledRelFn] =
+        '{ (stagedSm: CollectionsStorageManager) => ${ compileIRRelOp(irTree)(using 'stagedSm) } }
+      debug("generated code: ", () => res.show)
+      res
+    }
+    clearDottyThread(compiler)
+    result
+  }
 }
