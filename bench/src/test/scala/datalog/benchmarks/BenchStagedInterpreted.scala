@@ -16,16 +16,21 @@ import scala.util.Random
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class BenchStagedInterpreted_full {
-  var engine: ConcreteStagedExecutionEngine = null
-  var program: Program = null
+  var engine1: ConcreteStagedExecutionEngine = null
+  var program1: Program = null
+  var engine2: ConcreteStagedExecutionEngine = null
+  var program2: Program = null
+
   var toSolve1: Relation[Constant] = null
   var toSolve2: Relation[Constant] = null
   @Setup(Level.Invocation)
   def setup(): Unit = {
-    engine = ConcreteStagedExecutionEngine(CollectionsStorageManager())
-    program = Program(engine)
-    toSolve1 = initialize_8xJoin.pretest(program)
-    toSolve2 = initialize20x.pretest(program)
+    engine1 = ConcreteStagedExecutionEngine(CollectionsStorageManager())
+    program1 = Program(engine1)
+    engine2 = ConcreteStagedExecutionEngine(CollectionsStorageManager())
+    program2 = Program(engine2)
+    toSolve1 = initialize_8xJoin.pretest(program1)
+    toSolve2 = initialize20x.pretest(program2)
   }
   // measure cost of tree gen, running interpreted
   @Benchmark def run_tree_8x(blackhole: Blackhole): Unit = {
@@ -57,8 +62,10 @@ class BenchStagedInterpreted_full {
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class BenchStagedInterpreted_no_tree {
-  var engine: ConcreteStagedExecutionEngine = null
-  var program: Program = null
+  var engine1: ConcreteStagedExecutionEngine = null
+  var program1: Program = null
+  var engine2: ConcreteStagedExecutionEngine = null
+  var program2: Program = null
   var toSolve1: Relation[Constant] = null
   var tree1: ir.IROp = null
   var ctx1: ir.InterpreterContext = null
@@ -71,15 +78,17 @@ class BenchStagedInterpreted_no_tree {
 
   @Setup(Level.Invocation)
   def setup(): Unit = {
-    engine = ConcreteStagedExecutionEngine(CollectionsStorageManager())
-    program = Program(engine)
-    toSolve1 = initialize_8xJoin.pretest(program)
-    val x1 = engine.generateProgramTree(toSolve1.id)
+    engine1 = ConcreteStagedExecutionEngine(CollectionsStorageManager())
+    program1 = Program(engine1)
+    engine2 = ConcreteStagedExecutionEngine(CollectionsStorageManager())
+    program2 = Program(engine2)
+    toSolve1 = initialize_8xJoin.pretest(program1)
+    toSolve2 = initialize20x.pretest(program2)
+    val x1 = engine1.generateProgramTree(toSolve1.id)
     tree1 = x1._1
     ctx1 = x1._2
 
-    toSolve2 = initialize20x.pretest(program)
-    val x2 = engine.generateProgramTree(toSolve2.id)
+    val x2 = engine2.generateProgramTree(toSolve2.id)
     tree2 = x2._1
     ctx2 = x2._2
 
@@ -91,25 +100,25 @@ class BenchStagedInterpreted_no_tree {
   //  measure cost of running interpreted only
   @Benchmark def run_tree_8x(blackhole: Blackhole): Unit = {
     blackhole.consume(
-      engine.solveInterpreted(tree1, ctx1)
+      engine1.solveInterpreted(tree1, ctx1)
     )
   }
 
   @Benchmark def run_run_8x(blackhole: Blackhole): Unit = {
     blackhole.consume(
-      engine.solveInterpreted_withRun(tree1, ctx1)
+      engine1.solveInterpreted_withRun(tree1, ctx1)
     )
   }
 
   @Benchmark def run_tree_20x(blackhole: Blackhole): Unit = {
     blackhole.consume(
-      engine.solveInterpreted(tree2, ctx2)
+      engine2.solveInterpreted(tree2, ctx2)
     )
   }
 
   @Benchmark def run_run_20x(blackhole: Blackhole): Unit = {
     blackhole.consume(
-      engine.solveInterpreted_withRun(tree2, ctx2)
+      engine2.solveInterpreted_withRun(tree2, ctx2)
     )
   }
 }
