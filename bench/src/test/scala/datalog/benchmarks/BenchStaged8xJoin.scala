@@ -125,7 +125,7 @@ class BenchStaged8xJoin_run_only_compiled {
     val x1 = engine.generateProgramTree(toSolve.id)
     tree = x1._1
     ctx = x1._2
-    compiled = engine.preCompile(tree, ctx)
+    compiled = engine.preCompile(tree)
   }
 
   // measure cost of running compiled code

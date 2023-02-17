@@ -51,7 +51,7 @@ class StagedCompileTest extends munit.FunSuite {
     val compiled: CollectionsStorageManager => storageManager.EDB =
       staging.run {
         val res: Expr[CollectionsStorageManager => Any] =
-          '{ (stagedSm: CollectionsStorageManager) => ${engine.compiler.compileIR[collection.mutable.ArrayBuffer[IndexedSeq[Term]]](miniprog)(using 'stagedSm)} }
+          '{ (stagedSm: CollectionsStorageManager) => ${engine.compiler.compileIR(miniprog)(using 'stagedSm)} }
         val strRes = res.show
         check.foldLeft(strRes)((generatedString, op) =>
           op(generatedString)

@@ -181,7 +181,7 @@ class BenchStagedOther_run_only_compiled extends OtherBench {
     val x1 = engine.generateProgramTree(toSolveR.id)
     tree = x1._1
     ctx = x1._2
-    compiled = engine.preCompile(tree, ctx)
+    compiled = engine.preCompile(tree)
   }
 
   @TearDown

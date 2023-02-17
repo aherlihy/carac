@@ -181,9 +181,9 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
     (irTree, irCtx)
   }
 
-  def preCompile(irTree: IROp, ctx: InterpreterContext): CollectionsStorageManager => CollectionsStorageManager#EDB = {
+  def preCompile(irTree: IROp): CollectionsStorageManager => CollectionsStorageManager#EDB = {
     given staging.Compiler = dedicatedDotty
-    compiler.getCompiled(irTree, ctx)
+    compiler.getCompiled(irTree)
   }
   def solvePreCompiled(compiled: CollectionsStorageManager => CollectionsStorageManager#EDB, ctx: InterpreterContext): Set[Seq[Term]] = {
     compiled(storageManager.asInstanceOf[CollectionsStorageManager]) // TODO: remove cast
@@ -192,7 +192,7 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
 
   def solveCompiled(irTree: IROp, ctx: InterpreterContext): Set[Seq[Term]] = {
     given staging.Compiler = dedicatedDotty
-    val compiled = compiler.getCompiled(irTree, ctx)
+    val compiled = compiler.getCompiled(irTree)
     compiled(storageManager.asInstanceOf[CollectionsStorageManager]) // TODO: remove cast
     storageManager.getNewIDBResult(ctx.toSolve)
   }

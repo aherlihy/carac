@@ -29,6 +29,7 @@ abstract class IROp() {
   val code: OpCode
   var compiledFn: Future[CompiledFn] = null
   var compiledSnippetContinuationFn: CompiledSnippetContinuationFn = null
+  var cachedExpr: Expr[Any] = null
 
   /**
    * Add continuation to revert control flow to the interpret method, which checks for optimizations/deoptimizations
@@ -48,6 +49,7 @@ abstract class IRRelOp() extends IROp {
   var compiledRelSnippetContinuationFn: CompiledRelSnippetContinuationFn = null
   def runRel_continuation(storageManager: CollectionsStorageManager, opFns: Seq[CompiledRelFn] = Seq.empty): CollectionsStorageManager#EDB
   def runRel(storageManager: CollectionsStorageManager): CollectionsStorageManager#EDB
+  var cachedRelExpr: Expr[CollectionsStorageManager#EDB] = null
 }
 
 case class ProgramOp(body: IROp) extends IROp {

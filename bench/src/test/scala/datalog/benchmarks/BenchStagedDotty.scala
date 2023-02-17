@@ -61,13 +61,13 @@ class BenchStagedDotty_cold {
   @Benchmark def compile_tree(blackhole: Blackhole): Unit = {
     given staging.Compiler = engine.dedicatedDotty
     blackhole.consume(
-      engine.compiler.getCompiled(tree, ctx)
+      engine.compiler.getCompiled(tree)
     )
   }
   @Benchmark def compile_naiveEval(blackhole: Blackhole): Unit = {
     given staging.Compiler = engine.dedicatedDotty
     blackhole.consume(
-      engine.compiler.getCompiled(naiveEval, ctx)
+      engine.compiler.getCompiled(naiveEval)
     )
   }
 
@@ -75,7 +75,7 @@ class BenchStagedDotty_cold {
     given staging.Compiler = engine.dedicatedDotty
 
     blackhole.consume(
-      engine.compiler.getCompiled(doWhile, ctx)
+      engine.compiler.getCompiled(doWhile)
     )
   }
 
@@ -83,7 +83,7 @@ class BenchStagedDotty_cold {
     given staging.Compiler = engine.dedicatedDotty
 
     blackhole.consume(
-      engine.compiler.getCompiled(snEval, ctx)
+      engine.compiler.getCompiled(snEval)
     )
   }
 
@@ -91,7 +91,7 @@ class BenchStagedDotty_cold {
     given staging.Compiler = engine.dedicatedDotty
 
     blackhole.consume(
-      engine.compiler.getCompiled(snEvalRule, ctx)
+      engine.compiler.getCompiled(snEvalRule)
     )
   }
 
@@ -99,7 +99,7 @@ class BenchStagedDotty_cold {
     given staging.Compiler = engine.dedicatedDotty
 
     blackhole.consume(
-      engine.compiler.getCompiled(join, ctx)
+      engine.compiler.getCompiled(join)
     )
   }
 
@@ -107,7 +107,7 @@ class BenchStagedDotty_cold {
     given staging.Compiler = engine.dedicatedDotty
 
     blackhole.consume(
-      engine.compiler.getCompiled(scan, ctx)
+      engine.compiler.getCompiled(scan)
     )
   }
 }
@@ -138,7 +138,7 @@ class BenchStagedDotty_warm {
     val programNode = tree.asInstanceOf[ir.ProgramOp]
     naiveEval = programNode.getSubTree(ir.OpCode.EVAL_NAIVE) //body.asInstanceOf[ir.SequenceOp].ops.head // insert + n-SPJU for all rels
     assert(naiveEval.code == ir.OpCode.EVAL_NAIVE)
-    doWhile = programNode.getSubTree(ir.OpCode.LOOP_BODY) //tree.asInstanceOf[ir.ProgramOp].body.asInstanceOf[ir.SequenceOp].ops(1) // main loop
+    doWhile = programNode.getSubTree(ir.OpCode.LOOP) //tree.asInstanceOf[ir.ProgramOp].body.asInstanceOf[ir.SequenceOp].ops(1) // main loop
     assert(doWhile.asInstanceOf[ir.DoWhileOp].body.code == ir.OpCode.LOOP_BODY)
     snEval = programNode.getSubTree(ir.OpCode.EVAL_SN) //doWhile.asInstanceOf[ir.DoWhileOp].body.asInstanceOf[ir.SequenceOp].ops(1) // insert + SPJU for all rels
     assert(snEval.code == ir.OpCode.EVAL_SN)
@@ -148,9 +148,6 @@ class BenchStagedDotty_warm {
     assert(join.isInstanceOf[ir.ProjectOp])
     scan = join.asInstanceOf[ir.ProjectOp].subOp.asInstanceOf[ir.JoinOp].ops.head
     assert(scan.isInstanceOf[ir.ScanOp])
-    //    given ir.InterpreterContext = ctx
-    //    println("subTree=" + engine.storageManager.printer.printIR(snEvalRule))
-
   }
 
   @TearDown(Level.Invocation)
@@ -159,13 +156,13 @@ class BenchStagedDotty_warm {
   @Benchmark def compile_tree(blackhole: Blackhole): Unit = {
     given staging.Compiler = engine.dedicatedDotty
     blackhole.consume(
-      engine.compiler.getCompiled(tree, ctx)
+      engine.compiler.getCompiled(tree)
     )
   }
   @Benchmark def compile_naiveEval(blackhole: Blackhole): Unit = {
     given staging.Compiler = engine.dedicatedDotty
     blackhole.consume(
-      engine.compiler.getCompiled(naiveEval, ctx)
+      engine.compiler.getCompiled(naiveEval)
     )
   }
 
@@ -173,7 +170,7 @@ class BenchStagedDotty_warm {
     given staging.Compiler = engine.dedicatedDotty
 
     blackhole.consume(
-      engine.compiler.getCompiled(doWhile, ctx)
+      engine.compiler.getCompiled(doWhile)
     )
   }
 
@@ -181,7 +178,7 @@ class BenchStagedDotty_warm {
     given staging.Compiler = engine.dedicatedDotty
 
     blackhole.consume(
-      engine.compiler.getCompiled(snEval, ctx)
+      engine.compiler.getCompiled(snEval)
     )
   }
 
@@ -189,7 +186,7 @@ class BenchStagedDotty_warm {
     given staging.Compiler = engine.dedicatedDotty
 
     blackhole.consume(
-      engine.compiler.getCompiled(snEvalRule, ctx)
+      engine.compiler.getCompiled(snEvalRule)
     )
   }
 
@@ -197,7 +194,7 @@ class BenchStagedDotty_warm {
     given staging.Compiler = engine.dedicatedDotty
 
     blackhole.consume(
-      engine.compiler.getCompiled(join, ctx)
+      engine.compiler.getCompiled(join)
     )
   }
 
@@ -205,7 +202,7 @@ class BenchStagedDotty_warm {
     given staging.Compiler = engine.dedicatedDotty
 
     blackhole.consume(
-      engine.compiler.getCompiled(scan, ctx)
+      engine.compiler.getCompiled(scan)
     )
   }
 }

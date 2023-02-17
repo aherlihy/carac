@@ -101,7 +101,7 @@ class JITStagedExecutionEngine(override val storageManager: CollectionsStorageMa
 
               op.compiledFn = Future {
                 given staging.Compiler = dedicatedDotty //staging.Compiler.make(getClass.getClassLoader) // TODO: new dotty per thread, maybe concat
-                compiler.getCompiled(op, ctx)
+                compiler.getCompiled(op)
               }
             }
             op.compiledFn.value match {
@@ -148,7 +148,7 @@ class JITStagedExecutionEngine(override val storageManager: CollectionsStorageMa
     given staging.Compiler = dedicatedDotty
 
     subTree.compiledFn = Future {
-      compiler.getCompiled(subTree, ctx)
+      compiler.getCompiled(subTree)
     }
   }
 
