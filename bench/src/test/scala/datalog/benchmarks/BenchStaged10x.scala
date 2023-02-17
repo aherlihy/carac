@@ -12,8 +12,8 @@ import scala.util.Random
 
 object initialize20x {
   def pretest(program: Program): Relation[Constant] = {
-    val edge = program.relation[Constant]("edge")
-    val path = program.relation[Constant]("path")
+    val edge = program.relation[Constant]("edge2")
+    val path = program.relation[Constant]("path2")
     val hops1 = program.relation[Constant]("hops1")
     val hops2 = program.relation[Constant]("hops2")
     val hops3 = program.relation[Constant]("hops3")

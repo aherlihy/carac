@@ -28,7 +28,7 @@ class StagedCompiler(val storageManager: StorageManager) {
   def compileIRRelOp[T](irTree: IRRelOp)(using stagedSM: Expr[StorageManager {type EDB = T}], t: Type[T])(using ctx: InterpreterContext)(using Quotes): Expr[T] = { // TODO: Instead of parameterizing, use staged path dependent type: i.e. stagedSM.EDB
     irTree match {
       case ScanOp(rId, db, knowledge) =>
-        db match { // TODO[future]: Since edb is accessed upon first iteration, potentially optimize away getOrElse
+        db match {
           case DB.Derived =>
             knowledge match {
               case KNOWLEDGE.New =>

@@ -12,8 +12,8 @@ import scala.util.Random
 
 object initialize_8xJoin {
   def pretest(program: Program): Relation[Constant] = {
-    val edge = program.relation[Constant]("edge")
-    val path = program.relation[Constant]("path")
+    val edge = program.relation[Constant]("edge1")
+    val path = program.relation[Constant]("path1")
     val hops1 = program.relation[Constant]("hops1")
     val hops2_join = program.relation[Constant]("hops2_join")
     val hops3_join = program.relation[Constant]("hops3_join")

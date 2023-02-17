@@ -12,7 +12,7 @@ type Constant = Int | String // TODO: other constant types?
 val __ = Variable(-1, true)
 
 enum MODE:
-  case Interpret, Compile, JIT
+  case Interpret, Compile, JIT, InterpRun
 
 case class Variable(oid: Int, anon: Boolean = false) {
   override def toString = if (anon) "_" else "v" + oid

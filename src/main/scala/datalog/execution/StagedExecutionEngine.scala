@@ -143,7 +143,7 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
         }
 
       case UnionOp(ops, _) =>
-        ops.flatMap(o => interpretIR(o).asInstanceOf[EDB]).toSet.toBuffer
+        ops.flatMap(o => interpretIR(o).asInstanceOf[EDB]).toSet.toBuffer // TODO: not using sm union?
 
       case DiffOp(lhs, rhs) =>
         storageManager.diff(interpretIR(lhs).asInstanceOf[EDB], interpretIR(rhs).asInstanceOf[EDB])
@@ -202,6 +202,11 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
     interpretIR(irTree)
     storageManager.getNewIDBResult(ctx.toSolve)
   }
+  def solveInterpreted_withRun(irTree: IROp, ctx: InterpreterContext): Set[Seq[Term]] = {
+    given irCtx: InterpreterContext = ctx
+    irTree.run(storageManager.asInstanceOf[CollectionsStorageManager])
+    storageManager.getNewIDBResult(ctx.toSolve)
+  }
 
   override def solve(rId: Int, mode: MODE): Set[Seq[Term]] = {
     debug("", () => s"solve $rId with mode $mode")
@@ -244,6 +249,8 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
         solveCompiled(irTree, irCtx)
       case MODE.Interpret =>
         solveInterpreted(irTree, irCtx)
+      case MODE.InterpRun =>
+        solveInterpreted_withRun(irTree, irCtx)
       case _ => throw new Exception(s"Mode $mode not yet implemented")
     }
   }
@@ -252,6 +259,7 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
 class InterpretedStagedExecutionEngine(storageManager: StorageManager) extends StagedExecutionEngine(storageManager) {
   override def solve(rId: Int, mode: MODE): Set[Seq[Term]] = super.solve(rId, MODE.Interpret)
 }
+class ConcreteStagedExecutionEngine(storageManager: StorageManager) extends StagedExecutionEngine(storageManager)
 class CompiledStagedExecutionEngine(storageManager: StorageManager) extends StagedExecutionEngine(storageManager) {
   override def solve(rId: Int, mode: MODE): Set[Seq[Term]] = super.solve(rId, MODE.Compile)
 }

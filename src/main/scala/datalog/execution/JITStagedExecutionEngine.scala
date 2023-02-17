@@ -20,25 +20,25 @@ class JITStagedExecutionEngine(override val storageManager: CollectionsStorageMa
 //    println(s"IN INTERPRET REL_IR, code=${irTree.code}")
     irTree match {
       case op: ScanOp =>
-        op.runRel(storageManager)
+        op.runRel_continuation(storageManager)
 
       case op: ScanEDBOp =>
-        op.runRel(storageManager)
+        op.runRel_continuation(storageManager)
 
       case op: JoinOp =>
-        op.runRel(storageManager, op.ops.map(o => sm => interpretIRRelOp(o)))
+        op.runRel_continuation(storageManager, op.ops.map(o => sm => interpretIRRelOp(o)))
 
       case op: ProjectOp =>
-        op.runRel(storageManager, Seq(sm => interpretIRRelOp(op.subOp)))
+        op.runRel_continuation(storageManager, Seq(sm => interpretIRRelOp(op.subOp)))
 
       case op: UnionOp =>
-        op.runRel(storageManager, op.ops.map(o => sm => interpretIRRelOp(o)))
+        op.runRel_continuation(storageManager, op.ops.map(o => sm => interpretIRRelOp(o)))
 
       case op: DiffOp =>
-        op.runRel(storageManager, Seq(sm => interpretIRRelOp(op.lhs), sm => interpretIRRelOp(op.rhs)))
+        op.runRel_continuation(storageManager, Seq(sm => interpretIRRelOp(op.lhs), sm => interpretIRRelOp(op.rhs)))
 
       case op: DebugPeek =>
-        op.runRel(storageManager, Seq(sm => interpretIRRelOp(op.op)))
+        op.runRel_continuation(storageManager, Seq(sm => interpretIRRelOp(op.op)))
       case _ => throw new Exception("Error: interpretRelOp called with unit operation")
     }
   }
@@ -51,7 +51,7 @@ class JITStagedExecutionEngine(override val storageManager: CollectionsStorageMa
           aotCompile(op)
         // test if need to compile, if so:
         if (op.compiledFn == null) { // don't bother online compile since only 1
-          op.run(storageManager, Seq(sm => interpretIR(op.body)))
+          op.run_continuation(storageManager, Seq(sm => interpretIR(op.body)))
         } else {
           op.compiledFn.value match {
             case Some(Success(run)) =>
@@ -65,14 +65,14 @@ class JITStagedExecutionEngine(override val storageManager: CollectionsStorageMa
                 Await.result(op.compiledFn, Duration.Inf)(storageManager)
               else
                 debug("program compilation not ready yet, so defaulting", () => "")
-                op.run(storageManager, Seq(sm => interpretIR(op.body)))
+                op.run_continuation(storageManager, Seq(sm => interpretIR(op.body)))
           }
         }
 
       case op: DoWhileOp =>
         // test if need to compile, if so:
         if (op.compiledFn == null) { // don't bother online compile since only 1
-          op.run(storageManager, Seq(sm => interpretIR(op.body)))
+          op.run_continuation(storageManager, Seq(sm => interpretIR(op.body)))
         } else {
           op.compiledFn.value match {
             case Some(Success(run)) =>
@@ -86,7 +86,7 @@ class JITStagedExecutionEngine(override val storageManager: CollectionsStorageMa
                 Await.result(op.compiledFn, Duration.Inf)(storageManager)
               else
                 debug("dowhile compilation not ready yet, so defaulting", () => "")
-                op.run(storageManager, Seq(sm => interpretIR(op.body)))
+                op.run_continuation(storageManager, Seq(sm => interpretIR(op.body)))
           }
         }
 
@@ -117,20 +117,20 @@ class JITStagedExecutionEngine(override val storageManager: CollectionsStorageMa
                   Await.result(op.compiledFn, Duration.Inf)(storageManager)
                 else
                   debug(s"${op.code} compilation not ready yet, so defaulting", () => "")
-                  op.run(storageManager, op.ops.map(o => sm => interpretIR(o)))
+                  op.run_continuation(storageManager, op.ops.map(o => sm => interpretIR(o)))
             }
           }
           case _ =>
-            op.run(storageManager, op.ops.map(o => sm => interpretIR(o)))
+            op.run_continuation(storageManager, op.ops.map(o => sm => interpretIR(o)))
 
       case op: SwapAndClearOp =>
-        op.run(storageManager)
+        op.run_continuation(storageManager)
 
       case op: InsertOp =>
-        op.run(storageManager, Seq((sm: CollectionsStorageManager) => interpretIRRelOp(op.subOp)) ++ op.subOp2.map(sop => (sm: CollectionsStorageManager) => interpretIRRelOp(sop)))
+        op.run_continuation(storageManager, Seq((sm: CollectionsStorageManager) => interpretIRRelOp(op.subOp)) ++ op.subOp2.map(sop => (sm: CollectionsStorageManager) => interpretIRRelOp(sop)))
 
       case op: DebugNode =>
-        op.run(storageManager)
+        op.run_continuation(storageManager)
 
       case _ =>
         irTree match {

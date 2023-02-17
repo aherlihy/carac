@@ -32,38 +32,38 @@ class JITStagedSnippetExecutionEngine(override val storageManager: CollectionsSt
 //    println(s"IN INTERPRET REL_IR, code=${irTree.code}")
     irTree match {
       case op: ScanOp =>
-        op.runRel(storageManager)
+        op.runRel_continuation(storageManager)
 //        if (op.compiledRelSnippetFn == null)
 //          given staging.Compiler = dedicatedDotty
 //          op.compiledRelSnippetFn = snippetCompiler.getCompiledRelSnippet(op, ctx, Seq.empty)
 //        op.compiledRelSnippetFn(storageManager, Seq.empty)
 
       case op: ScanEDBOp =>
-        op.runRel(storageManager)
+        op.runRel_continuation(storageManager)
 
       case op: JoinOp =>
 //        op.runRel(storageManager, op.ops.map(o => sm => interpretIRRelOp(o)))
-        if (op.compiledRelSnippetFn == null)
+        if (op.compiledRelSnippetContinuationFn == null)
           given staging.Compiler = dedicatedDotty
-          op.compiledRelSnippetFn = snippetCompiler.getCompiledRelSnippet(op, ctx, Seq.empty)
-        op.compiledRelSnippetFn(storageManager, op.ops.map(o => sm => interpretIRRelOp(o)))
+          op.compiledRelSnippetContinuationFn = snippetCompiler.getCompiledRelSnippet(op, ctx, Seq.empty)
+        op.compiledRelSnippetContinuationFn(storageManager, op.ops.map(o => sm => interpretIRRelOp(o)))
 
       case op: ProjectOp =>
-        op.runRel(storageManager, Seq(sm => interpretIRRelOp(op.subOp)))
+        op.runRel_continuation(storageManager, Seq(sm => interpretIRRelOp(op.subOp)))
 
       case op: UnionOp =>
-        op.runRel(storageManager, op.ops.map(o => sm => interpretIRRelOp(o)))
+        op.runRel_continuation(storageManager, op.ops.map(o => sm => interpretIRRelOp(o)))
 
       case op: DiffOp =>
 //        op.runRel(storageManager, Seq(sm => interpretIRRelOp(op.lhs), sm => interpretIRRelOp(op.rhs)))
-        if (op.compiledRelSnippetFn == null)
+        if (op.compiledRelSnippetContinuationFn == null)
           given staging.Compiler = dedicatedDotty
-          op.compiledRelSnippetFn = snippetCompiler.getCompiledRelSnippet(op, ctx, Seq.empty)
+          op.compiledRelSnippetContinuationFn = snippetCompiler.getCompiledRelSnippet(op, ctx, Seq.empty)
 
-        op.compiledRelSnippetFn(storageManager, Seq(sm => interpretIRRelOp(op.lhs), sm => interpretIRRelOp(op.rhs)))
+        op.compiledRelSnippetContinuationFn(storageManager, Seq(sm => interpretIRRelOp(op.lhs), sm => interpretIRRelOp(op.rhs)))
 
       case op: DebugPeek =>
-        op.runRel(storageManager, Seq(sm => interpretIRRelOp(op.op)))
+        op.runRel_continuation(storageManager, Seq(sm => interpretIRRelOp(op.op)))
 
       case _ => throw new Exception("Error: interpretRelOp called with unit operation")
     }
@@ -72,22 +72,22 @@ class JITStagedSnippetExecutionEngine(override val storageManager: CollectionsSt
 //    println(s"IN INTERPRET IR, code=${irTree.code}")
     irTree match {
       case op: ProgramOp =>
-        op.run(storageManager, Seq(sm => interpretIR(op.body)))
+        op.run_continuation(storageManager, Seq(sm => interpretIR(op.body)))
 
       case op: DoWhileOp =>
-        op.run(storageManager, Seq(sm => interpretIR(op.body)))
+        op.run_continuation(storageManager, Seq(sm => interpretIR(op.body)))
 
       case op: SequenceOp =>
-        op.run(storageManager, op.ops.map(o => sm => interpretIR(o)))
+        op.run_continuation(storageManager, op.ops.map(o => sm => interpretIR(o)))
 
       case op: SwapAndClearOp =>
-        op.run(storageManager)
+        op.run_continuation(storageManager)
 
       case op: InsertOp =>
-        op.run(storageManager, Seq((sm: CollectionsStorageManager) => interpretIRRelOp(op.subOp)) ++ op.subOp2.map(sop => (sm: CollectionsStorageManager) => interpretIRRelOp(sop)))
+        op.run_continuation(storageManager, Seq((sm: CollectionsStorageManager) => interpretIRRelOp(op.subOp)) ++ op.subOp2.map(sop => (sm: CollectionsStorageManager) => interpretIRRelOp(sop)))
 
       case op: DebugNode =>
-        op.run(storageManager)
+        op.run_continuation(storageManager)
 
       case _ =>
         irTree match {
