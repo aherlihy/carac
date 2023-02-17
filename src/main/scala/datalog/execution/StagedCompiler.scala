@@ -25,7 +25,8 @@ class StagedCompiler(val storageManager: StorageManager) {
     }
   }
 
-  def compileIRRelOp[T](irTree: IRRelOp)(using stagedSM: Expr[StorageManager {type EDB = T}], t: Type[T])(using ctx: InterpreterContext)(using Quotes): Expr[T] = { // TODO: Instead of parameterizing, use staged path dependent type: i.e. stagedSM.EDB
+//  def compileIRRelOp[T](irTree: IRRelOp)(using stagedSM: Expr[StorageManager {type EDB = T}], t: Type[T])(using Quotes): Expr[T] = { // TODO: Instead of parameterizing, use staged path dependent type: i.e. stagedSM.EDB
+  def compileIRRelOp(irTree: IRRelOp)(using stagedSM: Expr[CollectionsStorageManager])(using Quotes): Expr[CollectionsStorageManager#EDB] = { // TODO: Instead of parameterizing, use staged path dependent type: i.e. stagedSM.EDB
     irTree match {
       case ScanOp(rId, db, knowledge) =>
         db match {
@@ -93,7 +94,8 @@ class StagedCompiler(val storageManager: StorageManager) {
     }
   }
 
-  def compileIR[T](irTree: IROp)(using stagedSM: Expr[StorageManager {type EDB = T}], t: Type[T])(using ctx: InterpreterContext)(using Quotes): Expr[Any] = { // TODO: Instead of parameterizing, use staged path dependent type: i.e. stagedSM.EDB
+//  def compileIR[T](irTree: IROp)(using stagedSM: Expr[StorageManager {type EDB = T}], t: Type[T])(using Quotes): Expr[Any] = { // TODO: Instead of parameterizing, use staged path dependent type: i.e. stagedSM.EDB
+  def compileIR(irTree: IROp)(using stagedSM: Expr[CollectionsStorageManager])(using Quotes): Expr[Any] = {
     irTree match {
       case ProgramOp(body) =>
         compileIR(body)
@@ -174,14 +176,13 @@ class StagedCompiler(val storageManager: StorageManager) {
     threadField.setAccessible(true)
     threadField.set(contextBase, null)
 
-  def getCompiled(irTree: IROp, ctx: InterpreterContext)(using compiler: staging.Compiler): CollectionsStorageManager => CollectionsStorageManager#EDB = {
-    given irCtx: InterpreterContext = ctx
+  def getCompiled(irTree: IROp)(using compiler: staging.Compiler): CompiledFn = {
     val result = staging.run {
-      val res: Expr[CollectionsStorageManager => Any] =
-        '{ (stagedSm: CollectionsStorageManager) => ${ compileIR[CollectionsStorageManager#EDB](irTree)(using 'stagedSm) } }
+      val res: Expr[CompiledFn] =
+        '{ (stagedSm: CollectionsStorageManager) => ${ compileIR(irTree)(using 'stagedSm) } }
       debug("generated code: ", () => res.show)
       res
-    }.asInstanceOf[CollectionsStorageManager => CollectionsStorageManager#EDB]
+    }
     clearDottyThread(compiler)
     result
   }

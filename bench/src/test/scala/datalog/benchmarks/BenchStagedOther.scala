@@ -1,7 +1,8 @@
 package datalog.benchmarks
 
 import datalog.dsl.{Constant, MODE, Program, Relation, Term}
-import datalog.execution.{ExecutionEngine, SemiNaiveExecutionEngine, CompiledStagedExecutionEngine, ir}
+import datalog.execution.ir.CompiledFn
+import datalog.execution.{CompiledStagedExecutionEngine, ExecutionEngine, SemiNaiveExecutionEngine, ir}
 import datalog.storage.CollectionsStorageManager
 import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.Blackhole
@@ -168,7 +169,7 @@ class BenchStagedOther_run_only_compiled extends OtherBench {
   var toSolveR: Relation[Constant] = null
   var tree: ir.IROp = null
   var ctx: ir.InterpreterContext = null
-  var compiled: CollectionsStorageManager => CollectionsStorageManager#EDB = null
+  var compiled: CompiledFn = null
 
   // measure cost of tree gen, compiling, running
   @Setup(Level.Invocation)
@@ -181,7 +182,7 @@ class BenchStagedOther_run_only_compiled extends OtherBench {
     val x1 = engine.generateProgramTree(toSolveR.id)
     tree = x1._1
     ctx = x1._2
-    compiled = engine.preCompile(tree, ctx)
+    compiled = engine.preCompile(tree)
   }
 
   @TearDown

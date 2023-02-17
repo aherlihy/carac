@@ -44,21 +44,18 @@ class StagedCompileTest extends munit.FunSuite {
   val anyCapture = "([\\s\\S]*?)"
 
   // TODO: string compare prob too brittle but ok for dev
-  def compileCheck(miniprog: IROp, check: (String => String)*): CollectionsStorageManager => storageManager.EDB = {
-    debug("MINI PROG\n", () => storageManager.printer.printIR(miniprog))
-
+  def compileCheck(miniprog: IROp, check: (String => String)*): CompiledFn = {
     given staging.Compiler = staging.Compiler.make(getClass.getClassLoader)
-    val compiled: CollectionsStorageManager => storageManager.EDB =
-      staging.run {
-        val res: Expr[CollectionsStorageManager => Any] =
-          '{ (stagedSm: CollectionsStorageManager) => ${engine.compiler.compileIR[collection.mutable.ArrayBuffer[IndexedSeq[Term]]](miniprog)(using 'stagedSm)} }
-        val strRes = res.show
-        check.foldLeft(strRes)((generatedString, op) =>
-          op(generatedString)
-        )
-        res
-      }.asInstanceOf[CollectionsStorageManager => storageManager.EDB]
-    compiled
+    staging.run {
+      val res: Expr[CompiledFn] =
+        '{ (stagedSm: CollectionsStorageManager) => ${ engine.compiler.compileIR(miniprog)(using 'stagedSm) } }
+      debug("generated code: ", () => res.show)
+      val strRes = res.show
+      check.foldLeft(strRes)((generatedString, op) =>
+        op(generatedString)
+      )
+      res
+    }
   }
   def generalMatch(test: Regex)(generatedString: String): String =
     generatedString match {

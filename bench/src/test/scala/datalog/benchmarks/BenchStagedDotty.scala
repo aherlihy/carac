@@ -61,13 +61,13 @@ class BenchStagedDotty_cold {
   @Benchmark def compile_tree(blackhole: Blackhole): Unit = {
     given staging.Compiler = engine.dedicatedDotty
     blackhole.consume(
-      engine.compiler.getCompiled(tree, ctx)
+      engine.compiler.getCompiled(tree)
     )
   }
   @Benchmark def compile_naiveEval(blackhole: Blackhole): Unit = {
     given staging.Compiler = engine.dedicatedDotty
     blackhole.consume(
-      engine.compiler.getCompiled(naiveEval, ctx)
+      engine.compiler.getCompiled(naiveEval)
     )
   }
 
@@ -75,7 +75,7 @@ class BenchStagedDotty_cold {
     given staging.Compiler = engine.dedicatedDotty
 
     blackhole.consume(
-      engine.compiler.getCompiled(doWhile, ctx)
+      engine.compiler.getCompiled(doWhile)
     )
   }
 
@@ -83,7 +83,7 @@ class BenchStagedDotty_cold {
     given staging.Compiler = engine.dedicatedDotty
 
     blackhole.consume(
-      engine.compiler.getCompiled(snEval, ctx)
+      engine.compiler.getCompiled(snEval)
     )
   }
 
@@ -91,7 +91,7 @@ class BenchStagedDotty_cold {
     given staging.Compiler = engine.dedicatedDotty
 
     blackhole.consume(
-      engine.compiler.getCompiled(snEvalRule, ctx)
+      engine.compiler.getCompiled(snEvalRule)
     )
   }
 
@@ -99,7 +99,7 @@ class BenchStagedDotty_cold {
     given staging.Compiler = engine.dedicatedDotty
 
     blackhole.consume(
-      engine.compiler.getCompiled(join, ctx)
+      engine.compiler.getCompiled(join)
     )
   }
 
@@ -107,7 +107,7 @@ class BenchStagedDotty_cold {
     given staging.Compiler = engine.dedicatedDotty
 
     blackhole.consume(
-      engine.compiler.getCompiled(scan, ctx)
+      engine.compiler.getCompiled(scan)
     )
   }
 }
@@ -159,13 +159,13 @@ class BenchStagedDotty_warm {
   @Benchmark def compile_tree(blackhole: Blackhole): Unit = {
     given staging.Compiler = engine.dedicatedDotty
     blackhole.consume(
-      engine.compiler.getCompiled(tree, ctx)
+      engine.compiler.getCompiled(tree)
     )
   }
   @Benchmark def compile_naiveEval(blackhole: Blackhole): Unit = {
     given staging.Compiler = engine.dedicatedDotty
     blackhole.consume(
-      engine.compiler.getCompiled(naiveEval, ctx)
+      engine.compiler.getCompiled(naiveEval)
     )
   }
 
@@ -173,7 +173,7 @@ class BenchStagedDotty_warm {
     given staging.Compiler = engine.dedicatedDotty
 
     blackhole.consume(
-      engine.compiler.getCompiled(doWhile, ctx)
+      engine.compiler.getCompiled(doWhile)
     )
   }
 
@@ -181,7 +181,7 @@ class BenchStagedDotty_warm {
     given staging.Compiler = engine.dedicatedDotty
 
     blackhole.consume(
-      engine.compiler.getCompiled(snEval, ctx)
+      engine.compiler.getCompiled(snEval)
     )
   }
 
@@ -189,7 +189,7 @@ class BenchStagedDotty_warm {
     given staging.Compiler = engine.dedicatedDotty
 
     blackhole.consume(
-      engine.compiler.getCompiled(snEvalRule, ctx)
+      engine.compiler.getCompiled(snEvalRule)
     )
   }
 
@@ -197,7 +197,7 @@ class BenchStagedDotty_warm {
     given staging.Compiler = engine.dedicatedDotty
 
     blackhole.consume(
-      engine.compiler.getCompiled(join, ctx)
+      engine.compiler.getCompiled(join)
     )
   }
 
@@ -205,7 +205,7 @@ class BenchStagedDotty_warm {
     given staging.Compiler = engine.dedicatedDotty
 
     blackhole.consume(
-      engine.compiler.getCompiled(scan, ctx)
+      engine.compiler.getCompiled(scan)
     )
   }
 }
