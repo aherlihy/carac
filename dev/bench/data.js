@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1676637966324,
+  "lastUpdate": 1676642454632,
   "repoUrl": "https://github.com/aherlihy/carac",
   "entries": {
     "Benchmark": [
@@ -13072,6 +13072,342 @@ window.BENCHMARK_DATA = {
           {
             "name": "datalog.benchmarks.examples.tree_benchmark.ci_staged_compiled",
             "value": 387.1799256435309,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "herlihyap@gmail.com",
+            "name": "aherlihy",
+            "username": "aherlihy"
+          },
+          "committer": {
+            "email": "herlihyap@gmail.com",
+            "name": "aherlihy",
+            "username": "aherlihy"
+          },
+          "distinct": true,
+          "id": "32985748e8ac6311a034baa984bc8c5dded2fc9a",
+          "message": "fix benchmarks",
+          "timestamp": "2023-02-17T14:10:24+01:00",
+          "tree_id": "b42b779eb317d819d314cfef675aa8b5298e2a3b",
+          "url": "https://github.com/aherlihy/carac/commit/32985748e8ac6311a034baa984bc8c5dded2fc9a"
+        },
+        "date": 1676642453914,
+        "tool": "jmh",
+        "benches": [
+          {
+            "name": "datalog.benchmarks.examples.ackermann_benchmark.ci_seminaive_collections",
+            "value": 28.962730025620914,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.ackermann_benchmark.ci_staged_compiled",
+            "value": 34.373333416,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.andersen_benchmark.ci_seminaive_collections",
+            "value": 0.4146560583322681,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.andersen_benchmark.ci_staged_compiled",
+            "value": 218.18236959907458,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.anon_var_benchmark.ci_seminaive_collections",
+            "value": 399.22444910799993,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.anon_var_benchmark.ci_staged_compiled",
+            "value": 608.4989106159999,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.cba_expr_value_benchmark.ci_seminaive_collections",
+            "value": 6.6176562268914285,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.cba_expr_value_benchmark.ci_staged_compiled",
+            "value": 467.6719064048778,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.clique_benchmark.ci_seminaive_collections",
+            "value": 20.230592606322652,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.clique_benchmark.ci_staged_compiled",
+            "value": 363.4010631505851,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.cliquer_benchmark.ci_seminaive_collections",
+            "value": 2.0303200493800997,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.cliquer_benchmark.ci_staged_compiled",
+            "value": 342.14031853842533,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.equal_benchmark.ci_seminaive_collections",
+            "value": 96.4973533871256,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.equal_benchmark.ci_staged_compiled",
+            "value": 468.106683033403,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.func_benchmark.ci_seminaive_collections",
+            "value": 1.4941836541150668,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.func_benchmark.ci_staged_compiled",
+            "value": 242.90505727381077,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.grad_benchmark.ci_seminaive_collections",
+            "value": 0.13610560616881787,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.grad_benchmark.ci_staged_compiled",
+            "value": 139.35875378369775,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.input_output_benchmark.ci_seminaive_collections",
+            "value": 4.014638999765321,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.input_output_benchmark.ci_staged_compiled",
+            "value": 4235.484645677323,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.is_after_benchmark.ci_seminaive_collections",
+            "value": 81.93322758707237,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.is_after_benchmark.ci_staged_compiled",
+            "value": 285.3005053245721,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.is_before_benchmark.ci_seminaive_collections",
+            "value": 11.905326339971362,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.is_before_benchmark.ci_staged_compiled",
+            "value": 180.55893200431208,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.java_pointsto_benchmark.ci_seminaive_collections",
+            "value": 0.30133286941012055,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.java_pointsto_benchmark.ci_staged_compiled",
+            "value": 11.180737692809563,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.metro_benchmark.ci_seminaive_collections",
+            "value": 0.9032962204606048,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.metro_benchmark.ci_staged_compiled",
+            "value": 198.31188130640766,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.palindrome_benchmark.ci_seminaive_collections",
+            "value": 83.4431986927359,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.palindrome_benchmark.ci_staged_compiled",
+            "value": 389.85850423368055,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.pointsto_benchmark.ci_seminaive_collections",
+            "value": 267.01909209,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.pointsto_benchmark.ci_staged_compiled",
+            "value": 258.77510897,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.prime_benchmark.ci_seminaive_collections",
+            "value": 91.7358894540107,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.prime_benchmark.ci_staged_compiled",
+            "value": 821.7227062811496,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.puzzle_benchmark.ci_seminaive_collections",
+            "value": 7.649272737590968,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.puzzle_benchmark.ci_staged_compiled",
+            "value": 499.9102663745962,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.rsg_benchmark.ci_seminaive_collections",
+            "value": 1.0448412362282986,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.rsg_benchmark.ci_staged_compiled",
+            "value": 172.728000249753,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.ship_benchmark.ci_seminaive_collections",
+            "value": 0.3884937249812439,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.ship_benchmark.ci_staged_compiled",
+            "value": 147.99691327521984,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.small_benchmark.ci_seminaive_collections",
+            "value": 0.8968696390629063,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.small_benchmark.ci_staged_compiled",
+            "value": 343.0906344723373,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.tc_benchmark.ci_seminaive_collections",
+            "value": 1.5572258510272983,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.tc_benchmark.ci_staged_compiled",
+            "value": 163.27203918347792,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.traffic_benchmark.ci_seminaive_collections",
+            "value": 0.7237455061296434,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.traffic_benchmark.ci_staged_compiled",
+            "value": 382.686358679189,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.trains_benchmark.ci_seminaive_collections",
+            "value": 26.838194566315792,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.trains_benchmark.ci_staged_compiled",
+            "value": 40.36926697692307,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.trans_benchmark.ci_seminaive_collections",
+            "value": 0.595954332840928,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.trans_benchmark.ci_staged_compiled",
+            "value": 142.2416897454927,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.tree_benchmark.ci_seminaive_collections",
+            "value": 1.2524193480534056,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.tree_benchmark.ci_staged_compiled",
+            "value": 396.9953272134429,
             "unit": "s/op",
             "extra": "iterations: 5\nforks: 1\nthreads: 1"
           }
