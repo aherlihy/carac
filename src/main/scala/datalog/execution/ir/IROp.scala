@@ -9,7 +9,8 @@ import datalog.tools.Debug.debug
 import java.util.concurrent.atomic.AtomicReference
 import scala.collection.mutable
 import scala.concurrent.duration.Duration
-import scala.concurrent.{Future, Await}
+import scala.concurrent.{Await, Future}
+import scala.quoted.*
 import scala.util.{Failure, Success}
 
 enum OpCode:

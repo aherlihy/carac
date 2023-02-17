@@ -20,7 +20,7 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
   private val tCtx = ASTTransformerContext(using precedenceGraph)
   val transforms: Seq[Transformer] = Seq(CopyEliminationPass(using tCtx), JoinIndexPass(using tCtx))
   val compiler: StagedCompiler = StagedCompiler(storageManager)
-  val dedicatedDotty: staging.Compiler = staging.Compiler.make(getClass.getClassLoader)  // TODO: should this be initialized async too?
+  val dedicatedDotty: staging.Compiler = staging.Compiler.make(getClass.getClassLoader)
 
   def createIR(ast: ASTNode)(using InterpreterContext): IROp = IRTreeGenerator().generateSemiNaive(ast)
 
@@ -238,7 +238,7 @@ abstract class StagedExecutionEngine(val storageManager: StorageManager) extends
 //    val irTree = DoWhileOp(SequenceOp(Seq(s, s, s, s, s, s)), DB.Derived)
 
 
-//    debug("IRTree: ", () => storageManager.printer.printIR(irTree))
+    debug("IRTree: ", () => storageManager.printer.printIR(irTree))
     mode match {
       case MODE.Compile =>
         solveCompiled(irTree, irCtx)

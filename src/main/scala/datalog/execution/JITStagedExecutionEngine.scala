@@ -44,7 +44,6 @@ class JITStagedExecutionEngine(override val storageManager: CollectionsStorageMa
   }
   override def interpretIR(irTree: IROp)(using ctx: InterpreterContext): Any = {
 //    println(s"IN INTERPRET IR, code=${irTree.code}")
-    given CollectionsStorageManager = storageManager
     irTree match {
       case op: ProgramOp =>
         trees.append(op)
@@ -153,7 +152,7 @@ class JITStagedExecutionEngine(override val storageManager: CollectionsStorageMa
     }
   }
 
-  def waitForAll(): Unit = {
+  def waitForStragglers(): Unit = {
     debug(s"awaiting in aot=$aot gran=$granularity block=$block", () => trees.map(t => t.code).mkString("[", ", ", "]"))
     trees.foreach(t =>
       val subTree = t.getSubTree(granularity)

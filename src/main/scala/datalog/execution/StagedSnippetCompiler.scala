@@ -8,7 +8,10 @@ import datalog.tools.Debug.debug
 import scala.quoted.*
 
 /**
- * Instead of compiling entire subtree, compile only contents of the node and call into continue
+ * Instead of compiling entire subtree, compile only contents of the node and call into continue.
+ * Unclear if it will ever be useful to only compile a single, mid-tier node, and go back to
+ * interpretation (maybe for save points for de-optimizations?) but this is mostly just a POC
+ * that it's possible.
  */
 class StagedSnippetCompiler(val storageManager: StorageManager) {
   given ToExpr[Constant] with {
@@ -26,7 +29,7 @@ class StagedSnippetCompiler(val storageManager: StorageManager) {
     }
   }
 
-  def compileIRRelOp[T](irTree: IRRelOp)(using stagedSM: Expr[StorageManager {type EDB = T}], t: Type[T])(using ctx: InterpreterContext)(using Quotes): Expr[T] = { // TODO: Instead of parameterizing, use staged path dependent type: i.e. stagedSM.EDB
+  def compileIRRelOp[T](irTree: IRRelOp)(using stagedSM: Expr[CollectionsStorageManager])(using stagedFns: Expr[Seq[CompiledRelFn]])(using ctx: InterpreterContext)(using Quotes): Expr[CollectionsStorageManager#EDB] = { // TODO: Instead of parameterizing, use staged path dependent type: i.e. stagedSM.EDB
     irTree match {
       case ScanOp(rId, db, knowledge) =>
         db match { // TODO[future]: Since edb is accessed upon first iteration, potentially optimize away getOrElse
@@ -53,7 +56,7 @@ class StagedSnippetCompiler(val storageManager: StorageManager) {
           '{ $stagedSM.EDB() }
 
       case JoinOp(subOps, keys) =>
-        val compiledOps = Expr.ofSeq(subOps.map(compileIRRelOp))
+        val compiledOps = '{ $stagedFns.map(s => s($stagedSM)) }
         // TODO[future]: inspect keys and optimize join algo
         '{
           $stagedSM.joinHelper(
@@ -82,9 +85,7 @@ class StagedSnippetCompiler(val storageManager: StorageManager) {
             '{ $stagedSM.union(${Expr.ofSeq(compiledOps)}) }
 
       case DiffOp(lhs, rhs) =>
-        val clhs = compileIRRelOp(lhs)
-        val crhs = compileIRRelOp(rhs)
-        '{ $stagedSM.diff($clhs, $crhs) }
+        '{ $stagedSM.diff($stagedFns(0)($stagedSM), $stagedFns(1)($stagedSM)) }
 
       case DebugPeek(prefix, msg, op) =>
         val res = compileIRRelOp(op)
@@ -94,7 +95,7 @@ class StagedSnippetCompiler(val storageManager: StorageManager) {
     }
   }
 
-  def compileIR[T](irTree: IROp)(using stagedSM: Expr[StorageManager {type EDB = T}], t: Type[T])(using ctx: InterpreterContext)(using Quotes): Expr[Any] = { // TODO: Instead of parameterizing, use staged path dependent type: i.e. stagedSM.EDB
+  def compileIR[T](irTree: IROp)(using stagedSM: Expr[StorageManager {type EDB = T}], t: Type[T])(using stagedFns: Expr[Seq[CompiledFn]])(using ctx: InterpreterContext)(using Quotes): Expr[Any] = { // TODO: Instead of parameterizing, use staged path dependent type: i.e. stagedSM.EDB
     irTree match {
       case ProgramOp(body) =>
         compileIR(body)
@@ -132,55 +133,55 @@ class StagedSnippetCompiler(val storageManager: StorageManager) {
               '{ $acc ; $next }
             )
 
-      case InsertOp(rId, db, knowledge, subOp, subOp2) =>
-        val res = compileIRRelOp(subOp)
-        val res2 = if (subOp2.isEmpty) '{ $stagedSM.EDB() } else compileIRRelOp(subOp2.get)
-        db match {
-          case DB.Derived =>
-            knowledge match {
-              case KNOWLEDGE.New =>
-                '{ $stagedSM.resetNewDerived(${ Expr(rId) }, $res, $res2) }
-              case KNOWLEDGE.Known =>
-                '{ $stagedSM.resetKnownDerived(${ Expr(rId) }, $res, $res2) }
-            }
-          case DB.Delta =>
-            knowledge match {
-              case KNOWLEDGE.New =>
-                '{ $stagedSM.resetNewDelta(${ Expr(rId) }, $res) }
-              case KNOWLEDGE.Known =>
-                '{ $stagedSM.resetKnownDelta(${ Expr(rId) }, $res) }
-            }
-        }
-
-      case DebugNode(prefix, msg) =>
-        '{ debug(${ Expr(prefix) }, () => $stagedSM.printer.toString()) }
-
+//      case InsertOp(rId, db, knowledge, subOp, subOp2) =>
+//        val res = compileIRRelOp(subOp)
+//        val res2 = if (subOp2.isEmpty) '{ $stagedSM.EDB() } else compileIRRelOp(subOp2.get)
+//        db match {
+//          case DB.Derived =>
+//            knowledge match {
+//              case KNOWLEDGE.New =>
+//                '{ $stagedSM.resetNewDerived(${ Expr(rId) }, $res, $res2) }
+//              case KNOWLEDGE.Known =>
+//                '{ $stagedSM.resetKnownDerived(${ Expr(rId) }, $res, $res2) }
+//            }
+//          case DB.Delta =>
+//            knowledge match {
+//              case KNOWLEDGE.New =>
+//                '{ $stagedSM.resetNewDelta(${ Expr(rId) }, $res) }
+//              case KNOWLEDGE.Known =>
+//                '{ $stagedSM.resetKnownDelta(${ Expr(rId) }, $res) }
+//            }
+//        }
+//
+//      case DebugNode(prefix, msg) =>
+//        '{ debug(${ Expr(prefix) }, () => $stagedSM.printer.toString()) }
+//
       case _ =>
         irTree match {
-          case op: IRRelOp => compileIRRelOp(op)
+//          case op: IRRelOp => compileIRRelOp(op)
           case _ =>
             throw new Exception(s"Error: unhandled node type $irTree")
         }
     }
   }
 
-  def getCompiledSnippet(irTree: IROp, ctx: InterpreterContext)(using staging.Compiler): (CollectionsStorageManager => CollectionsStorageManager#EDB) = {
+  def getCompiledSnippet(irTree: IROp, ctx: InterpreterContext, continue: Seq[CompiledRelFn])(using staging.Compiler): ((CollectionsStorageManager, Seq[CompiledFn]) => Any) = {
     given irCtx: InterpreterContext = ctx
     staging.run {
-      val res: Expr[CollectionsStorageManager => Any] =
-        '{ (stagedSm: CollectionsStorageManager) => ${ compileIR[CollectionsStorageManager#EDB](irTree)(using 'stagedSm) } }
+      val res: Expr[(CollectionsStorageManager, Seq[CompiledFn]) => Any] =
+        '{ (stagedSm: CollectionsStorageManager, stagedFns: Seq[CompiledFn]) => ${ compileIR[CollectionsStorageManager#EDB](irTree)(using 'stagedSm)(using 'stagedFns) } }
       debug("generated code: ", () => res.show)
       res
-    }.asInstanceOf[CollectionsStorageManager => CollectionsStorageManager#EDB]
+    }
   }
 
   def getCompiledRelSnippet(irTree: IRRelOp, ctx: InterpreterContext, continue: Seq[CompiledRelFn])(using staging.Compiler): ((CollectionsStorageManager, Seq[CompiledRelFn]) => CollectionsStorageManager#EDB) = {
     given irCtx: InterpreterContext = ctx
     staging.run {
       val res: Expr[(CollectionsStorageManager, Seq[CompiledRelFn]) => CollectionsStorageManager#EDB] =
-        '{ (stagedSm: CollectionsStorageManager, nextFns: Seq[CompiledRelFn]) => ${ compileIRRelOp[CollectionsStorageManager#EDB](irTree)(using 'stagedSm) } }
+        '{ (stagedSm: CollectionsStorageManager, stagedFns: Seq[CompiledRelFn]) => ${ compileIRRelOp[CollectionsStorageManager#EDB](irTree)(using 'stagedSm)(using 'stagedFns) } }
       debug("generated code: ", () => res.show)
       res
-    }.asInstanceOf[(CollectionsStorageManager, Seq[CompiledRelFn]) => CollectionsStorageManager#EDB]
+    }
   }
 }

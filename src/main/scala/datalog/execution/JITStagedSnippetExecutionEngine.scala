@@ -12,12 +12,24 @@ import scala.concurrent.{Await, Future}
 import scala.quoted.staging
 import scala.util.{Failure, Success}
 
-class JITStagedSnippetExecutionEngine(override val storageManager: CollectionsStorageManager, granularity: OpCode, aot: Boolean, block: Boolean) extends StagedExecutionEngine(storageManager) {
+/**
+ * Instead of compiling entire subtree, compile only contents of the node and call into continue.
+ * Unclear if it will ever be useful to only compile a single, mid-tier node, and go back to
+ * interpretation (maybe for save points for de-optimizations?) but this is mostly just a POC
+ * that it's possible.
+ *
+ * Alternatively, could potentially make the run methods into macros or at least generate exprs
+ * so they can be cached and reused.
+ */
+class JITStagedSnippetExecutionEngine(override val storageManager: CollectionsStorageManager,
+                                       granularity: OpCode,
+                                       aot: Boolean,
+                                       block: Boolean) extends JITStagedExecutionEngine(storageManager, granularity, aot, block) {
   import storageManager.EDB
-  val trees: mutable.Queue[ProgramOp] = mutable.Queue.empty
+  val snippetCompiler: StagedSnippetCompiler = StagedSnippetCompiler(storageManager)
   override def solve(rId: Int, mode: MODE): Set[Seq[Term]] = super.solve(rId, MODE.Interpret)
-  def interpretIRRelOp(irTree: IRRelOp)(using ctx: InterpreterContext): storageManager.EDB = {
-    println(s"IN INTERPRET REL_IR, code=${irTree.code}")
+  override def interpretIRRelOp(irTree: IRRelOp)(using ctx: InterpreterContext): storageManager.EDB = {
+//    println(s"IN INTERPRET REL_IR, code=${irTree.code}")
     irTree match {
       case op: ScanOp =>
         op.runRel(storageManager)
@@ -30,7 +42,11 @@ class JITStagedSnippetExecutionEngine(override val storageManager: CollectionsSt
         op.runRel(storageManager)
 
       case op: JoinOp =>
-        op.runRel(storageManager, op.ops.map(o => sm => interpretIRRelOp(o)))
+//        op.runRel(storageManager, op.ops.map(o => sm => interpretIRRelOp(o)))
+        if (op.compiledRelSnippetFn == null)
+          given staging.Compiler = dedicatedDotty
+          op.compiledRelSnippetFn = snippetCompiler.getCompiledRelSnippet(op, ctx, Seq.empty)
+        op.compiledRelSnippetFn(storageManager, op.ops.map(o => sm => interpretIRRelOp(o)))
 
       case op: ProjectOp =>
         op.runRel(storageManager, Seq(sm => interpretIRRelOp(op.subOp)))
@@ -39,7 +55,12 @@ class JITStagedSnippetExecutionEngine(override val storageManager: CollectionsSt
         op.runRel(storageManager, op.ops.map(o => sm => interpretIRRelOp(o)))
 
       case op: DiffOp =>
-        op.runRel(storageManager, Seq(sm => interpretIRRelOp(op.lhs), sm => interpretIRRelOp(op.rhs)))
+//        op.runRel(storageManager, Seq(sm => interpretIRRelOp(op.lhs), sm => interpretIRRelOp(op.rhs)))
+        if (op.compiledRelSnippetFn == null)
+          given staging.Compiler = dedicatedDotty
+          op.compiledRelSnippetFn = snippetCompiler.getCompiledRelSnippet(op, ctx, Seq.empty)
+
+        op.compiledRelSnippetFn(storageManager, Seq(sm => interpretIRRelOp(op.lhs), sm => interpretIRRelOp(op.rhs)))
 
       case op: DebugPeek =>
         op.runRel(storageManager, Seq(sm => interpretIRRelOp(op.op)))
@@ -48,7 +69,7 @@ class JITStagedSnippetExecutionEngine(override val storageManager: CollectionsSt
     }
   }
   override def interpretIR(irTree: IROp)(using ctx: InterpreterContext): Any = {
-    println(s"IN INTERPRET IR, code=${irTree.code}")
+//    println(s"IN INTERPRET IR, code=${irTree.code}")
     irTree match {
       case op: ProgramOp =>
         op.run(storageManager, Seq(sm => interpretIR(op.body)))
@@ -75,30 +96,5 @@ class JITStagedSnippetExecutionEngine(override val storageManager: CollectionsSt
             throw new Exception(s"Error: unhandled node type $irTree")
         }
     }
-  }
-  // TODO: this could potentially go as a tree transform phase
-  def aotCompile(tree: ProgramOp)(using ctx: InterpreterContext): Unit = {
-    val subTree = tree.getSubTree(granularity)
-    debug("", () => s"ahead-of-time compiling ${subTree.code}")
-    given scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
-    given staging.Compiler = dedicatedDotty
-
-    subTree.compiledFn = Future {
-      compiler.getCompiled(subTree, ctx)
-    }
-  }
-
-  def waitForAll(): Unit = {
-    debug(s"awaiting in aot=$aot gran=$granularity block=$block", () => trees.map(t => t.code).mkString("[", ", ", "]"))
-    trees.foreach(t =>
-      val subTree = t.getSubTree(granularity)
-      if (subTree.compiledFn != null)
-        try {
-          Await.result(subTree.compiledFn, Duration.Inf)
-        } catch {
-          case e  => throw new Exception(s"Exception cleaning up compiler: ${e.getCause}")
-        }
-    )
-    trees.clear()
   }
 }

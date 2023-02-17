@@ -182,7 +182,7 @@ class StagedCompiler(val storageManager: StorageManager) {
       debug("generated code: ", () => res.show)
       res
     }.asInstanceOf[CollectionsStorageManager => CollectionsStorageManager#EDB]
-//    clearDottyThread(compiler)
+    clearDottyThread(compiler)
     result
   }
 }

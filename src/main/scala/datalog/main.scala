@@ -1,7 +1,7 @@
 package datalog
 
 import datalog.dsl.MODE.Interpret
-import datalog.execution.{ExecutionEngine, NaiveExecutionEngine, SemiNaiveExecutionEngine, JITStagedExecutionEngine, InterpretedStagedExecutionEngine, CompiledStagedExecutionEngine, ir}
+import datalog.execution.{CompiledStagedExecutionEngine, ExecutionEngine, InterpretedStagedExecutionEngine, JITStagedExecutionEngine, JITStagedSnippetExecutionEngine, NaiveExecutionEngine, SemiNaiveExecutionEngine, ir}
 import datalog.dsl.{Constant, Program, __}
 import datalog.execution.ast.transform.CopyEliminationPass
 import datalog.execution.ir.InterpreterContext
@@ -527,14 +527,14 @@ def anon_var(program: Program) = {
 //  tc(program2)
 //  println("\n\n_______________________\n\n")
 //
-  println("STAGED INTERP")
-  given engine3: ExecutionEngine = new InterpretedStagedExecutionEngine(new CollectionsStorageManager())
-  val program3 = Program(engine3)
-  tc(program3)
-  println("\n\n_______________________\n\n")
+//  println("STAGED INTERP")
+//  given engine3: ExecutionEngine = new InterpretedStagedExecutionEngine(new CollectionsStorageManager())
+//  val program3 = Program(engine3)
+//  tc(program3)
+//  println("\n\n_______________________\n\n")
 
   println("JIT STAGED: aot Loop Body")
-  val engine4: ExecutionEngine = new JITStagedExecutionEngine(new CollectionsStorageManager(), ir.OpCode.LOOP_BODY, false, false)
+  val engine4: ExecutionEngine = new JITStagedSnippetExecutionEngine(new CollectionsStorageManager(), ir.OpCode.LOOP_BODY, false, false)
   val program4 = Program(engine4)
   tc(program4)
   println("\n\n_______________________\n\n")
@@ -546,8 +546,8 @@ def anon_var(program: Program) = {
 //  println("\n\n_______________________\n\n")
   //  println("JIT STAGED")
 //
-//  given engine3: ExecutionEngine = new SemiNaiveJITStagedExecutionEngine(new CollectionsStorageManager())
+//  given engine3: ExecutionEngine = new CompiledStagedExecutionEngine(new CollectionsStorageManager())//, ir.OpCode.LOOP_BODY, false, false)
 //  val program3 = Program(engine3)
-//  benchStaged10x(program3)
+//  tc(program3)
 //  println("\n\n_______________________\n\n")
 }

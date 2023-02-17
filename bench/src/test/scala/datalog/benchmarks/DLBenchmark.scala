@@ -63,7 +63,7 @@ abstract class DLBenchmark {
   def finish(): Unit = {
     debug("in finish: ", () => programs.keys.mkString("[", ", ", "]"))
     programs.keys.filter(k => k.contains("JITStaged")).foreach(k =>
-      programs(k).ee.asInstanceOf[JITStagedExecutionEngine].waitForAll()
+      programs(k).ee.asInstanceOf[JITStagedExecutionEngine].waitForStragglers()
     )
     assert(result.nonEmpty)
     if (toSolve != "_") { // solve for one relation, check all expected
