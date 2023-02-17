@@ -1,6 +1,6 @@
 package datalog.execution.ir
 
-import datalog.execution.{JITStagedExecutionEngine, JoinIndexes, PrecedenceGraph, StagedCompiler, ir}
+import datalog.execution.{JoinIndexes, PrecedenceGraph, StagedCompiler, ir}
 import datalog.execution.ast.*
 import datalog.storage.{CollectionsStorageManager, DB, KNOWLEDGE, RelationId, StorageManager}
 import datalog.tools.Debug

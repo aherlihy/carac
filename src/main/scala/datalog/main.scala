@@ -1,7 +1,6 @@
 package datalog
 
-import datalog.dsl.MODE.Interpret
-import datalog.execution.{CompiledStagedExecutionEngine, ExecutionEngine, InterpretedStagedExecutionEngine, JITStagedExecutionEngine, JITStagedSnippetExecutionEngine, NaiveExecutionEngine, SemiNaiveExecutionEngine, ir}
+import datalog.execution.{ExecutionEngine, SemiNaiveExecutionEngine, StagedExecutionEngine, ir}
 import datalog.dsl.{Constant, Program, __}
 import datalog.execution.ast.transform.CopyEliminationPass
 import datalog.execution.ir.InterpreterContext
@@ -61,7 +60,7 @@ def tc_long(program: Program): Unit = {
   base("a", "b") :- ()
   base("b", "c") :- ()
   base("c", "d") :- ()
-  println("RES=" + tc.solve(mode = Interpret))
+  println("RES=" + tc.solve())
 }
 
 def reversible(program: Program, engine: ExecutionEngine): Unit = {
@@ -85,7 +84,7 @@ def reversible(program: Program, engine: ExecutionEngine): Unit = {
   query(x) :- equiv(x, "v2")
 
 //  println("RES=" + engine.solveCompiled(query.id))
-  println("RES=" + query.solve(mode = Interpret))
+  println("RES=" + query.solve())
 }
 
 def func(program: Program) = {
@@ -225,7 +224,7 @@ def cliquer(program: Program): Unit = {
 
   reachable("e", "f") :- ()
 
-  println("reachable=" + reachable.solve(mode = Interpret))
+  println("reachable=" + reachable.solve())
 }
 
 def input_output(program: Program): Unit = {
@@ -528,7 +527,7 @@ def anon_var(program: Program) = {
 //  println("\n\n_______________________\n\n")
 //
   println("STAGED INTERP")
-  given engine3: ExecutionEngine = new InterpretedStagedExecutionEngine(new CollectionsStorageManager())
+  given engine3: ExecutionEngine = new StagedExecutionEngine(new CollectionsStorageManager())
   val program3 = Program(engine3)
   tc(program3)
   println("\n\n_______________________\n\n")

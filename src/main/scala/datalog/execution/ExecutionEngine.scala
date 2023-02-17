@@ -1,6 +1,6 @@
 package datalog.execution
 
-import datalog.dsl.{Atom, Constant, MODE, Term, Variable}
+import datalog.dsl.{Atom, Constant, Term, Variable}
 import datalog.storage.{RelationId, StorageManager}
 
 import scala.collection.mutable
@@ -15,7 +15,7 @@ trait ExecutionEngine {
   def insertIDB(rId: RelationId, rule: Seq[Atom]): Unit
   def insertEDB(body: Atom): Unit
 
-  def solve(rId: RelationId, mode: MODE): Set[Seq[Term]]
+  def solve(rId: RelationId, jitOptions: JITOptions = JITOptions()): Set[Seq[Term]]
   def get(rId: RelationId): Set[Seq[Term]]
   def get(name: String): Set[Seq[Term]]
 

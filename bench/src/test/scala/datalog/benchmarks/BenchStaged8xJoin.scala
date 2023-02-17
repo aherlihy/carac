@@ -1,8 +1,8 @@
 package datalog.benchmarks
 
-import datalog.dsl.{Constant, MODE, Program, Relation, Term}
+import datalog.dsl.{Constant, Program, Relation, Term}
 import datalog.execution.ir.CompiledFn
-import datalog.execution.{CompiledStagedExecutionEngine, ExecutionEngine, SemiNaiveExecutionEngine, ir}
+import datalog.execution.{ExecutionEngine, JITOptions, SemiNaiveExecutionEngine, StagedExecutionEngine, ir}
 import datalog.storage.CollectionsStorageManager
 import org.openjdk.jmh.annotations.{Benchmark, BenchmarkMode, Fork, Level, Measurement, Mode, Scope, Setup, State, Warmup}
 import org.openjdk.jmh.infra.Blackhole
@@ -59,12 +59,12 @@ object initialize_8xJoin {
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class BenchStaged8xJoin_full_compiled {
-  var engine: CompiledStagedExecutionEngine = null
+  var engine: StagedExecutionEngine = null
   var program: Program = null
   var toSolve: Relation[Constant] = null
   @Setup(Level.Invocation)
   def setup(): Unit = {
-    engine = CompiledStagedExecutionEngine(CollectionsStorageManager())
+    engine = StagedExecutionEngine(CollectionsStorageManager())
     program = Program(engine)
     toSolve = initialize_8xJoin.pretest(program)
     Thread.sleep(10000)
@@ -72,7 +72,7 @@ class BenchStaged8xJoin_full_compiled {
   // measure cost of tree gen, compiling, running
   @Benchmark def run(blackhole: Blackhole): Unit = {
     blackhole.consume(
-      toSolve.solve(MODE.Compile)
+      toSolve.solve()
     )
   }
 }
@@ -82,7 +82,7 @@ class BenchStaged8xJoin_full_compiled {
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class BenchStaged8xJoin_compile_and_run {
-  var engine: CompiledStagedExecutionEngine = null
+  var engine: StagedExecutionEngine = null
   var program: Program = null
   var toSolve: Relation[Constant] = null
   var tree: ir.IROp = null
@@ -90,7 +90,7 @@ class BenchStaged8xJoin_compile_and_run {
   // measure cost of tree gen, compiling, running
   @Setup(Level.Invocation)
   def setup(): Unit = {
-    engine = CompiledStagedExecutionEngine(CollectionsStorageManager())
+    engine = StagedExecutionEngine(CollectionsStorageManager())
     program = Program(engine)
     toSolve = initialize_8xJoin.pretest(program)
     val x1 = engine.generateProgramTree(toSolve.id)
@@ -110,7 +110,7 @@ class BenchStaged8xJoin_compile_and_run {
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class BenchStaged8xJoin_run_only_compiled {
-  var engine: CompiledStagedExecutionEngine = null
+  var engine: StagedExecutionEngine = null
   var program: Program = null
   var toSolve: Relation[Constant] = null
   var tree: ir.IROp = null
@@ -120,7 +120,7 @@ class BenchStaged8xJoin_run_only_compiled {
   // measure cost of tree gen, compiling, running
   @Setup(Level.Invocation)
   def setup(): Unit = {
-    engine = CompiledStagedExecutionEngine(CollectionsStorageManager())
+    engine = StagedExecutionEngine(CollectionsStorageManager())
     program = Program(engine)
     toSolve = initialize_8xJoin.pretest(program)
     val x1 = engine.generateProgramTree(toSolve.id)
@@ -143,19 +143,19 @@ class BenchStaged8xJoin_run_only_compiled {
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class BenchStaged8xJoin_full_interpreted {
-  var engine: CompiledStagedExecutionEngine = null
+  var engine: StagedExecutionEngine = null
   var program: Program = null
   var toSolve: Relation[Constant] = null
   @Setup(Level.Invocation)
   def setup(): Unit = {
-    engine = CompiledStagedExecutionEngine(CollectionsStorageManager())
+    engine = StagedExecutionEngine(CollectionsStorageManager(), JITOptions(ir.OpCode.OTHER))
     program = Program(engine)
     toSolve = initialize_8xJoin.pretest(program)
   }
   // measure cost of tree gen, running interpreted
   @Benchmark def run(blackhole: Blackhole): Unit = {
     blackhole.consume(
-      toSolve.solve(MODE.Interpret)
+      toSolve.solve()
     )
   }
 }
@@ -165,7 +165,7 @@ class BenchStaged8xJoin_full_interpreted {
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class BenchStaged8xJoin_run_only_interpreted {
-  var engine: CompiledStagedExecutionEngine = null
+  var engine: StagedExecutionEngine = null
   var program: Program = null
   var toSolve: Relation[Constant] = null
   var tree: ir.IROp = null
@@ -173,7 +173,7 @@ class BenchStaged8xJoin_run_only_interpreted {
   // measure cost of tree gen, compiling, running
   @Setup(Level.Invocation)
   def setup(): Unit = {
-    engine = CompiledStagedExecutionEngine(CollectionsStorageManager())
+    engine = StagedExecutionEngine(CollectionsStorageManager())
     program = Program(engine)
     toSolve = initialize_8xJoin.pretest(program)
     val x1 = engine.generateProgramTree(toSolve.id)

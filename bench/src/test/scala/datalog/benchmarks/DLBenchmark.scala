@@ -22,9 +22,9 @@ abstract class DLBenchmark {
       case "NaiveRelational" => Program(NaiveExecutionEngine(RelationalStorageManager()))
       case "SemiNaiveCollections" => Program(SemiNaiveExecutionEngine(CollectionsStorageManager()))
       case "NaiveCollections" => Program(NaiveExecutionEngine(CollectionsStorageManager()))
-      case "NaiveCompiledStagedCollections" => Program(NaiveCompiledStagedExecutionEngine(CollectionsStorageManager()))
-      case "InterpretedStagedCollections" => Program(InterpretedStagedExecutionEngine(CollectionsStorageManager()))
-      case "CompiledStagedCollections" => Program(CompiledStagedExecutionEngine(CollectionsStorageManager()))
+      case "NaiveCompiledStagedCollections" => Program(NaiveStagedExecutionEngine(CollectionsStorageManager()))
+      case "InterpretedStagedCollections" => Program(StagedExecutionEngine(CollectionsStorageManager(), JITOptions(granularity = ir.OpCode.OTHER)))
+      case "CompiledStagedCollections" => Program(StagedExecutionEngine(CollectionsStorageManager()))
       case _ if context.contains("JITStaged") =>
         val aot = context.contains("AOT")
         val nonblocking = context.contains("NonBlocking")
@@ -35,7 +35,7 @@ abstract class DLBenchmark {
           else if (context.contains("Loop")) ir.OpCode.LOOP
           else if (context.contains("Program")) ir.OpCode.PROGRAM
           else throw new Exception(s"Unknown type of JIT staged $context")
-        Program(JITStagedExecutionEngine(CollectionsStorageManager(), label, aot, !nonblocking))
+        Program(StagedExecutionEngine(CollectionsStorageManager(), JITOptions(label, aot, !nonblocking)))
       case _ => // WARNING: MUnit just returns null pointers everywhere if an error or assert is triggered in beforeEach
         throw new Exception(s"Unknown engine construction ${context}") // TODO: this is reported as passing
     }
@@ -63,11 +63,11 @@ abstract class DLBenchmark {
   def finish(): Unit = {
     debug("in finish: ", () => programs.keys.mkString("[", ", ", "]"))
     programs.keys.filter(k => k.contains("JITStaged")).foreach(k =>
-      programs(k).ee.asInstanceOf[JITStagedExecutionEngine].waitForStragglers()
+      programs(k).ee.asInstanceOf[StagedExecutionEngine].waitForStragglers()
     )
     assert(result.nonEmpty)
     if (toSolve != "_") { // solve for one relation, check all expected
-//      assert(result(toSolve) == expectedFacts(toSolve))
+//      assert(result(toSolve) == expectedFacts(toSolve)) TODO: this is just input_output I think?
     } else { // solve all relations for their expected
       expectedFacts.foreach((fact, expected) => {
         assert(result(fact) == expectedFacts(fact))

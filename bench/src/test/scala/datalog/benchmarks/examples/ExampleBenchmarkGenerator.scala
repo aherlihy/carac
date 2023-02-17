@@ -2,7 +2,7 @@ package datalog.benchmarks.examples
 
 import datalog.benchmarks.DLBenchmark
 import datalog.dsl.{Constant, Program, Relation, Term}
-import datalog.execution.{NaiveExecutionEngine, NaiveCompiledStagedExecutionEngine, SemiNaiveExecutionEngine, InterpretedStagedExecutionEngine, CompiledStagedExecutionEngine, JITStagedExecutionEngine}
+import datalog.execution.{NaiveExecutionEngine, NaiveStagedExecutionEngine, SemiNaiveExecutionEngine, StagedExecutionEngine}
 import datalog.storage.{CollectionsStorageManager, RelationalStorageManager}
 
 import java.nio.file.{Files, Path, Paths}
@@ -84,7 +84,7 @@ abstract class BenchmarkGenerator(directory: Path,
     })
 
   Seq(
-    "SemiNaive", "Naive", "InterpretedStaged", "CompiledStaged", "NaiveCompiledStaged",
+    "SemiNaive", "Naive", "InterpretedStaged", "CompiledStaged",
     "JITStagedAOTNaiveEvalBlocking", "JITStagedAOTSemiNaiveEvalBlocking", "JITStagedAOTLoopBlocking", "JITStagedAOTLoopBodyBlocking", "JITStagedAOTProgramBlocking",
     "JITStagedAOTSemiNaiveEvalNonBlocking", "JITStagedAOTLoopBodyNonBlocking",
     "JITStagedSemiNaiveEvalOnline", "JITStagedLoopBodyOnline",

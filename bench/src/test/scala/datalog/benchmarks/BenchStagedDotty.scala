@@ -1,7 +1,7 @@
 package datalog.benchmarks
 
 import datalog.dsl.{Constant, Program, Relation}
-import datalog.execution.{CompiledStagedExecutionEngine, ir}
+import datalog.execution.{StagedExecutionEngine, ir}
 import datalog.storage.CollectionsStorageManager
 import org.openjdk.jmh.annotations.{Benchmark, BenchmarkMode, Fork, Level, Measurement, Mode, Scope, Setup, State, TearDown, Warmup}
 import org.openjdk.jmh.infra.Blackhole
@@ -22,7 +22,7 @@ inline val dotty_staged_fork = 1
 @BenchmarkMode(Array(Mode.AverageTime))
 class BenchStagedDotty_cold {
   var storage: CollectionsStorageManager = null
-  var engine: CompiledStagedExecutionEngine = null
+  var engine: StagedExecutionEngine = null
   var program: Program = null
   var toSolve: Relation[Constant] = null
   var tree: ir.IROp = null
@@ -32,7 +32,7 @@ class BenchStagedDotty_cold {
   @Setup(Level.Invocation)
   def setup(): Unit = {
     storage = CollectionsStorageManager()
-    engine = CompiledStagedExecutionEngine(storage)
+    engine = StagedExecutionEngine(storage)
     program = Program(engine)
     toSolve = initialize20x.pretest(program)
     val x1 = engine.generateProgramTree(toSolve.id)
@@ -119,7 +119,7 @@ class BenchStagedDotty_cold {
 @BenchmarkMode(Array(Mode.AverageTime))
 class BenchStagedDotty_warm {
   var storage: CollectionsStorageManager = null
-  var engine: CompiledStagedExecutionEngine = null
+  var engine: StagedExecutionEngine = null
   var program: Program = null
   var toSolve: Relation[Constant] = null
   var tree: ir.IROp = null
@@ -128,7 +128,7 @@ class BenchStagedDotty_warm {
 
   @Setup(Level.Trial)
   def setup(): Unit = {
-    engine = CompiledStagedExecutionEngine(CollectionsStorageManager())
+    engine = StagedExecutionEngine(CollectionsStorageManager())
     program = Program(engine)
     toSolve = initialize20x.pretest(program)
     val x1 = engine.generateProgramTree(toSolve.id)

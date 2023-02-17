@@ -1,7 +1,7 @@
 package test
 
 import datalog.dsl.{Constant, Program, Relation, Term}
-import datalog.execution.{NaiveExecutionEngine, SemiNaiveExecutionEngine, InterpretedStagedExecutionEngine, CompiledStagedExecutionEngine, JITStagedExecutionEngine, ir, NaiveCompiledStagedExecutionEngine}
+import datalog.execution.{JITOptions, NaiveExecutionEngine, NaiveStagedExecutionEngine, SemiNaiveExecutionEngine, StagedExecutionEngine, ir}
 import datalog.storage.{CollectionsStorageManager, RelationalStorageManager}
 
 import java.nio.file.{Files, Path, Paths}
@@ -95,10 +95,14 @@ abstract class TestGenerator(directory: Path,
           case "NaiveRelational" => Program(NaiveExecutionEngine(RelationalStorageManager()))
           case "SemiNaiveCollections" => Program(SemiNaiveExecutionEngine(CollectionsStorageManager()))
           case "NaiveCollections" => Program(NaiveExecutionEngine(CollectionsStorageManager()))
-          case "NaiveCompiledStagedCollections" => Program(NaiveCompiledStagedExecutionEngine(CollectionsStorageManager()))
-          case "InterpretedStagedCollections" => Program(InterpretedStagedExecutionEngine(CollectionsStorageManager()))
-          case "CompiledStagedCollections" => Program(CompiledStagedExecutionEngine(CollectionsStorageManager()))
-          case "JITStagedCollections" => Program(JITStagedExecutionEngine(CollectionsStorageManager(), ir.OpCode.OTHER, false, false))
+          case "NaiveCompiledStagedCollections" =>
+            Program(NaiveStagedExecutionEngine(CollectionsStorageManager())) // default is compiled
+          case "InterpretedStagedCollections" =>
+            Program(StagedExecutionEngine(CollectionsStorageManager(), JITOptions(granularity = ir.OpCode.OTHER)))
+          case "CompiledStagedCollections" =>
+            Program(StagedExecutionEngine(CollectionsStorageManager())) // default is compiled
+          case "JITStagedCollections" =>
+            Program(StagedExecutionEngine(CollectionsStorageManager(), JITOptions(ir.OpCode.EVAL_SN, aot = false, block = false)))
           case _ => // WARNING: MUnit just returns null pointers everywhere if an error or assert is triggered in beforeEach
             throw new Exception(s"Unknown engine construction ${context.test.name}") // TODO: this is reported as passing
         }

@@ -27,5 +27,5 @@ class Program(engine: ExecutionEngine) extends AbstractProgram {
   }
 
   // TODO: also provide solve for multiple/all predicates, or return table so users can query over the derived DB
-  def solve(rId: Int, mode: MODE = MODE.Compile): Set[Seq[Term]] = ee.solve(rId, mode).map(s => s.toSeq).toSet
+  def solve(rId: Int): Set[Seq[Term]] = ee.solve(rId).map(s => s.toSeq).toSet
 }
