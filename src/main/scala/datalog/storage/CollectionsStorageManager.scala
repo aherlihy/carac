@@ -72,7 +72,7 @@ class CollectionsStorageManager(ns: NS = new NS(), fuse: Boolean = true) extends
   }
 
   def joinProjectHelper(inputs: Seq[EDB], k: JoinIndexes): EDB = {
-    if (inputs.length == 1) // just filter
+    if (inputs.size == 1) // just filter
       inputs.view.head
         .filter(e =>
           val filteredC = k.constIndexes.filter((ind, _) => ind < e.size)

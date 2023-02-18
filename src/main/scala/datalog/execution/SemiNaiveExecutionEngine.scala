@@ -66,7 +66,7 @@ class SemiNaiveExecutionEngine(override val storageManager: StorageManager) exte
     var setDiff = true
     while(setDiff) {
       storageManager.swapKnowledge()
-      storageManager.clearNewDB(true)
+      storageManager.clearNewDerived()
 
       debug(s"initial state @ $count", storageManager.printer.toString)
       count += 1

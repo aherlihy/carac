@@ -102,11 +102,8 @@ abstract class SimpleStorageManager(override val ns: NS) extends StorageManager(
     derivedDB(newDbId)(rId) = rules ++ prev
   def resetNewDelta(rId: RelationId, rules: Relation[StorageTerm]): Unit =
     deltaDB(newDbId)(rId) = rules
-  def clearNewDB(derived: Boolean): Unit =
-    if (derived)
-      derivedDB(newDbId).foreach((i, e) => e.clear())
-    else
-      deltaDB(newDbId).foreach((i, e) => e.clear())
+  def clearNewDerived(): Unit =
+    derivedDB(newDbId).foreach((i, e) => e.clear())
 
   def swapKnowledge(): Unit = {
     val t = knownDbId

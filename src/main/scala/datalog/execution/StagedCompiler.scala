@@ -52,8 +52,8 @@ class StagedCompiler(val storageManager: StorageManager) {
         else
           '{ $stagedSM.EDB() }
 
-      case JoinOp(subOps, keys) =>
-        val compiledOps = Expr.ofSeq(subOps.map(compileIRRelOp))
+      case JoinOp(keys, children:_*) =>
+        val compiledOps = Expr.ofSeq(children.map(compileIRRelOp))
         // TODO[future]: inspect keys and optimize join algo
         '{
           $stagedSM.joinHelper(
@@ -62,32 +62,32 @@ class StagedCompiler(val storageManager: StorageManager) {
           )
         }
 
-      case ProjectOp(subOp, keys) =>
-        if (subOp.code == OpCode.JOIN) // merge join+project
-          val compiledOps = Expr.ofSeq(subOp.asInstanceOf[JoinOp].ops.map(compileIRRelOp))
+      case ProjectOp(keys, children:_*) =>
+        if (children.head.code == OpCode.JOIN) // merge join+project
+          val compiledOps = Expr.ofSeq(children.head.asInstanceOf[JoinOp].children.map(compileIRRelOp))
           '{ $stagedSM.joinProjectHelper($compiledOps, ${ Expr(keys) }) }
         else
-          '{ $stagedSM.projectHelper(${ compileIRRelOp(subOp) }, ${ Expr(keys) }) }
+          '{ $stagedSM.projectHelper(${ compileIRRelOp(children.head) }, ${ Expr(keys) }) }
 
-      case UnionOp(ops, label) =>
-        val compiledOps = ops.map(compileIRRelOp)
+      case UnionOp(label, children:_*) =>
+        val compiledOps = children.map(compileIRRelOp)
         label match
-          case OpCode.EVAL_RULE_NAIVE if ops.size > heuristics.max_deps =>
+          case OpCode.EVAL_RULE_NAIVE if children.size > heuristics.max_deps =>
             val lambdaOps = compiledOps.map(e => '{ def eval_rule_lambda() = $e; eval_rule_lambda() })
             '{ $stagedSM.union(${Expr.ofSeq(lambdaOps)}) }
-          case OpCode.EVAL_RULE_SN if ops.size > heuristics.max_deps =>
+          case OpCode.EVAL_RULE_SN if children.size > heuristics.max_deps =>
             val lambdaOps = compiledOps.map(e => '{ def eval_rule_sn_lambda() = $e; eval_rule_sn_lambda() })
             '{ $stagedSM.union(${ Expr.ofSeq(lambdaOps) }) }
           case _ =>
             '{ $stagedSM.union(${Expr.ofSeq(compiledOps)}) }
 
-      case DiffOp(lhs, rhs) =>
-        val clhs = compileIRRelOp(lhs)
-        val crhs = compileIRRelOp(rhs)
+      case DiffOp(children:_*) =>
+        val clhs = compileIRRelOp(children.head)
+        val crhs = compileIRRelOp(children(1))
         '{ $stagedSM.diff($clhs, $crhs) }
 
-      case DebugPeek(prefix, msg, op) =>
-        val res = compileIRRelOp(op)
+      case DebugPeek(prefix, msg, children:_*) =>
+        val res = compileIRRelOp(children.head)
         '{ debug(${ Expr(prefix) }, () => s"${${ Expr(msg()) }}") ; $res }
 
       case _ => throw new Exception("Error: compileRelOp called with unit operation")
@@ -97,10 +97,10 @@ class StagedCompiler(val storageManager: StorageManager) {
 //  def compileIR[T](irTree: IROp)(using stagedSM: Expr[StorageManager {type EDB = T}], t: Type[T])(using Quotes): Expr[Any] = { // TODO: Instead of parameterizing, use staged path dependent type: i.e. stagedSM.EDB
   def compileIR(irTree: IROp)(using stagedSM: Expr[CollectionsStorageManager])(using Quotes): Expr[Any] = {
     irTree match {
-      case ProgramOp(body) =>
-        compileIR(body)
+      case ProgramOp(children:_*) =>
+        compileIR(children.head)
 
-      case DoWhileOp(body, toCmp) =>
+      case DoWhileOp(toCmp, children:_*) =>
         val cond = toCmp match {
           case DB.Derived =>
             '{ !$stagedSM.compareDerivedDBs() }
@@ -109,22 +109,22 @@ class StagedCompiler(val storageManager: StorageManager) {
         }
         '{
           while ( {
-            ${ compileIR(body) };
+            ${ compileIR(children.head) };
             $cond;
           }) ()
         }
 
       case SwapAndClearOp() =>
-        '{ $stagedSM.swapKnowledge() ; $stagedSM.clearNewDB(${ Expr(true) }) }
+        '{ $stagedSM.swapKnowledge() ; $stagedSM.clearNewDerived() }
 
-      case SequenceOp(ops, label) =>
-        val cOps = ops.map(compileIR)
+      case SequenceOp(label, children:_*) =>
+        val cOps = children.map(compileIR)
         label match
-          case OpCode.EVAL_NAIVE if ops.length / 2 > heuristics.max_relations =>
+          case OpCode.EVAL_NAIVE if children.size / 2 > heuristics.max_relations =>
             cOps.reduceLeft((acc, next) =>
               '{ $acc ; def eval_naive_lambda() = $next; eval_naive_lambda() }
             )
-          case OpCode.EVAL_SN if ops.length > heuristics.max_relations =>
+          case OpCode.EVAL_SN if children.size > heuristics.max_relations =>
             cOps.reduceLeft((acc, next) =>
               '{ $acc ; def eval_sn_lambda() = $next; eval_sn_lambda() }
             )
@@ -133,9 +133,9 @@ class StagedCompiler(val storageManager: StorageManager) {
               '{ $acc ; $next }
             )
 
-      case InsertOp(rId, db, knowledge, subOp, subOp2) =>
-        val res = compileIRRelOp(subOp)
-        val res2 = if (subOp2.isEmpty) '{ $stagedSM.EDB() } else compileIRRelOp(subOp2.get)
+      case InsertOp(rId, db, knowledge, children:_*) =>
+        val res = compileIRRelOp(children.head)
+        val res2 = if (children.size > 1) compileIRRelOp(children(1)) else '{ $stagedSM.EDB() }
         db match {
           case DB.Derived =>
             knowledge match {

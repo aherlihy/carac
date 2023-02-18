@@ -114,21 +114,21 @@ class Printer[S <: StorageManager](val s: S) {
   def printIR(node: IROp, ident: Int = 0, seq: Int = 0)(using ctx: InterpreterContext): String = {
     val i = "\t"*ident
     i + (node match {
-      case ProgramOp(body) => s"PROGRAM:\n${printIR(body, ident+1)}"
+      case ProgramOp(children:_*) => s"PROGRAM:\n${printIR(children.head, ident+1)}"
       case SwapAndClearOp() => "SWAP & CLEAR"
-      case DoWhileOp(body, toCmp) => s"DO {\n${printIR(body, ident+1)}}\n${i}WHILE {$toCmp}\n"
-      case SequenceOp(ops, fnCode) => s"SEQ{${seq+1}${if (fnCode != OpCode.SEQ) "::" + fnCode else "_"}:${ops.zipWithIndex.map((o, idx) => s"${seq+1}.$idx" + printIR(o, ident+1, seq+1)).mkString("[\n", ",\n", "]")}"
+      case DoWhileOp(toCmp, children:_*) => s"DO {\n${printIR(children.head, ident+1)}}\n${i}WHILE {$toCmp}\n"
+      case SequenceOp(fnCode, children:_*) => s"SEQ{${seq+1}${if (fnCode != OpCode.SEQ) "::" + fnCode else "_"}:${children.zipWithIndex.map((o, idx) => s"${seq+1}.$idx" + printIR(o, ident+1, seq+1)).mkString("[\n", ",\n", "]")}"
       case ScanEDBOp(srcRel) => s"SCANEDB(edbs[${ctx.storageManager.ns(srcRel)}])"
       case ScanOp(srcRel, db, knowledge) =>
         s"SCAN[$db.$knowledge](${ctx.storageManager.ns(srcRel)})"
-      case JoinOp(subOps, keys) => s"JOIN${keys.varToString()}${keys.constToString()}${subOps.map(s => printIR(s, ident+1)).mkString("(\n", ",\n", ")")}"
-      case ProjectOp(subOp, keys) => s"PROJECT${keys.projToString()}(\n${printIR(subOp, ident+1)})"
-      case InsertOp(rId, db, knowledge, subOp, subOp2) =>
-        s"INSERT INTO $db.$knowledge.${ctx.storageManager.ns(rId)}\n${printIR(subOp, ident+1)}\n${subOp2.map(s => printIR(s, ident+1))}"
-      case UnionOp(ops, fnCode) => s"UNION${if (fnCode != OpCode.UNION) "::" + fnCode else "_"}${ops.map(o => printIR(o, ident+1)).mkString("(\n", ",\n", ")")}"
-      case DiffOp(lhs, rhs) => s"DIFF\n${printIR(lhs, ident+1)}\n-${printIR(rhs, ident+1)}"
-      case DebugNode(prefix, op) => s"DEBUG: $prefix"
-      case DebugPeek(prefix, msg, op) => s"DEBUG PEEK: $prefix into: ${printIR(op)}"
+      case JoinOp(keys, children:_*) => s"JOIN${keys.varToString()}${keys.constToString()}${children.map(s => printIR(s, ident+1)).mkString("(\n", ",\n", ")")}"
+      case ProjectOp(keys, children:_*) => s"PROJECT${keys.projToString()}(\n${printIR(children.head, ident+1)})"
+      case InsertOp(rId, db, knowledge, children:_*) =>
+        s"INSERT INTO $db.$knowledge.${ctx.storageManager.ns(rId)}\n${children.map(s => printIR(s, ident+1))}\n"
+      case UnionOp(fnCode, children:_*) => s"UNION${if (fnCode != OpCode.UNION) "::" + fnCode else "_"}${children.map(o => printIR(o, ident+1)).mkString("(\n", ",\n", ")")}"
+      case DiffOp(children:_*) => s"DIFF\n${printIR(children.head, ident+1)}\n-${printIR(children(1), ident+1)}"
+      case DebugNode(prefix, dbg) => s"DEBUG: $prefix"
+      case DebugPeek(prefix, dbg, children:_*) => s"DEBUG PEEK: $prefix into: ${printIR(children.head)}"
     })
   }
 }

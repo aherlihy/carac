@@ -31,7 +31,7 @@ class JoinIndexPass(using ASTTransformerContext) extends Transformer {
             term match {
               case VarTerm(v) =>
                 variables(v) = matches.head._2 // first idx for a variable
-                !v.anon && matches.length >= 2
+                !v.anon && matches.size >= 2
               case ConstTerm(c) =>
                 matches.foreach((_, idx) => constants(idx) = c)
                 false

@@ -50,7 +50,7 @@ abstract class TestGenerator(directory: Path,
                 }).asInstanceOf[Term]
               ).toSeq
             if (factInput.length != headers.size)
-              throw new Exception(s"Input data for fact of length ${factInput.length} but should be ${headers.mkString("[", ", ", "]")}. Line='$l'")
+              throw new Exception(s"Input data for fact of length ${factInput.size} but should be ${headers.mkString("[", ", ", "]")}. Line='$l'")
             factInput
           }).toScala(Seq)
         reader.close()

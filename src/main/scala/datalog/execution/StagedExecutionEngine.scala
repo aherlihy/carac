@@ -143,38 +143,38 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
       case op: UnionOp if jitOptions.granularity == op.code =>
         if (op.compiledRelFn == null && !jitOptions.aot)
           startCompileThread(op, newDotty)
-        checkResult(op.compiledRelFn, op, () => op.runRel_continuation(storageManager, op.ops.map(o => sm => jitRel(o))))
+        checkResult(op.compiledRelFn, op, () => op.runRel_continuation(storageManager, op.children.map(o => sm => jitRel(o))))
 
       case op: JoinOp if jitOptions.granularity == op.code =>
         if (op.compiledRelFn == null && !jitOptions.aot)
           startCompileThread(op, newDotty)
-        checkResult(op.compiledRelFn, op, () => op.runRel_continuation(storageManager, op.ops.map(o => sm => jitRel(o))))
+        checkResult(op.compiledRelFn, op, () => op.runRel_continuation(storageManager, op.children.map(o => sm => jitRel(o))))
 
       case op: DiffOp if jitOptions.granularity == op.code =>
         if (op.compiledRelFn == null && !jitOptions.aot)
           startCompileThread(op, dedicatedDotty)
-        checkResult(op.compiledRelFn, op, () => op.runRel_continuation(storageManager, Seq(sm => jitRel(op.lhs), sm => jitRel(op.rhs))))
+        checkResult(op.compiledRelFn, op, () => op.runRel_continuation(storageManager, op.children.map(o => sm => jitRel(o))))
 
       case op: ScanOp =>
-        op.runRel_continuation(storageManager)
+        op.runRel(storageManager)
 
       case op: ScanEDBOp =>
-        op.runRel_continuation(storageManager)
+        op.runRel(storageManager)
 
       case op: JoinOp => // TODO: mutex?
-        op.runRel_continuation(storageManager, op.ops.map(o => sm => jitRel(o)))
+        op.runRel_continuation(storageManager, op.children.map(o => sm => jitRel(o)))
 
       case op: ProjectOp =>
-        op.runRel_continuation(storageManager, Seq(sm => jitRel(op.subOp)))
+        op.runRel_continuation(storageManager, op.children.map(o => sm => jitRel(o)))
 
       case op: UnionOp =>
-        op.runRel_continuation(storageManager, op.ops.map(o => sm => jitRel(o)))
+        op.runRel_continuation(storageManager, op.children.map(o => sm => jitRel(o)))
 
       case op: DiffOp =>
-        op.runRel_continuation(storageManager, Seq(sm => jitRel(op.lhs), sm => jitRel(op.rhs)))
+        op.runRel_continuation(storageManager, op.children.map(o => sm => jitRel(o)))
 
       case op: DebugPeek =>
-        op.runRel_continuation(storageManager, Seq(sm => jitRel(op.op)))
+        op.runRel_continuation(storageManager, op.children.map(o => sm => jitRel(o)))
       case _ => throw new Exception("Error: interpretRelOp called with unit operation")
     }
   }
@@ -248,43 +248,43 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
         if (op.compiledFn == null) // don't bother online async compile since only entered once
           if (jitOptions.block && jitOptions.granularity == op.code)
             startCompileThread(op, dedicatedDotty)
-            checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, Seq(sm => jit(op.body))))
+            checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.children.map(o => sm => jit(o))))
           else
-            op.run_continuation(storageManager, Seq(sm => jit(op.body)))
+            op.run_continuation(storageManager, Seq(sm => jit(op.children.head)))
         else
-          checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, Seq(sm => jit(op.body))))
+          checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.children.map(o => sm => jit(o))))
 
       case op: DoWhileOp if jitOptions.granularity == op.code =>
         if (op.compiledFn == null && jitOptions.block)
           startCompileThread(op, dedicatedDotty)
-          checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, Seq(sm => jit(op.body))))
+          checkResult(op.compiledFn, op, () => op.run_continuation(storageManager,op.children.map(o => sm => jit(o))))
         else
-          op.run_continuation(storageManager, Seq(sm => jit(op.body)))
+          op.run_continuation(storageManager, Seq(sm => jit(op.children.head)))
 
       case op: DoWhileOp =>
         // test if need to compile, if so:
         if (op.compiledFn == null) // don't bother online compile since only entered once
-          op.run_continuation(storageManager, Seq(sm => jit(op.body)))
+          op.run_continuation(storageManager, Seq(sm => jit(op.children.head)))
         else
-          checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, Seq(sm => jit(op.body))))
+          checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.children.map(o => sm => jit(o))))
 
       case op: SequenceOp =>
         op.code match
           case OpCode.EVAL_SN | OpCode.EVAL_NAIVE | OpCode.LOOP_BODY if jitOptions.granularity == op.code =>
             if (op.compiledFn == null && !jitOptions.aot) // need to start compilation
               startCompileThread(op, dedicatedDotty)
-            checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.ops.map(o => sm => jit(o))))
+            checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.children.map(o => sm => jit(o))))
           case _ =>
-            op.run_continuation(storageManager, op.ops.map(o => sm => jit(o)))
+            op.run_continuation(storageManager, op.children.map(o => sm => jit(o)))
 
       case op: SwapAndClearOp =>
-        op.run_continuation(storageManager)
+        op.run(storageManager)
 
       case op: InsertOp =>
-        op.run_continuation(storageManager, Seq((sm: CollectionsStorageManager) => jitRel(op.subOp)) ++ op.subOp2.map(sop => (sm: CollectionsStorageManager) => jitRel(sop)))
+        op.run_continuation(storageManager, op.children.map(o => sm => jit(o)))
 
       case op: DebugNode =>
-        op.run_continuation(storageManager)
+        op.run(storageManager)
 
       case _ =>
         irTree match {

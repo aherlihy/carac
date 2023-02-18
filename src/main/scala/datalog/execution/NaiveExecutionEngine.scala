@@ -82,7 +82,7 @@ class NaiveExecutionEngine(val storageManager: StorageManager) extends Execution
     var setDiff = true
     while (setDiff) {
       storageManager.swapKnowledge()
-      storageManager.clearNewDB(true)
+      storageManager.clearNewDerived()
 
       debug(s"initial state @ $count", storageManager.printer.toString)
       count += 1

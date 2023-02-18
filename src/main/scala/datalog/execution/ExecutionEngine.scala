@@ -44,7 +44,7 @@ trait ExecutionEngine {
         term match {
           case v: Variable =>
             variables(v) = matches.head._2 // first idx for a variable
-            !v.anon && matches.length >= 2
+            !v.anon && matches.size >= 2
           case c: Constant =>
             matches.foreach((_, idx) => constants(idx) = c)
             false

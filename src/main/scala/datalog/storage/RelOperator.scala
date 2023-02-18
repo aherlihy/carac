@@ -182,7 +182,7 @@ class RelationalOperators[S <: StorageManager](val storageManager: S) {
         .filter(r => scanFilter(r.size)(r))
     }
     def next(): Option[edbRow] = {
-      if (index >= outputRelation.length)
+      if (index >= outputRelation.size)
         NilTuple
       else {
         index += 1

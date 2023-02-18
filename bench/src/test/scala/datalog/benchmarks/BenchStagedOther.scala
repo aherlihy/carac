@@ -49,8 +49,8 @@ trait OtherBench extends andersen {
                 case _ => throw new Exception(s"Unknown type ${headers(i)}")
               }).asInstanceOf[Term]
             ).toSeq
-            if (factInput.length != headers.size)
-              throw new Exception(s"Input data for fact of length ${factInput.length} but should be ${headers.mkString("[", ", ", "]")}. Line='$l'")
+            if (factInput.size != headers.size)
+              throw new Exception(s"Input data for fact of length ${factInput.size} but should be ${headers.mkString("[", ", ", "]")}. Line='$l'")
             factInput
           }).toScala(Seq)
         reader.close()

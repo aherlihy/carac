@@ -55,7 +55,7 @@ class StagedSnippetCompiler(val storageManager: StorageManager) {
         else
           '{ $stagedSM.EDB() }
 
-      case JoinOp(subOps, keys) =>
+      case JoinOp(keys, children:_*) =>
         val compiledOps = '{ $stagedFns.map(s => s($stagedSM)) }
         // TODO[future]: inspect keys and optimize join algo
         '{
@@ -65,30 +65,30 @@ class StagedSnippetCompiler(val storageManager: StorageManager) {
           )
         }
 
-      case ProjectOp(subOp, keys) =>
-        if (subOp.code == OpCode.JOIN) // merge join+project
-          val compiledOps = Expr.ofSeq(subOp.asInstanceOf[JoinOp].ops.map(compileIRRelOp))
+      case ProjectOp(keys, children:_*) =>
+        if (children.head.code == OpCode.JOIN) // merge join+project
+          val compiledOps = Expr.ofSeq(children.head.children.map(compileIRRelOp))
           '{ $stagedSM.joinProjectHelper($compiledOps, ${ Expr(keys) }) }
         else
-          '{ $stagedSM.projectHelper(${ compileIRRelOp(subOp) }, ${ Expr(keys) }) }
+          '{ $stagedSM.projectHelper(${ compileIRRelOp(children.head) }, ${ Expr(keys) }) }
 
-      case UnionOp(ops, label) =>
-        val compiledOps = ops.map(compileIRRelOp)
+      case UnionOp(label, children:_*) =>
+        val compiledOps = children.map(compileIRRelOp)
         label match
-          case OpCode.EVAL_RULE_NAIVE if ops.size > heuristics.max_deps =>
+          case OpCode.EVAL_RULE_NAIVE if children.size > heuristics.max_deps =>
             val lambdaOps = compiledOps.map(e => '{ def eval_rule_lambda() = $e; eval_rule_lambda() })
             '{ $stagedSM.union(${Expr.ofSeq(lambdaOps)}) }
-          case OpCode.EVAL_RULE_SN if ops.size > heuristics.max_deps =>
+          case OpCode.EVAL_RULE_SN if children.size > heuristics.max_deps =>
             val lambdaOps = compiledOps.map(e => '{ def eval_rule_sn_lambda() = $e; eval_rule_sn_lambda() })
             '{ $stagedSM.union(${ Expr.ofSeq(lambdaOps) }) }
           case _ =>
             '{ $stagedSM.union(${Expr.ofSeq(compiledOps)}) }
 
-      case DiffOp(lhs, rhs) =>
+      case DiffOp(children:_*) =>
         '{ $stagedSM.diff($stagedFns(0)($stagedSM), $stagedFns(1)($stagedSM)) }
 
-      case DebugPeek(prefix, msg, op) =>
-        val res = compileIRRelOp(op)
+      case DebugPeek(prefix, msg, children:_*) =>
+        val res = compileIRRelOp(children.head)
         '{ debug(${ Expr(prefix) }, () => s"${${ Expr(msg()) }}") ; $res }
 
       case _ => throw new Exception("Error: compileRelOp called with unit operation")
@@ -100,7 +100,7 @@ class StagedSnippetCompiler(val storageManager: StorageManager) {
       case ProgramOp(body) =>
         compileIR(body)
 
-      case DoWhileOp(body, toCmp) =>
+      case DoWhileOp(toCmp, children:_*) =>
         val cond = toCmp match {
           case DB.Derived =>
             '{ !$stagedSM.compareDerivedDBs() }
@@ -115,27 +115,27 @@ class StagedSnippetCompiler(val storageManager: StorageManager) {
         }
 
       case SwapAndClearOp() =>
-        '{ $stagedSM.swapKnowledge() ; $stagedSM.clearNewDB(${ Expr(true) }) }
+        '{ $stagedSM.swapKnowledge() ; $stagedSM.clearNewDerived() }
 
-      case SequenceOp(ops, label) =>
-        val cOps = ops.map(compileIR)
+      case SequenceOp(label, children:_*) =>
+        val cOps = children.map(compileIR)
         label match
-          case OpCode.EVAL_NAIVE if ops.length / 2 > heuristics.max_relations =>
+          case OpCode.EVAL_NAIVE if children.size / 2 > heuristics.max_relations =>
             cOps.reduceLeft((acc, next) =>
               '{ $acc ; def eval_naive_lambda() = $next; eval_naive_lambda() }
             )
-          case OpCode.EVAL_SN if ops.length > heuristics.max_relations =>
+          case OpCode.EVAL_SN if children.size > heuristics.max_relations =>
             cOps.reduceLeft((acc, next) =>
               '{ $acc ; def eval_sn_lambda() = $next; eval_sn_lambda() }
             )
           case _ =>
             cOps.reduceLeft((acc, next) => // TODO[future]: make a block w reflection instead of reduceLeft for efficiency
-              '{ println("in compiled code, seq"); $acc ; $next }
+              '{ $acc; $next; }
             )
 
-      case InsertOp(rId, db, knowledge, subOp, subOp2) =>
+      case InsertOp(rId, db, knowledge, children:_*) =>
         val res = '{ $stagedFns(0)($stagedSM).asInstanceOf[CollectionsStorageManager#EDB] }
-        val res2 = if (subOp2.isEmpty) '{ $stagedSM.EDB() } else '{ $stagedFns(1)($stagedSM).asInstanceOf[CollectionsStorageManager#EDB] }
+        val res2 = if (children.size > 1) '{ $stagedFns(1)($stagedSM).asInstanceOf[CollectionsStorageManager#EDB] } else '{ $stagedSM.EDB() }
         db match {
           case DB.Derived =>
             knowledge match {
