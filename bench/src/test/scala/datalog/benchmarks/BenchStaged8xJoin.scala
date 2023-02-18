@@ -85,7 +85,7 @@ class BenchStaged8xJoin_compile_and_run {
   var engine: StagedExecutionEngine = null
   var program: Program = null
   var toSolve: Relation[Constant] = null
-  var tree: ir.IROp = null
+  var tree: ir.IROp[Any] = null
   var ctx: ir.InterpreterContext = null
   // measure cost of tree gen, compiling, running
   @Setup(Level.Invocation)
@@ -113,7 +113,7 @@ class BenchStaged8xJoin_run_only_compiled {
   var engine: StagedExecutionEngine = null
   var program: Program = null
   var toSolve: Relation[Constant] = null
-  var tree: ir.IROp = null
+  var tree: ir.IROp[Any] = null
   var ctx: ir.InterpreterContext = null
   var compiled: CompiledFn = null
 
@@ -168,7 +168,7 @@ class BenchStaged8xJoin_run_only_interpreted {
   var engine: StagedExecutionEngine = null
   var program: Program = null
   var toSolve: Relation[Constant] = null
-  var tree: ir.IROp = null
+  var tree: ir.IROp[Any] = null
   var ctx: ir.InterpreterContext = null
   // measure cost of tree gen, compiling, running
   @Setup(Level.Invocation)

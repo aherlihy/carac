@@ -44,11 +44,26 @@ class StagedCompileTest extends munit.FunSuite {
   val anyCapture = "([\\s\\S]*?)"
 
   // TODO: string compare prob too brittle but ok for dev
-  def compileCheck(miniprog: IROp, check: (String => String)*): CompiledFn = {
+  def compileCheck(miniprog: IROp[Any], check: (String => String)*): CompiledFn = {
     given staging.Compiler = staging.Compiler.make(getClass.getClassLoader)
     staging.run {
       val res: Expr[CompiledFn] =
         '{ (stagedSm: CollectionsStorageManager) => ${ engine.compiler.compileIR(miniprog)(using 'stagedSm) } }
+      debug("generated code: ", () => res.show)
+      val strRes = res.show
+      check.foldLeft(strRes)((generatedString, op) =>
+        op(generatedString)
+      )
+      res
+    }
+  }
+
+  def compileCheckRel(miniprog: IROp[CollectionsStorageManager#EDB], check: (String => String)*): CompiledRelFn = {
+    given staging.Compiler = staging.Compiler.make(getClass.getClassLoader)
+
+    staging.run {
+      val res: Expr[CompiledRelFn] =
+        '{ (stagedSm: CollectionsStorageManager) => ${ engine.compiler.compileIRRelOp(miniprog)(using 'stagedSm) } }
       debug("generated code: ", () => res.show)
       val strRes = res.show
       check.foldLeft(strRes)((generatedString, op) =>
@@ -97,7 +112,7 @@ class StagedCompileTest extends munit.FunSuite {
     val toRun = compileCheck(
       DoWhileOp(
         DB.Derived,
-        InsertOp(edb.id, DB.Derived, KNOWLEDGE.Known, ScanOp(edb.id, DB.Derived, KNOWLEDGE.Known), ScanEDBOp(edb.id)), // empty => "1"
+        InsertOp(edb.id, DB.Derived, KNOWLEDGE.Known, ScanOp(edb.id, DB.Derived, KNOWLEDGE.Known).asInstanceOf[IROp[Any]], ScanEDBOp(edb.id).asInstanceOf[IROp[Any]]), // empty => "1"
       ),
       whileMatch(s"$sVar.compareDerivedDBs().unary_!")
     )
@@ -119,7 +134,7 @@ class StagedCompileTest extends munit.FunSuite {
     val toRun = compileCheck(
       DoWhileOp(
         DB.Delta,
-        InsertOp(edb.id, DB.Delta, KNOWLEDGE.New, ScanEDBOp(idb.id)) // empty => "1"
+        InsertOp(edb.id, DB.Delta, KNOWLEDGE.New, ScanEDBOp(idb.id).asInstanceOf[IROp[Any]]) // empty => "1"
       ),
       whileMatch(s"$sVar.compareNewDeltaDBs()")
     )
@@ -145,9 +160,9 @@ class StagedCompileTest extends munit.FunSuite {
     val oldNew = storageManager.newDbId
     val toRun = compileCheck(
       SequenceOp(OpCode.SEQ,
-        ScanOp(idb.id, DB.Derived, KNOWLEDGE.Known),
+        ScanOp(idb.id, DB.Derived, KNOWLEDGE.Known).asInstanceOf[IROp[Any]],
         SwapAndClearOp(),
-        ScanOp(idb.id, DB.Derived, KNOWLEDGE.Known)
+        ScanOp(idb.id, DB.Derived, KNOWLEDGE.Known).asInstanceOf[IROp[Any]]
       ),
       generalMatch(s"$any$sVar.getKnownDerivedDB\\(${idb.id}$anyCapture".r),
       generalMatch(s"$any$sVar.swapKnowledge\\(\\)$anyCapture".r),
@@ -173,8 +188,8 @@ class StagedCompileTest extends munit.FunSuite {
     val delta = deepClone(storageManager.deltaDB)
     val toRun = compileCheck(
       SequenceOp(OpCode.SEQ,
-        InsertOp(idb.id, DB.Derived, KNOWLEDGE.New, ScanEDBOp(edb.id)),
-        InsertOp(idb.id, DB.Delta, KNOWLEDGE.New, ScanEDBOp(edb.id)),
+        InsertOp(idb.id, DB.Derived, KNOWLEDGE.New, ScanEDBOp(edb.id).asInstanceOf[IROp[Any]]),
+        InsertOp(idb.id, DB.Delta, KNOWLEDGE.New, ScanEDBOp(edb.id).asInstanceOf[IROp[Any]]),
       ),
       generalMatch(s"$any$sVar.resetNewDerived\\(${idb.id}, $sVar.edbs.apply\\(${edb.id}\\), $sVar.EDB\\(\\)\\)$anyCapture".r),
       generalMatch(s"$any$sVar.resetNewDelta\\(${idb.id}, $sVar.edbs.apply\\(${edb.id}\\)\\)$anyCapture".r)
@@ -190,12 +205,12 @@ class StagedCompileTest extends munit.FunSuite {
   }
 
   test("ScanEDBOp") {
-    val toRun = compileCheck(
+    val toRun = compileCheckRel(
       ScanEDBOp(edge.id),
       generalMatch(s"$any$sVar.edbs.apply\\(${edge.id}\\)$anyCapture".r)
     )
     assertEquals(toRun(storageManager), storageManager.edbs(edge.id))
-    val toRun2 = compileCheck(
+    val toRun2 = compileCheckRel(
       ScanEDBOp(-1),
       generalMatch(s"$any$sVar.EDB\\(\\)$anyCapture".r)
     )
@@ -211,22 +226,22 @@ class StagedCompileTest extends munit.FunSuite {
     storageManager.resetNewDerived(idb.id, storageManager.EDB(Vector("NewDerived")))
     storageManager.resetNewDelta(idb.id, storageManager.EDB(Vector("NewDelta")))
 
-    var toRun = compileCheck(
+    var toRun = compileCheckRel(
       ScanOp(idb.id, DB.Derived, KNOWLEDGE.Known),
       generalMatch(s"$any$sVar.getKnownDerivedDB\\(${idb.id}$anyCapture".r)
     )
     assertEquals(toRun(storageManager), ArrayBuffer(Vector("KnownDerived")))
-    toRun = compileCheck(
+    toRun = compileCheckRel(
       ScanOp(idb.id, DB.Delta, KNOWLEDGE.Known),
       generalMatch(s"$any$sVar.getKnownDeltaDB\\(${idb.id}$anyCapture".r)
     )
     assertEquals(toRun(storageManager), ArrayBuffer(Vector("KnownDelta")))
-    toRun = compileCheck(
+    toRun = compileCheckRel(
       ScanOp(idb.id, DB.Derived, KNOWLEDGE.New),
       generalMatch(s"$any$sVar.getNewDerivedDB\\(${idb.id}$anyCapture".r)
     )
     assertEquals(toRun(storageManager), ArrayBuffer(Vector("NewDerived")))
-    toRun = compileCheck(
+    toRun = compileCheckRel(
       ScanOp(idb.id, DB.Delta, KNOWLEDGE.New),
       generalMatch(s"$any$sVar.getNewDeltaDB\\(${idb.id}$anyCapture".r)
     )
@@ -240,7 +255,7 @@ class StagedCompileTest extends munit.FunSuite {
 
   test("JoinOp") {
     val scanEdge = s"$sVar.edbs.apply\\(${edge.id}\\)"
-    val toRun = compileCheck(
+    val toRun = compileCheckRel(
       JoinOp(
         JoinIndexes(
           Seq(Seq(1, 2)), Map[Int, Constant](0 -> "b"), Seq.empty, Seq.empty
@@ -255,7 +270,7 @@ class StagedCompileTest extends munit.FunSuite {
 
   test("ProjectOp") {
     val scanEdge = s"$sVar.edbs.apply\\(${edge.id}\\)"
-    val toRun = compileCheck(
+    val toRun = compileCheckRel(
       ProjectOp(
         JoinIndexes(
           Seq.empty, Map[Int, Constant](), Seq(("c", "1"), ("v", 1)), Seq.empty
@@ -276,7 +291,7 @@ class StagedCompileTest extends munit.FunSuite {
     assertEquals(storageManager.getKnownDeltaDB(edb.id), ArrayBuffer())
     val scanEdb = s"$sVar.edbs.apply\\(${edb.id}\\)"
     var toRun = compileCheck(
-      InsertOp(edb.id, DB.Delta, KNOWLEDGE.Known, ScanEDBOp(edb.id)),
+      InsertOp(edb.id, DB.Delta, KNOWLEDGE.Known, ScanEDBOp(edb.id).asInstanceOf[IROp[Any]]),
       generalMatch(s"$any$sVar.resetKnownDelta\\(${edb.id}, $scanEdb\\)$anyCapture".r)
     )
     toRun(storageManager)
@@ -284,7 +299,7 @@ class StagedCompileTest extends munit.FunSuite {
 
     // insert again to show that it fully resets
     toRun = compileCheck(
-      InsertOp(edb.id, DB.Delta, KNOWLEDGE.Known, ScanEDBOp(edb.id)),
+      InsertOp(edb.id, DB.Delta, KNOWLEDGE.Known, ScanEDBOp(edb.id).asInstanceOf[IROp[Any]]),
       generalMatch(s"$any$sVar.resetKnownDelta\\(${edb.id}, $scanEdb\\)$anyCapture".r)
     )
     toRun(storageManager)
@@ -293,7 +308,7 @@ class StagedCompileTest extends munit.FunSuite {
     // insert into new, delta from edb
     assertEquals(storageManager.getNewDeltaDB(edb.id), ArrayBuffer())
     toRun = compileCheck(
-      InsertOp(edb.id, DB.Delta, KNOWLEDGE.New, ScanEDBOp(edb.id)), // insert into new, delta from edb
+      InsertOp(edb.id, DB.Delta, KNOWLEDGE.New, ScanEDBOp(edb.id).asInstanceOf[IROp[Any]]), // insert into new, delta from edb
       generalMatch(s"$any$sVar.resetNewDelta\\(${edb.id}, $scanEdb\\)$anyCapture".r)
     )
     toRun(storageManager)
@@ -301,7 +316,7 @@ class StagedCompileTest extends munit.FunSuite {
 
     // insert again to show that it fully resets
     toRun = compileCheck(
-      InsertOp(edb.id, DB.Delta, KNOWLEDGE.New, ScanEDBOp(edb.id)), // insert into new, delta from edb
+      InsertOp(edb.id, DB.Delta, KNOWLEDGE.New, ScanEDBOp(edb.id).asInstanceOf[IROp[Any]]), // insert into new, delta from edb
       generalMatch(s"$any$sVar.resetNewDelta\\(${edb.id}, $scanEdb\\)$anyCapture".r)
     )
     toRun(storageManager)
@@ -322,7 +337,7 @@ class StagedCompileTest extends munit.FunSuite {
     val scanEdb = s"$sVar.edbs.apply\\(${edb.id}\\)"
     val edbS = s"$sVar.EDB\\(\\)"
     var toRun = compileCheck(
-      InsertOp(edb.id, DB.Derived, KNOWLEDGE.Known, ScanEDBOp(edb.id)),
+      InsertOp(edb.id, DB.Derived, KNOWLEDGE.Known, ScanEDBOp(edb.id).asInstanceOf[IROp[Any]]),
       generalMatch(s"$any$sVar.resetKnownDerived\\(${edb.id}, $scanEdb, $edbS\\)$anyCapture".r)
     )
     toRun(storageManager)
@@ -330,7 +345,7 @@ class StagedCompileTest extends munit.FunSuite {
 
     // insert again to show that it fully resets
     toRun = compileCheck(
-      InsertOp(edb.id, DB.Derived, KNOWLEDGE.Known, ScanEDBOp(edb.id)),
+      InsertOp(edb.id, DB.Derived, KNOWLEDGE.Known, ScanEDBOp(edb.id).asInstanceOf[IROp[Any]]),
       generalMatch(s"$any$sVar.resetKnownDerived\\(${edb.id}, $scanEdb, $edbS\\)$anyCapture".r)
     )
     toRun(storageManager)
@@ -339,7 +354,7 @@ class StagedCompileTest extends munit.FunSuite {
     // insert into new, derived from edb
     assertEquals(storageManager.getNewDerivedDB(edb.id), ArrayBuffer())
     toRun = compileCheck(
-      InsertOp(edb.id, DB.Derived, KNOWLEDGE.New, ScanEDBOp(edb.id)), // insert into new, derived from edb
+      InsertOp(edb.id, DB.Derived, KNOWLEDGE.New, ScanEDBOp(edb.id).asInstanceOf[IROp[Any]]), // insert into new, derived from edb
       generalMatch(s"$any$sVar.resetNewDerived\\(${edb.id}, $scanEdb, $edbS\\)$anyCapture".r)
     )
     toRun(storageManager)
@@ -347,7 +362,7 @@ class StagedCompileTest extends munit.FunSuite {
 
     // insert again to show that it fully resets
     toRun = compileCheck(
-      InsertOp(edb.id, DB.Derived, KNOWLEDGE.New, ScanEDBOp(edb.id)), // insert into new, derived from edb
+      InsertOp(edb.id, DB.Derived, KNOWLEDGE.New, ScanEDBOp(edb.id).asInstanceOf[IROp[Any]]), // insert into new, derived from edb
       generalMatch(s"$any$sVar.resetNewDerived\\(${edb.id}, $scanEdb, $edbS\\)$anyCapture".r)
     )
     toRun(storageManager)
@@ -370,7 +385,7 @@ class StagedCompileTest extends munit.FunSuite {
     val emptyEDB = s"$sVar.EDB\\(\\)"
     val scanEdbDerived = s"$sVar.getKnownDerivedDB\\(${edb.id}".r
     var toRun = compileCheck(
-      InsertOp(edb.id, DB.Derived, KNOWLEDGE.Known, ScanEDBOp(edb.id)),
+      InsertOp(edb.id, DB.Derived, KNOWLEDGE.Known, ScanEDBOp(edb.id).asInstanceOf[IROp[Any]]),
       generalMatch(s"$any$sVar.resetKnownDerived\\(${edb.id}, $scanEdb, $emptyEDB\\)$anyCapture".r)
     )
     toRun(storageManager)
@@ -378,7 +393,7 @@ class StagedCompileTest extends munit.FunSuite {
 
     // insert again to show that it appends
     toRun = compileCheck(
-      InsertOp(edb.id, DB.Derived, KNOWLEDGE.Known, ScanEDBOp(edb.id), ScanOp(edb.id, DB.Derived, KNOWLEDGE.Known)),
+      InsertOp(edb.id, DB.Derived, KNOWLEDGE.Known, ScanEDBOp(edb.id).asInstanceOf[IROp[Any]], ScanOp(edb.id, DB.Derived, KNOWLEDGE.Known).asInstanceOf[IROp[Any]]),
       generalMatch(s"$any$sVar.resetKnownDerived\\(${edb.id}, $scanEdb, $scanEdbDerived\\)$anyCapture".r)
     )
     toRun(storageManager)
@@ -386,7 +401,7 @@ class StagedCompileTest extends munit.FunSuite {
 
     // insert with self to double
     toRun = compileCheck(
-      InsertOp(edb.id, DB.Derived, KNOWLEDGE.Known, ScanOp(edb.id, DB.Derived, KNOWLEDGE.Known), ScanOp(edb.id, DB.Derived, KNOWLEDGE.Known)),
+      InsertOp(edb.id, DB.Derived, KNOWLEDGE.Known, ScanOp(edb.id, DB.Derived, KNOWLEDGE.Known).asInstanceOf[IROp[Any]], ScanOp(edb.id, DB.Derived, KNOWLEDGE.Known).asInstanceOf[IROp[Any]]),
       generalMatch(s"$any$sVar.resetKnownDerived\\(${edb.id}, $scanEdbDerived\\), $scanEdbDerived\\)$anyCapture".r)
     )
     toRun(storageManager)
@@ -394,7 +409,7 @@ class StagedCompileTest extends munit.FunSuite {
 
     // insert with empty to show it rewrites
     toRun = compileCheck(
-      InsertOp(edb.id, DB.Derived, KNOWLEDGE.Known, ScanEDBOp(idb.id)),
+      InsertOp(edb.id, DB.Derived, KNOWLEDGE.Known, ScanEDBOp(idb.id).asInstanceOf[IROp[Any]]),
       generalMatch(s"$any$sVar.resetKnownDerived\\(${edb.id}, $emptyEDB, $emptyEDB\\)$anyCapture".r)
     )
     toRun(storageManager)
@@ -403,7 +418,7 @@ class StagedCompileTest extends munit.FunSuite {
     // NEW
     val scanEdbDerivedNew = s"$sVar.getNewDerivedDB\\(${edb.id}$anyCapture".r
     toRun = compileCheck(
-      InsertOp(edb.id, DB.Derived, KNOWLEDGE.New, ScanEDBOp(edb.id)),
+      InsertOp(edb.id, DB.Derived, KNOWLEDGE.New, ScanEDBOp(edb.id).asInstanceOf[IROp[Any]]),
       generalMatch(s"$any$sVar.resetNewDerived\\(${edb.id}, $scanEdb, $emptyEDB\\)$anyCapture".r)
     )
     toRun(storageManager)
@@ -411,7 +426,7 @@ class StagedCompileTest extends munit.FunSuite {
 
     // insert again to show that it appends
     toRun = compileCheck(
-      InsertOp(edb.id, DB.Derived, KNOWLEDGE.New, ScanEDBOp(edb.id), ScanOp(edb.id, DB.Derived, KNOWLEDGE.New)),
+      InsertOp(edb.id, DB.Derived, KNOWLEDGE.New, ScanEDBOp(edb.id).asInstanceOf[IROp[Any]], ScanOp(edb.id, DB.Derived, KNOWLEDGE.New).asInstanceOf[IROp[Any]]),
       generalMatch(s"$any$sVar.resetNewDerived\\(${edb.id}, $scanEdb, $scanEdbDerivedNew$anyCapture".r)
     )
     toRun(storageManager)
@@ -419,7 +434,7 @@ class StagedCompileTest extends munit.FunSuite {
 
     // insert with self to double
     toRun = compileCheck(
-      InsertOp(edb.id, DB.Derived, KNOWLEDGE.New, ScanOp(edb.id, DB.Derived, KNOWLEDGE.New), ScanOp(edb.id, DB.Derived, KNOWLEDGE.New)),
+      InsertOp(edb.id, DB.Derived, KNOWLEDGE.New, ScanOp(edb.id, DB.Derived, KNOWLEDGE.New).asInstanceOf[IROp[Any]], ScanOp(edb.id, DB.Derived, KNOWLEDGE.New).asInstanceOf[IROp[Any]]),
       generalMatch(s"$any$sVar.resetNewDerived\\(${edb.id}, $scanEdbDerivedNew\\), $scanEdbDerivedNew\\)$anyCapture".r)
     )
     toRun(storageManager)
@@ -427,7 +442,7 @@ class StagedCompileTest extends munit.FunSuite {
 
     // insert with empty to show it rewrites
     toRun = compileCheck(
-      InsertOp(edb.id, DB.Derived, KNOWLEDGE.New, ScanEDBOp(idb.id)),
+      InsertOp(edb.id, DB.Derived, KNOWLEDGE.New, ScanEDBOp(idb.id).asInstanceOf[IROp[Any]]),
       generalMatch(s"$any$sVar.resetNewDerived\\(${edb.id}, $emptyEDB, $emptyEDB\\)$anyCapture".r)
     )
     toRun(storageManager)
@@ -443,7 +458,7 @@ class StagedCompileTest extends munit.FunSuite {
   test("UnionOp") {
     val scanEdge = s"$sVar.edbs.apply\\(${edge.id}\\)"
     val scanEdb = s"$sVar.edbs.apply\\(${edb.id}\\)"
-    val toRun = compileCheck(
+    val toRun = compileCheckRel(
       UnionOp(OpCode.UNION,
         ScanEDBOp(edge.id),
         ScanEDBOp(edb.id),
@@ -457,7 +472,7 @@ class StagedCompileTest extends munit.FunSuite {
   test("DiffOp") {
     val scanEdge = s"$sVar.edbs.apply\\(${edge.id}\\)"
     val scanEdb = s"$sVar.edbs.apply\\(${edb.id}\\)"
-    val toRun = compileCheck(
+    val toRun = compileCheckRel(
       DiffOp(
         ScanEDBOp(edge.id),
         ScanEDBOp(edb.id)

@@ -1,6 +1,6 @@
 package datalog.execution
 
-import datalog.dsl.{Term}
+import datalog.dsl.Term
 import datalog.execution.ast.ASTNode
 import datalog.execution.ir.*
 import datalog.storage.{CollectionsStorageManager, DB, KNOWLEDGE, StorageManager}
@@ -9,7 +9,7 @@ import datalog.tools.Debug.debug
 import scala.collection.mutable
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
-import scala.quoted.staging
+import scala.quoted.{Type, staging}
 import scala.util.{Failure, Success}
 
 /**
@@ -25,59 +25,61 @@ class StagedSnippetExecutionEngine(override val storageManager: CollectionsStora
                                    defaultJITOptions: JITOptions = JITOptions()) extends StagedExecutionEngine(storageManager, defaultJITOptions) {
   import storageManager.EDB
   val snippetCompiler: StagedSnippetCompiler = StagedSnippetCompiler(storageManager)
-  override def jitRel(irTree: IRRelOp)(using jitOptions: JITOptions): storageManager.EDB = {
+  override def jitRel(irTree: IROp[CollectionsStorageManager#EDB])(using jitOptions: JITOptions): CollectionsStorageManager#EDB = {
     debug("", () => s"IN SNIPPET JIT REL IR, code=${irTree.code}")
     irTree match {
       case op: ScanOp if jitOptions.granularity == op.code =>
-        if (op.compiledRelSnippetContinuationFn == null)
+        if (op.compiledSnippetContinuationFn == null)
           given staging.Compiler = dedicatedDotty
-          op.compiledRelSnippetContinuationFn = snippetCompiler.getCompiledSnippet(op)
-        op.compiledRelSnippetContinuationFn(storageManager, Seq.empty) // TODO: weird
+          op.compiledSnippetContinuationFn = snippetCompiler.getCompiledSnippetRel(op)
+        op.compiledSnippetContinuationFn(storageManager, Seq.empty) // TODO: weird
 
       case op: ScanOp =>
-        op.runRel(storageManager)
+        op.run(storageManager)
 
       case op: ScanEDBOp =>
-        op.runRel(storageManager)
+        op.run(storageManager)
 
       case op: JoinOp if jitOptions.granularity == op.code =>
-        if (op.compiledRelSnippetContinuationFn == null)
+        if (op.compiledSnippetContinuationFn == null)
           given staging.Compiler = dedicatedDotty
-          op.compiledRelSnippetContinuationFn = snippetCompiler.getCompiledSnippet(op)
-        op.compiledRelSnippetContinuationFn(storageManager, op.children.map(o => sm => jitRel(o)))
+          op.compiledSnippetContinuationFn = snippetCompiler.getCompiledSnippetRel(op)
+        op.compiledSnippetContinuationFn(storageManager, op.children.map(o => sm => jitRel(o)))
 
       case op: JoinOp =>
-        op.runRel_continuation(storageManager, op.children.map(o => sm => jitRel(o)))
+        op.run_continuation(storageManager, op.children.map(o => sm => jitRel(o)))
 
       case op: ProjectOp =>
-        op.runRel_continuation(storageManager, op.children.map(o => sm => jitRel(o)))
+        op.run_continuation(storageManager, op.children.map(o => sm => jitRel(o)))
 
       case op: UnionOp =>
-        op.runRel_continuation(storageManager, op.children.map(o => sm => jitRel(o)))
+        op.run_continuation(storageManager, op.children.map(o => sm => jitRel(o)))
 
       case op: DiffOp if jitOptions.granularity == op.code =>
-        if (op.compiledRelSnippetContinuationFn == null)
+        if (op.compiledSnippetContinuationFn == null)
           given staging.Compiler = dedicatedDotty
-          op.compiledRelSnippetContinuationFn = snippetCompiler.getCompiledSnippet(op)
-        op.compiledRelSnippetContinuationFn(storageManager, op.children.map(o => sm => jitRel(o)))
+          op.compiledSnippetContinuationFn = snippetCompiler.getCompiledSnippetRel(op)
+        op.compiledSnippetContinuationFn(storageManager, op.children.map(o => sm => jitRel(o)))
 
       case op: DiffOp =>
-        op.runRel_continuation(storageManager, op.children.map(o => sm => jitRel(o)))
+        op.run_continuation(storageManager, op.children.map(o => sm => jitRel(o)))
 
       case op: DebugPeek =>
-        op.runRel_continuation(storageManager, op.children.map(o => sm => jitRel(o)))
+        op.run_continuation(storageManager, op.children.map(o => sm => jitRel(o)))
 
       case _ => throw new Exception("Error: interpretRelOp called with unit operation")
     }
   }
-  override def jit(irTree: IROp)(using jitOptions: JITOptions): Any = {
-    debug("", () => "IN SNIPPET IR, code=${irTree.code}")
+  override def jit(irTree: IROp[Any])(using jitOptions: JITOptions): Any = {
+    debug("", () => s"IN SNIPPET IR, code=${irTree.code}")
     irTree match {
       case op: ProgramOp if jitOptions.granularity == op.code =>
         if (op.compiledSnippetContinuationFn == null)
           given staging.Compiler = dedicatedDotty
           op.compiledSnippetContinuationFn = snippetCompiler.getCompiledSnippet(op)
-        op.compiledSnippetContinuationFn(storageManager, op.children.map(o => sm => jit(o)))
+        op.compiledSnippetContinuationFn(
+          storageManager,
+          op.children.flatMap(o => o.children.map(o2 => sm => jit(o2)))) // or o2.run() for only interp
 
       case op: ProgramOp =>
         op.run_continuation(storageManager, op.children.map(o => sm => jit(o)))
@@ -99,7 +101,7 @@ class StagedSnippetExecutionEngine(override val storageManager: CollectionsStora
               op.compiledSnippetContinuationFn = snippetCompiler.getCompiledSnippet(op)
             op.compiledSnippetContinuationFn(
               storageManager,
-              op.children.flatMap(o => o.children.map(o2 => sm => o2.asInstanceOf[IRRelOp].runRel(sm))))
+              op.children.flatMap(o => o.children.map(o2 => sm => jit(o2)))) // or o2.run(sm) for only interp
           case _ =>
             op.run_continuation(storageManager, op.children.map(o => sm => jit(o)))
 
@@ -110,19 +112,16 @@ class StagedSnippetExecutionEngine(override val storageManager: CollectionsStora
         if (op.compiledSnippetContinuationFn == null)
           given staging.Compiler = dedicatedDotty
           op.compiledSnippetContinuationFn = snippetCompiler.getCompiledSnippet(op)
-        op.compiledSnippetContinuationFn(storageManager, op.children.map(o => sm => jitRel(o)))//Seq((sm: CollectionsStorageManager) => jitRel(op.subOp)) ++ op.subOp2.map(sop => (sm: CollectionsStorageManager) => jitRel(sop)))
+        op.compiledSnippetContinuationFn(storageManager, op.children.map(o => sm => jitRel(o.asInstanceOf[IROp[CollectionsStorageManager#EDB]])))
 
       case op: InsertOp =>
-        op.run_continuation(storageManager, op.children.map(o => sm => jitRel(o)))//Seq((sm: CollectionsStorageManager) => jitRel(op.subOp))/* ++ op.subOp2.map(sop => (sm: CollectionsStorageManager) => jitRel(sop))*/)
+        op.run_continuation(storageManager, op.children.map(o => sm => jitRel(o.asInstanceOf[IROp[CollectionsStorageManager#EDB]])))
       case op: DebugNode =>
         op.run(storageManager)
 
       case _ =>
-        irTree match {
-          case op: IRRelOp => jitRel(op)
-          case _ =>
-            throw new Exception(s"Error: unhandled node type $irTree")
-        }
+        jitRel(irTree.asInstanceOf[IROp[CollectionsStorageManager#EDB]])
+//        throw new Exception(s"Error: unhandled node type $irTree")
     }
   }
 }

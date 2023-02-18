@@ -111,7 +111,7 @@ class Printer[S <: StorageManager](val s: S) {
     }
   }
 
-  def printIR(node: IROp, ident: Int = 0, seq: Int = 0)(using ctx: InterpreterContext): String = {
+  def printIR[T](node: IROp[T], ident: Int = 0, seq: Int = 0)(using ctx: InterpreterContext): String = {
     val i = "\t"*ident
     i + (node match {
       case ProgramOp(children:_*) => s"PROGRAM:\n${printIR(children.head, ident+1)}"

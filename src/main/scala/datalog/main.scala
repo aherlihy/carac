@@ -8,6 +8,7 @@ import datalog.storage.{CollectionsStorageManager, NS, RelationalStorageManager}
 
 import scala.util.Random
 import scala.collection.mutable
+import scala.quoted.*
 
 def tc(program: Program): Unit = {
   val edge = program.relation[Constant]("edge")
@@ -527,11 +528,11 @@ def anon_var(program: Program) = {
 //  println("\n\n_______________________\n\n")
 //
   val jo = JITOptions(ir.OpCode.EVAL_SN, aot = false, block = true)
-  println("STAGED")
-  given engine3: ExecutionEngine = new StagedExecutionEngine(new CollectionsStorageManager(), jo)
-  val program3 = Program(engine3)
-  tc(program3)
-  println("\n\n_______________________\n\n")
+//  println("STAGED")
+//  given engine3: ExecutionEngine = new StagedExecutionEngine(new CollectionsStorageManager(), jo)
+//  val program3 = Program(engine3)
+//  tc(program3)
+//  println("\n\n_______________________\n\n")
 
   println("JIT Snippet")
   val engine4: ExecutionEngine = new StagedSnippetExecutionEngine(new CollectionsStorageManager(), jo)

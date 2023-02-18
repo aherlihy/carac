@@ -28,14 +28,14 @@ abstract class DLBenchmark {
       case "NaiveCompiledStagedCollections" => Program(NaiveStagedExecutionEngine(CollectionsStorageManager()))
       case "InterpretedStagedCollections" => Program(StagedExecutionEngine(CollectionsStorageManager(), JITOptions(granularity = ir.OpCode.OTHER)))
       case "CompiledStagedCollections" => Program(StagedExecutionEngine(CollectionsStorageManager()))
-      case _ if context.contains("JITStaged") =>
+      case _ if context.contains("JIT") =>
         val aot = context.contains("AOT")
         val nonblocking = context.contains("NonBlocking")
         val label =
           if (context.contains("NaiveEval")) ir.OpCode.EVAL_NAIVE
           else if (context.contains("SemiNaiveEval")) ir.OpCode.EVAL_SN
           else if (context.contains("LoopBody")) ir.OpCode.LOOP_BODY
-          else if (context.contains("Loop")) ir.OpCode.LOOP
+          else if (context.contains("Loop")) ir.OpCode.DOWHILE
           else if (context.contains("Program")) ir.OpCode.PROGRAM
           else if (context.contains("Join")) ir.OpCode.JOIN
           else throw new Exception(s"Unknown type of JIT staged $context")

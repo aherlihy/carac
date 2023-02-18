@@ -34,7 +34,7 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
   val dedicatedDotty: staging.Compiler = staging.Compiler.make(getClass.getClassLoader)
   var stragglers: mutable.WeakHashMap[Int, Future[CompiledFn]] = mutable.WeakHashMap.empty // should be ok since we are only removing by ref and then iterating on values only?
 
-  def createIR(ast: ASTNode)(using InterpreterContext): IROp = IRTreeGenerator().generateSemiNaive(ast)
+  def createIR(ast: ASTNode)(using InterpreterContext): IROp[Any] = IRTreeGenerator().generateSemiNaive(ast)
 
   def initRelation(rId: Int, name: String): Unit = {
     storageManager.ns(rId) = name
@@ -81,7 +81,7 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
   }
 
   // NOTE: this method is just for testing to see how much overhead tree processing has, not used irl.
-  def generateProgramTree(rId: Int): (IROp, InterpreterContext) = {
+  def generateProgramTree(rId: Int): (IROp[Any], InterpreterContext) = {
     // verify setup
     storageManager.verifyEDBs(precedenceGraph.idbs)
     if (storageManager.edbs.contains(rId) && !precedenceGraph.idbs.contains(rId)) { // if just an edb predicate then return
@@ -106,7 +106,7 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
 
   // Separate these out for easier benchmarking
 
-  def preCompile(irTree: IROp): CompiledFn = {
+  def preCompile(irTree: IROp[Any]): CompiledFn = {
     given staging.Compiler = dedicatedDotty
     compiler.getCompiled(irTree)
   }
@@ -115,7 +115,7 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
     storageManager.getNewIDBResult(ctx.toSolve)
   }
 
-  def solveCompiled(irTree: IROp, ctx: InterpreterContext): Set[Seq[Term]] = {
+  def solveCompiled(irTree: IROp[Any], ctx: InterpreterContext): Set[Seq[Term]] = {
     debug("", () => "compile-only mode")
     given staging.Compiler = dedicatedDotty
     val compiled = compiler.getCompiled(irTree)
@@ -123,83 +123,63 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
     storageManager.getNewIDBResult(ctx.toSolve)
   }
 
-  def solveInterpreted(irTree: IROp, ctx: InterpreterContext):  Set[Seq[Term]] = {
+  def solveInterpreted[T](irTree: IROp[Any], ctx: InterpreterContext):  Set[Seq[Term]] = {
     debug("", () => "interpret-only mode")
     irTree.run(storageManager)
     storageManager.getNewIDBResult(ctx.toSolve)
   }
 
-  def solveJIT(irTree: IROp, ctx: InterpreterContext)(using jitOptions: JITOptions): Set[Seq[Term]] = {
+  def solveJIT(irTree: IROp[Any], ctx: InterpreterContext)(using jitOptions: JITOptions): Set[Seq[Term]] = {
     debug("", () => s"JIT with options $jitOptions")
     jit(irTree)
     storageManager.getNewIDBResult(ctx.toSolve)
   }
 
-  def jitRel(irTree: IRRelOp)(using jitOptions: JITOptions): storageManager.EDB = {
+  def jitRel(irTree: IROp[CollectionsStorageManager#EDB])(using jitOptions: JITOptions): CollectionsStorageManager#EDB = {
     //    println(s"IN INTERPRET REL_IR, code=${irTree.code}")
     // If async compiling, then make a new dotty for nodes for which there are multiple. TODO: pool?
     lazy val newDotty = if (jitOptions.block) dedicatedDotty else staging.Compiler.make(getClass.getClassLoader)
     irTree match {
       case op: UnionOp if jitOptions.granularity == op.code =>
-        if (op.compiledRelFn == null && !jitOptions.aot)
-          startCompileThread(op, newDotty)
-        checkResult(op.compiledRelFn, op, () => op.runRel_continuation(storageManager, op.children.map(o => sm => jitRel(o))))
+        if (op.compiledFn == null && !jitOptions.aot)
+          startCompileThreadRel(op, newDotty)
+        checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.children.map(o => sm => jitRel(o))))
 
       case op: JoinOp if jitOptions.granularity == op.code =>
-        if (op.compiledRelFn == null && !jitOptions.aot)
-          startCompileThread(op, newDotty)
-        checkResult(op.compiledRelFn, op, () => op.runRel_continuation(storageManager, op.children.map(o => sm => jitRel(o))))
+        if (op.compiledFn == null && !jitOptions.aot)
+          startCompileThreadRel(op, newDotty)
+        checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.children.map(o => sm => jitRel(o))))
 
       case op: DiffOp if jitOptions.granularity == op.code =>
-        if (op.compiledRelFn == null && !jitOptions.aot)
-          startCompileThread(op, dedicatedDotty)
-        checkResult(op.compiledRelFn, op, () => op.runRel_continuation(storageManager, op.children.map(o => sm => jitRel(o))))
+        if (op.compiledFn == null && !jitOptions.aot)
+          startCompileThreadRel(op, dedicatedDotty)
+        checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.children.map(o => sm => jitRel(o))))
 
       case op: ScanOp =>
-        op.runRel(storageManager)
+        op.run(storageManager)
 
       case op: ScanEDBOp =>
-        op.runRel(storageManager)
+        op.run(storageManager)
 
       case op: JoinOp => // TODO: mutex?
-        op.runRel_continuation(storageManager, op.children.map(o => sm => jitRel(o)))
+        op.run_continuation(storageManager, op.children.map(o => sm => jitRel(o)))
 
       case op: ProjectOp =>
-        op.runRel_continuation(storageManager, op.children.map(o => sm => jitRel(o)))
+        op.run_continuation(storageManager, op.children.map(o => sm => jitRel(o)))
 
       case op: UnionOp =>
-        op.runRel_continuation(storageManager, op.children.map(o => sm => jitRel(o)))
+        op.run_continuation(storageManager, op.children.map(o => sm => jitRel(o)))
 
       case op: DiffOp =>
-        op.runRel_continuation(storageManager, op.children.map(o => sm => jitRel(o)))
+        op.run_continuation(storageManager, op.children.map(o => sm => jitRel(o)))
 
       case op: DebugPeek =>
-        op.runRel_continuation(storageManager, op.children.map(o => sm => jitRel(o)))
+        op.run_continuation(storageManager, op.children.map(o => sm => jitRel(o)))
       case _ => throw new Exception("Error: interpretRelOp called with unit operation")
     }
   }
 
-  inline def checkResult(value: Future[CompiledRelFn], op: IRRelOp, default: () => CollectionsStorageManager#EDB)(using jitOptions: JITOptions): CollectionsStorageManager#EDB =
-    value.value match {
-      case Some(Success(run)) =>
-        debug(s"COMPILED ${op.code}", () => "")
-        stragglers.remove(op.compiledRelFn.hashCode()) // TODO: might not work, but jsut end up waiting for completed future
-        run(storageManager)
-      case Some(Failure(e)) =>
-        stragglers.remove(op.compiledRelFn.hashCode())
-        throw Exception(s"Error compiling ${op.code} with: ${e.getCause}")
-      case None =>
-        if (jitOptions.block)
-          debug(s"${op.code} compilation not ready yet, so blocking", () => "")
-          val res = Await.result(op.compiledRelFn, Duration.Inf)(storageManager)
-          stragglers.remove(op.compiledRelFn.hashCode())
-          res
-        else
-          debug(s"${op.code} compilation not ready yet, so defaulting", () => "")
-          default()
-    }
-
-  inline def checkResult(value: Future[CompiledFn], op: IROp, default: () => Any)(using jitOptions: JITOptions): Any =
+  inline def checkResult[T](value: Future[CollectionsStorageManager => T], op: IROp[T], default: () => T)(using jitOptions: JITOptions): T =
     value.value match {
       case Some(Success(run)) =>
         debug(s"COMPILED ${op.code}", () => "")
@@ -218,7 +198,7 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
           debug(s"${op.code} compilation not ready yet, so defaulting", () => "")
           default()
     }
-  inline def startCompileThread(op: IROp, dotty: staging.Compiler): Unit =
+  inline def startCompileThread(op: IROp[Any], dotty: staging.Compiler): Unit =
     debug(s"starting online compilation for code ${op.code}", () => "")
     given scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
     op.compiledFn = Future {
@@ -227,17 +207,17 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
     }
     stragglers.addOne(op.compiledFn.hashCode(), op.compiledFn)
 
-  inline def startCompileThread(op: IRRelOp, dotty: staging.Compiler): Unit =
+  inline def startCompileThreadRel(op: IROp[CollectionsStorageManager#EDB], dotty: staging.Compiler): Unit =
     debug(s"starting online compilation for code ${op.code}", () => "")
     given scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
-    op.compiledRelFn = Future {
+    op.compiledFn = Future {
       given staging.Compiler = dotty; // dedicatedDotty //staging.Compiler.make(getClass.getClassLoader) // TODO: new dotty per thread, maybe concat
-      compiler.getCompiled(op)
+      compiler.getCompiledRel(op)
     }
-    stragglers.addOne(op.compiledRelFn.hashCode(), op.compiledFn)
+    stragglers.addOne(op.compiledFn.hashCode(), op.compiledFn)
 
 
-  def jit(irTree: IROp)(using jitOptions: JITOptions): Any = {
+  def jit(irTree: IROp[Any])(using jitOptions: JITOptions): Any = {
     debug("", () => s"IN STAGED JIT IR, code=${irTree.code}, gran=${jitOptions.granularity}")
     irTree match {
       case op: ProgramOp =>
@@ -281,17 +261,14 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
         op.run(storageManager)
 
       case op: InsertOp =>
-        op.run_continuation(storageManager, op.children.map(o => sm => jit(o)))
+        op.run_continuation(storageManager, op.children.map(o => sm => jitRel(o.asInstanceOf[IROp[CollectionsStorageManager#EDB]])))
 
       case op: DebugNode =>
         op.run(storageManager)
 
       case _ =>
-        irTree match {
-          case op: IRRelOp => jitRel(op)
-          case _ =>
-            throw new Exception(s"Error: unhandled node type $irTree")
-        }
+        jitRel(irTree.asInstanceOf[IROp[CollectionsStorageManager#EDB]])
+//        throw new Exception(s"Error: unhandled node type $irTree")
     }
   }
 
@@ -350,5 +327,5 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
 }
 class NaiveStagedExecutionEngine(storageManager: CollectionsStorageManager, defaultJITOptions: JITOptions = JITOptions()) extends StagedExecutionEngine(storageManager, defaultJITOptions) {
   import storageManager.EDB
-  override def createIR(ast: ASTNode)(using InterpreterContext): IROp = IRTreeGenerator().generateNaive(ast)
+  override def createIR(ast: ASTNode)(using InterpreterContext): IROp[Any] = IRTreeGenerator().generateNaive(ast)
 }

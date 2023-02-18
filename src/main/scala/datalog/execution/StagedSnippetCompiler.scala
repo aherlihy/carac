@@ -29,7 +29,7 @@ class StagedSnippetCompiler(val storageManager: StorageManager) {
     }
   }
 
-  def compileIRRelOp(irTree: IRRelOp)(using stagedSM: Expr[CollectionsStorageManager])(using stagedFns: Expr[Seq[CompiledRelFn]])(using Quotes): Expr[CollectionsStorageManager#EDB] = { // TODO: Instead of parameterizing, use staged path dependent type: i.e. stagedSM.EDB
+  def compileIRRelOp(irTree: IROp[CollectionsStorageManager#EDB])(using stagedSM: Expr[CollectionsStorageManager])(using stagedFns: Expr[Seq[CompiledRelFn]])(using Quotes): Expr[CollectionsStorageManager#EDB] = { // TODO: Instead of parameterizing, use staged path dependent type: i.e. stagedSM.EDB
     irTree match {
       case ScanOp(rId, db, knowledge) =>
         db match { // TODO[future]: Since edb is accessed upon first iteration, potentially optimize away getOrElse
@@ -67,22 +67,14 @@ class StagedSnippetCompiler(val storageManager: StorageManager) {
 
       case ProjectOp(keys, children:_*) =>
         if (children.head.code == OpCode.JOIN) // merge join+project
-          val compiledOps = Expr.ofSeq(children.head.children.map(compileIRRelOp))
+          val compiledOps = Expr.ofSeq(children.head.children.map(compileIRRelOp)) // TODO: not sure about this
           '{ $stagedSM.joinProjectHelper($compiledOps, ${ Expr(keys) }) }
         else
-          '{ $stagedSM.projectHelper(${ compileIRRelOp(children.head) }, ${ Expr(keys) }) }
+          '{ $stagedSM.projectHelper($stagedFns(0)($stagedSM), ${ Expr(keys) }) }
 
       case UnionOp(label, children:_*) =>
-        val compiledOps = children.map(compileIRRelOp)
-        label match
-          case OpCode.EVAL_RULE_NAIVE if children.size > heuristics.max_deps =>
-            val lambdaOps = compiledOps.map(e => '{ def eval_rule_lambda() = $e; eval_rule_lambda() })
-            '{ $stagedSM.union(${Expr.ofSeq(lambdaOps)}) }
-          case OpCode.EVAL_RULE_SN if children.size > heuristics.max_deps =>
-            val lambdaOps = compiledOps.map(e => '{ def eval_rule_sn_lambda() = $e; eval_rule_sn_lambda() })
-            '{ $stagedSM.union(${ Expr.ofSeq(lambdaOps) }) }
-          case _ =>
-            '{ $stagedSM.union(${Expr.ofSeq(compiledOps)}) }
+        val compiledOps = '{ $stagedFns.map(s => s($stagedSM)) }
+        '{ $stagedSM.union($compiledOps) }
 
       case DiffOp(children:_*) =>
         '{ $stagedSM.diff($stagedFns(0)($stagedSM), $stagedFns(1)($stagedSM)) }
@@ -95,10 +87,10 @@ class StagedSnippetCompiler(val storageManager: StorageManager) {
     }
   }
 
-  def compileIR(irTree: IROp)(using stagedSM: Expr[CollectionsStorageManager])(using stagedFns: Expr[Seq[CompiledFn]])(using Quotes): Expr[Any] = { // TODO: Instead of parameterizing, use staged path dependent type: i.e. stagedSM.EDB
+  def compileIR(irTree: IROp[Any])(using stagedSM: Expr[CollectionsStorageManager])(using stagedFns: Expr[Seq[CompiledFn]])(using Quotes): Expr[Any] = { // TODO: Instead of parameterizing, use staged path dependent type: i.e. stagedSM.EDB
     irTree match {
-      case ProgramOp(body) =>
-        compileIR(body)
+      case ProgramOp(children) =>
+        '{ $stagedFns(0)($stagedSM) }
 
       case DoWhileOp(toCmp, children:_*) =>
         val cond = toCmp match {
@@ -118,20 +110,7 @@ class StagedSnippetCompiler(val storageManager: StorageManager) {
         '{ $stagedSM.swapKnowledge() ; $stagedSM.clearNewDerived() }
 
       case SequenceOp(label, children:_*) =>
-        val cOps = children.map(compileIR)
-        label match
-          case OpCode.EVAL_NAIVE if children.size / 2 > heuristics.max_relations =>
-            cOps.reduceLeft((acc, next) =>
-              '{ $acc ; def eval_naive_lambda() = $next; eval_naive_lambda() }
-            )
-          case OpCode.EVAL_SN if children.size > heuristics.max_relations =>
-            cOps.reduceLeft((acc, next) =>
-              '{ $acc ; def eval_sn_lambda() = $next; eval_sn_lambda() }
-            )
-          case _ =>
-            cOps.reduceLeft((acc, next) => // TODO[future]: make a block w reflection instead of reduceLeft for efficiency
-              '{ $acc; $next; }
-            )
+        '{ $stagedFns.foreach(s => s($stagedSM)) } // no need to generate lambdas bc already there!
 
       case InsertOp(rId, db, knowledge, children:_*) =>
         val res = '{ $stagedFns(0)($stagedSM).asInstanceOf[CollectionsStorageManager#EDB] }
@@ -157,15 +136,11 @@ class StagedSnippetCompiler(val storageManager: StorageManager) {
         '{ debug(${ Expr(prefix) }, () => $stagedSM.printer.toString()) }
 
       case _ =>
-        irTree match {
-//          case op: IRRelOp => compileIRRelOp(op)
-          case _ =>
-            throw new Exception(s"Error: unhandled node type $irTree")
-        }
+        throw new Exception(s"Error: unhandled node type $irTree")
     }
   }
 
-  def getCompiledSnippet(irTree: IROp)(using staging.Compiler): ((CollectionsStorageManager, Seq[CompiledFn]) => Any) = {
+  def getCompiledSnippet(irTree: IROp[Any])(using staging.Compiler): ((CollectionsStorageManager, Seq[CompiledFn]) => Any) = {
     staging.run {
       val res: Expr[(CollectionsStorageManager, Seq[CompiledFn]) => Any] =
         '{ (stagedSm: CollectionsStorageManager, stagedFns: Seq[CompiledFn]) => ${ compileIR(irTree)(using 'stagedSm)(using 'stagedFns) } }
@@ -174,7 +149,7 @@ class StagedSnippetCompiler(val storageManager: StorageManager) {
     }
   }
 
-  def getCompiledSnippet(irTree: IRRelOp)(using staging.Compiler): ((CollectionsStorageManager, Seq[CompiledRelFn]) => CollectionsStorageManager#EDB) = {
+  def getCompiledSnippetRel(irTree: IROp[CollectionsStorageManager#EDB])(using staging.Compiler): ((CollectionsStorageManager, Seq[CompiledRelFn]) => CollectionsStorageManager#EDB) = {
     staging.run {
       val res: Expr[(CollectionsStorageManager, Seq[CompiledRelFn]) => CollectionsStorageManager#EDB] =
         '{ (stagedSm: CollectionsStorageManager, stagedFns: Seq[CompiledRelFn]) => ${ compileIRRelOp(irTree)(using 'stagedSm)(using 'stagedFns) } }

@@ -2,13 +2,13 @@ package datalog.execution.ir
 
 import datalog.execution.StagedCompiler
 import datalog.execution.ast.{ASTNode, AllRulesNode, LogicAtom, ProgramNode, RuleNode}
-import datalog.storage.{DB, KNOWLEDGE, RelationId}
+import datalog.storage.{DB, KNOWLEDGE, RelationId, CollectionsStorageManager}
 import datalog.tools.Debug.debug
 
 import scala.collection.mutable
 
 class IRTreeGenerator(using val ctx: InterpreterContext) {
-  def naiveEval(ruleMap: mutable.Map[RelationId, ASTNode], copyToDelta: Boolean = false): IROp =
+  def naiveEval(ruleMap: mutable.Map[RelationId, ASTNode], copyToDelta: Boolean = false): IROp[Any] =
     SequenceOp(
       OpCode.EVAL_NAIVE,
       //      DebugNode("in eval:", () => s"rId=${ctx.storageManager.ns(rId)} relations=${ctx.relations.map(r => ctx.storageManager.ns(r)).mkString("[", ", ", "]")}  incr=${ctx.newDbId} src=${ctx.knownDbId}") +:
@@ -17,42 +17,42 @@ class IRTreeGenerator(using val ctx: InterpreterContext) {
         .flatMap(r =>
           if (copyToDelta)
             Seq( // TODO: un-flatten to generate for loops if better
-              InsertOp(r, DB.Derived, KNOWLEDGE.New, naiveEvalRule(ruleMap(r))),
-              InsertOp(r, DB.Delta, KNOWLEDGE.New, ScanOp(r, DB.Derived, KNOWLEDGE.New))
+              InsertOp(r, DB.Derived, KNOWLEDGE.New, naiveEvalRule(ruleMap(r)).asInstanceOf[IROp[Any]]),
+              InsertOp(r, DB.Delta, KNOWLEDGE.New, ScanOp(r, DB.Derived, KNOWLEDGE.New).asInstanceOf[IROp[Any]])
             )
           else
-            Seq(InsertOp(r, DB.Derived, KNOWLEDGE.New, naiveEvalRule(ruleMap(r))))
+            Seq(InsertOp(r, DB.Derived, KNOWLEDGE.New, naiveEvalRule(ruleMap(r)).asInstanceOf[IROp[Any]]))
         ):_*
     )
 
-  def semiNaiveEval(rId: RelationId, ruleMap: mutable.Map[RelationId, ASTNode]): IROp =
+  def semiNaiveEval(rId: RelationId, ruleMap: mutable.Map[RelationId, ASTNode]): IROp[Any] =
     SequenceOp(
       OpCode.EVAL_SN,
       ctx.sortedRelations
         .filter(ruleMap.contains)
-        .flatMap(r =>
-//        .map(r =>
+//        .flatMap(r =>
+        .map(r =>
           val prev = ScanOp(r, DB.Derived, KNOWLEDGE.Known)
           val res = semiNaiveEvalRule(ruleMap(r))
           val diff = DiffOp(res, prev)
 
-//          SequenceOp( // TODO: could flatten, but then potentially can't generate loop if needed
-//            OpCode.SEQ,
-          Seq(
-            InsertOp(r, DB.Delta, KNOWLEDGE.New, diff),
-            InsertOp(r, DB.Derived, KNOWLEDGE.New, prev, ScanOp(r, DB.Delta, KNOWLEDGE.New)),
+          SequenceOp( // TODO: could flatten, but then potentially can't generate loop if needed
+            OpCode.SEQ,
+//          Seq(
+            InsertOp(r, DB.Delta, KNOWLEDGE.New, diff.asInstanceOf[IROp[Any]]),
+            InsertOp(r, DB.Derived, KNOWLEDGE.New, prev.asInstanceOf[IROp[Any]], ScanOp(r, DB.Delta, KNOWLEDGE.New).asInstanceOf[IROp[Any]]),
           )
         ):_*,
     )
 
-  def naiveEvalRule(ast: ASTNode): IRRelOp = {
+  def naiveEvalRule(ast: ASTNode): IROp[CollectionsStorageManager#EDB] = {
     ast match {
       case AllRulesNode(rules, rId, edb) =>
         var allRes = rules.map(naiveEvalRule).toSeq
         if (edb)
           allRes = allRes :+ ScanEDBOp(rId)
-        //        DebugPeek("NaiveSPJU: ", () => s"r=${ctx.storageManager.ns(rId)} keys=${ctx.storageManager.printer.printIR(res).replace("\n", " ")} knownDBId ${ctx.knownDbId} \nresult of evalRule: ", res)
-        if(allRes.size == 1) allRes.head else UnionOp(OpCode.EVAL_RULE_NAIVE, allRes:_*)
+//        if(allRes.size == 1) allRes.head else
+        UnionOp(OpCode.EVAL_RULE_NAIVE, allRes:_*)
       case RuleNode(head, _, joinIdx) =>
         val r = head.asInstanceOf[LogicAtom].relation
         joinIdx match {
@@ -73,14 +73,14 @@ class IRTreeGenerator(using val ctx: InterpreterContext) {
     }
   }
 
-  def semiNaiveEvalRule(ast: ASTNode): IRRelOp = {
+  def semiNaiveEvalRule(ast: ASTNode): IROp[CollectionsStorageManager#EDB] = {
     ast match {
       case AllRulesNode(rules, rId, edb) =>
         var allRes = rules.map(semiNaiveEvalRule).toSeq
         if (edb)
           allRes = allRes :+ ScanEDBOp(rId)
-        if(allRes.size == 1) allRes.head else UnionOp(OpCode.EVAL_RULE_SN, allRes:_*)
-        //        DebugPeek("SPJU: ", () => s"r=${ctx.storageManager.ns(rId)} keys=${ctx.storageManager.printer.printIR(res).replace("\n", " ")} knownDBId ${ctx.knownDbId} \nevalRuleSN ", res)
+//        if(allRes.size == 1) allRes.head else
+        UnionOp(OpCode.EVAL_RULE_SN, allRes:_*)
       case RuleNode(head, _, joinIdx) =>
         val r = head.asInstanceOf[LogicAtom].relation
         joinIdx match {
@@ -114,7 +114,7 @@ class IRTreeGenerator(using val ctx: InterpreterContext) {
     }
   }
 
-  def generateNaive(ast: ASTNode): IROp = {
+  def generateNaive(ast: ASTNode): IROp[Any] = {
     ast match {
       case ProgramNode(ruleMap) =>
         DoWhileOp(
@@ -128,7 +128,7 @@ class IRTreeGenerator(using val ctx: InterpreterContext) {
     }
   }
 
-  def generateSemiNaive(ast: ASTNode): IROp = {
+  def generateSemiNaive(ast: ASTNode): IROp[Any] = {
     ast match {
       case ProgramNode(ruleMap) =>
         ProgramOp(SequenceOp(OpCode.SEQ,

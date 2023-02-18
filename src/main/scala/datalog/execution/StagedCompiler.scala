@@ -26,7 +26,7 @@ class StagedCompiler(val storageManager: StorageManager) {
   }
 
 //  def compileIRRelOp[T](irTree: IRRelOp)(using stagedSM: Expr[StorageManager {type EDB = T}], t: Type[T])(using Quotes): Expr[T] = { // TODO: Instead of parameterizing, use staged path dependent type: i.e. stagedSM.EDB
-  def compileIRRelOp(irTree: IRRelOp)(using stagedSM: Expr[CollectionsStorageManager])(using Quotes): Expr[CollectionsStorageManager#EDB] = {
+  def compileIRRelOp(irTree: IROp[CollectionsStorageManager#EDB])(using stagedSM: Expr[CollectionsStorageManager])(using Quotes): Expr[CollectionsStorageManager#EDB] = {
     irTree match {
       case ScanOp(rId, db, knowledge) =>
         db match {
@@ -95,7 +95,7 @@ class StagedCompiler(val storageManager: StorageManager) {
   }
 
 //  def compileIR[T](irTree: IROp)(using stagedSM: Expr[StorageManager {type EDB = T}], t: Type[T])(using Quotes): Expr[Any] = { // TODO: Instead of parameterizing, use staged path dependent type: i.e. stagedSM.EDB
-  def compileIR(irTree: IROp)(using stagedSM: Expr[CollectionsStorageManager])(using Quotes): Expr[Any] = {
+  def compileIR(irTree: IROp[Any])(using stagedSM: Expr[CollectionsStorageManager])(using Quotes): Expr[Any] = {
     irTree match {
       case ProgramOp(children:_*) =>
         compileIR(children.head)
@@ -134,8 +134,8 @@ class StagedCompiler(val storageManager: StorageManager) {
             )
 
       case InsertOp(rId, db, knowledge, children:_*) =>
-        val res = compileIRRelOp(children.head)
-        val res2 = if (children.size > 1) compileIRRelOp(children(1)) else '{ $stagedSM.EDB() }
+        val res = compileIRRelOp(children.head.asInstanceOf[IROp[CollectionsStorageManager#EDB]])
+        val res2 = if (children.size > 1) compileIRRelOp(children(1).asInstanceOf[IROp[CollectionsStorageManager#EDB]]) else '{ $stagedSM.EDB() }
         db match {
           case DB.Derived =>
             knowledge match {
@@ -157,11 +157,7 @@ class StagedCompiler(val storageManager: StorageManager) {
         '{ debug(${ Expr(prefix) }, () => $stagedSM.printer.toString()) }
 
       case _ =>
-        irTree match {
-          case op: IRRelOp => compileIRRelOp(op)
-          case _ =>
-            throw new Exception(s"Error: unhandled node type $irTree")
-        }
+        throw new Exception(s"Error: unhandled node type $irTree")
     }
   }
 
@@ -176,7 +172,7 @@ class StagedCompiler(val storageManager: StorageManager) {
     threadField.setAccessible(true)
     threadField.set(contextBase, null)
 
-  def getCompiled(irTree: IROp)(using compiler: staging.Compiler): CompiledFn = {
+  def getCompiled(irTree: IROp[Any])(using compiler: staging.Compiler): CompiledFn = {
     val result = staging.run {
       val res: Expr[CompiledFn] =
         '{ (stagedSm: CollectionsStorageManager) => ${ compileIR(irTree)(using 'stagedSm) } }
@@ -187,7 +183,7 @@ class StagedCompiler(val storageManager: StorageManager) {
     result
   }
 
-  def getCompiled(irTree: IRRelOp)(using compiler: staging.Compiler): CompiledRelFn = {
+  def getCompiledRel(irTree: IROp[CollectionsStorageManager#EDB])(using compiler: staging.Compiler): CompiledRelFn = {
     val result = staging.run {
       val res: Expr[CompiledRelFn] =
         '{ (stagedSm: CollectionsStorageManager) => ${ compileIRRelOp(irTree)(using 'stagedSm) } }

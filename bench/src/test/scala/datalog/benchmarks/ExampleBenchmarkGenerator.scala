@@ -1,4 +1,4 @@
-package datalog.benchmarks.examples
+package datalog.benchmarks
 
 import datalog.benchmarks.DLBenchmark
 import datalog.dsl.{Constant, Program, Relation, Term}
@@ -10,16 +10,6 @@ import scala.collection.mutable
 import scala.io.Source
 import scala.jdk.StreamConverters.*
 import scala.util.Properties
-
-inline val examples_warmup_iterations = 3
-inline val examples_iterations = 5
-inline val examples_warmup_time = 10
-inline val examples_time = 10
-inline val examples_batchsize = 10000
-inline val examples_xl_batchsize = 100
-inline val examples_fork = 1
-inline val examples_xl_time = 120
-inline val examples_xxl_time = 360
 
 abstract class ExampleBenchmarkGenerator(testname: String,
                                          val skip: Set[String] = Set(),

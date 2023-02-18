@@ -1,7 +1,9 @@
 package datalog.benchmarks.examples
 
+import datalog.benchmarks.ExampleBenchmarkGenerator
 import test.examples.clique.clique
 import datalog.dsl.{Constant, Program}
+
 import java.util.concurrent.TimeUnit
 import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.Blackhole
@@ -115,4 +117,45 @@ class clique_benchmark() extends ExampleBenchmarkGenerator("clique") with clique
     blackhole.consume(run(programs(p), result))
   }
 
+  @Benchmark def jit_staged_JITStagedSemiNaiveEvalBlocking(blackhole: Blackhole): Unit = {
+    val p = "JITStagedSemiNaiveEvalBlockingCollections"
+    if (!programs.contains(p))
+      throw new Exception(f"skip test $p for current env")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  @Benchmark def jit_staged_JITStagedProgramBlocking(blackhole: Blackhole): Unit = {
+    val p = "JITStagedProgramBlockingCollections"
+    if (!programs.contains(p))
+      throw new Exception(f"skip test $p for current env")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  @Benchmark def jit_staged_JITStagedJoinBlocking(blackhole: Blackhole): Unit = {
+    val p = "JITStagedJoinBlockingCollections"
+    if (!programs.contains(p))
+      throw new Exception(f"skip test $p for current env")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  @Benchmark def jit_staged_JITStagedSnippetSemiNaiveEvalBlocking(blackhole: Blackhole): Unit = {
+    val p = "JITStagedSnippetSemiNaiveEvalBlockingCollections"
+    if (!programs.contains(p))
+      throw new Exception(f"skip test $p for current env")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  @Benchmark def jit_staged_JITStagedSnippetProgramBlocking(blackhole: Blackhole): Unit = {
+    val p = "JITStagedSnippetProgramBlockingCollections"
+    if (!programs.contains(p))
+      throw new Exception(f"skip test $p for current env")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  @Benchmark def jit_staged_JITStagedSnippetJoinBlocking(blackhole: Blackhole): Unit = {
+    val p = "JITStagedSnippetJoinBlockingCollections"
+    if (!programs.contains(p))
+      throw new Exception(f"skip test $p for current env")
+    blackhole.consume(run(programs(p), result))
+  }
 }
