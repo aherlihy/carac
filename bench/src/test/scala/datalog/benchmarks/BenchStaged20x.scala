@@ -61,6 +61,7 @@ object initialize20x {
     hops18(x, y) :- (hops1(x, z), hops17(z, y))
     hops19(x, y) :- (hops1(x, z), hops18(z, y))
     hops20(x, y) :- (hops1(x, z), hops19(z, y))
+    hops20(x, y) :- hops19(x, y) // to get more rules per spju
 
     for i <- 0 until 200 do
       edge(

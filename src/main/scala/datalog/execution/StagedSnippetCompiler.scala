@@ -130,12 +130,12 @@ class StagedSnippetCompiler(val storageManager: StorageManager) {
             )
           case _ =>
             cOps.reduceLeft((acc, next) => // TODO[future]: make a block w reflection instead of reduceLeft for efficiency
-              '{ $acc ; $next }
+              '{ println("in compiled code, seq"); $acc ; $next }
             )
 
       case InsertOp(rId, db, knowledge, subOp, subOp2) =>
-        val res = '{ $stagedFns(0).asInstanceOf[CompiledRelFn]($stagedSM) }
-        val res2 = if (subOp2.isEmpty) '{ $stagedSM.EDB() } else '{ $stagedFns(1).asInstanceOf[CompiledRelFn]($stagedSM) }
+        val res = '{ $stagedFns(0)($stagedSM).asInstanceOf[CollectionsStorageManager#EDB] }
+        val res2 = if (subOp2.isEmpty) '{ $stagedSM.EDB() } else '{ $stagedFns(1)($stagedSM).asInstanceOf[CollectionsStorageManager#EDB] }
         db match {
           case DB.Derived =>
             knowledge match {

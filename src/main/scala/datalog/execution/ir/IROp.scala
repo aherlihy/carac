@@ -14,7 +14,7 @@ import scala.quoted.*
 import scala.util.{Failure, Success}
 
 enum OpCode:
-  case PROGRAM, SWAP_CLEAR, SEQ, SCAN, SCANEDB, PROJECT, JOIN, INSERT, UNION, DIFF, DEBUG, LOOP,
+  case PROGRAM, SWAP_CLEAR, SEQ, SCAN, SCANEDB, PROJECT, JOIN, INSERT, UNION, DIFF, DEBUG, DOWHILE,
   EVAL_RULE_NAIVE, EVAL_RULE_SN, EVAL_NAIVE, EVAL_SN, LOOP_BODY, OTHER // convenience labels for generating functions
 
 // TODO: make general SM not collections
@@ -60,21 +60,28 @@ case class ProgramOp(body: IROp) extends IROp {
   // convenience methods to get certain subtrees
   def getSubTree(code: OpCode): IROp =
     code match
+      case OpCode.PROGRAM =>
+        this
       case OpCode.EVAL_NAIVE =>
         body.asInstanceOf[SequenceOp].ops.head
-      case OpCode.LOOP =>
+      case OpCode.DOWHILE =>
         body.asInstanceOf[SequenceOp].ops(1)
       case OpCode.LOOP_BODY =>
-        body.asInstanceOf[SequenceOp].ops(1).asInstanceOf[DoWhileOp].body
+        getSubTree(OpCode.DOWHILE).asInstanceOf[DoWhileOp].body
       case OpCode.EVAL_SN =>
-        body.asInstanceOf[SequenceOp].ops(1).asInstanceOf[DoWhileOp].body.asInstanceOf[SequenceOp].ops(1)
-      case _ => // TODO: for non-unique nodes, compile with fresh dotty on separate threads?
-        throw new Exception(s"getSubTree given non-unique subtree code $code")
-
+        getSubTree(OpCode.LOOP_BODY).asInstanceOf[SequenceOp].ops(1)
+      case OpCode.EVAL_RULE_SN => // gets a bit weird here bc there are multiple of these nodes, just gets the first one. Including insert+diff
+        getSubTree(OpCode.EVAL_SN).asInstanceOf[SequenceOp].ops.head
+      case OpCode.JOIN => // technically project
+        getSubTree(OpCode.EVAL_RULE_SN).asInstanceOf[ir.SequenceOp].ops.head.asInstanceOf[ir.InsertOp].subOp.asInstanceOf[ir.DiffOp].lhs.asInstanceOf[ir.UnionOp].ops.head
+      case OpCode.SCAN =>
+        getSubTree(OpCode.JOIN).asInstanceOf[ir.ProjectOp].subOp.asInstanceOf[ir.JoinOp].ops.head
+      case _ =>
+        throw new Exception(s"getSubTree not supported for $code, could prob just add it")
 }
 
 case class DoWhileOp(body: IROp, toCmp: DB) extends IROp {
-  val code: OpCode = OpCode.LOOP
+  val code: OpCode = OpCode.DOWHILE
   override def run_continuation(storageManager: CollectionsStorageManager, opFns: Seq[CompiledFn] = Seq.empty): Any =
     while ( {
       opFns.head(storageManager)
@@ -178,6 +185,7 @@ case class ScanOp(rId: RelationId, db: DB, knowledge: KNOWLEDGE) extends IRRelOp
         }
     }
   def runRel(storageManager: CollectionsStorageManager): storageManager.EDB =
+//    throw new Exception()
     db match {
       case DB.Derived =>
         knowledge match {
@@ -231,9 +239,11 @@ case class JoinOp(ops: Seq[IRRelOp], keys: JoinIndexes) extends IRRelOp {
 
 case class UnionOp(ops: Seq[IRRelOp], override val code: OpCode = OpCode.UNION) extends IRRelOp {
   def runRel_continuation(storageManager: CollectionsStorageManager, opFns: Seq[CompiledRelFn] = Seq.empty): storageManager.EDB =
-    opFns.flatMap(o => o(storageManager)).toSet.toBuffer.asInstanceOf[storageManager.EDB]
+//    opFns.flatMap(o => o(storageManager)).toSet.toBuffer.asInstanceOf[storageManager.EDB]
+    storageManager.union(opFns.map(o => o(storageManager)))
   def runRel(storageManager: CollectionsStorageManager): storageManager.EDB =
-    ops.flatMap(o => o.runRel(storageManager)).toSet.toBuffer.asInstanceOf[storageManager.EDB]
+//    ops.flatMap(o => o.runRel(storageManager)).toSet.toBuffer.asInstanceOf[storageManager.EDB]
+    storageManager.union(ops.map(o => o.runRel(storageManager)))
 }
 
 case class DiffOp(lhs: IRRelOp, rhs: IRRelOp) extends IRRelOp {

@@ -7,6 +7,9 @@ import datalog.tools.Debug.debug
 
 import scala.collection.mutable
 
+/**
+ * Used for both hand-written benchmarks (ex: TransitiveClosure) to be run on all configs, and also auto-generated (ex: Examples)
+ */
 abstract class DLBenchmark {
   def pretest(program: Program): Unit
   val toSolve: String
@@ -34,8 +37,12 @@ abstract class DLBenchmark {
           else if (context.contains("LoopBody")) ir.OpCode.LOOP_BODY
           else if (context.contains("Loop")) ir.OpCode.LOOP
           else if (context.contains("Program")) ir.OpCode.PROGRAM
+          else if (context.contains("Join")) ir.OpCode.JOIN
           else throw new Exception(s"Unknown type of JIT staged $context")
-        Program(StagedExecutionEngine(CollectionsStorageManager(), JITOptions(label, aot, !nonblocking)))
+        if (context.contains("Snippet"))
+          Program(StagedSnippetExecutionEngine(CollectionsStorageManager(), JITOptions(label, aot, !nonblocking)))
+        else
+          Program(StagedExecutionEngine(CollectionsStorageManager(), JITOptions(label, aot, !nonblocking)))
       case _ => // WARNING: MUnit just returns null pointers everywhere if an error or assert is triggered in beforeEach
         throw new Exception(s"Unknown engine construction ${context}") // TODO: this is reported as passing
     }

@@ -85,9 +85,11 @@ abstract class BenchmarkGenerator(directory: Path,
 
   Seq(
     "SemiNaive", "Naive", "InterpretedStaged", "CompiledStaged",
-    "JITStagedAOTNaiveEvalBlocking", "JITStagedAOTSemiNaiveEvalBlocking", "JITStagedAOTLoopBlocking", "JITStagedAOTLoopBodyBlocking", "JITStagedAOTProgramBlocking",
-    "JITStagedAOTSemiNaiveEvalNonBlocking", "JITStagedAOTLoopBodyNonBlocking",
-    "JITStagedSemiNaiveEvalOnline", "JITStagedLoopBodyOnline",
+    "JITStagedSemiNaiveEvalBlocking", "JITStagedProgramBlocking", "JITStagedJoinBlocking",
+    "JITStagedSnippetSemiNaiveEvalBlocking", "JITStagedSnippetProgramBlocking", "JITStagedSnippetJoinBlocking"
+  //    "JITStagedAOTNaiveEvalBlocking",
+//    "JITStagedAOTSemiNaiveEvalNonBlocking", "JITStagedAOTLoopBodyNonBlocking",
+//    "JITStagedSemiNaiveEvalOnline", "JITStagedLoopBodyOnline",
   ).foreach(execution =>
     Seq("Relational", "Collections").foreach(storage =>
       if (

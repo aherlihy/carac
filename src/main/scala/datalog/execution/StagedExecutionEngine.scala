@@ -10,15 +10,14 @@ import datalog.tools.Debug.debug
 import scala.collection.mutable
 import scala.collection.immutable
 import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{Await, Future, blocking}
 import scala.util.{Failure, Success}
-
 import scala.quoted.*
 
 case class JITOptions(granularity: OpCode = OpCode.PROGRAM, aot: Boolean = true, block: Boolean = true) {
-  if ((granularity == OpCode.OTHER || granularity == OpCode.PROGRAM) && (!aot || !block))
-    throw new Exception(s"Invalid JIT options: with $granularity, aot and block must be true: $aot, $block")
-  private val unique = Seq(OpCode.LOOP, OpCode.EVAL_NAIVE, OpCode.LOOP_BODY)
+//  if ((granularity == OpCode.OTHER || granularity == OpCode.PROGRAM) && (!aot || !block))
+//    throw new Exception(s"Invalid JIT options: with $granularity, aot and block must be true: $aot, $block")
+  private val unique = Seq(OpCode.DOWHILE, OpCode.EVAL_NAIVE, OpCode.LOOP_BODY)
   if (!aot && !block && unique.contains(granularity))
     throw new Exception(s"Cannot online, async compile singleton IR nodes: $granularity (theres no point)")
 }
@@ -117,6 +116,7 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
   }
 
   def solveCompiled(irTree: IROp, ctx: InterpreterContext): Set[Seq[Term]] = {
+    debug("", () => "compile-only mode")
     given staging.Compiler = dedicatedDotty
     val compiled = compiler.getCompiled(irTree)
     compiled(storageManager)
@@ -124,11 +124,13 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
   }
 
   def solveInterpreted(irTree: IROp, ctx: InterpreterContext):  Set[Seq[Term]] = {
+    debug("", () => "interpret-only mode")
     irTree.run(storageManager)
     storageManager.getNewIDBResult(ctx.toSolve)
   }
 
-  def solveJIT(irTree: IROp, ctx: InterpreterContext)(using JITOptions): Set[Seq[Term]] = {
+  def solveJIT(irTree: IROp, ctx: InterpreterContext)(using jitOptions: JITOptions): Set[Seq[Term]] = {
+    debug("", () => s"JIT with options $jitOptions")
     jit(irTree)
     storageManager.getNewIDBResult(ctx.toSolve)
   }
@@ -236,17 +238,28 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
 
 
   def jit(irTree: IROp)(using jitOptions: JITOptions): Any = {
-    //    println(s"IN INTERPRET IR, code=${irTree.code}")
+    debug("", () => s"IN STAGED JIT IR, code=${irTree.code}, gran=${jitOptions.granularity}")
     irTree match {
       case op: ProgramOp =>
         if (jitOptions.aot)
           debug("", () => s"ahead-of-time compiling")
           startCompileThread(op.getSubTree(jitOptions.granularity), dedicatedDotty)
         // test if need to compile, if so:
-        if (op.compiledFn == null) // don't bother online compile since only entered once
-          op.run_continuation(storageManager, Seq(sm => jit(op.body)))
+        if (op.compiledFn == null) // don't bother online async compile since only entered once
+          if (jitOptions.block && jitOptions.granularity == op.code)
+            startCompileThread(op, dedicatedDotty)
+            checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, Seq(sm => jit(op.body))))
+          else
+            op.run_continuation(storageManager, Seq(sm => jit(op.body)))
         else
           checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, Seq(sm => jit(op.body))))
+
+      case op: DoWhileOp if jitOptions.granularity == op.code =>
+        if (op.compiledFn == null && jitOptions.block)
+          startCompileThread(op, dedicatedDotty)
+          checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, Seq(sm => jit(op.body))))
+        else
+          op.run_continuation(storageManager, Seq(sm => jit(op.body)))
 
       case op: DoWhileOp =>
         // test if need to compile, if so:
@@ -329,7 +342,7 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
     debug("IRTree: ", () => storageManager.printer.printIR(irTree))
     if (jitOptions.granularity == OpCode.OTHER) // i.e. never compile
       solveInterpreted(irTree, irCtx)
-    else if (jitOptions.granularity == OpCode.PROGRAM) // i.e. compile asap
+    else if (jitOptions.granularity == OpCode.PROGRAM && jitOptions.aot && jitOptions.block) // i.e. compile asap
       solveCompiled(irTree, irCtx)
     else
       solveJIT(irTree, irCtx)
