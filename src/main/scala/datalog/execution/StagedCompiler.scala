@@ -157,7 +157,7 @@ class StagedCompiler(val storageManager: StorageManager) {
         '{ debug(${ Expr(prefix) }, () => $stagedSM.printer.toString()) }
 
       case _ =>
-        throw new Exception(s"Error: unhandled node type $irTree")
+        compileIRRelOp(irTree.asInstanceOf[IROp[CollectionsStorageManager#EDB]])(using stagedSM)
     }
   }
 

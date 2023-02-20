@@ -66,11 +66,10 @@ class StagedSnippetCompiler(val storageManager: StorageManager) {
         }
 
       case ProjectOp(keys, children:_*) =>
-        if (children.head.code == OpCode.JOIN) // merge join+project
-          val compiledOps = Expr.ofSeq(children.head.children.map(compileIRRelOp)) // TODO: not sure about this
-          '{ $stagedSM.joinProjectHelper($compiledOps, ${ Expr(keys) }) }
-        else
-          '{ $stagedSM.projectHelper($stagedFns(0)($stagedSM), ${ Expr(keys) }) }
+//        if (children.head.code == OpCode.JOIN) // merge join+project // can't really skip levels with continuations
+//          '{ $stagedSM.joinProjectHelper($stagedFns, ${ Expr(keys) }) }
+//        else
+        '{ $stagedSM.projectHelper($stagedFns(0)($stagedSM), ${ Expr(keys) }) }
 
       case UnionOp(label, children:_*) =>
         val compiledOps = '{ $stagedFns.map(s => s($stagedSM)) }
