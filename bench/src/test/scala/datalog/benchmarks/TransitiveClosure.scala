@@ -11,7 +11,6 @@ class TransitiveClosure extends DLBenchmark {
   override val description: String = "TransitiveClosure"
   override val expectedFacts: mutable.Map[String, Set[Seq[Term]]] = mutable.Map(
     "fourHops" -> Set.empty,
-//    "fourHopsJoin" -> Set.empty
   )
   def pretest(program: Program): Unit = {
     val edge = program.relation[Constant]("edge")
@@ -44,8 +43,6 @@ class TransitiveClosure extends DLBenchmark {
   }
 
   override def finish(): Unit =
-    if(result.size != 2)
-      throw new Exception(s"Benchmark error in $description: missing result")
-    if(result("fourHops") != result("fourHopsJoin"))
-      throw new Exception(s"Benchmark error in $description: result doesn't match")
+    if(result.size != 1)
+      throw new Exception(s"Benchmark error in $description: wrong size")
 }

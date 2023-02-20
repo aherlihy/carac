@@ -49,7 +49,7 @@ class ranpo_benchmark() extends ExampleBenchmarkGenerator (
     blackhole.consume(run(programs(p), result))
   }
   // relational, seminaive
-  @Benchmark def ci_seminaive_collections(blackhole: Blackhole): Unit = {
+  @Benchmark def seminaive_collections(blackhole: Blackhole): Unit = {
     val p = "SemiNaiveCollections"
     if(!programs.contains(p))
       throw new Exception(f"skip test $p for current env")
@@ -63,7 +63,7 @@ class ranpo_benchmark() extends ExampleBenchmarkGenerator (
     blackhole.consume(run(programs(p), result))
   }
 
-  @Benchmark def staged_interpreted(blackhole: Blackhole): Unit = {
+  @Benchmark def ci_staged_interpreted(blackhole: Blackhole): Unit = {
     val p = "InterpretedStagedCollections"
     if (!programs.contains(p))
       throw new Exception(f"skip test $p for current env")

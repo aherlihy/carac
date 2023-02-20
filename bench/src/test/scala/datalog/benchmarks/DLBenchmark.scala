@@ -21,13 +21,14 @@ abstract class DLBenchmark {
 
   def initialize(context: String): Program = {
     val program = context match {
-      case "SemiNaiveRelational" => Program(SemiNaiveExecutionEngine(RelationalStorageManager()))
-      case "NaiveRelational" => Program(NaiveExecutionEngine(RelationalStorageManager()))
-      case "SemiNaiveCollections" => Program(SemiNaiveExecutionEngine(CollectionsStorageManager()))
-      case "NaiveCollections" => Program(NaiveExecutionEngine(CollectionsStorageManager()))
-      case "NaiveCompiledStagedCollections" => Program(NaiveStagedExecutionEngine(CollectionsStorageManager()))
-      case "InterpretedStagedCollections" => Program(StagedExecutionEngine(CollectionsStorageManager(), JITOptions(granularity = ir.OpCode.OTHER)))
-      case "CompiledStagedCollections" => Program(StagedExecutionEngine(CollectionsStorageManager()))
+      case "SemiNaiveRelational" =>               Program(SemiNaiveExecutionEngine(   RelationalStorageManager()))
+      case "NaiveRelational" =>                   Program(NaiveExecutionEngine(       RelationalStorageManager()))
+      case "SemiNaiveCollections" =>              Program(SemiNaiveExecutionEngine(   CollectionsStorageManager()))
+      case "NaiveCollections" =>                  Program(NaiveExecutionEngine(       CollectionsStorageManager()))
+      case "NaiveCompiledStagedCollections" =>    Program(NaiveStagedExecutionEngine( CollectionsStorageManager()))
+      case "NaiveInterpretedStagedCollections" => Program(NaiveStagedExecutionEngine( CollectionsStorageManager(),  JITOptions(granularity = ir.OpCode.OTHER)))
+      case "InterpretedStagedCollections" =>      Program(StagedExecutionEngine(      CollectionsStorageManager(),  JITOptions(granularity = ir.OpCode.OTHER)))
+      case "CompiledStagedCollections" =>         Program(StagedExecutionEngine(      CollectionsStorageManager()))
       case _ if context.contains("JIT") =>
         val aot = context.contains("AOT")
         val nonblocking = context.contains("NonBlocking")
