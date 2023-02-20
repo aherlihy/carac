@@ -15,6 +15,7 @@ jobs:
   bench:
     name: continuous benchmark
     runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
     steps:
     - uses: actions/checkout@v2
     - name: run benchmarks
@@ -34,9 +35,9 @@ jobs:
         # GitHub API token to make a commit comment
         github-token: ${{ secrets.GITHUB_TOKEN }}
         auto-push: true
-#        alert-threshold: '200%'
+        alert-threshold: '100%'
 #        fail-on-alert: true
 #        # Enable alert commit comment
-#        comment-on-alert: true
-#        # Mention @aherihy in the commit comment
-#        alert-comment-cc-users: '@aherlihy'
+        comment-on-alert: true
+        # Mention @aherihy in the commit comment
+        alert-comment-cc-users: '@aherlihy'
