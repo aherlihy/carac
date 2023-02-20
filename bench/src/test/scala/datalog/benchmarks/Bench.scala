@@ -13,9 +13,10 @@ import scala.util.Random
  * Benchmarks that are run on all modes
  */
 @Fork(1) // # of jvms that it will use
-@Warmup(iterations = 1, time = 1, timeUnit = TimeUnit.SECONDS)
-@Measurement(iterations = 1, time = 1, timeUnit = TimeUnit.SECONDS)
+@Warmup(iterations = 10, time = 10, timeUnit = TimeUnit.SECONDS, batchSize = 1000)
+@Measurement(iterations = 10, time = 10, timeUnit = TimeUnit.SECONDS, batchSize = 1000)
 @State(Scope.Thread)
+@BenchmarkMode(Array(Mode.AverageTime))
 class Bench_ci {
 //  val dummyStream = new java.io.PrintStream(_ => ())
   val ciBenchs: Map[String, DLBenchmark] = Map("tc" -> TransitiveClosure()) // for now just 1 for CI
