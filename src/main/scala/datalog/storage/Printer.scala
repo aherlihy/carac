@@ -12,7 +12,12 @@ class Printer[S <: StorageManager](val s: S) {
   def factToString(r: s.EDB): String = {
     r.map(s => s.mkString("(", ", ", ")")).mkString("[", ", ", "]")
   }
-  def ruleToString(r: mutable.ArrayBuffer[IndexedSeq[Atom]]): String = {
+
+  def atomToString(a: Seq[Atom]): String = {
+    s"${s.ns(a.head.rId)}${a.head.terms.mkString("(", ", ", ")")} :- ${a.drop(1).map(b => s.ns(b.rId) + b.terms.mkString("(", ", ", ")")).mkString("", ", ", "")}"
+  }
+
+  def ruleToString(r: mutable.ArrayBuffer[Seq[Atom]]): String = {
     r.map(s => if (s.isEmpty) "<empty>" else s.head.toString + s.drop(1).mkString(" :- ", ",", ""))
       .mkString("[", "; ", "]")
   }
@@ -87,7 +92,7 @@ class Printer[S <: StorageManager](val s: S) {
    * @param idbs
    * @return
    */
-  def printIDB(idbs: mutable.Map[RelationId, mutable.ArrayBuffer[IndexedSeq[Atom]]]): String = {
+  def printIDB(idbs: mutable.Map[RelationId, mutable.ArrayBuffer[Seq[Atom]]]): String = {
     immutable.ListMap(idbs.toSeq.sortBy(_._1):_*)
       .map((k, v) => (s.ns(k), ruleToString(v)))
       .mkString("[\n  ", ",\n  ", "]")
@@ -121,7 +126,7 @@ class Printer[S <: StorageManager](val s: S) {
       case ScanEDBOp(srcRel) => s"SCANEDB(edbs[${ctx.storageManager.ns(srcRel)}])"
       case ScanOp(srcRel, db, knowledge) =>
         s"SCAN[$db.$knowledge](${ctx.storageManager.ns(srcRel)})"
-      case SelectProjectJoinOp(keys, children:_*) => s"JOIN${keys.varToString()}${keys.constToString()}${children.map(s => printIR(s, ident+1)).mkString("(\n", ",\n", ")")}"
+      case ProjectJoinFilterOp(keys, children:_*) => s"JOIN${keys.varToString()}${keys.constToString()}${children.map(s => printIR(s, ident+1)).mkString("(\n", ",\n", ")")}"
       case InsertOp(rId, db, knowledge, children:_*) =>
         s"INSERT INTO $db.$knowledge.${ctx.storageManager.ns(rId)}\n${children.map(s => printIR(s, ident+1)).mkString("", "\n", "")}\n"
       case UnionOp(fnCode, children:_*) => s"UNION${if (fnCode != OpCode.UNION) "::" + fnCode else "_"}${children.map(o => printIR(o, ident+1)).mkString("(\n", ",\n", ")")}"

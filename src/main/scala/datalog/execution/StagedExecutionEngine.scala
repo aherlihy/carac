@@ -29,7 +29,7 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
   val ast: ProgramNode = ProgramNode()
   private var knownDbId = -1
   private val tCtx = ASTTransformerContext(using precedenceGraph)
-  val transforms: Seq[Transformer] = Seq(CopyEliminationPass(using tCtx), JoinIndexPass(using tCtx))
+  val transforms: Seq[Transformer] = Seq(/*CopyEliminationPass(using tCtx),*/ JoinIndexPass(using tCtx))
   val compiler: StagedCompiler = StagedCompiler(storageManager)
   val dedicatedDotty: staging.Compiler = staging.Compiler.make(getClass.getClassLoader)
   var stragglers: mutable.WeakHashMap[Int, Future[CompiledFn]] = mutable.WeakHashMap.empty // should be ok since we are only removing by ref and then iterating on values only?
@@ -146,7 +146,7 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
           startCompileThreadRel(op, newDotty)
         checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.children.map(o => sm => jitRel(o))))
 
-      case op: SelectProjectJoinOp if jitOptions.granularity == op.code =>
+      case op: ProjectJoinFilterOp if jitOptions.granularity == op.code =>
         if (op.compiledFn == null && !jitOptions.aot)
           startCompileThreadRel(op, newDotty)
         checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.children.map(o => sm => jitRel(o))))
@@ -162,7 +162,7 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
       case op: ScanEDBOp =>
         op.run(storageManager)
 
-      case op: SelectProjectJoinOp => // TODO: mutex?
+      case op: ProjectJoinFilterOp => // TODO: mutex?
         op.run_continuation(storageManager, op.children.map(o => sm => jitRel(o)))
 
       case op: UnionOp =>
@@ -308,8 +308,8 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
     }
 
     given irCtx: InterpreterContext = InterpreterContext(storageManager, precedenceGraph, toSolve)
-//    debug("AST: ", () => storageManager.printer.printAST(ast))
-//    debug("TRANSFORMED: ", () => storageManager.printer.printAST(transformedAST))
+    debug("AST: ", () => storageManager.printer.printAST(ast))
+    debug("TRANSFORMED: ", () => storageManager.printer.printAST(transformedAST))
 //    debug("PG: ", () => irCtx.sortedRelations.toString())
 
     val irTree = createIR(transformedAST)

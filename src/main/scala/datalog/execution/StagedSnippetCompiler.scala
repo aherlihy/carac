@@ -76,7 +76,7 @@ class StagedSnippetCompiler(val storageManager: StorageManager) {
         else
           '{ $stagedSM.EDB() }
 
-      case SelectProjectJoinOp(keys, children:_*) =>
+      case ProjectJoinFilterOp(keys, children:_*) =>
         val compiledOps = '{ $stagedFns.map(s => s($stagedSM)) }
         // TODO[future]: inspect keys and optimize join algo
         '{

@@ -40,13 +40,13 @@ class StagedSnippetExecutionEngine(override val storageManager: CollectionsStora
       case op: ScanEDBOp =>
         op.run(storageManager)
 
-      case op: SelectProjectJoinOp if jitOptions.granularity == op.code =>
+      case op: ProjectJoinFilterOp if jitOptions.granularity == op.code =>
         if (op.compiledSnippetContinuationFn == null)
           given staging.Compiler = dedicatedDotty
           op.compiledSnippetContinuationFn = snippetCompiler.getCompiledSnippetRel(op)
         op.compiledSnippetContinuationFn(storageManager, op.children.map(o => sm => jitRel(o)))
 
-      case op: SelectProjectJoinOp =>
+      case op: ProjectJoinFilterOp =>
         op.run_continuation(storageManager, op.children.map(o => sm => jitRel(o)))
 
       case op: UnionOp =>

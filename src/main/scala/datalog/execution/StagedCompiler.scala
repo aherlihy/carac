@@ -73,12 +73,12 @@ class StagedCompiler(val storageManager: StorageManager) {
         else
           '{ $stagedSM.EDB() }
 
-      case SelectProjectJoinOp(keys, children:_*) =>
+      case ProjectJoinFilterOp(joinIdx, children:_*) =>
         val compiledOps = Expr.ofSeq(children.map(compileIRRelOp))
         '{
           $stagedSM.joinProjectHelper(
             $compiledOps,
-            ${ Expr(keys) }
+            ${ Expr(joinIdx) }
           )
         }
 

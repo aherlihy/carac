@@ -13,22 +13,10 @@ import scala.quoted.*
 def tc(program: Program): Unit = {
   val edge = program.relation[Constant]("edge")
   val path = program.relation[Constant]("path")
-//  val oneHop = program.relation[Constant]("oneHop")
-//  val twoHops = program.relation[Constant]("twoHops")
-//  val threeHops = program.relation[Constant]("threeHops")
-//  val fourHops = program.relation[Constant]("fourHops")
-//  val query = program.relation[Constant]("query")
-
-  val x, y, z, w, q = program.variable()
+  val x, y, z = program.variable()
 
   path(x, y) :- edge(x, y)
   path(x, z) :- (edge(x, y), path(y, z))
-
-//  oneHop(x, y) :- edge(x, y, "red")
-//  twoHops(x, z) :- ( oneHop(x, y), oneHop(y, z) )
-//  threeHops(x, w) :- ( oneHop(x, y), oneHop(y, z), oneHop(z, w))
-//  fourHops(x, q) :- ( oneHop(x, y), oneHop(y, z), oneHop(z, w), oneHop(w, q))
-
 
   edge("a", "a", "red") :- ()
   edge("a", "b", "blue") :- ()
@@ -38,30 +26,26 @@ def tc(program: Program): Unit = {
   println("RES=" + path.solve())
 }
 
-def tc_long(program: Program): Unit = {
-  val base = program.relation[Constant]("base")
+def acyclic(program: Program) = {
+  val edge = program.relation[Constant]("e")
+  val oneHop = program.relation[Constant]("oh")
+  val twoHops = program.relation[Constant]("th")
+  val queryA = program.relation[Constant]("queryA")
+  val queryB = program.relation[Constant]("queryB")
 
-  val tc = program.relation[Constant]("tc")
+  val x, y, z = program.variable()
 
-  val tcl = program.relation[Constant]("tcl")
+  edge("a", "a") :- ()
+  edge("a", "b") :- ()
+  edge("b", "c") :- ()
+  edge("c", "d") :- ()
+  oneHop(x, y) :- edge(x, y)
+  twoHops(x, z) :- (edge(x, y), oneHop(y, z))
+  queryA(x) :- oneHop("a", x)
+  queryA(x) :- twoHops("a", x)
+  queryB(x) :- (oneHop("a", x), oneHop(x, "c"))
 
-  val tcr = program.relation[Constant]("tcr")
-
-  val X, Y, Z = program.variable()
-
-  tcl(X, Y) :- (base(X, Y))
-  tcl(X, Y) :- (tcl(X, Z), base(Z, Y))
-
-  tcr(X, Y) :- (base(X, Y))
-  tcr(X, Y) :- (base(X, Z), tcr(Z, Y))
-
-  tc(X, Y) :- (base(X, Y))
-  tc(X, Y) :- (tc(X, Z), tc(Z, Y))
-
-  base("a", "b") :- ()
-  base("b", "c") :- ()
-  base("c", "d") :- ()
-  println("RES=" + tc.solve())
+  println("RES=" + twoHops.solve())
 }
 
 def reversible(program: Program, engine: ExecutionEngine): Unit = {
@@ -79,12 +63,12 @@ def reversible(program: Program, engine: ExecutionEngine): Unit = {
 
   equiv(a, b) :- assign(a, b)
   equiv(a, b) :- ( equiv(a, x), equiv(x, b) )
-//  equiv(a, b) :- ( assignOp(x, f1, a, cst), assignOp(b, f2, y, cst), equiv(x, y), inverses(f1, f2))
+  //  equiv(a, b) :- ( assignOp(x, f1, a, cst), assignOp(b, f2, y, cst), equiv(x, y), inverses(f1, f2))
   equiv(a, b) :- ( assignOp(x, f1, a, cst), assignOp(b, f2, x, cst), inverses(f1, f2) )
 
   query(x) :- equiv(x, "v2")
 
-//  println("RES=" + engine.solveCompiled(query.id))
+  //  println("RES=" + engine.solveCompiled(query.id))
   println("RES=" + query.solve())
 }
 
@@ -536,32 +520,24 @@ def scratch(program: Program) =
   //  run(program)
   //  reversible(program, engine)
   //  val run = multiJoin
-  println("OLD N")
-
-  given engine0: ExecutionEngine = new NaiveExecutionEngine(new CollectionsStorageManager())
-
-  val program0 = Program(engine0)
-  func(program0)
-  println("\n\n_______________________\n\n")
+//  println("OLD N")
+//  given engine0: ExecutionEngine = new NaiveExecutionEngine(new CollectionsStorageManager())
+//  val program0 = Program(engine0)
+//  func(program0)
+//  println("\n\n_______________________\n\n")
 
   println("OLD SN")
   given engine1: ExecutionEngine = new SemiNaiveExecutionEngine(new CollectionsStorageManager())
   val program1 = Program(engine1)
-  func(program1)
+  acyclic(program1)
   println("\n\n_______________________\n\n")
 
-//  println("STAGED COMPILE")
-//  given engine2: ExecutionEngine = new CompiledStagedExecutionEngine(new CollectionsStorageManager())
-//  val program2 = Program(engine2)
-//  tc(program2)
-//  println("\n\n_______________________\n\n")
-//
-//  val jo = JITOptions(ir.OpCode.EVAL_SN, aot = false, block = true)
-//  println("STAGED")
-//  given engine3: ExecutionEngine = new StagedExecutionEngine(new CollectionsStorageManager(), jo)
-//  val program3 = Program(engine3)
-//  scratch(program3)
-//  println("\n\n_______________________\n\n")
+  val jo = JITOptions(ir.OpCode.OTHER, aot = true, block = true)
+  println("COMPILED")
+  given engine3: ExecutionEngine = new StagedExecutionEngine(new CollectionsStorageManager(), jo)
+  val program3 = Program(engine3)
+  acyclic(program3)
+  println("\n\n_______________________\n\n")
 
 //  println("JIT Snippet")
 //  val engine4: ExecutionEngine = new StagedSnippetExecutionEngine(new CollectionsStorageManager(), jo)

@@ -60,7 +60,7 @@ class IRTreeGenerator(using val ctx: InterpreterContext) {
             if (k.edb)
               ScanEDBOp(r)
             else
-              SelectProjectJoinOp(k,
+              ProjectJoinFilterOp(k,
                 k.deps.map(r => ScanOp(r, DB.Derived, KNOWLEDGE.Known)):_*
               )
           case _ => throw new Exception("Trying to solve without joinIndexes calculated yet")
@@ -87,10 +87,10 @@ class IRTreeGenerator(using val ctx: InterpreterContext) {
               ScanEDBOp(r)
             else
               var idx = -1 // if dep is featured more than once, only use delta once, but at a different pos each time
-              UnionOp(OpCode.EVAL_RULE_BODY, // a single rule body
+              UnionOp(OpCode.UNION, // a single rule body
                 k.deps.map(d => {
                   var found = false
-                  SelectProjectJoinOp(k,
+                  ProjectJoinFilterOp(k,
                     k.deps.zipWithIndex.map((r, i) => {
                       if (r == d && !found && i > idx)
                         found = true

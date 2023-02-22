@@ -212,21 +212,21 @@ case class ScanEDBOp(rId: RelationId) extends IROp[CollectionsStorageManager#EDB
     run(storageManager)
 }
 /**
- * @param keys
+ * @param joinIdx
  * @param children: [Scan*deps]
  */
-case class SelectProjectJoinOp(keys: JoinIndexes, override val children: IROp[CollectionsStorageManager#EDB]*) extends IROp[CollectionsStorageManager#EDB](children:_*) {
+case class ProjectJoinFilterOp(joinIdx: JoinIndexes, override val children: IROp[CollectionsStorageManager#EDB]*) extends IROp[CollectionsStorageManager#EDB](children:_*) {
   val code: OpCode = OpCode.SPJ
 
   override def run_continuation(storageManager: CollectionsStorageManager, opFns: Seq[CompiledRelFn]): CollectionsStorageManager#EDB =
     storageManager.joinProjectHelper(
       opFns.map(s => s(storageManager)),
-      keys
+      joinIdx
     )
   override def run(storageManager: CollectionsStorageManager): CollectionsStorageManager#EDB =
     storageManager.joinProjectHelper(
       children.map(s => s.run(storageManager)),
-      keys
+      joinIdx
     )
 }
 

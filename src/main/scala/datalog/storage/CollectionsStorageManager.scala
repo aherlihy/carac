@@ -88,8 +88,14 @@ class CollectionsStorageManager(ns: NS = new NS(), fuse: Boolean = true) extends
             }).toIndexedSeq)
         .to(mutable.ArrayBuffer)
     else
+//      println("getting new order, atoms=" + printer.atomToString(originalK.atoms))
       var k = originalK // TODO: find better ways to reduce with 2 acc
       var sorted = inputs
+      val edbToAtom = inputs.zipWithIndex.map((edb, i) => (edb, k.atoms(i + 1))).sortBy((edb, _) => edb.size)
+      val newAtoms = k.atoms.head +: edbToAtom.map(_._2)
+      k = JoinIndexes(newAtoms)
+      sorted = edbToAtom.map(_._1)
+
       sorted.view
         .map(i => i.view)
         .reduceLeft((outer: View[Row[StorageTerm]], inner: View[Row[StorageTerm]]) =>
@@ -147,8 +153,9 @@ class CollectionsStorageManager(ns: NS = new NS(), fuse: Boolean = true) extends
 //                  ), k), k
 //              )
 //            else
-            val newAtoms = originalK.atoms.head +: originalK.atoms.drop(1).sortBy(a => derivedDB(knownDbId).getOrElse(a.rId, edbs.getOrElse(a.rId, EDB())).size)
-            val k = JoinIndexes(newAtoms)
+//            val newAtoms = originalK.atoms.head +: originalK.atoms.drop(1).sortBy(a => derivedDB(knownDbId).getOrElse(a.rId, edbs.getOrElse(a.rId, EDB())).size)
+//            val k = JoinIndexes(newAtoms)
+            val k = originalK
             joinProjectHelper(
               k.deps.zipWithIndex.map((r, i) =>
                 if (r == d && !found && i > idx) {
