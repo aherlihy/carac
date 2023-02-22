@@ -6,7 +6,7 @@ import datalog.execution.JoinIndexes
 import scala.collection.{View, immutable, mutable}
 import datalog.tools.Debug.debug
 
-class CollectionsStorageManager(ns: NS = new NS(), fuse: Boolean = true) extends SimpleStorageManager(ns) {
+class CollectionsStorageManager(ns: NS = new NS(), sort: Int = 0) extends SimpleStorageManager(ns) {
   inline def scanFilter(k: JoinIndexes, maxIdx: Int)(get: Int => StorageTerm = x => x) = {
     val vCmp = k.varIndexes.isEmpty || k.varIndexes.forall(condition =>
       if (condition.head >= maxIdx)
@@ -91,10 +91,14 @@ class CollectionsStorageManager(ns: NS = new NS(), fuse: Boolean = true) extends
 //      println("getting new order, atoms=" + printer.atomToString(originalK.atoms))
       var k = originalK // TODO: find better ways to reduce with 2 acc
       var sorted = inputs
-      val edbToAtom = inputs.zipWithIndex.map((edb, i) => (edb, k.atoms(i + 1))).sortBy((edb, _) => edb.size)
-      val newAtoms = k.atoms.head +: edbToAtom.map(_._2)
-      k = JoinIndexes(newAtoms)
-      sorted = edbToAtom.map(_._1)
+      if (sort != 0)
+        var edbToAtom = inputs.zipWithIndex.map((edb, i) => (edb, k.atoms(i + 1))).sortBy((edb, _) => edb.size)
+//        println(edbToAtom.map((edb, atom) => s"${edb.size} for $atom"))
+        if (sort == -1) edbToAtom = edbToAtom.reverse
+        val newAtoms = k.atoms.head +: edbToAtom.map(_._2)
+        k = JoinIndexes(newAtoms)
+        sorted = edbToAtom.map(_._1)
+//      println("new atom=" + printer.atomToString(k.atoms))
 
       sorted.view
         .map(i => i.view)
@@ -138,21 +142,6 @@ class CollectionsStorageManager(ns: NS = new NS(), fuse: Boolean = true) extends
           var idx = -1 // if dep is featured more than once, only us delta once, but at a different pos each time
           originalK.deps.flatMap(d => {
             var found = false // TODO: perhaps need entry in derived/delta for each atom instead of each relation?
-//            if (!fuse)
-//              projectHelper(
-//                joinHelper(
-//                  k.deps.zipWithIndex.map((r, i) =>
-//                    if (r == d && !found && i > idx) {
-//                      found = true
-//                      idx = i
-//                      deltaDB(knownDbId)(r)
-//                    }
-//                    else {
-//                      derivedDB(knownDbId).getOrElse(r, edbs.getOrElse(r, EDB())) // TODO: warn if EDB is empty? Right now can't tell the difference between undeclared and empty EDB
-//                    }
-//                  ), k), k
-//              )
-//            else
 //            val newAtoms = originalK.atoms.head +: originalK.atoms.drop(1).sortBy(a => derivedDB(knownDbId).getOrElse(a.rId, edbs.getOrElse(a.rId, EDB())).size)
 //            val k = JoinIndexes(newAtoms)
             val k = originalK
@@ -177,16 +166,10 @@ class CollectionsStorageManager(ns: NS = new NS(), fuse: Boolean = true) extends
       if (k.edb)
         edbs.getOrElse(rId, EDB())
       else
-        if (fuse) {
-          joinProjectHelper(
-            k.deps.map(r => derivedDB(knownDbId).getOrElse(r, edbs.getOrElse(r, EDB()))), k  // TODO: warn if EDB is empty? Right now can't tell the difference between undeclared and empty EDB)
-          ).toSet
-        } else {
-          projectHelper(
-            joinHelper(
-              k.deps.map(r => derivedDB(knownDbId).getOrElse(r, edbs.getOrElse(r, EDB()))), k // TODO: warn if EDB is empty? Right now can't tell the difference between undeclared and empty EDB)
-            ), k).toSet
-        }
+        projectHelper(
+          joinHelper(
+            k.deps.map(r => derivedDB(knownDbId).getOrElse(r, edbs.getOrElse(r, EDB()))), k // TODO: warn if EDB is empty? Right now can't tell the difference between undeclared and empty EDB)
+          ), k).toSet
     })
   }
 }

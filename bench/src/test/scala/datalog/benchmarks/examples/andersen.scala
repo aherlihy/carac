@@ -47,7 +47,21 @@ class andersen_benchmark() extends ExampleBenchmarkGenerator("andersen") with an
   // relational, seminaive
   @Benchmark def seminaive_collections(blackhole: Blackhole): Unit = {
     val p = "SemiNaiveCollections"
-    if(!programs.contains(p))
+    if (!programs.contains(p))
+      throw new Exception(f"skip test $p for current env")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  @Benchmark def seminaive_collections_best(blackhole: Blackhole): Unit = {
+    val p = "SemiNaiveCollectionsBest"
+    if (!programs.contains(p))
+      throw new Exception(f"skip test $p for current env")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  @Benchmark def seminaive_collections_worst(blackhole: Blackhole): Unit = {
+    val p = "SemiNaiveCollectionsWorst"
+    if (!programs.contains(p))
       throw new Exception(f"skip test $p for current env")
     blackhole.consume(run(programs(p), result))
   }

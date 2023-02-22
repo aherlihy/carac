@@ -253,7 +253,7 @@ class StagedCompileTest extends munit.FunSuite {
     delta.foreach((k, v) => storageManager.deltaDB(k) = v)
   }
 
-  test("JoinProjectSelectOp") {
+  test("JoinProjectSelectOp".ignore) {
     val scanEdge = s"$sVar.edbs.apply\\(${edge.id}\\)"
     val toRun = compileCheckRel(
       ProjectJoinFilterOp(

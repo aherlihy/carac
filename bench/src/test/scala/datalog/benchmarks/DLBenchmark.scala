@@ -24,6 +24,8 @@ abstract class DLBenchmark {
       case "SemiNaiveRelational" =>               Program(SemiNaiveExecutionEngine(   RelationalStorageManager()))
       case "NaiveRelational" =>                   Program(NaiveExecutionEngine(       RelationalStorageManager()))
       case "SemiNaiveCollections" =>              Program(SemiNaiveExecutionEngine(   CollectionsStorageManager()))
+      case "SemiNaiveCollectionsBest" =>          Program(SemiNaiveExecutionEngine(   CollectionsStorageManager(sort = 1)))
+      case "SemiNaiveCollectionsWorst" =>         Program(SemiNaiveExecutionEngine(   CollectionsStorageManager(sort = -1)))
       case "NaiveCollections" =>                  Program(NaiveExecutionEngine(       CollectionsStorageManager()))
       case "NaiveCompiledStagedCollections" =>    Program(NaiveStagedExecutionEngine( CollectionsStorageManager()))
       case "NaiveInterpretedStagedCollections" => Program(NaiveStagedExecutionEngine( CollectionsStorageManager(),  JITOptions(granularity = ir.OpCode.OTHER)))
