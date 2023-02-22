@@ -1,8 +1,9 @@
 package datalog.execution
 
-import datalog.dsl.Constant
+import datalog.dsl.{Atom, Constant, Variable}
 import datalog.storage.NS
 
+import scala.collection.mutable
 import scala.quoted.*
 
 /**
@@ -18,7 +19,9 @@ case class JoinIndexes(varIndexes: Seq[Seq[Int]],
                        constIndexes: Map[Int, Constant],
                        projIndexes: Seq[(String, Constant)],
                        deps: Seq[Int],
-                       edb: Boolean = false) {
+                       atoms: Seq[Atom],
+                       edb: Boolean = false
+                      ) {
   override def toString(): String = toStringWithNS(null)
 
   def toStringWithNS(ns: NS): String = "{ vars:" + varToString() +
@@ -34,6 +37,45 @@ case class JoinIndexes(varIndexes: Seq[Seq[Int]],
   def depsToString(ns: NS): String = deps.map(d => if (ns != null) ns(d) else d).mkString("[", ", ", "]")
 }
 
+object JoinIndexes {
+  def apply(rule: Seq[Atom]) = {
+    val constants = mutable.Map[Int, Constant]() // position => constant
+    val variables = mutable.Map[Variable, Int]() // v.oid => position
+
+    val body = rule.drop(1)
+
+    val deps = body.map(a => a.rId) // TODO: should this be a set?
+
+    val bodyVars = body
+      .flatMap(a => a.terms)
+      .zipWithIndex // terms, position
+      .groupBy(z => z._1)
+      .filter((term, matches) => // matches = Seq[(var, pos1), (var, pos2), ...]
+        term match {
+          case v: Variable =>
+            variables(v) = matches.head._2 // first idx for a variable
+            !v.anon && matches.size >= 2
+          case c: Constant =>
+            matches.foreach((_, idx) => constants(idx) = c)
+            false
+        }
+      )
+      .map((term, matches) => // get rid of groupBy elem in result tuple
+        matches.map(_._2).toIndexedSeq
+      )
+      .toIndexedSeq
+
+    // variable ids in the head atom
+    val projects = rule(0).terms.map {
+      case v: Variable =>
+        if (!variables.contains(v)) throw new Exception(f"Free variable in rule head with varId $v.oid")
+        if (v.anon) throw new Exception("Anonymous variable ('__') not allowed in head of rule")
+        ("v", variables(v))
+      case c: Constant => ("c", c)
+    }
+    new JoinIndexes(bodyVars, constants.toMap, projects, deps, rule)
+  }
+}
 
 
 //given ToExpr[JoinIndexes] with {

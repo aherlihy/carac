@@ -258,9 +258,9 @@ class StagedCompileTest extends munit.FunSuite {
     val toRun = compileCheckRel(
       JoinOp(
         JoinIndexes(
-          Seq(Seq(1, 2)), Map[Int, Constant](0 -> "b"), Seq.empty, Seq.empty
+          Seq(Seq(1, 2)), Map[Int, Constant](0 -> "b"), Seq.empty, Seq.empty, Seq.empty
         ),
-        ScanEDBOp(edge.id), ScanEDBOp(edge.id)
+        ScanEDBOp(edge.id), ScanEDBOp(edge.id),
       ),
       generalMatch(s"$any$sVar.joinHelper\\($scanEdge, $scanEdge, $anyCapture".r)
     )
@@ -273,7 +273,7 @@ class StagedCompileTest extends munit.FunSuite {
     val toRun = compileCheckRel(
       ProjectOp(
         JoinIndexes(
-          Seq.empty, Map[Int, Constant](), Seq(("c", "1"), ("v", 1)), Seq.empty
+          Seq.empty, Map[Int, Constant](), Seq(("c", "1"), ("v", 1)), Seq.empty, Seq.empty
         ),
         ScanEDBOp(edge.id)
       ),

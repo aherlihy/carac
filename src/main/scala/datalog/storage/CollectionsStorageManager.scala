@@ -23,8 +23,10 @@ class CollectionsStorageManager(ns: NS = new NS(), fuse: Boolean = true) extends
     vCmp && kCmp
   }
 
-  override def joinHelper(inputs: Seq[EDB], k: JoinIndexes): EDB = {
-    inputs
+  override def joinHelper(inputs: Seq[EDB], originalK: JoinIndexes): EDB = {
+    var sorted = inputs
+    var k = originalK
+    sorted
       .reduceLeft((outer: EDB, inner: EDB) => {
         outer.flatMap(outerTuple => {
           inner.flatMap(innerTuple => {
@@ -71,14 +73,14 @@ class CollectionsStorageManager(ns: NS = new NS(), fuse: Boolean = true) extends
     )
   }
 
-  def joinProjectHelper(inputs: Seq[EDB], k: JoinIndexes): EDB = {
+  def joinProjectHelper(inputs: Seq[EDB], originalK: JoinIndexes): EDB = {
     if (inputs.size == 1) // just filter
       inputs.view.head
         .filter(e =>
-          val filteredC = k.constIndexes.filter((ind, _) => ind < e.size)
-          prefilter(filteredC, 0, e) && filteredC.size == k.constIndexes.size)
+          val filteredC = originalK.constIndexes.filter((ind, _) => ind < e.size)
+          prefilter(filteredC, 0, e) && filteredC.size == originalK.constIndexes.size)
         .map(t =>
-          k.projIndexes.flatMap((typ, idx) =>
+          originalK.projIndexes.flatMap((typ, idx) =>
             typ match {
               case "v" => t.lift(idx.asInstanceOf[Int])
               case "c" => Some(idx)
@@ -86,7 +88,9 @@ class CollectionsStorageManager(ns: NS = new NS(), fuse: Boolean = true) extends
             }).toIndexedSeq)
         .to(mutable.ArrayBuffer)
     else
-      inputs.view
+      var k = originalK // TODO: find better ways to reduce with 2 acc
+      var sorted = inputs
+      sorted.view
         .map(i => i.view)
         .reduceLeft((outer: View[Row[StorageTerm]], inner: View[Row[StorageTerm]]) =>
           outer
@@ -121,42 +125,43 @@ class CollectionsStorageManager(ns: NS = new NS(), fuse: Boolean = true) extends
    */
   def SPJU(rId: RelationId, keys: mutable.ArrayBuffer[JoinIndexes]): EDB = {
     debug("SPJU:", () => s"r=${ns(rId)} keys=${printer.snPlanToString(keys)} knownDBId $knownDbId")
-      keys.flatMap(k => // for each idb rule
-        if (k.edb)
+      keys.flatMap(originalK => // union of each definition of rId
+        if (originalK.edb)
           edbs.getOrElse(rId, EDB())
         else
           var idx = -1 // if dep is featured more than once, only us delta once, but at a different pos each time
-          k.deps.flatMap(d => {
+          originalK.deps.flatMap(d => {
             var found = false // TODO: perhaps need entry in derived/delta for each atom instead of each relation?
-            if (!fuse) {
-              projectHelper(
-                joinHelper(
-                  k.deps.zipWithIndex.map((r, i) =>
-                    if (r == d && !found && i > idx) {
-                      found = true
-                      idx = i
-                      deltaDB(knownDbId)(r)
-                    }
-                    else {
-                      derivedDB(knownDbId).getOrElse(r, edbs.getOrElse(r, EDB())) // TODO: warn if EDB is empty? Right now can't tell the difference between undeclared and empty EDB
-                    }
-                  ), k), k
-              )
-            } else {
-              joinProjectHelper(
-                k.deps.zipWithIndex.map((r, i) =>
-                  if (r == d && !found && i > idx) {
-                    found = true
-                    idx = i
-                    deltaDB(knownDbId)(r)
-                  }
-                  else {
-                    derivedDB(knownDbId).getOrElse(r, edbs.getOrElse(r, EDB())) // TODO: warn if EDB is empty? Right now can't tell the difference between undeclared and empty EDB
-                  }
-                ), k)
-            }
+//            if (!fuse)
+//              projectHelper(
+//                joinHelper(
+//                  k.deps.zipWithIndex.map((r, i) =>
+//                    if (r == d && !found && i > idx) {
+//                      found = true
+//                      idx = i
+//                      deltaDB(knownDbId)(r)
+//                    }
+//                    else {
+//                      derivedDB(knownDbId).getOrElse(r, edbs.getOrElse(r, EDB())) // TODO: warn if EDB is empty? Right now can't tell the difference between undeclared and empty EDB
+//                    }
+//                  ), k), k
+//              )
+//            else
+            val newAtoms = originalK.atoms.head +: originalK.atoms.drop(1).sortBy(a => derivedDB(knownDbId).getOrElse(a.rId, edbs.getOrElse(a.rId, EDB())).size)
+            val k = JoinIndexes(newAtoms)
+            joinProjectHelper(
+              k.deps.zipWithIndex.map((r, i) =>
+                if (r == d && !found && i > idx) {
+                  found = true
+                  idx = i
+                  deltaDB(knownDbId)(r)
+                }
+                else {
+                  derivedDB(knownDbId).getOrElse(r, edbs.getOrElse(r, EDB())) // TODO: warn if EDB is empty? Right now can't tell the difference between undeclared and empty EDB
+                }
+              ), k) // TODO: could use atoms here
           }).toSet
-        )
+      )
   }
 
   def naiveSPJU(rId: RelationId, keys: mutable.ArrayBuffer[JoinIndexes]): EDB = {

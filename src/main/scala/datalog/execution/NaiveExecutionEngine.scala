@@ -43,7 +43,7 @@ class NaiveExecutionEngine(val storageManager: StorageManager) extends Execution
 
   def insertEDB(rule: Atom): Unit = {
     if (!storageManager.edbs.contains(rule.rId))
-      prebuiltOpKeys.getOrElseUpdate(rule.rId, mutable.ArrayBuffer[JoinIndexes]()).addOne(JoinIndexes(IndexedSeq(), Map(), IndexedSeq(), Seq(rule.rId), true))
+      prebuiltOpKeys.getOrElseUpdate(rule.rId, mutable.ArrayBuffer[JoinIndexes]()).addOne(JoinIndexes(IndexedSeq(), Map(), IndexedSeq(), Seq(rule.rId), Seq(rule), true))
     storageManager.insertEDB(rule)
   }
 

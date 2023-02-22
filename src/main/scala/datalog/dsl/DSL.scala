@@ -24,23 +24,20 @@ type Term = Constant | Variable
 
 type NegatedAtom = Atom
 
-trait Atom {
-  def :- (body: Atom*): Unit
-  def :- (body: Unit): Unit
-  val rId: Int
-  val terms: IndexedSeq[Term]
+class Atom(val rId: Int, val terms: Seq[Term]) {
+  def :- (body: Atom*): Unit = ???
+  def :- (body: Unit): Unit = ???
 }
 
 case class Relation[T <: Constant](id: Int, name: String)(using ee: ExecutionEngine) {
   type RelTerm = T | Variable
   ee.initRelation(id, name)
 
-  case class RelAtom(terms: IndexedSeq[RelTerm]) extends Atom { // extend Atom so :- can accept atom of any Relation
+  case class RelAtom(override val terms: Seq[RelTerm]) extends Atom(id, terms) { // extend Atom so :- can accept atom of any Relation
     // IDB tuple
-    val rId: Int = id
-    def :-(body: Atom*): Unit = ee.insertIDB(rId, this +: body)
+    override def :-(body: Atom*): Unit = ee.insertIDB(rId, this +: body)
     // EDB tuple
-    def :-(body: Unit): Unit = ee.insertEDB(this)
+    override def :-(body: Unit): Unit = ee.insertEDB(this)
 
     override def toString = name + terms.mkString("(", ", ", ")")
   }

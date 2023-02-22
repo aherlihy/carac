@@ -39,10 +39,10 @@ trait StorageManager(val ns: NS) {
    * user-facing API class with internal storage */
   type StorageVariable
   type StorageConstant
-  case class StorageAtom(rId: RelationId, terms: IndexedSeq[StorageTerm]) {
+  case class StorageAtom(rId: RelationId, terms: Seq[StorageTerm]) {
     override def toString: String = ns(rId) + terms.mkString("(", ", ", ")")
   }
-  type Row [+T] <: IndexedSeq[T] with immutable.IndexedSeqOps[T, Row, Row[T]]
+  type Row [+T] <: Seq[T] with immutable.SeqOps[T, Row, Row[T]]
   type Table[T] <: mutable.ArrayBuffer[T]
   type Relation[T] <: Table[Row[T]] & mutable.ArrayBuffer[Row[T]]
 

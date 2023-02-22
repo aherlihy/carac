@@ -71,6 +71,7 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
             case x: Variable => VarTerm(x)
             case x: Constant => ConstTerm(x)
           })),
+        rule
       ))
   }
 
@@ -91,7 +92,7 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
     if (!precedenceGraph.idbs.contains(rId)) {
       throw new Exception("Solving for rule without body")
     }
-    val transformedAST = transforms.foldLeft(ast: ASTNode)((t, pass) => pass.transform(t))
+    val transformedAST = transforms.foldLeft(ast: ASTNode)((t, pass) => pass.transform(t)(using storageManager))
 
     var toSolve = rId
     if (tCtx.aliases.contains(rId))
@@ -298,7 +299,7 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
     }
 
     // generate and transform tree
-    val transformedAST = transforms.foldLeft(ast: ASTNode)((t, pass) => pass.transform(t))
+    val transformedAST = transforms.foldLeft(ast: ASTNode)((t, pass) => pass.transform(t)(using storageManager))
     var toSolve = rId
     if (tCtx.aliases.contains(rId)) {
       toSolve = tCtx.aliases.getOrElse(rId, rId)

@@ -10,8 +10,8 @@ abstract class SimpleStorageManager(override val ns: NS) extends StorageManager(
   type StorageTerm = Term
   type StorageVariable = Variable
   type StorageConstant = Constant
-  type Row[+T] = IndexedSeq[T]
-  def Row[T](c: T*) = IndexedSeq[T](c: _*)
+  type Row[+T] = Seq[T] // IndexedSeq and staging not compatible
+  def Row[T](c: T*) = Seq[T](c: _*)
   type Table[T] = mutable.ArrayBuffer[T]
   def Table[T](r: T*) = mutable.ArrayBuffer[T](r: _*)
   type Relation[T] = Table[Row[T]]

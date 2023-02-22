@@ -28,43 +28,8 @@ trait ExecutionEngine {
    *
    * @param rule - Includes the head at idx 0
    */
-  inline def getOperatorKey(rule: Seq[Atom]): JoinIndexes = {
-    val constants = mutable.Map[Int, Constant]() // position => constant
-    val variables = mutable.Map[Variable, Int]() // v.oid => position
-
-    val body = rule.drop(1)
-
-    val deps = body.map(a => a.rId) // TODO: should this be a set?
-
-    val bodyVars = body
-      .flatMap(a => a.terms)
-      .zipWithIndex // terms, position
-      .groupBy(z => z._1)
-      .filter((term, matches) => // matches = Seq[(var, pos1), (var, pos2), ...]
-        term match {
-          case v: Variable =>
-            variables(v) = matches.head._2 // first idx for a variable
-            !v.anon && matches.size >= 2
-          case c: Constant =>
-            matches.foreach((_, idx) => constants(idx) = c)
-            false
-        }
-      )
-      .map((term, matches) => // get rid of groupBy elem in result tuple
-        matches.map(_._2).toIndexedSeq
-      )
-      .toIndexedSeq
-
-    // variable ids in the head atom
-    val projects = rule(0).terms.map {
-      case v: Variable =>
-        if (!variables.contains(v)) throw new Exception(f"Free variable in rule head with varId $v.oid")
-        if (v.anon) throw new Exception("Anonymous variable ('__') not allowed in head of rule")
-        ("v", variables(v))
-      case c: Constant => ("c", c)
-    }
-    JoinIndexes(bodyVars, constants.toMap, projects, deps)
-  }
+  inline def getOperatorKey(rule: Seq[Atom]): JoinIndexes =
+    JoinIndexes(rule)
 
   def getOperatorKeys(rId: RelationId): mutable.ArrayBuffer[JoinIndexes] = {
     prebuiltOpKeys.getOrElseUpdate(rId, mutable.ArrayBuffer[JoinIndexes]())

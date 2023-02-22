@@ -1,8 +1,8 @@
 package datalog.execution
 
-import datalog.dsl.Constant
+import datalog.dsl.{Atom, Constant, Variable, Term}
 import datalog.execution.ir.*
-import datalog.storage.{CollectionsStorageManager, StorageManager, DB, KNOWLEDGE}
+import datalog.storage.{CollectionsStorageManager, DB, KNOWLEDGE, StorageManager}
 import datalog.tools.Debug.debug
 
 import scala.quoted.*
@@ -19,9 +19,30 @@ class StagedCompiler(val storageManager: StorageManager) {
     }
   }
 
+  given ToExpr[Variable] with {
+    def apply(x: Variable)(using Quotes) = {
+      '{ Variable(${ Expr(x.oid) }, ${ Expr(x.anon)}) }
+    }
+  }
+
+  given ToExpr[Term] with {
+    def apply(x: Term)(using Quotes) = {
+      x match {
+        case v: Variable => Expr(v)
+        case c: Constant => Expr(c)
+      }
+    }
+  }
+
+  given ToExpr[Atom] with {
+    def apply(x: Atom)(using Quotes) = {
+      '{ Atom( ${ Expr(x.rId) }, ${ Expr.ofSeq(x.terms.map(y => Expr(y))) } ) }
+    }
+  }
+
   given ToExpr[JoinIndexes] with {
     def apply(x: JoinIndexes)(using Quotes) = {
-      '{ JoinIndexes(${ Expr(x.varIndexes) }, ${ Expr(x.constIndexes) }, ${ Expr(x.projIndexes) }, ${ Expr(x.deps) }, ${ Expr(x.edb) }) }
+      '{ JoinIndexes(${ Expr(x.varIndexes) }, ${ Expr(x.constIndexes) }, ${ Expr(x.projIndexes) }, ${ Expr(x.deps) }, ${Expr (x.atoms) }, ${ Expr(x.edb) }) }
     }
   }
 
@@ -54,7 +75,6 @@ class StagedCompiler(val storageManager: StorageManager) {
 
       case JoinOp(keys, children:_*) =>
         val compiledOps = Expr.ofSeq(children.map(compileIRRelOp))
-        // TODO[future]: inspect keys and optimize join algo
         '{
           $stagedSM.joinHelper(
             $compiledOps,

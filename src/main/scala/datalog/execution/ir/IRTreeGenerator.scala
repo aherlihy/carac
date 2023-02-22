@@ -53,7 +53,7 @@ class IRTreeGenerator(using val ctx: InterpreterContext) {
           allRes = allRes :+ ScanEDBOp(rId)
 //        if(allRes.size == 1) allRes.head else
         UnionOp(OpCode.EVAL_RULE_NAIVE, allRes:_*)
-      case RuleNode(head, _, joinIdx) =>
+      case RuleNode(head, _, atoms, joinIdx) =>
         val r = head.asInstanceOf[LogicAtom].relation
         joinIdx match {
           case Some(k) =>
@@ -80,8 +80,8 @@ class IRTreeGenerator(using val ctx: InterpreterContext) {
         if (edb)
           allRes = allRes :+ ScanEDBOp(rId)
 //        if(allRes.size == 1) allRes.head else
-        UnionOp(OpCode.EVAL_RULE_SN, allRes:_*)
-      case RuleNode(head, _, joinIdx) =>
+        UnionOp(OpCode.EVAL_RULE_SN, allRes:_*) // None bc union of unions so no point in sorting
+      case RuleNode(head, body, atoms, joinIdx) =>
         val r = head.asInstanceOf[LogicAtom].relation
         joinIdx match {
           case Some(k) =>
@@ -89,7 +89,7 @@ class IRTreeGenerator(using val ctx: InterpreterContext) {
               ScanEDBOp(r)
             else
               var idx = -1 // if dep is featured more than once, only use delta once, but at a different pos each time
-              UnionOp(OpCode.UNION,
+              UnionOp(OpCode.EVAL_RULE_BODY, // a single rule body
                 k.deps.map(d => {
                   var found = false
                   ProjectOp(k,

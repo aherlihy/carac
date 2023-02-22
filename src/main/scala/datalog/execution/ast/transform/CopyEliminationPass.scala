@@ -1,6 +1,7 @@
 package datalog.execution.ast.transform
 
 import datalog.execution.ast.*
+import datalog.storage.StorageManager
 
 import scala.collection.mutable.{ArrayBuffer, Map}
 
@@ -18,7 +19,7 @@ class CopyEliminationPass()(using ASTTransformerContext) extends Transformer {
       case AllRulesNode(rules, _, edb) =>
         if (rules.size == 1 && !edb)
           checkAlias(rules.head)
-      case RuleNode(head, body, _) =>
+      case RuleNode(head, body, _, _) =>
         if (body.size == 1) // for now just subst simple equality
           (head, body(0)) match {
             case (h: LogicAtom, b: LogicAtom) =>
@@ -29,7 +30,7 @@ class CopyEliminationPass()(using ASTTransformerContext) extends Transformer {
       case _ =>
     }
   }
-  override def transform(node: ASTNode): ASTNode = {
+  override def transform(node: ASTNode)(using StorageManager): ASTNode = {
     checkAlias(node)
     if (ctx.aliases.nonEmpty)
       node match {
@@ -40,8 +41,8 @@ class CopyEliminationPass()(using ASTTransformerContext) extends Transformer {
           ) // delete aliased rules
         case AllRulesNode(rules, rId, edb) =>
           AllRulesNode(rules.map(transform), rId, edb)
-        case RuleNode(head, body, key) =>
-          RuleNode(transform(head), body.map(transform), key)
+        case RuleNode(head, body, atoms, key) =>
+          RuleNode(transform(head), body.map(transform), atoms, key)
         case n: AtomNode => n match {
           case NegAtom(expr) =>
             NegAtom(transform(expr))

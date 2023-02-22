@@ -1,6 +1,6 @@
 package datalog
 
-import datalog.execution.{ExecutionEngine, JITOptions, SemiNaiveExecutionEngine, StagedExecutionEngine, StagedSnippetExecutionEngine, ir}
+import datalog.execution.{ExecutionEngine, JITOptions, SemiNaiveExecutionEngine, StagedExecutionEngine, StagedSnippetExecutionEngine, ir, NaiveExecutionEngine}
 import datalog.dsl.{Constant, Program, __}
 import datalog.execution.ast.transform.CopyEliminationPass
 import datalog.execution.ir.InterpreterContext
@@ -507,6 +507,28 @@ def anon_var(program: Program) = {
   println(s"RES=${res.size}")
 }
 
+def scratch(program: Program) =
+  val a1 = program.relation[Constant]("a1")
+  val a2 = program.relation[Constant]("a2")
+  val b = program.relation[Constant]("b")
+  val c = program.relation[Constant]("c")
+  val e = program.relation[Constant]("e")
+
+  val x, y, z = program.variable()
+
+  e(1, 2, 3) :- ()
+  e(11, 22, 33) :- ()
+  e(111, 222, 333) :- ()
+
+  b(x) :- e(1, x, 3)
+
+  c(x, y) :- (e(x, y, 3), b(x))
+
+  a1(x, y, z, 1) :- (e(y, z, 3), b(x, y), c(y, z))
+  a2(x, y, z, 1) :- (e(y, z, 3), b(x, y), c(y, z))
+
+  println(a2.solve())
+
 @main def main = {
   //  val engine = new SemiNaiveStagedExecutionEngine(new CollectionsStorageManager())
   //  val program = Program(engine)
@@ -514,12 +536,19 @@ def anon_var(program: Program) = {
   //  run(program)
   //  reversible(program, engine)
   //  val run = multiJoin
+  println("OLD N")
 
-//  println("OLD SN")
-//  given engine1: ExecutionEngine = new SemiNaiveExecutionEngine(new CollectionsStorageManager())
-//  val program1 = Program(engine1)
-//  tc(program1)
-//  println("\n\n_______________________\n\n")
+  given engine0: ExecutionEngine = new NaiveExecutionEngine(new CollectionsStorageManager())
+
+  val program0 = Program(engine0)
+  func(program0)
+  println("\n\n_______________________\n\n")
+
+  println("OLD SN")
+  given engine1: ExecutionEngine = new SemiNaiveExecutionEngine(new CollectionsStorageManager())
+  val program1 = Program(engine1)
+  func(program1)
+  println("\n\n_______________________\n\n")
 
 //  println("STAGED COMPILE")
 //  given engine2: ExecutionEngine = new CompiledStagedExecutionEngine(new CollectionsStorageManager())
@@ -527,18 +556,18 @@ def anon_var(program: Program) = {
 //  tc(program2)
 //  println("\n\n_______________________\n\n")
 //
-  val jo = JITOptions(ir.OpCode.EVAL_SN, aot = false, block = true)
+//  val jo = JITOptions(ir.OpCode.EVAL_SN, aot = false, block = true)
 //  println("STAGED")
 //  given engine3: ExecutionEngine = new StagedExecutionEngine(new CollectionsStorageManager(), jo)
 //  val program3 = Program(engine3)
-//  tc(program3)
+//  scratch(program3)
 //  println("\n\n_______________________\n\n")
 
-  println("JIT Snippet")
-  val engine4: ExecutionEngine = new StagedSnippetExecutionEngine(new CollectionsStorageManager(), jo)
-  val program4 = Program(engine4)
-  tc(program4)
-  println("\n\n_______________________\n\n")
+//  println("JIT Snippet")
+//  val engine4: ExecutionEngine = new StagedSnippetExecutionEngine(new CollectionsStorageManager(), jo)
+//  val program4 = Program(engine4)
+//  tc(program4)
+//  println("\n\n_______________________\n\n")
 
 //  println("JIT STAGED: aot EvalSN")
 //  val engine5: ExecutionEngine = new JITStagedExecutionEngine(new CollectionsStorageManager(), ir.OpCode.EVAL_SN, true, true)
