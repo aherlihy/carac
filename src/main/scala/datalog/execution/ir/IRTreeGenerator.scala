@@ -60,10 +60,8 @@ class IRTreeGenerator(using val ctx: InterpreterContext) {
             if (k.edb)
               ScanEDBOp(r)
             else
-              ProjectOp(k,
-                JoinOp(k,
-                  k.deps.map(r => ScanOp(r, DB.Derived, KNOWLEDGE.Known)):_*
-                )
+              SelectProjectJoinOp(k,
+                k.deps.map(r => ScanOp(r, DB.Derived, KNOWLEDGE.Known)):_*
               )
           case _ => throw new Exception("Trying to solve without joinIndexes calculated yet")
         }
@@ -92,17 +90,15 @@ class IRTreeGenerator(using val ctx: InterpreterContext) {
               UnionOp(OpCode.EVAL_RULE_BODY, // a single rule body
                 k.deps.map(d => {
                   var found = false
-                  ProjectOp(k,
-                    JoinOp(k,
-                      k.deps.zipWithIndex.map((r, i) => {
-                        if (r == d && !found && i > idx)
-                          found = true
-                          idx = i
-                          ScanOp(r, DB.Delta, KNOWLEDGE.Known)
-                        else
-                          ScanOp(r, DB.Derived, KNOWLEDGE.Known)
-                      }):_*
-                    )
+                  SelectProjectJoinOp(k,
+                    k.deps.zipWithIndex.map((r, i) => {
+                      if (r == d && !found && i > idx)
+                        found = true
+                        idx = i
+                        ScanOp(r, DB.Delta, KNOWLEDGE.Known)
+                      else
+                        ScanOp(r, DB.Derived, KNOWLEDGE.Known)
+                    }):_*
                   )
                 }):_*
               )

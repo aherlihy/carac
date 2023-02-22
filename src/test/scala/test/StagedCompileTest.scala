@@ -253,34 +253,19 @@ class StagedCompileTest extends munit.FunSuite {
     delta.foreach((k, v) => storageManager.deltaDB(k) = v)
   }
 
-  test("JoinOp") {
+  test("JoinProjectSelectOp") {
     val scanEdge = s"$sVar.edbs.apply\\(${edge.id}\\)"
     val toRun = compileCheckRel(
-      JoinOp(
+      SelectProjectJoinOp(
         JoinIndexes(
-          Seq(Seq(1, 2)), Map[Int, Constant](0 -> "b"), Seq.empty, Seq.empty, Seq.empty
+          Seq(Seq(1, 2)), Map[Int, Constant](0 -> "b"), Seq(("v", 0),("v", 1), ("v", 2), ("v", 3)), Seq.empty, Seq.empty
         ),
         ScanEDBOp(edge.id), ScanEDBOp(edge.id),
       ),
-      generalMatch(s"$any$sVar.joinHelper\\($scanEdge, $scanEdge, $anyCapture".r)
+      generalMatch(s"$any$sVar.joinProjectHelper\\($scanEdge, $scanEdge, $anyCapture".r)
     )
 
     assertEquals(toRun(storageManager), ArrayBuffer(Vector("b", "c", "c", "d")))
-  }
-
-  test("ProjectOp") {
-    val scanEdge = s"$sVar.edbs.apply\\(${edge.id}\\)"
-    val toRun = compileCheckRel(
-      ProjectOp(
-        JoinIndexes(
-          Seq.empty, Map[Int, Constant](), Seq(("c", "1"), ("v", 1)), Seq.empty, Seq.empty
-        ),
-        ScanEDBOp(edge.id)
-      ),
-      generalMatch(s"$any$sVar.projectHelper\\($scanEdge, $anyCapture".r)
-    )
-
-    assertEquals(toRun(storageManager), ArrayBuffer(Vector("1", "a"), Vector("1", "b"), Vector("1", "c"), Vector("1", "d"), Vector("1", "1")))
   }
 
   test("InsertOp Delta") {

@@ -38,7 +38,7 @@ abstract class DLBenchmark {
           else if (context.contains("LoopBody")) ir.OpCode.LOOP_BODY
           else if (context.contains("Loop")) ir.OpCode.DOWHILE
           else if (context.contains("Program")) ir.OpCode.PROGRAM
-          else if (context.contains("Join")) ir.OpCode.JOIN
+          else if (context.contains("Join")) ir.OpCode.SPJ
           else throw new Exception(s"Unknown type of JIT staged $context")
         if (context.contains("Snippet"))
           Program(StagedSnippetExecutionEngine(CollectionsStorageManager(), JITOptions(label, aot, !nonblocking)))

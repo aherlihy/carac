@@ -146,7 +146,7 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
           startCompileThreadRel(op, newDotty)
         checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.children.map(o => sm => jitRel(o))))
 
-      case op: JoinOp if jitOptions.granularity == op.code =>
+      case op: SelectProjectJoinOp if jitOptions.granularity == op.code =>
         if (op.compiledFn == null && !jitOptions.aot)
           startCompileThreadRel(op, newDotty)
         checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.children.map(o => sm => jitRel(o))))
@@ -162,10 +162,7 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
       case op: ScanEDBOp =>
         op.run(storageManager)
 
-      case op: JoinOp => // TODO: mutex?
-        op.run_continuation(storageManager, op.children.map(o => sm => jitRel(o)))
-
-      case op: ProjectOp =>
+      case op: SelectProjectJoinOp => // TODO: mutex?
         op.run_continuation(storageManager, op.children.map(o => sm => jitRel(o)))
 
       case op: UnionOp =>

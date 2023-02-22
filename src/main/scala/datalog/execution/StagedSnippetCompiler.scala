@@ -76,21 +76,15 @@ class StagedSnippetCompiler(val storageManager: StorageManager) {
         else
           '{ $stagedSM.EDB() }
 
-      case JoinOp(keys, children:_*) =>
+      case SelectProjectJoinOp(keys, children:_*) =>
         val compiledOps = '{ $stagedFns.map(s => s($stagedSM)) }
         // TODO[future]: inspect keys and optimize join algo
         '{
-          $stagedSM.joinHelper(
+          $stagedSM.joinProjectHelper(
             $compiledOps,
             ${ Expr(keys) }
           )
         }
-
-      case ProjectOp(keys, children:_*) =>
-//        if (children.head.code == OpCode.JOIN) // merge join+project // can't really skip levels with continuations
-//          '{ $stagedSM.joinProjectHelper($stagedFns, ${ Expr(keys) }) }
-//        else
-        '{ $stagedSM.projectHelper($stagedFns(0)($stagedSM), ${ Expr(keys) }) }
 
       case UnionOp(label, children:_*) =>
         val compiledOps = '{ $stagedFns.map(s => s($stagedSM)) }

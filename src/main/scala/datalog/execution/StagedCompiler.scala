@@ -73,21 +73,14 @@ class StagedCompiler(val storageManager: StorageManager) {
         else
           '{ $stagedSM.EDB() }
 
-      case JoinOp(keys, children:_*) =>
+      case SelectProjectJoinOp(keys, children:_*) =>
         val compiledOps = Expr.ofSeq(children.map(compileIRRelOp))
         '{
-          $stagedSM.joinHelper(
+          $stagedSM.joinProjectHelper(
             $compiledOps,
             ${ Expr(keys) }
           )
         }
-
-      case ProjectOp(keys, children:_*) =>
-        if (children.head.code == OpCode.JOIN) // merge join+project
-          val compiledOps = Expr.ofSeq(children.head.asInstanceOf[JoinOp].children.map(compileIRRelOp))
-          '{ $stagedSM.joinProjectHelper($compiledOps, ${ Expr(keys) }) }
-        else
-          '{ $stagedSM.projectHelper(${ compileIRRelOp(children.head) }, ${ Expr(keys) }) }
 
       case UnionOp(label, children:_*) =>
         val compiledOps = children.map(compileIRRelOp)

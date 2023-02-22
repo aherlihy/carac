@@ -29,7 +29,7 @@ class BenchStagedDotty_full_cold {
   var ctx: ir.InterpreterContext = null
   var doWhile: ir.DoWhileOp = null
   var naiveEval, snEval, snEvalRule: ir.SequenceOp = null
-  var join: ir.ProjectOp = null
+  var join: ir.SelectProjectJoinOp = null
   var scan: ir.ScanOp = null
 
   @Setup(Level.Invocation)
@@ -47,7 +47,7 @@ class BenchStagedDotty_full_cold {
     doWhile = programNode.getSubTree(ir.OpCode.DOWHILE).asInstanceOf[ir.DoWhileOp]
     snEval = programNode.getSubTree(ir.OpCode.EVAL_SN).asInstanceOf[ir.SequenceOp]
     snEvalRule = programNode.getSubTree(ir.OpCode.EVAL_RULE_SN).asInstanceOf[ir.SequenceOp]
-    join = programNode.getSubTree(ir.OpCode.JOIN).asInstanceOf[ir.ProjectOp]
+    join = programNode.getSubTree(ir.OpCode.SPJ).asInstanceOf[ir.SelectProjectJoinOp]
     scan = programNode.getSubTree(ir.OpCode.SCAN).asInstanceOf[ir.ScanOp]
   }
   @TearDown(Level.Invocation)
@@ -121,7 +121,7 @@ class BenchStagedDotty_full_warm {
   var ctx: ir.InterpreterContext = null
   var doWhile: ir.DoWhileOp = null
   var naiveEval, snEval, snEvalRule: ir.SequenceOp = null
-  var join: ir.ProjectOp = null
+  var join: ir.SelectProjectJoinOp = null
   var scan: ir.ScanOp = null
 
   @Setup(Level.Trial)
@@ -139,7 +139,7 @@ class BenchStagedDotty_full_warm {
     doWhile = programNode.getSubTree(ir.OpCode.DOWHILE).asInstanceOf[ir.DoWhileOp]
     snEval = programNode.getSubTree(ir.OpCode.EVAL_SN).asInstanceOf[ir.SequenceOp]
     snEvalRule = programNode.getSubTree(ir.OpCode.EVAL_RULE_SN).asInstanceOf[ir.SequenceOp]
-    join = programNode.getSubTree(ir.OpCode.JOIN).asInstanceOf[ir.ProjectOp]
+    join = programNode.getSubTree(ir.OpCode.SPJ).asInstanceOf[ir.SelectProjectJoinOp]
     scan = programNode.getSubTree(ir.OpCode.SCAN).asInstanceOf[ir.ScanOp]
   }
 
@@ -213,7 +213,7 @@ class BenchStagedDotty_snippet_cold {
   var ctx: ir.InterpreterContext = null
   var doWhile: ir.DoWhileOp = null
   var naiveEval, snEval, snEvalRule: ir.SequenceOp = null
-  var join: ir.ProjectOp = null
+  var join: ir.SelectProjectJoinOp = null
   var scan: ir.ScanOp = null
 
   @Setup(Level.Invocation)
@@ -230,7 +230,7 @@ class BenchStagedDotty_snippet_cold {
     doWhile = programNode.getSubTree(ir.OpCode.DOWHILE).asInstanceOf[ir.DoWhileOp]
     snEval = programNode.getSubTree(ir.OpCode.EVAL_SN).asInstanceOf[ir.SequenceOp]
     snEvalRule = programNode.getSubTree(ir.OpCode.EVAL_RULE_SN).asInstanceOf[ir.SequenceOp]
-    join = programNode.getSubTree(ir.OpCode.JOIN).asInstanceOf[ir.ProjectOp]
+    join = programNode.getSubTree(ir.OpCode.SPJ).asInstanceOf[ir.SelectProjectJoinOp]
     scan = programNode.getSubTree(ir.OpCode.SCAN).asInstanceOf[ir.ScanOp]
   }
   @TearDown(Level.Invocation)
@@ -303,7 +303,7 @@ class BenchStagedDotty_snippet_warm {
   var ctx: ir.InterpreterContext = null
   var doWhile: ir.DoWhileOp = null
   var naiveEval, snEval, snEvalRule: ir.SequenceOp = null
-  var join: ir.ProjectOp = null
+  var join: ir.SelectProjectJoinOp = null
   var scan: ir.ScanOp = null
 
   @Setup(Level.Trial)
@@ -320,7 +320,7 @@ class BenchStagedDotty_snippet_warm {
     doWhile = programNode.getSubTree(ir.OpCode.DOWHILE).asInstanceOf[ir.DoWhileOp]
     snEval = programNode.getSubTree(ir.OpCode.EVAL_SN).asInstanceOf[ir.SequenceOp]
     snEvalRule = programNode.getSubTree(ir.OpCode.EVAL_RULE_SN).asInstanceOf[ir.SequenceOp]
-    join = programNode.getSubTree(ir.OpCode.JOIN).asInstanceOf[ir.ProjectOp]
+    join = programNode.getSubTree(ir.OpCode.SPJ).asInstanceOf[ir.SelectProjectJoinOp]
     scan = programNode.getSubTree(ir.OpCode.SCAN).asInstanceOf[ir.ScanOp]
   }
   @TearDown(Level.Invocation)

@@ -14,7 +14,7 @@ import scala.quoted.*
 import scala.util.{Failure, Success}
 
 enum OpCode:
-  case PROGRAM, SWAP_CLEAR, SEQ, SCAN, SCANEDB, PROJECT, JOIN, INSERT, UNION, DIFF, DEBUG, DOWHILE,
+  case PROGRAM, SWAP_CLEAR, SEQ, SCAN, SCANEDB, SPJ, INSERT, UNION, DIFF, DEBUG, DOWHILE,
   EVAL_RULE_NAIVE, EVAL_RULE_SN, EVAL_RULE_BODY, EVAL_NAIVE, EVAL_SN, LOOP_BODY, OTHER // convenience labels for generating functions
 
 // TODO: make general SM not collections
@@ -73,10 +73,10 @@ case class ProgramOp(override val children: IROp[Any]*) extends IROp[Any](childr
         getSubTree(OpCode.LOOP_BODY).children(1)
       case OpCode.EVAL_RULE_SN => // gets a bit weird here bc there are multiple of these nodes, just gets the first one. Including insert+diff
         getSubTree(OpCode.EVAL_SN).children.head
-      case OpCode.JOIN => // technically project
+      case OpCode.SPJ => // technically project
         getSubTree(OpCode.EVAL_RULE_SN).children.head.children.head.children.head.children.head
       case OpCode.SCAN =>
-        getSubTree(OpCode.JOIN).children.head.children.head
+        getSubTree(OpCode.SPJ).children.head.children.head
       case _ =>
         throw new Exception(s"getSubTree not supported for $code, could prob just add it")
 }
@@ -211,34 +211,20 @@ case class ScanEDBOp(rId: RelationId) extends IROp[CollectionsStorageManager#EDB
   override def run_continuation(storageManager: CollectionsStorageManager, opFns: Seq[CompiledRelFn]): CollectionsStorageManager#EDB =
     run(storageManager)
 }
-
-/**
- * @param keys
- * @param children: [JoinOp]
- */
-case class ProjectOp(keys: JoinIndexes, override val children: IROp[CollectionsStorageManager#EDB]*) extends IROp[CollectionsStorageManager#EDB](children:_*) {
-  val code: OpCode = OpCode.PROJECT
-
-  override def run_continuation(storageManager: CollectionsStorageManager, opFns: Seq[CompiledRelFn]): CollectionsStorageManager#EDB =
-    storageManager.projectHelper(opFns.head(storageManager), keys)
-  override def run(storageManager: CollectionsStorageManager): CollectionsStorageManager#EDB =
-    storageManager.projectHelper(children.head.run(storageManager), keys)
-}
-
 /**
  * @param keys
  * @param children: [Scan*deps]
  */
-case class JoinOp(keys: JoinIndexes, override val children: IROp[CollectionsStorageManager#EDB]*) extends IROp[CollectionsStorageManager#EDB](children:_*) {
-  val code: OpCode = OpCode.JOIN
+case class SelectProjectJoinOp(keys: JoinIndexes, override val children: IROp[CollectionsStorageManager#EDB]*) extends IROp[CollectionsStorageManager#EDB](children:_*) {
+  val code: OpCode = OpCode.SPJ
 
   override def run_continuation(storageManager: CollectionsStorageManager, opFns: Seq[CompiledRelFn]): CollectionsStorageManager#EDB =
-    storageManager.joinHelper(
+    storageManager.joinProjectHelper(
       opFns.map(s => s(storageManager)),
       keys
     )
   override def run(storageManager: CollectionsStorageManager): CollectionsStorageManager#EDB =
-    storageManager.joinHelper(
+    storageManager.joinProjectHelper(
       children.map(s => s.run(storageManager)),
       keys
     )
