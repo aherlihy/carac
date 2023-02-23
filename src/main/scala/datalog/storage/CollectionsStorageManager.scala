@@ -88,41 +88,49 @@ class CollectionsStorageManager(ns: NS = new NS(), sort: Int = 0) extends Simple
             }).toIndexedSeq)
         .to(mutable.ArrayBuffer)
     else
-      var k = originalK // TODO: find better ways to reduce with 2 acc
-      var atomI = 1
+      var preSortedK = originalK // TODO: find better ways to reduce with 2 acc
       var sorted = inputs
       if (sort != 0)
-        var edbToAtom = inputs.zipWithIndex.map((edb, i) => (edb, k.atoms(i + 1))).sortBy((edb, _) => edb.size)
+        var edbToAtom = inputs.zipWithIndex.map((edb, i) => (edb, originalK.atoms(i + 1))).sortBy((edb, _) => edb.size)
         if (sort == -1) edbToAtom = edbToAtom.reverse
-        val newAtoms = k.atoms.head +: edbToAtom.map(_._2)
-        k = JoinIndexes(newAtoms)
+        val newAtoms = originalK.atoms.head +: edbToAtom.map(_._2)
+        preSortedK = JoinIndexes(newAtoms)
         sorted = edbToAtom.map(_._1)
 
-      sorted.view
+      val result = sorted.view
         .map(i => i.view)
-        .reduceLeft((outerT: View[Row[StorageTerm]], innerT: View[Row[StorageTerm]]) =>
-          val (inner, outer) =
-            if (sort != 0 && atomI > 1 && outerT.size > innerT.size)
-              val body = k.atoms.drop(1)
-              k = JoinIndexes(Seq(k.atoms.head, body(atomI)) ++ body.dropRight(body.size - atomI) ++ body.drop(atomI + 1))
-              (outerT, innerT)
-            else
-              (innerT, outerT)
-          atomI += 1
-          outer
-            .filter(o =>
-              prefilter(k.constIndexes.filter((i, _) => i < o.size), 0, o)
-            ) // filter outer tuple
-            .flatMap(outerTuple =>
-              inner
-                .filter(i =>
-                  prefilter(k.constIndexes.filter((ind, _) => ind >= outerTuple.size && ind < (outerTuple.size + i.size)), outerTuple.size, i) && toJoin(k, outerTuple, i)
-                )
-                .map(innerTuple => outerTuple ++ innerTuple))
-        )
-        .filter(edb => k.constIndexes.filter((i, _) => i >= edb.size).isEmpty)
+        .foldLeft(
+          (EDB().view, 0, preSortedK)
+        )((combo: (View[Row[StorageTerm]], Int, JoinIndexes), innerT: View[Row[StorageTerm]]) =>
+          val outerT = combo._1
+          val atomI = combo._2
+          var k = combo._3
+          if (atomI == 0) // not a monad :(
+            (innerT, atomI + 1, k)
+          else
+            val (inner, outer) =
+              if (atomI > 1 && ((sort == 1 && outerT.size > innerT.size) || (sort == -1 && innerT.size > outerT.size)))
+                val body = k.atoms.drop(1)
+                k = JoinIndexes(Seq(k.atoms.head, body(atomI)) ++ body.dropRight(body.size - atomI) ++ body.drop(atomI + 1))
+                (outerT, innerT)
+              else
+                (innerT, outerT)
+            val edbResult = outer
+              .filter(o =>
+                prefilter(k.constIndexes.filter((i, _) => i < o.size), 0, o)
+              ) // filter outer tuple
+              .flatMap(outerTuple =>
+                inner
+                  .filter(i =>
+                    prefilter(k.constIndexes.filter((ind, _) => ind >= outerTuple.size && ind < (outerTuple.size + i.size)), outerTuple.size, i) && toJoin(k, outerTuple, i)
+                  )
+                  .map(innerTuple => outerTuple ++ innerTuple))
+            (edbResult, atomI + 1, k)
+          )
+      result._1
+        .filter(edb => result._3.constIndexes.filter((i, _) => i >= edb.size).isEmpty)
         .map(t =>
-          k.projIndexes.flatMap((typ, idx) =>
+          result._3.projIndexes.flatMap((typ, idx) =>
             typ match {
               case "v" => t.lift(idx.asInstanceOf[Int])
               case "c" => Some(idx)
