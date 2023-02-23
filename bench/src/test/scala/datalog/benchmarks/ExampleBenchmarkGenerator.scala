@@ -82,7 +82,14 @@ abstract class BenchmarkGenerator(directory: Path,
 //    "JITStagedAOTSemiNaiveEvalNonBlocking", "JITStagedAOTLoopBodyNonBlocking",
 //    "JITStagedSemiNaiveEvalOnline", "JITStagedLoopBodyOnline",
   ).foreach(execution =>
-    Seq(/*"Relational", */"Collections", "CollectionsBest", "CollectionsWorst").foreach(storage =>
+    Seq(/*"Relational", */"Collections",
+      "CollectionsBestUnsorted", "CollectionsWorstUnsorted",
+      "CollectionsUnsortedBest", "CollectionsUnsortedWorst",
+      "CollectionsBestBest", "CollectionsWorstWorst",
+      "CollectionsFoldView", "CollectionsFoldNoView",
+      "CollectionsReduceView", "CollectionsReduceNoView",
+      "CollectionsBestUnsorted", "CollectionsWorstUnsorted",
+    ).foreach(storage =>
       if (
         (execution.contains("Staged") && storage == "Relational") ||
           skip.contains(execution) || skip.contains(storage) ||

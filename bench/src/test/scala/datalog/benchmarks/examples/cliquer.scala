@@ -51,15 +51,71 @@ class cliquer_benchmark() extends ExampleBenchmarkGenerator("cliquer") with cliq
     blackhole.consume(run(programs(p), result))
   }
 
-  @Benchmark def seminaive_collections_best(blackhole: Blackhole): Unit = {
-    val p = "SemiNaiveCollectionsBest"
+  @Benchmark def seminaive_collections_reduce_view(blackhole: Blackhole): Unit = {
+    val p = "SemiNaiveCollectionsReduceView"
     if (!programs.contains(p))
       throw new Exception(f"skip test $p for current env")
     blackhole.consume(run(programs(p), result))
   }
 
-  @Benchmark def seminaive_collections_worst(blackhole: Blackhole): Unit = {
-    val p = "SemiNaiveCollectionsWorst"
+  @Benchmark def seminaive_collections_reduce_noview(blackhole: Blackhole): Unit = {
+    val p = "SemiNaiveCollectionsReduceNoView"
+    if (!programs.contains(p))
+      throw new Exception(f"skip test $p for current env")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  @Benchmark def seminaive_collections_fold_view(blackhole: Blackhole): Unit = {
+    val p = "SemiNaiveCollectionsFoldView"
+    if (!programs.contains(p))
+      throw new Exception(f"skip test $p for current env")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  @Benchmark def seminaive_collections_fold_noview(blackhole: Blackhole): Unit = {
+    val p = "SemiNaiveCollectionsFoldNoView"
+    if (!programs.contains(p))
+      throw new Exception(f"skip test $p for current env")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  @Benchmark def seminaive_collections_best_unsorted(blackhole: Blackhole): Unit = {
+    val p = "SemiNaiveCollectionsBestUnsorted"
+    if (!programs.contains(p))
+      throw new Exception(f"skip test $p for current env")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  @Benchmark def seminaive_collections_worst_unsorted(blackhole: Blackhole): Unit = {
+    val p = "SemiNaiveCollectionsWorstUnsorted"
+    if (!programs.contains(p))
+      throw new Exception(f"skip test $p for current env")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  @Benchmark def seminaive_collections_unsorted_best(blackhole: Blackhole): Unit = {
+    val p = "SemiNaiveCollectionsUnsortedBest"
+    if (!programs.contains(p))
+      throw new Exception(f"skip test $p for current env")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  @Benchmark def seminaive_collections_unsorted_worst(blackhole: Blackhole): Unit = {
+    val p = "SemiNaiveCollectionsUnsortedWorst"
+    if (!programs.contains(p))
+      throw new Exception(f"skip test $p for current env")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  @Benchmark def seminaive_collections_best_best(blackhole: Blackhole): Unit = {
+    val p = "SemiNaiveCollectionsBestBest"
+    if (!programs.contains(p))
+      throw new Exception(f"skip test $p for current env")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  @Benchmark def seminaive_collections_worst_worst(blackhole: Blackhole): Unit = {
+    val p = "SemiNaiveCollectionsWorstWorst"
     if (!programs.contains(p))
       throw new Exception(f"skip test $p for current env")
     blackhole.consume(run(programs(p), result))
