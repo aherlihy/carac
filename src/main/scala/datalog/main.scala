@@ -526,14 +526,14 @@ def scratch(program: Program) =
 //  func(program0)
 //  println("\n\n_______________________\n\n")
 
-  val sort = -1
+  var sort = 1
   println(s"OLD SN: $sort")
   given engine1: ExecutionEngine = new SemiNaiveExecutionEngine(new CollectionsStorageManager(sort = sort))
   val program1 = Program(engine1)
-  scratch(program1)
+  func(program1)
   println("\n\n_______________________\n\n")
 
-//  val jo = JITOptions(ir.OpCode.OTHER, aot = true, block = true)
+  //  val jo = JITOptions(ir.OpCode.OTHER, aot = true, block = true)
 //  println("COMPILED")
 //  given engine3: ExecutionEngine = new StagedExecutionEngine(new CollectionsStorageManager(), jo)
 //  val program3 = Program(engine3)

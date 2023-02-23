@@ -88,21 +88,27 @@ class CollectionsStorageManager(ns: NS = new NS(), sort: Int = 0) extends Simple
             }).toIndexedSeq)
         .to(mutable.ArrayBuffer)
     else
-//      println("getting new order, atoms=" + printer.atomToString(originalK.atoms))
       var k = originalK // TODO: find better ways to reduce with 2 acc
+      var atomI = 1
       var sorted = inputs
       if (sort != 0)
         var edbToAtom = inputs.zipWithIndex.map((edb, i) => (edb, k.atoms(i + 1))).sortBy((edb, _) => edb.size)
-//        println(edbToAtom.map((edb, atom) => s"${edb.size} for $atom"))
         if (sort == -1) edbToAtom = edbToAtom.reverse
         val newAtoms = k.atoms.head +: edbToAtom.map(_._2)
         k = JoinIndexes(newAtoms)
         sorted = edbToAtom.map(_._1)
-//      println("new atom=" + printer.atomToString(k.atoms))
 
       sorted.view
         .map(i => i.view)
-        .reduceLeft((outer: View[Row[StorageTerm]], inner: View[Row[StorageTerm]]) =>
+        .reduceLeft((outerT: View[Row[StorageTerm]], innerT: View[Row[StorageTerm]]) =>
+          val (inner, outer) =
+            if (sort != 0 && atomI > 1 && outerT.size > innerT.size)
+              val body = k.atoms.drop(1)
+              k = JoinIndexes(Seq(k.atoms.head, body(atomI)) ++ body.dropRight(body.size - atomI) ++ body.drop(atomI + 1))
+              (outerT, innerT)
+            else
+              (innerT, outerT)
+          atomI += 1
           outer
             .filter(o =>
               prefilter(k.constIndexes.filter((i, _) => i < o.size), 0, o)
