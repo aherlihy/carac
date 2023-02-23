@@ -6,7 +6,7 @@ import datalog.execution.JoinIndexes
 import scala.collection.{View, immutable, mutable}
 import datalog.tools.Debug.debug
 
-class CollectionsStorageManager(ns: NS = new NS(), sort: Int = 0) extends SimpleStorageManager(ns) {
+class CollectionsStorageManager(ns: NS = new NS(), sortAhead: Int = 0, sortOnline: Int = 0) extends SimpleStorageManager(ns) {
   inline def scanFilter(k: JoinIndexes, maxIdx: Int)(get: Int => StorageTerm = x => x) = {
     val vCmp = k.varIndexes.isEmpty || k.varIndexes.forall(condition =>
       if (condition.head >= maxIdx)
@@ -90,9 +90,9 @@ class CollectionsStorageManager(ns: NS = new NS(), sort: Int = 0) extends Simple
     else
       var preSortedK = originalK // TODO: find better ways to reduce with 2 acc
       var sorted = inputs
-      if (sort != 0)
+      if (sortAhead != 0)
         var edbToAtom = inputs.zipWithIndex.map((edb, i) => (edb, originalK.atoms(i + 1))).sortBy((edb, _) => edb.size)
-        if (sort == -1) edbToAtom = edbToAtom.reverse
+        if (sortAhead == -1) edbToAtom = edbToAtom.reverse
         val newAtoms = originalK.atoms.head +: edbToAtom.map(_._2)
         preSortedK = JoinIndexes(newAtoms)
         sorted = edbToAtom.map(_._1)
@@ -109,7 +109,7 @@ class CollectionsStorageManager(ns: NS = new NS(), sort: Int = 0) extends Simple
             (innerT, atomI + 1, k)
           else
             val (inner, outer) =
-              if (atomI > 1 && ((sort == 1 && outerT.size > innerT.size) || (sort == -1 && innerT.size > outerT.size)))
+              if (atomI > 1 && ((sortOnline == 1 && outerT.size > innerT.size) || (sortOnline == -1 && innerT.size > outerT.size)))
                 val body = k.atoms.drop(1)
                 k = JoinIndexes(Seq(k.atoms.head, body(atomI)) ++ body.dropRight(body.size - atomI) ++ body.drop(atomI + 1))
                 (outerT, innerT)
@@ -169,7 +169,7 @@ class CollectionsStorageManager(ns: NS = new NS(), sort: Int = 0) extends Simple
                 else {
                   derivedDB(knownDbId).getOrElse(r, edbs.getOrElse(r, EDB())) // TODO: warn if EDB is empty? Right now can't tell the difference between undeclared and empty EDB
                 }
-              ), k) // TODO: could use atoms here
+              ), k)
           }).toSet
       )
   }

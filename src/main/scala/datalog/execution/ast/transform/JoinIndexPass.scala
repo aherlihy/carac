@@ -21,18 +21,18 @@ class JoinIndexPass(using ASTTransformerContext) extends Transformer {
         val variables = mutable.Map[Variable, Int]() // v.oid => position
         // TODO: do without cast, handle neg node
         val head = h.asInstanceOf[LogicAtom]
-        val body = b.map(n => n.asInstanceOf[LogicAtom])/*.sortBy(a =>
+        val body = b.map(n => n.asInstanceOf[LogicAtom]).sortBy(a =>
           if (sm.edbs.contains(a.relation))
             sm.edb(a.relation).size
           else
             0
-        )*/
-        val sortedAtoms = atoms/*.head +: atoms.drop(1).sortBy(a => // TODO: keep atoms around for online join order switching, TODO: don't really need sub-AST and atoms at the same time, get rid of one
+        )
+        val sortedAtoms = atoms.head +: atoms.drop(1).sortBy(a => // TODO: keep atoms around for online join order switching, TODO: don't really need sub-AST and atoms at the same time, get rid of one
           if (sm.edbs.contains(a.rId))
             sm.edb(a.rId).size
           else
             0
-        )*/
+        )
         val idx = JoinIndexes(sortedAtoms)
         ctx.precedenceGraph.addNode(head.relation, idx.deps)
         RuleNode(head, body, sortedAtoms, Some(idx))

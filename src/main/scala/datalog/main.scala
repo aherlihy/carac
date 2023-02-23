@@ -528,7 +528,7 @@ def scratch(program: Program) =
 
   var sort = 1
   println(s"OLD SN: $sort")
-  given engine1: ExecutionEngine = new SemiNaiveExecutionEngine(new CollectionsStorageManager(sort = sort))
+  given engine1: ExecutionEngine = new SemiNaiveExecutionEngine(new CollectionsStorageManager(sortAhead = sort, sortOnline = sort))
   val program1 = Program(engine1)
   func(program1)
   println("\n\n_______________________\n\n")
