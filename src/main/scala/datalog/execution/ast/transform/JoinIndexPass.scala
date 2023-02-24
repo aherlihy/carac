@@ -16,7 +16,7 @@ class JoinIndexPass(using ASTTransformerContext) extends Transformer {
     node match {
       case ProgramNode(idbs) => ProgramNode(idbs.map((rId, allRules) => (rId, transform(allRules))))
       case AllRulesNode(rules, rId, edb) => AllRulesNode(rules.map(transform), rId, edb)
-      case RuleNode(h, b, atoms, joinIdx) =>
+      case RuleNode(h, b, atoms, allIndexes, hash) =>
         val constants = mutable.Map[Int, Constant]() // position => constant
         val variables = mutable.Map[Variable, Int]() // v.oid => position
         // TODO: do without cast, handle neg node
@@ -33,9 +33,10 @@ class JoinIndexPass(using ASTTransformerContext) extends Transformer {
           else
             0
         )
-        val idx = JoinIndexes(sortedAtoms)
-        ctx.precedenceGraph.addNode(head.relation, idx.deps)
-        RuleNode(head, body, sortedAtoms, idx)
+        val idx = JoinIndexes.allOrders(sortedAtoms)
+        val currentHash = JoinIndexes.getRuleHash(sortedAtoms)
+        ctx.precedenceGraph.addNode(head.relation, idx(currentHash).deps)
+        RuleNode(head, body, sortedAtoms, idx, currentHash)
       case n:AtomNode => n
       case n:TermNode => n
     }

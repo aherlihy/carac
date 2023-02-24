@@ -36,6 +36,7 @@ case class JoinIndexes(varIndexes: Seq[Seq[Int]],
   def constToString(): String = constIndexes.map((k, v) => k + "==" + v).mkString("{", "&&", "}")
   def projToString(): String = projIndexes.map((typ, v) => f"$typ$v").mkString("[", " ", "]")
   def depsToString(ns: NS): String = deps.map(d => if (ns != null) ns(d) else d).mkString("[", ", ", "]")
+  val hash: String = atoms.map(a => a.hash).mkString("", "", "")
 }
 
 object JoinIndexes {
@@ -86,9 +87,14 @@ object JoinIndexes {
     (sortedT, sortedK)
   }
 
-//  def allOrders(rule: Array[Atom]): Map[String, Array[JoinIndexes]] = {
-//
-//  }
+  def allOrders(rule: Array[Atom]): Map[String, JoinIndexes] = {
+    rule.drop(1).permutations.map(r =>
+      val toRet = JoinIndexes(rule.head +: r)
+      (toRet.hash, toRet)
+    ).toMap[String, JoinIndexes]
+  }
+
+  def getRuleHash(rule: Array[Atom]): String = rule.map(r => r.hash).mkString("", "", "")
 }
 
 

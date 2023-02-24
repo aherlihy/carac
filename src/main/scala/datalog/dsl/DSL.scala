@@ -27,6 +27,7 @@ type NegatedAtom = Atom
 class Atom(val rId: Int, val terms: Seq[Term]) {
   def :- (body: Atom*): Unit = ???
   def :- (body: Unit): Unit = ???
+  val hash: String = s"$rId${terms.mkString("", "", "")}"
 }
 
 case class Relation[T <: Constant](id: Int, name: String)(using ee: ExecutionEngine) {

@@ -53,7 +53,8 @@ class IRTreeGenerator(using val ctx: InterpreterContext) {
           allRes = allRes :+ ScanEDBOp(rId)
 //        if(allRes.size == 1) allRes.head else
         UnionOp(OpCode.EVAL_RULE_NAIVE, allRes:_*)
-      case RuleNode(head, _, atoms, k) =>
+      case RuleNode(head, _, atoms, allK, hash) =>
+        val k = allK(hash)
         val r = head.asInstanceOf[LogicAtom].relation
         if (k.edb)
           ScanEDBOp(r)
@@ -75,8 +76,9 @@ class IRTreeGenerator(using val ctx: InterpreterContext) {
           allRes = allRes :+ ScanEDBOp(rId)
 //        if(allRes.size == 1) allRes.head else
         UnionOp(OpCode.EVAL_RULE_SN, allRes:_*) // None bc union of unions so no point in sorting
-      case RuleNode(head, body, atoms, k) =>
+      case RuleNode(head, body, atoms, allK, hash) =>
         val r = head.asInstanceOf[LogicAtom].relation
+        val k = allK(hash)
         if (k.edb)
           ScanEDBOp(r)
         else

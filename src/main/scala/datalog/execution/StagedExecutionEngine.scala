@@ -59,8 +59,9 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
     precedenceGraph.idbs.addOne(rId)
     val allRules = ast.rules.getOrElseUpdate(rId, AllRulesNode(mutable.ArrayBuffer.empty, rId)).asInstanceOf[AllRulesNode]
     // TODO: sort here in case EDBs/etc are already defined?
-    val k = getOperatorKey(rule)
-    precedenceGraph.addNode(rId, k.deps)
+    val k = JoinIndexes.allOrders(rule)
+    val hash = JoinIndexes.getRuleHash(rule)
+    precedenceGraph.addNode(rId, k(hash).deps)
 
     allRules.rules.append(
       RuleNode(
@@ -76,7 +77,8 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
             case x: Constant => ConstTerm(x)
           })),
         rule,
-        k
+        k,
+        hash
       ))
   }
 

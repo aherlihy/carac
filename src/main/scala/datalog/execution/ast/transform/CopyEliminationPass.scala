@@ -19,7 +19,7 @@ class CopyEliminationPass()(using ASTTransformerContext) extends Transformer {
       case AllRulesNode(rules, _, edb) =>
         if (rules.size == 1 && !edb)
           checkAlias(rules.head)
-      case RuleNode(head, body, _, _) =>
+      case RuleNode(head, body, _, _, _) =>
         if (body.size == 1) // for now just subst simple equality
           (head, body(0)) match {
             case (h: LogicAtom, b: LogicAtom) =>
@@ -41,8 +41,8 @@ class CopyEliminationPass()(using ASTTransformerContext) extends Transformer {
           ) // delete aliased rules
         case AllRulesNode(rules, rId, edb) =>
           AllRulesNode(rules.map(transform), rId, edb)
-        case RuleNode(head, body, atoms, key) =>
-          RuleNode(transform(head), body.map(transform), atoms, key)
+        case RuleNode(head, body, atoms, keys, h) =>
+          RuleNode(transform(head), body.map(transform), atoms, keys, h)
         case n: AtomNode => n match {
           case NegAtom(expr) =>
             NegAtom(transform(expr))
