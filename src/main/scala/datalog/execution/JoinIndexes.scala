@@ -85,6 +85,10 @@ object JoinIndexes {
     val sortedT = tToAtom.map(_._1)
     (sortedT, sortedK)
   }
+
+//  def allOrders(rule: Array[Atom]): Map[String, Array[JoinIndexes]] = {
+//
+//  }
 }
 
 
