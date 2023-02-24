@@ -104,7 +104,7 @@ class Printer[S <: StorageManager](val s: S) {
       case AllRulesNode(rules, rId, edb) => s"${if (edb) "{EDB}"+factToString(s.edbs(rId))+"{IDB}" else ""}${rules.map(printAST).mkString("[", "\n\t", "  ]")}"
       case RuleNode(head, body, atoms, joinIdx) =>
         s"\n\t${printAST(head)} :- ${body.map(printAST).mkString("(", ", ", ")")}" +
-          s" => idx=${if (joinIdx.isEmpty) "NONE" else joinIdx.get.toStringWithNS(s.ns)}\n"
+          s" => idx=${joinIdx.toStringWithNS(s.ns)}\n"
       case n: AtomNode => n match {
         case NegAtom(expr) => s"!${printAST(expr)}"
         case LogicAtom(relation, terms) => s"${s.ns(relation)}${terms.map(printAST).mkString("(", ", ", ")")}"

@@ -53,18 +53,14 @@ class IRTreeGenerator(using val ctx: InterpreterContext) {
           allRes = allRes :+ ScanEDBOp(rId)
 //        if(allRes.size == 1) allRes.head else
         UnionOp(OpCode.EVAL_RULE_NAIVE, allRes:_*)
-      case RuleNode(head, _, atoms, joinIdx) =>
+      case RuleNode(head, _, atoms, k) =>
         val r = head.asInstanceOf[LogicAtom].relation
-        joinIdx match {
-          case Some(k) =>
-            if (k.edb)
-              ScanEDBOp(r)
-            else
-              ProjectJoinFilterOp(k,
-                k.deps.map(r => ScanOp(r, DB.Derived, KNOWLEDGE.Known)):_*
-              )
-          case _ => throw new Exception("Trying to solve without joinIndexes calculated yet")
-        }
+        if (k.edb)
+          ScanEDBOp(r)
+        else
+          ProjectJoinFilterOp(k,
+            k.deps.map(r => ScanOp(r, DB.Derived, KNOWLEDGE.Known)):_*
+          )
       case _ =>
         debug("AST node passed to naiveEval:", () => ctx.storageManager.printer.printAST(ast))
         throw new Exception("Wrong ASTNode received when generating naive IR")
@@ -79,31 +75,27 @@ class IRTreeGenerator(using val ctx: InterpreterContext) {
           allRes = allRes :+ ScanEDBOp(rId)
 //        if(allRes.size == 1) allRes.head else
         UnionOp(OpCode.EVAL_RULE_SN, allRes:_*) // None bc union of unions so no point in sorting
-      case RuleNode(head, body, atoms, joinIdx) =>
+      case RuleNode(head, body, atoms, k) =>
         val r = head.asInstanceOf[LogicAtom].relation
-        joinIdx match {
-          case Some(k) =>
-            if (k.edb)
-              ScanEDBOp(r)
-            else
-              var idx = -1 // if dep is featured more than once, only use delta once, but at a different pos each time
-              UnionSPJOp(k, // a single rule body
-                k.deps.map(d => {
-                  var found = false
-                  ProjectJoinFilterOp(k,
-                    k.deps.zipWithIndex.map((r, i) => {
-                      if (r == d && !found && i > idx)
-                        found = true
-                        idx = i
-                        ScanOp(r, DB.Delta, KNOWLEDGE.Known)
-                      else
-                        ScanOp(r, DB.Derived, KNOWLEDGE.Known)
-                    }):_*
-                  )
+        if (k.edb)
+          ScanEDBOp(r)
+        else
+          var idx = -1 // if dep is featured more than once, only use delta once, but at a different pos each time
+          UnionSPJOp(k, // a single rule body
+            k.deps.map(d => {
+              var found = false
+              ProjectJoinFilterOp(k,
+                k.deps.zipWithIndex.map((r, i) => {
+                  if (r == d && !found && i > idx)
+                    found = true
+                    idx = i
+                    ScanOp(r, DB.Delta, KNOWLEDGE.Known)
+                  else
+                    ScanOp(r, DB.Derived, KNOWLEDGE.Known)
                 }):_*
               )
-          case _ => throw new Exception("Trying to solve without joinIndexes calculated yet")
-        }
+            }):_*
+          )
       case _ =>
         debug("AST node passed to semiNaiveEval:", () => ctx.storageManager.printer.printAST(ast))
         throw new Exception("Wrong ASTNode received when generating naive IR")

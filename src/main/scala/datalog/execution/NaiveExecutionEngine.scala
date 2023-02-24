@@ -34,7 +34,8 @@ class NaiveExecutionEngine(val storageManager: StorageManager) extends Execution
     get(storageManager.ns(name))
   }
 
-  def insertIDB(rId: RelationId, rule: Seq[Atom]): Unit = {
+  def insertIDB(rId: RelationId, ruleSeq: Seq[Atom]): Unit = {
+    val rule = ruleSeq.toArray
     precedenceGraph.addNode(rule)
     precedenceGraph.idbs.addOne(rId)
     idbs.getOrElseUpdate(rId, mutable.ArrayBuffer[IndexedSeq[Atom]]()).addOne(rule.toIndexedSeq)
@@ -43,7 +44,7 @@ class NaiveExecutionEngine(val storageManager: StorageManager) extends Execution
 
   def insertEDB(rule: Atom): Unit = {
     if (!storageManager.edbs.contains(rule.rId))
-      prebuiltOpKeys.getOrElseUpdate(rule.rId, mutable.ArrayBuffer[JoinIndexes]()).addOne(JoinIndexes(IndexedSeq(), Map(), IndexedSeq(), Seq(rule.rId), Seq(rule), true))
+      prebuiltOpKeys.getOrElseUpdate(rule.rId, mutable.ArrayBuffer[JoinIndexes]()).addOne(JoinIndexes(IndexedSeq(), Map(), IndexedSeq(), Seq(rule.rId), Array(rule), true))
     storageManager.insertEDB(rule)
   }
 

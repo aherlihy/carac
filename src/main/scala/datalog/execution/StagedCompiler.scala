@@ -75,14 +75,12 @@ class StagedCompiler(val storageManager: CollectionsStorageManager) {
 
       case ProjectJoinFilterOp(originalK, children:_*) =>
         var preSortedK = originalK
-        var sortedChildren = children
+        var sortedChildren = children.toArray
         if (storageManager.sortAhead != 0) // This should be only rearranging the one delta relation, since derived relations sorted in UnionSPJ
           debug(s"in compiler spj: deps=${originalK.deps.map(s => storageManager.ns(s)).mkString("", ",", "")} current relation sizes:", () => s"${children.map(child => s"${storageManager.ns(child.rId)}:|${child.run(storageManager).size}|").mkString("", ", ", "")}")
-          var childToAtom = children.zipWithIndex.map((child, i) => (child, originalK.atoms(i + 1))).sortBy(_._1.run(storageManager).size)
-          if (storageManager.sortAhead == -1) childToAtom = childToAtom.reverse
-          val newAtoms = originalK.atoms.head +: childToAtom.map(_._2)
-          preSortedK = JoinIndexes(newAtoms)
-          sortedChildren = childToAtom.map(_._1)
+          val s = JoinIndexes.getSorted(storageManager.sortAhead, sortedChildren, c => c.run(storageManager).size, originalK.atoms)
+          preSortedK = s._2
+          sortedChildren = s._1
           debug("\tnew child order:", () => sortedChildren.map(c => storageManager.ns(c.rId)).mkString("", ", ", ""))
 
         val compiledOps = Expr.ofSeq(sortedChildren.map(compileIRRelOp))
@@ -104,6 +102,7 @@ class StagedCompiler(val storageManager: CollectionsStorageManager) {
           debug("\tspju: new child order:", () => preSortedK.deps.map(c => storageManager.ns(c)).mkString("", ", ", ""))
           // TODO: worth it to update this op's k?
 //          irTree.asInstanceOf[UnionSPJOp].joinIdx = preSortedK
+
           sortedChildren = children.map(c => ProjectJoinFilterOp(preSortedK, newBody.map((_, oldP) => c.children(oldP)):_*))
 
         val compiledOps = sortedChildren.map(compileIRRelOp)

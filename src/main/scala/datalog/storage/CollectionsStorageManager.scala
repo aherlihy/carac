@@ -91,7 +91,7 @@ class CollectionsStorageManager(ns: NS = new NS(), val preSortAhead: Int = 0, va
       var preSortedK = originalK // TODO: find better ways to reduce with 2 acc
       var sorted = inputs
       if (sortAhead != 0)
-        var edbToAtom = inputs.zipWithIndex.map((edb, i) => (edb, originalK.atoms(i + 1))).sortBy((edb, _) => edb.size)
+        var edbToAtom = inputs.toArray.zipWithIndex.map((edb, i) => (edb, originalK.atoms(i + 1))).sortBy((edb, _) => edb.size)
         if (sortAhead == -1) edbToAtom = edbToAtom.reverse
         val newAtoms = originalK.atoms.head +: edbToAtom.map(_._2)
         preSortedK = JoinIndexes(newAtoms)
@@ -111,7 +111,7 @@ class CollectionsStorageManager(ns: NS = new NS(), val preSortAhead: Int = 0, va
             val (inner, outer) =
               if (atomI > 1 && ((sortOnline == 1 && outerT.size > innerT.size) || (sortOnline == -1 && innerT.size > outerT.size)))
                 val body = k.atoms.drop(1)
-                k = JoinIndexes(Seq(k.atoms.head, body(atomI)) ++ body.dropRight(body.size - atomI) ++ body.drop(atomI + 1))
+                k = JoinIndexes(Array(k.atoms.head, body(atomI)) ++ body.dropRight(body.size - atomI) ++ body.drop(atomI + 1))
                 (outerT, innerT)
               else
                 (innerT, outerT)

@@ -5,6 +5,7 @@ import datalog.storage.NS
 
 import scala.collection.mutable
 import scala.quoted.*
+import scala.reflect.ClassTag
 
 /**
  * Wrapper object for join keys for IDB rules
@@ -19,7 +20,7 @@ case class JoinIndexes(varIndexes: Seq[Seq[Int]],
                        constIndexes: Map[Int, Constant],
                        projIndexes: Seq[(String, Constant)],
                        deps: Seq[Int],
-                       atoms: Seq[Atom],
+                       atoms: Array[Atom],
                        edb: Boolean = false
                       ) {
   override def toString(): String = toStringWithNS(null)
@@ -38,7 +39,7 @@ case class JoinIndexes(varIndexes: Seq[Seq[Int]],
 }
 
 object JoinIndexes {
-  def apply(rule: Seq[Atom]) = {
+  def apply(rule: Array[Atom]) = {
     val constants = mutable.Map[Int, Constant]() // position => constant
     val variables = mutable.Map[Variable, Int]() // v.oid => position
 
@@ -74,6 +75,15 @@ object JoinIndexes {
       case c: Constant => ("c", c)
     }
     new JoinIndexes(bodyVars, constants.toMap, projects, deps, rule)
+  }
+
+  def getSorted[T: ClassTag](order: Int, input: Array[T], sortBy: T => Int, oldAtoms: Array[Atom]): (Array[T], JoinIndexes) = {
+    var tToAtom = input.zipWithIndex.map((t, i) => (t, oldAtoms(i + 1))).sortBy((t, _) => sortBy(t))
+    if (order == -1) tToAtom = tToAtom.reverse
+    val newAtoms = oldAtoms.head +: tToAtom.map(_._2)
+    val sortedK = JoinIndexes(newAtoms)
+    val sortedT = tToAtom.map(_._1)
+    (sortedT, sortedK)
   }
 }
 

@@ -18,7 +18,7 @@ case class LogicAtom(relation: Int, terms: Seq[ASTNode]) extends AtomNode {}
 // case class aggregator / constraint / arithmetic op
 case class ProgramNode(rules: Map[Int, ASTNode] = Map.empty) extends ASTNode {}
 
-case class RuleNode(head: ASTNode, body: Seq[ASTNode], dslAtoms: Seq[Atom], joinIdx: Option[JoinIndexes] = None) extends ASTNode {
+case class RuleNode(head: ASTNode, body: Seq[ASTNode], dslAtoms: Array[Atom], joinIdx: JoinIndexes) extends ASTNode {
   // TODO: assert head is instanceOf LogicAtom
 }
 

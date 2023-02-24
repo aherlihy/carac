@@ -25,11 +25,11 @@ case class JITOptions(granularity: OpCode = OpCode.PROGRAM, aot: Boolean = true,
 class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defaultJITOptions: JITOptions = JITOptions()) extends ExecutionEngine {
   import storageManager.EDB
   val precedenceGraph = new PrecedenceGraph(using storageManager.ns)
-  val prebuiltOpKeys: mutable.Map[Int, mutable.ArrayBuffer[JoinIndexes]] = mutable.Map[Int, mutable.ArrayBuffer[JoinIndexes]]()
+  val prebuiltOpKeys: mutable.Map[Int, mutable.ArrayBuffer[JoinIndexes]] = mutable.Map[Int, mutable.ArrayBuffer[JoinIndexes]]() // TODO: currently unused, mb remove from EE
   val ast: ProgramNode = ProgramNode()
   private var knownDbId = -1
   private val tCtx = ASTTransformerContext(using precedenceGraph)
-  val transforms: Seq[Transformer] = Seq(/*CopyEliminationPass(using tCtx),*/ JoinIndexPass(using tCtx))
+  val transforms: Seq[Transformer] = Seq(/*CopyEliminationPass(using tCtx), JoinIndexPass(using tCtx)*/)
   val compiler: StagedCompiler = StagedCompiler(storageManager)
   val dedicatedDotty: staging.Compiler = staging.Compiler.make(getClass.getClassLoader)
   var stragglers: mutable.WeakHashMap[Int, Future[CompiledFn]] = mutable.WeakHashMap.empty // should be ok since we are only removing by ref and then iterating on values only?
@@ -54,9 +54,13 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
     get(storageManager.ns(name))
   }
 
-  def insertIDB(rId: Int, rule: Seq[Atom]): Unit = {
+  def insertIDB(rId: Int, ruleSeq: Seq[Atom]): Unit = {
+    val rule = ruleSeq.toArray
     precedenceGraph.idbs.addOne(rId)
     val allRules = ast.rules.getOrElseUpdate(rId, AllRulesNode(mutable.ArrayBuffer.empty, rId)).asInstanceOf[AllRulesNode]
+    // TODO: sort here in case EDBs/etc are already defined?
+    val k = getOperatorKey(rule)
+    precedenceGraph.addNode(rId, k.deps)
 
     allRules.rules.append(
       RuleNode(
@@ -71,7 +75,8 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
             case x: Variable => VarTerm(x)
             case x: Constant => ConstTerm(x)
           })),
-        rule
+        rule,
+        k
       ))
   }
 
@@ -172,7 +177,7 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
 
       case op: UnionOp =>
         op.run_continuation(storageManager, op.children.map(o => sm => jitRel(o)))
-      
+
       case op: UnionSPJOp =>
         op.run_continuation(storageManager, op.children.map(o => sm => jitRel(o)))
 
