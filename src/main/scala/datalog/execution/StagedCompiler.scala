@@ -9,7 +9,7 @@ import scala.quoted.*
 /**
  * Separate out compile logic from StagedExecutionEngine
  */
-class StagedCompiler(val storageManager: StorageManager) {
+class StagedCompiler(val storageManager: CollectionsStorageManager) {
   given ToExpr[Constant] with {
     def apply(x: Constant)(using Quotes) = {
       x match {
@@ -73,14 +73,41 @@ class StagedCompiler(val storageManager: StorageManager) {
         else
           '{ $stagedSM.EDB() }
 
-      case ProjectJoinFilterOp(joinIdx, children:_*) =>
-        val compiledOps = Expr.ofSeq(children.map(compileIRRelOp))
+      case ProjectJoinFilterOp(originalK, children:_*) =>
+        var preSortedK = originalK
+        var sortedChildren = children
+        if (storageManager.sortAhead != 0) // This should be only rearranging the one delta relation, since derived relations sorted in UnionSPJ
+          debug(s"in compiler spj: deps=${originalK.deps.map(s => storageManager.ns(s)).mkString("", ",", "")} current relation sizes:", () => s"${children.map(child => s"${storageManager.ns(child.rId)}:|${child.run(storageManager).size}|").mkString("", ", ", "")}")
+          var childToAtom = children.zipWithIndex.map((child, i) => (child, originalK.atoms(i + 1))).sortBy(_._1.run(storageManager).size)
+          if (storageManager.sortAhead == -1) childToAtom = childToAtom.reverse
+          val newAtoms = originalK.atoms.head +: childToAtom.map(_._2)
+          preSortedK = JoinIndexes(newAtoms)
+          sortedChildren = childToAtom.map(_._1)
+          debug("\tnew child order:", () => sortedChildren.map(c => storageManager.ns(c.rId)).mkString("", ", ", ""))
+
+        val compiledOps = Expr.ofSeq(sortedChildren.map(compileIRRelOp))
         '{
           $stagedSM.joinProjectHelper(
             $compiledOps,
-            ${ Expr(joinIdx) }
+            ${ Expr(preSortedK) }
           )
         }
+
+      case UnionSPJOp(originalK, children:_*) =>
+        var sortedChildren = children
+        if (storageManager.preSortAhead != 0) // sort based on the derived.known sizes, since will be for all but one relation
+          debug(s"in compiler UNION[spj] deps=${originalK.deps.map(s => storageManager.ns(s)).mkString("", ",", "")} current relation sizes:", () => s"${originalK.deps.map(d => s"${storageManager.ns(d)}:|${storageManager.getKnownDerivedDB(d).size}|").mkString("", ", ", "")}")
+          var newBody = originalK.atoms.drop(1).zipWithIndex.sortBy((a, _) => storageManager.getKnownDerivedDB(a.rId).size)
+          if (storageManager.preSortAhead == -1) newBody = newBody.reverse
+          val newAtoms = originalK.atoms.head +: newBody.map(_._1)
+          val preSortedK = JoinIndexes(newAtoms)
+          debug("\tspju: new child order:", () => preSortedK.deps.map(c => storageManager.ns(c)).mkString("", ", ", ""))
+          // TODO: worth it to update this op's k?
+//          irTree.asInstanceOf[UnionSPJOp].joinIdx = preSortedK
+          sortedChildren = children.map(c => ProjectJoinFilterOp(preSortedK, newBody.map((_, oldP) => c.children(oldP)):_*))
+
+        val compiledOps = sortedChildren.map(compileIRRelOp)
+        '{ $stagedSM.union(${Expr.ofSeq(compiledOps)}) }
 
       case UnionOp(label, children:_*) =>
         val compiledOps = children.map(compileIRRelOp)

@@ -87,7 +87,7 @@ class IRTreeGenerator(using val ctx: InterpreterContext) {
               ScanEDBOp(r)
             else
               var idx = -1 // if dep is featured more than once, only use delta once, but at a different pos each time
-              UnionOp(OpCode.UNION, // a single rule body
+              UnionSPJOp(k, // a single rule body
                 k.deps.map(d => {
                   var found = false
                   ProjectJoinFilterOp(k,

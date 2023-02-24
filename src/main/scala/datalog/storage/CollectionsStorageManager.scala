@@ -6,7 +6,7 @@ import datalog.execution.JoinIndexes
 import scala.collection.{View, immutable, mutable}
 import datalog.tools.Debug.debug
 
-class CollectionsStorageManager(ns: NS = new NS(), sortAhead: Int = 0, sortOnline: Int = 0) extends SimpleStorageManager(ns) {
+class CollectionsStorageManager(ns: NS = new NS(), val preSortAhead: Int = 0, val sortAhead: Int = 0, val sortOnline: Int = 0) extends SimpleStorageManager(ns) {
   inline def scanFilter(k: JoinIndexes, maxIdx: Int)(get: Int => StorageTerm = x => x) = {
     val vCmp = k.varIndexes.isEmpty || k.varIndexes.forall(condition =>
       if (condition.head >= maxIdx)
@@ -156,9 +156,12 @@ class CollectionsStorageManager(ns: NS = new NS(), sortAhead: Int = 0, sortOnlin
           var idx = -1 // if dep is featured more than once, only us delta once, but at a different pos each time
           originalK.deps.flatMap(d => {
             var found = false // TODO: perhaps need entry in derived/delta for each atom instead of each relation?
-//            val newAtoms = originalK.atoms.head +: originalK.atoms.drop(1).sortBy(a => derivedDB(knownDbId).getOrElse(a.rId, edbs.getOrElse(a.rId, EDB())).size)
-//            val k = JoinIndexes(newAtoms)
-            val k = originalK
+            var k = originalK
+            if (preSortAhead != 0)
+              var newBody = originalK.atoms.drop(1).sortBy(a => derivedDB(knownDbId).getOrElse(a.rId, edbs.getOrElse(a.rId, EDB())).size)
+              if (preSortAhead == -1) newBody = newBody.reverse
+              val newAtoms = originalK.atoms.head +: newBody
+              k = JoinIndexes(newAtoms)
             joinProjectHelper(
               k.deps.zipWithIndex.map((r, i) =>
                 if (r == d && !found && i > idx) {

@@ -74,21 +74,21 @@ abstract class BenchmarkGenerator(directory: Path,
     })
 
   Seq(
-    "SemiNaive",
+//    "SemiNaive",
 //    "Naive", "InterpretedStaged", "CompiledStaged",
-//    "JITStagedSemiNaiveEvalBlocking", "JITStagedProgramBlocking", "JITStagedJoinBlocking",
-//    "JITStagedSnippetSemiNaiveEvalBlocking", "JITStagedSnippetProgramBlocking", "JITStagedSnippetJoinBlocking"
-  //    "JITStagedAOTNaiveEvalBlocking",
-//    "JITStagedAOTSemiNaiveEvalNonBlocking", "JITStagedAOTLoopBodyNonBlocking",
-//    "JITStagedSemiNaiveEvalOnline", "JITStagedLoopBodyOnline",
+    "JITStagedSemiNaiveEvalBlocking", "JITStagedProgramBlocking", "JITStagedJoinBlocking",
+    "JITStagedSnippetSemiNaiveEvalBlocking", "JITStagedSnippetProgramBlocking", "JITStagedSnippetJoinBlocking",
+      "JITStagedAOTNaiveEvalBlocking",
+    "JITStagedAOTSemiNaiveEvalNonBlocking", "JITStagedAOTLoopBodyNonBlocking",
+    "JITStagedSemiNaiveEvalOnline", "JITStagedLoopBodyOnline",
   ).foreach(execution =>
     Seq(/*"Relational", */"Collections",
-      "CollectionsBestUnsorted", "CollectionsWorstUnsorted",
-      "CollectionsUnsortedBest", "CollectionsUnsortedWorst",
-      "CollectionsBestBest", "CollectionsWorstWorst",
-      "CollectionsFoldView", "CollectionsFoldNoView",
-      "CollectionsReduceView", "CollectionsReduceNoView",
-      "CollectionsBestUnsorted", "CollectionsWorstUnsorted",
+//      "CollectionsBestUnsorted", "CollectionsWorstUnsorted",
+//      "CollectionsUnsortedBest", "CollectionsUnsortedWorst",
+//      "CollectionsBestBest", "CollectionsWorstWorst",
+//      "CollectionsFoldView", "CollectionsFoldNoView",
+//      "CollectionsReduceView", "CollectionsReduceNoView",
+//      "CollectionsBestUnsorted", "CollectionsWorstUnsorted",
     ).foreach(storage =>
       if (
         (execution.contains("Staged") && storage == "Relational") ||

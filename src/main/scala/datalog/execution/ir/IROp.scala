@@ -215,7 +215,7 @@ case class ScanEDBOp(rId: RelationId) extends IROp[CollectionsStorageManager#EDB
  * @param joinIdx
  * @param children: [Scan*deps]
  */
-case class ProjectJoinFilterOp(joinIdx: JoinIndexes, override val children: IROp[CollectionsStorageManager#EDB]*) extends IROp[CollectionsStorageManager#EDB](children:_*) {
+case class ProjectJoinFilterOp(var joinIdx: JoinIndexes, override val children: ScanOp*) extends IROp[CollectionsStorageManager#EDB](children:_*) {
   val code: OpCode = OpCode.SPJ
 
   override def run_continuation(storageManager: CollectionsStorageManager, opFns: Seq[CompiledRelFn]): CollectionsStorageManager#EDB =
@@ -232,7 +232,7 @@ case class ProjectJoinFilterOp(joinIdx: JoinIndexes, override val children: IROp
 
 /**
  * @param code
- * @param children: [Scan|Project*rules]
+ * @param children: [Scan|UnionSPJ*rules]
  */
 case class UnionOp(override val code: OpCode, override val children: IROp[CollectionsStorageManager#EDB]*) extends IROp[CollectionsStorageManager#EDB](children:_*) {
   override def run_continuation(storageManager: CollectionsStorageManager, opFns: Seq[CompiledRelFn]): CollectionsStorageManager#EDB =
@@ -241,6 +241,19 @@ case class UnionOp(override val code: OpCode, override val children: IROp[Collec
     storageManager.union(children.map(o => o.run(storageManager)))
 }
 
+/**
+ * Special case union for single rule body; for convenience
+ * @param code
+ * @param children: [Scan*atoms]
+ */
+case class UnionSPJOp(var joinIdx: JoinIndexes, override val children: ProjectJoinFilterOp*) extends IROp[CollectionsStorageManager#EDB](children:_*) {
+  val code: OpCode = OpCode.EVAL_RULE_BODY
+  override def run_continuation(storageManager: CollectionsStorageManager, opFns: Seq[CompiledRelFn]): CollectionsStorageManager#EDB =
+    storageManager.union(opFns.map(o => o(storageManager)))
+
+  override def run(storageManager: CollectionsStorageManager): CollectionsStorageManager#EDB =
+    storageManager.union(children.map(o => o.run(storageManager)))
+}
 /**
  * @param children: [Union|Scan, Scan]
  */

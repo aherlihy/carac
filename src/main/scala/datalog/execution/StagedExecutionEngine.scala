@@ -156,6 +156,11 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
           startCompileThreadRel(op, dedicatedDotty)
         checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.children.map(o => sm => jitRel(o))))
 
+      case op: UnionSPJOp if jitOptions.granularity == op.code =>
+        if (op.compiledFn == null && !jitOptions.aot)
+          startCompileThreadRel(op, newDotty)
+        checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.children.map(o => sm => jitRel(o))))
+
       case op: ScanOp =>
         op.run(storageManager)
 
@@ -166,6 +171,9 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
         op.run_continuation(storageManager, op.children.map(o => sm => jitRel(o)))
 
       case op: UnionOp =>
+        op.run_continuation(storageManager, op.children.map(o => sm => jitRel(o)))
+      
+      case op: UnionSPJOp =>
         op.run_continuation(storageManager, op.children.map(o => sm => jitRel(o)))
 
       case op: DiffOp =>
@@ -180,7 +188,7 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
   inline def checkResult[T](value: Future[CollectionsStorageManager => T], op: IROp[T], default: () => T)(using jitOptions: JITOptions): T =
     value.value match {
       case Some(Success(run)) =>
-        debug(s"COMPILED ${op.code}", () => "")
+        debug(s"Compilation succeeded: ${op.code}", () => "")
         stragglers.remove(op.compiledFn.hashCode()) // TODO: might not work, but jsut end up waiting for completed future
         run(storageManager)
       case Some(Failure(e)) =>
@@ -216,7 +224,7 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
 
 
   def jit(irTree: IROp[Any])(using jitOptions: JITOptions): Any = {
-    debug("", () => s"IN STAGED JIT IR, code=${irTree.code}, gran=${jitOptions.granularity}")
+//    debug("", () => s"IN STAGED JIT IR, code=${irTree.code}, gran=${jitOptions.granularity}")
     irTree match {
       case op: ProgramOp =>
         if (jitOptions.aot)

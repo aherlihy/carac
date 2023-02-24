@@ -51,6 +51,9 @@ class StagedSnippetExecutionEngine(override val storageManager: CollectionsStora
 
       case op: UnionOp =>
         op.run_continuation(storageManager, op.children.map(o => sm => jitRel(o)))
+      
+      case op: UnionSPJOp =>
+        op.run_continuation(storageManager, op.children.map(o => sm => jitRel(o)))
 
       case op: DiffOp if jitOptions.granularity == op.code =>
         if (op.compiledSnippetContinuationFn == null)

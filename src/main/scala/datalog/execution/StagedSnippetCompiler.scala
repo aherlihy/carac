@@ -90,6 +90,10 @@ class StagedSnippetCompiler(val storageManager: StorageManager) {
         val compiledOps = '{ $stagedFns.map(s => s($stagedSM)) }
         '{ $stagedSM.union($compiledOps) }
 
+      case UnionSPJOp(k, children: _*) =>
+        val compiledOps = '{ $stagedFns.map(s => s($stagedSM)) }
+        '{ $stagedSM.union($compiledOps) }
+
       case DiffOp(children:_*) =>
         '{ $stagedSM.diff($stagedFns(0)($stagedSM), $stagedFns(1)($stagedSM)) }
 
