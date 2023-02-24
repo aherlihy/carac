@@ -34,32 +34,40 @@ abstract class DLBenchmark {
 //      case "SemiNaiveCollectionsReduceNoView" =>  Program(SemiNaiveExecutionEngine(   CollectionsStorageManagerReduceNoView()))
 //      case "SemiNaiveCollectionsFoldView" =>      Program(SemiNaiveExecutionEngine(   CollectionsStorageManagerFoldView()))
 //      case "SemiNaiveCollectionsFoldNoView" =>    Program(SemiNaiveExecutionEngine(   CollectionsStorageManagerFoldNoView()))
-      case "StagedSPJUCollections" => Program(StagedExecutionEngine(CollectionsStorageManager(), JITOptions(ir.OpCode.EVAL_RULE_BODY, false, true)))
-      case "StagedSPJUBestUnsortedUnsorted" =>    Program(StagedExecutionEngine(CollectionsStorageManager(preSortAhead = 1), JITOptions(ir.OpCode.EVAL_RULE_BODY, false, true)))
-      case "StagedSPJUBestBestUnsorted" =>        Program(StagedExecutionEngine(CollectionsStorageManager(preSortAhead = 1, sortAhead = 1), JITOptions(ir.OpCode.EVAL_RULE_BODY, false, true)))
-      case "StagedSPJUWorstWorstUnsorted" =>      Program(StagedExecutionEngine(CollectionsStorageManager(preSortAhead = -1, sortAhead = -1), JITOptions(ir.OpCode.EVAL_RULE_BODY, false, true)))
-      case "StagedSPJUBestBestBest" =>            Program(StagedExecutionEngine(CollectionsStorageManager(preSortAhead = 1, sortAhead = 1, sortOnline = 1), JITOptions(ir.OpCode.EVAL_RULE_BODY, false, true)))
-      case "StagedSPJUWorstWorstWorst" =>         Program(StagedExecutionEngine(CollectionsStorageManager(preSortAhead = -1, sortAhead = -1, sortOnline = -1), JITOptions(ir.OpCode.EVAL_RULE_BODY, false, true)))
+      case "ERBStagedSPJUCollections" =>             Program(StagedExecutionEngine(CollectionsStorageManager(), JITOptions(ir.OpCode.EVAL_RULE_BODY, false, true)))
+      case "ERBStagedSPJUBestUnsortedUnsorted" =>    Program(StagedExecutionEngine(CollectionsStorageManager(preSortAhead = 1), JITOptions(ir.OpCode.EVAL_RULE_BODY, false, true)))
+      case "ERBStagedSPJUBestBestUnsorted" =>        Program(StagedExecutionEngine(CollectionsStorageManager(preSortAhead = 1, sortAhead = 1), JITOptions(ir.OpCode.EVAL_RULE_BODY, false, true)))
+      case "ERBStagedSPJUWorstWorstUnsorted" =>      Program(StagedExecutionEngine(CollectionsStorageManager(preSortAhead = -1, sortAhead = -1), JITOptions(ir.OpCode.EVAL_RULE_BODY, false, true)))
+      case "ERBStagedSPJUWorstUnsortedUnsorted" =>      Program(StagedExecutionEngine(CollectionsStorageManager(preSortAhead = -1), JITOptions(ir.OpCode.EVAL_RULE_BODY, false, true)))
+      case "ERBStagedSPJUBestBestBest" =>            Program(StagedExecutionEngine(CollectionsStorageManager(preSortAhead = 1, sortAhead = 1, sortOnline = 1), JITOptions(ir.OpCode.EVAL_RULE_BODY, false, true)))
+      case "ERBStagedSPJUWorstWorstWorst" =>         Program(StagedExecutionEngine(CollectionsStorageManager(preSortAhead = -1, sortAhead = -1, sortOnline = -1), JITOptions(ir.OpCode.EVAL_RULE_BODY, false, true)))
+      case "InterpretedStagedSPJUCollections" =>     Program(StagedExecutionEngine(CollectionsStorageManager(), JITOptions(ir.OpCode.OTHER, false, true)))
+      case "InterpretedStagedSPJUBestUnsortedUnsorted" => Program(StagedExecutionEngine(CollectionsStorageManager(preSortAhead = 1), JITOptions(ir.OpCode.OTHER, false, true)))
+      case "InterpretedStagedSPJUWorstUnsortedUnsorted" => Program(StagedExecutionEngine(CollectionsStorageManager(preSortAhead = -1), JITOptions(ir.OpCode.OTHER, false, true)))
+      case "InterpretedStagedSPJUBestBestUnsorted" => Program(StagedExecutionEngine(CollectionsStorageManager(preSortAhead = 1, sortAhead = 1), JITOptions(ir.OpCode.OTHER, false, true)))
+      case "InterpretedStagedSPJUWorstWorstUnsorted" => Program(StagedExecutionEngine(CollectionsStorageManager(preSortAhead = -1, sortAhead = -1), JITOptions(ir.OpCode.OTHER, false, true)))
+      case "InterpretedStagedSPJUBestBestBest" =>    Program(StagedExecutionEngine(CollectionsStorageManager(preSortAhead = 1, sortAhead = 1, sortOnline = 1), JITOptions(ir.OpCode.OTHER, false, true)))
+      case "InterpretedStagedSPJUWorstWorstWorst" => Program(StagedExecutionEngine(CollectionsStorageManager(preSortAhead = -1, sortAhead = -1, sortOnline = -1), JITOptions(ir.OpCode.OTHER, false, true)))
       case "NaiveCollections" =>                  Program(NaiveExecutionEngine(       CollectionsStorageManager()))
       case "NaiveCompiledStagedCollections" =>    Program(NaiveStagedExecutionEngine( CollectionsStorageManager()))
       case "NaiveInterpretedStagedCollections" => Program(NaiveStagedExecutionEngine( CollectionsStorageManager(),  JITOptions(granularity = ir.OpCode.OTHER)))
       case "InterpretedStagedCollections" =>      Program(StagedExecutionEngine(      CollectionsStorageManager(),  JITOptions(granularity = ir.OpCode.OTHER)))
       case "CompiledStagedCollections" =>         Program(StagedExecutionEngine(      CollectionsStorageManager()))
-      case _ if context.contains("JIT") =>
-        val aot = context.contains("AOT")
-        val nonblocking = context.contains("NonBlocking")
-        val label =
-          if (context.contains("NaiveEval")) ir.OpCode.EVAL_NAIVE
-          else if (context.contains("SemiNaiveEval")) ir.OpCode.EVAL_SN
-          else if (context.contains("LoopBody")) ir.OpCode.LOOP_BODY
-          else if (context.contains("Loop")) ir.OpCode.DOWHILE
-          else if (context.contains("Program")) ir.OpCode.PROGRAM
-          else if (context.contains("Join")) ir.OpCode.SPJ
-          else throw new Exception(s"Unknown type of JIT staged $context")
-        if (context.contains("Snippet"))
-          Program(StagedSnippetExecutionEngine(CollectionsStorageManager(), JITOptions(label, aot, !nonblocking)))
-        else
-          Program(StagedExecutionEngine(CollectionsStorageManager(), JITOptions(label, aot, !nonblocking)))
+//      case _ if context.contains("JIT") =>
+//        val aot = context.contains("AOT")
+//        val nonblocking = context.contains("NonBlocking")
+//        val label =
+//          if (context.contains("NaiveEval")) ir.OpCode.EVAL_NAIVE
+//          else if (context.contains("SemiNaiveEval")) ir.OpCode.EVAL_SN
+//          else if (context.contains("LoopBody")) ir.OpCode.LOOP_BODY
+//          else if (context.contains("Loop")) ir.OpCode.DOWHILE
+//          else if (context.contains("Program")) ir.OpCode.PROGRAM
+//          else if (context.contains("Join")) ir.OpCode.SPJ
+//          else throw new Exception(s"Unknown type of JIT staged $context")
+//        if (context.contains("Snippet"))
+//          Program(StagedSnippetExecutionEngine(CollectionsStorageManager(), JITOptions(label, aot, !nonblocking)))
+//        else
+//          Program(StagedExecutionEngine(CollectionsStorageManager(), JITOptions(label, aot, !nonblocking)))
       case _ => // WARNING: MUnit just returns null pointers everywhere if an error or assert is triggered in beforeEach
         throw new Exception(s"Unknown engine construction ${context}") // TODO: this is reported as passing
     }

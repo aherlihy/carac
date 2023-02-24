@@ -1,6 +1,7 @@
 package datalog.execution
 
 import datalog.dsl.{Atom, Constant, Variable}
+import datalog.execution.ir.{ProjectJoinFilterOp}
 import datalog.storage.{CollectionsStorageManager, NS}
 import datalog.tools.Debug.debug
 
@@ -81,12 +82,12 @@ object JoinIndexes {
     new JoinIndexes(bodyVars, constants.toMap, projects, deps, rule)
   }
 
-  def getSorted[T: ClassTag](input: Array[T], sortBy: T => Int, rId: Int, oldHash: String, sm: CollectionsStorageManager, order: Int): (Array[T], String) = {
-    if (order != 0)
+  def getSortAhead[T: ClassTag](input: Array[T], sortBy: T => Int, rId: Int, oldHash: String, sm: CollectionsStorageManager): (Array[T], String) = {
+    if (sm.sortAhead != 0)
       val oldAtoms = sm.allRulesAllIndexes(rId)(oldHash).atoms
-      debug(s"in getSorted: deps=", () => s"${sm.allRulesAllIndexes(rId)(oldHash).deps.map(s => sm.ns(s)).mkString("", ",", "")} current relation sizes: ${input.map(i => s"${sortBy(i)}|").mkString("", ", ", "")}")
+//      debug(s"in getSorted: deps=", () => s"${sm.allRulesAllIndexes(rId)(oldHash).deps.map(s => sm.ns(s)).mkString("", ",", "")} current relation sizes: ${input.map(i => s"${sortBy(i)}|").mkString("", ", ", "")}")
       var tToAtom = input.zipWithIndex.map((t, i) => (t, oldAtoms(i + 1))).sortBy((t, _) => sortBy(t))
-      if (order == -1) tToAtom = tToAtom.reverse
+      if (sm.sortAhead == -1) tToAtom = tToAtom.reverse
       val newHash = JoinIndexes.getRuleHash(oldAtoms.head +: tToAtom.map(_._2))
       val sortedT = tToAtom.map(_._1)
       (sortedT, newHash)
@@ -94,6 +95,19 @@ object JoinIndexes {
       (input, oldHash)
   }
 
+  def getPreSortAhead(input: Array[ProjectJoinFilterOp], sortBy: Atom => Int, rId: Int, oldHash: String, sm: CollectionsStorageManager): Array[ProjectJoinFilterOp] = {
+    val originalK = sm.allRulesAllIndexes(rId)(oldHash)
+    if (sm.preSortAhead != 0)
+//      debug(s"in compiler UNION[spj] deps=${originalK.deps.map(s => sm.ns(s)).mkString("", ",", "")} current relation sizes:", () => s"${originalK.atoms.drop(1).map(a => s"${sm.ns(a.rId)}:|${sortBy(a)}|").mkString("", ", ", "")}")
+      var newBody = originalK.atoms.drop(1).zipWithIndex.sortBy((a, _) => sortBy(a))
+      if (sm.preSortAhead == -1) newBody = newBody.reverse
+      val newAtoms = originalK.atoms.head +: newBody.map(_._1)
+      val newHash = JoinIndexes.getRuleHash(newAtoms)
+      input.map(c => ProjectJoinFilterOp(rId, newHash, newBody.map((_, oldP) => c.children(oldP)): _*))
+    else
+      input
+
+  }
   def allOrders(rule: Array[Atom]): AllIndexes = {
     mutable.Map[String, JoinIndexes](rule.drop(1).permutations.map(r =>
       val toRet = JoinIndexes(rule.head +: r)

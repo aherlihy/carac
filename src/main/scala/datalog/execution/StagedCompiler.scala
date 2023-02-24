@@ -74,13 +74,12 @@ class StagedCompiler(val storageManager: CollectionsStorageManager) {
           '{ $stagedSM.EDB() }
 
       case ProjectJoinFilterOp(rId, hash, children:_*) =>
-        val (sortedChildren, newHash) = JoinIndexes.getSorted(
+        val (sortedChildren, newHash) = JoinIndexes.getSortAhead(
           children.toArray,
           c => c.run(storageManager).size,
           rId,
           hash,
-          storageManager,
-          storageManager.sortAhead,
+          storageManager
         )
         val compiledOps = Expr.ofSeq(sortedChildren.map(compileIRRelOp))
         '{
@@ -91,22 +90,14 @@ class StagedCompiler(val storageManager: CollectionsStorageManager) {
           )
         }
 
-      case UnionSPJOp(rId, hash, children:_*) => // TODO: use JoinIndex sorted helper?
-        var sortedChildren = children
-        val originalK = storageManager.allRulesAllIndexes(rId)(hash)
-        if (storageManager.preSortAhead != 0) // sort based on the derived.known sizes, since will be for all but one relation
-          debug(s"in compiler UNION[spj] deps=${originalK.deps.map(s => storageManager.ns(s)).mkString("", ",", "")} current relation sizes:", () => s"${originalK.deps.map(d => s"${storageManager.ns(d)}:|${storageManager.getKnownDerivedDB(d).size}|").mkString("", ", ", "")}")
-          var newBody = originalK.atoms.drop(1).zipWithIndex.sortBy((a, _) => storageManager.getKnownDerivedDB(a.rId).size)
-          if (storageManager.preSortAhead == -1) newBody = newBody.reverse
-          val newAtoms = originalK.atoms.head +: newBody.map(_._1)
-          val newHash = JoinIndexes.getRuleHash(newAtoms)
-          val preSortedK = storageManager.allRulesAllIndexes(rId)(newHash)
-          debug("\tspju: new child order:", () => preSortedK.deps.map(c => storageManager.ns(c)).mkString("", ", ", ""))
-          // TODO: worth it to update this op's k?
-//          irTree.asInstanceOf[UnionSPJOp].joinIdx = preSortedK
-
-          sortedChildren = children.map(c => ProjectJoinFilterOp(rId, newHash, newBody.map((_, oldP) => c.children(oldP)):_*))
-
+      case UnionSPJOp(rId, hash, children:_*) =>
+        var sortedChildren = JoinIndexes.getPreSortAhead(
+            children.toArray,
+            a => storageManager.getKnownDerivedDB(a.rId).size,
+            rId,
+            hash,
+            storageManager
+          )
         val compiledOps = sortedChildren.map(compileIRRelOp)
         '{ $stagedSM.union(${Expr.ofSeq(compiledOps)}) }
 

@@ -89,12 +89,11 @@ class CollectionsStorageManager(ns: NS = new NS(), val preSortAhead: Int = 1, va
             }).toIndexedSeq)
         .to(mutable.ArrayBuffer)
     else
-      val (sorted, newHash) = JoinIndexes.getSorted(inputs.toArray, edb => edb.size, rId, hash, this, sortAhead)
-
-      val result = sorted.view
+//      val (sorted, newHash) = JoinIndexes.getSorted(inputs.toArray, edb => edb.size, rId, hash, this, sortAhead) // NOTE: already sorted in staged compiler/ProjectJoinFilterOp.run
+      val result = inputs.view
         .map(i => i.view)
         .foldLeft(
-          (EDB().view, 0, allRulesAllIndexes(rId)(newHash))
+          (EDB().view, 0, allRulesAllIndexes(rId)(hash))
         )((combo: (View[Row[StorageTerm]], Int, JoinIndexes), innerT: View[Row[StorageTerm]]) =>
           val outerT = combo._1
           val atomI = combo._2

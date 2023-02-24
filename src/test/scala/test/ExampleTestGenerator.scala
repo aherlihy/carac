@@ -102,7 +102,7 @@ abstract class TestGenerator(directory: Path,
           case "CompiledStagedCollections" =>
             Program(StagedExecutionEngine(CollectionsStorageManager())) // default is compiled
           case "JITStagedCollections" =>
-            Program(StagedExecutionEngine(CollectionsStorageManager(), JITOptions(ir.OpCode.EVAL_SN, aot = false, block = false)))
+            Program(StagedExecutionEngine(CollectionsStorageManager(), JITOptions(ir.OpCode.EVAL_RULE_BODY, aot = false, block = true)))
           case _ => // WARNING: MUnit just returns null pointers everywhere if an error or assert is triggered in beforeEach
             throw new Exception(s"Unknown engine construction ${context.test.name}") // TODO: this is reported as passing
         }
