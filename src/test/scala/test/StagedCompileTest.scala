@@ -253,25 +253,25 @@ class StagedCompileTest extends munit.FunSuite {
     delta.foreach((k, v) => storageManager.deltaDB(k) = v)
   }
 
-  test("JoinProjectSelectOp".ignore) {
-    val derived = deepClone(storageManager.derivedDB)
-    storageManager.resetKnownDerived(idb.id, storageManager.edbs(edge.id))
-
-    val scanEdge = s"$sVar.edbs.apply\\(${edge.id}\\)"
-    val toRun = compileCheckRel(
-      ProjectJoinFilterOp(
-        JoinIndexes(
-          Seq(Seq(1, 2)), Map[Int, Constant](0 -> "b"), Seq(("v", 0),("v", 1), ("v", 2), ("v", 3)), Seq(1,2,3), Array.empty  // TODO: create actual atom
-        ),
-        ScanOp(idb.id, DB.Derived, KNOWLEDGE.Known), ScanOp(idb.id, DB.Derived, KNOWLEDGE.Known)
-      ),
-//      generalMatch(s"$any$sVar.joinProjectHelper\\($scanEdge, $scanEdge, $anyCapture".r)
-    )
-
-    assertEquals(toRun(storageManager), ArrayBuffer(Vector("b", "c", "c", "d")))
-    storageManager.derivedDB.clear()
-    derived.foreach((k, v) => storageManager.derivedDB(k) = v)
-  }
+//  test("JoinProjectSelectOp".ignore) {
+//    val derived = deepClone(storageManager.derivedDB)
+//    storageManager.resetKnownDerived(idb.id, storageManager.edbs(edge.id))
+//
+//    val scanEdge = s"$sVar.edbs.apply\\(${edge.id}\\)"
+//    val toRun = compileCheckRel(
+//      ProjectJoinFilterOp(
+//        JoinIndexes(
+//          Seq(Seq(1, 2)), Map[Int, Constant](0 -> "b"), Seq(("v", 0),("v", 1), ("v", 2), ("v", 3)), Seq(1,2,3), Array.empty  // TODO: create actual atom
+//        ),
+//        ScanOp(idb.id, DB.Derived, KNOWLEDGE.Known), ScanOp(idb.id, DB.Derived, KNOWLEDGE.Known)
+//      ),
+////      generalMatch(s"$any$sVar.joinProjectHelper\\($scanEdge, $scanEdge, $anyCapture".r)
+//    )
+//
+//    assertEquals(toRun(storageManager), ArrayBuffer(Vector("b", "c", "c", "d")))
+//    storageManager.derivedDB.clear()
+//    derived.foreach((k, v) => storageManager.derivedDB(k) = v)
+//  }
 
   test("InsertOp Delta") {
     val derived = deepClone(storageManager.derivedDB)

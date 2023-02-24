@@ -13,7 +13,7 @@ import scala.quoted.*
  * interpretation (maybe for save points for de-optimizations?) but this is mostly just a POC
  * that it's possible.
  */
-class StagedSnippetCompiler(val storageManager: StorageManager) {
+class StagedSnippetCompiler(val storageManager: CollectionsStorageManager) {
   given ToExpr[Constant] with {
     def apply(x: Constant)(using Quotes) = {
       x match {
@@ -76,13 +76,13 @@ class StagedSnippetCompiler(val storageManager: StorageManager) {
         else
           '{ $stagedSM.EDB() }
 
-      case ProjectJoinFilterOp(keys, children:_*) =>
+      case ProjectJoinFilterOp(rId, hash, children:_*) =>
         val compiledOps = '{ $stagedFns.map(s => s($stagedSM)) }
         // TODO[future]: inspect keys and optimize join algo
         '{
           $stagedSM.joinProjectHelper(
             $compiledOps,
-            ${ Expr(keys) }
+            ${ Expr(storageManager.allRulesAllIndexes(rId)(hash)) }
           )
         }
 
@@ -90,7 +90,7 @@ class StagedSnippetCompiler(val storageManager: StorageManager) {
         val compiledOps = '{ $stagedFns.map(s => s($stagedSM)) }
         '{ $stagedSM.union($compiledOps) }
 
-      case UnionSPJOp(k, children: _*) =>
+      case UnionSPJOp(rId, hash, children: _*) =>
         val compiledOps = '{ $stagedFns.map(s => s($stagedSM)) }
         '{ $stagedSM.union($compiledOps) }
 

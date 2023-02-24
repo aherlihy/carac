@@ -1,6 +1,6 @@
 package datalog.execution.ir
 
-import datalog.execution.{JoinIndexes, PrecedenceGraph, StagedCompiler, ir}
+import datalog.execution.{PrecedenceGraph, StagedCompiler, ir}
 import datalog.execution.ast.*
 import datalog.storage.{CollectionsStorageManager, DB, KNOWLEDGE, RelationId, StorageManager}
 import datalog.tools.Debug
@@ -215,18 +215,20 @@ case class ScanEDBOp(rId: RelationId) extends IROp[CollectionsStorageManager#EDB
  * @param joinIdx
  * @param children: [Scan*deps]
  */
-case class ProjectJoinFilterOp(var joinIdx: JoinIndexes, override val children: ScanOp*) extends IROp[CollectionsStorageManager#EDB](children:_*) {
+case class ProjectJoinFilterOp(rId: RelationId, hash: String, override val children: ScanOp*) extends IROp[CollectionsStorageManager#EDB](children:_*) {
   val code: OpCode = OpCode.SPJ
 
   override def run_continuation(storageManager: CollectionsStorageManager, opFns: Seq[CompiledRelFn]): CollectionsStorageManager#EDB =
-    storageManager.joinProjectHelper(
+    storageManager.joinProjectHelper_withHash(
       opFns.map(s => s(storageManager)),
-      joinIdx
+      rId,
+      hash
     )
   override def run(storageManager: CollectionsStorageManager): CollectionsStorageManager#EDB =
-    storageManager.joinProjectHelper(
+    storageManager.joinProjectHelper_withHash(
       children.map(s => s.run(storageManager)),
-      joinIdx
+      rId,
+      hash
     )
 }
 
@@ -246,7 +248,7 @@ case class UnionOp(override val code: OpCode, override val children: IROp[Collec
  * @param code
  * @param children: [Scan*atoms]
  */
-case class UnionSPJOp(var joinIdx: JoinIndexes, override val children: ProjectJoinFilterOp*) extends IROp[CollectionsStorageManager#EDB](children:_*) {
+case class UnionSPJOp(rId: RelationId, hash: String, override val children: ProjectJoinFilterOp*) extends IROp[CollectionsStorageManager#EDB](children:_*) {
   val code: OpCode = OpCode.EVAL_RULE_BODY
   override def run_continuation(storageManager: CollectionsStorageManager, opFns: Seq[CompiledRelFn]): CollectionsStorageManager#EDB =
     storageManager.union(opFns.map(o => o(storageManager)))

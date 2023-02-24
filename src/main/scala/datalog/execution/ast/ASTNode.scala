@@ -1,7 +1,6 @@
 package datalog.execution.ast
 
 import datalog.dsl.{Atom, Constant, Term, Variable}
-import datalog.execution.JoinIndexes
 
 import scala.collection.immutable
 import scala.collection.mutable.{ArrayBuffer, Map}
@@ -19,7 +18,7 @@ case class LogicAtom(relation: Int, terms: Seq[ASTNode]) extends AtomNode {}
 // case class aggregator / constraint / arithmetic op
 case class ProgramNode(rules: Map[Int, ASTNode] = Map.empty) extends ASTNode {}
 
-case class RuleNode(head: ASTNode, body: Seq[ASTNode], dslAtoms: Array[Atom], joinIdx: immutable.Map[String, JoinIndexes], currentRuleHash: String) extends ASTNode {
+case class RuleNode(head: ASTNode, body: Seq[ASTNode], dslAtoms: Array[Atom], currentRuleHash: String) extends ASTNode {
   // TODO: assert head is instanceOf LogicAtom
 }
 

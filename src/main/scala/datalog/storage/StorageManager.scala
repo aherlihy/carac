@@ -1,7 +1,7 @@
 package datalog.storage
 
 import datalog.dsl.{Atom, Term, Variable}
-import datalog.execution.JoinIndexes
+import datalog.execution.{JoinIndexes, AllIndexes}
 
 import scala.collection.mutable
 import scala.collection.immutable

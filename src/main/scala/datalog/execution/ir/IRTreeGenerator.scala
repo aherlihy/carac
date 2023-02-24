@@ -53,13 +53,13 @@ class IRTreeGenerator(using val ctx: InterpreterContext) {
           allRes = allRes :+ ScanEDBOp(rId)
 //        if(allRes.size == 1) allRes.head else
         UnionOp(OpCode.EVAL_RULE_NAIVE, allRes:_*)
-      case RuleNode(head, _, atoms, allK, hash) =>
-        val k = allK(hash)
+      case RuleNode(head, _, atoms, hash) =>
+        val k = ctx.storageManager.allRulesAllIndexes(atoms.head.rId)(hash)
         val r = head.asInstanceOf[LogicAtom].relation
         if (k.edb)
           ScanEDBOp(r)
         else
-          ProjectJoinFilterOp(k,
+          ProjectJoinFilterOp(atoms.head.rId, hash,
             k.deps.map(r => ScanOp(r, DB.Derived, KNOWLEDGE.Known)):_*
           )
       case _ =>
@@ -76,17 +76,19 @@ class IRTreeGenerator(using val ctx: InterpreterContext) {
           allRes = allRes :+ ScanEDBOp(rId)
 //        if(allRes.size == 1) allRes.head else
         UnionOp(OpCode.EVAL_RULE_SN, allRes:_*) // None bc union of unions so no point in sorting
-      case RuleNode(head, body, atoms, allK, hash) =>
+      case RuleNode(head, body, atoms, hash) =>
         val r = head.asInstanceOf[LogicAtom].relation
-        val k = allK(hash)
+        val k = ctx.storageManager.allRulesAllIndexes(atoms.head.rId)(hash)
         if (k.edb)
           ScanEDBOp(r)
         else
           var idx = -1 // if dep is featured more than once, only use delta once, but at a different pos each time
-          UnionSPJOp(k, // a single rule body
+          UnionSPJOp(// a single rule body
+            atoms.head.rId,
+            hash,
             k.deps.map(d => {
               var found = false
-              ProjectJoinFilterOp(k,
+              ProjectJoinFilterOp(atoms.head.rId, hash,
                 k.deps.zipWithIndex.map((r, i) => {
                   if (r == d && !found && i > idx)
                     found = true

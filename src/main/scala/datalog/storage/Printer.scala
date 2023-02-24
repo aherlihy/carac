@@ -102,9 +102,9 @@ class Printer[S <: StorageManager](val s: S) {
     node match {
       case ProgramNode(allRules) => "PROGRAM\n" + allRules.map((rId, rules) => s"  ${s.ns(rId)} => ${printAST(rules)}").mkString("", "\n", "")
       case AllRulesNode(rules, rId, edb) => s"${if (edb) "{EDB}"+factToString(s.edbs(rId))+"{IDB}" else ""}${rules.map(printAST).mkString("[", "\n\t", "  ]")}"
-      case RuleNode(head, body, atoms, allK, hash) =>
+      case RuleNode(head, body, atoms, hash) =>
         s"\n\t${printAST(head)} :- ${body.map(printAST).mkString("(", ", ", ")")}" +
-          s" => idx=${allK(hash).toStringWithNS(s.ns)}\n"
+          s" => idx=${s.asInstanceOf[CollectionsStorageManager].allRulesAllIndexes(atoms.head.rId)(hash).toStringWithNS(s.ns)}\n"
       case n: AtomNode => n match {
         case NegAtom(expr) => s"!${printAST(expr)}"
         case LogicAtom(relation, terms) => s"${s.ns(relation)}${terms.map(printAST).mkString("(", ", ", ")")}"
@@ -126,11 +126,13 @@ class Printer[S <: StorageManager](val s: S) {
       case ScanEDBOp(srcRel) => s"SCANEDB(edbs[${ctx.storageManager.ns(srcRel)}])"
       case ScanOp(srcRel, db, knowledge) =>
         s"SCAN[$db.$knowledge](${ctx.storageManager.ns(srcRel)})"
-      case ProjectJoinFilterOp(keys, children:_*) => s"JOIN${keys.varToString()}${keys.constToString()}${children.map(s => printIR(s, ident+1)).mkString("(\n", ",\n", ")")}"
+      case ProjectJoinFilterOp(rId, hash, children:_*) =>
+        val keys = s.asInstanceOf[CollectionsStorageManager].allRulesAllIndexes(rId)(hash)
+        s"JOIN${keys.varToString()}${keys.constToString()}${children.map(s => printIR(s, ident+1)).mkString("(\n", ",\n", ")")}"
       case InsertOp(rId, db, knowledge, children:_*) =>
         s"INSERT INTO $db.$knowledge.${ctx.storageManager.ns(rId)}\n${children.map(s => printIR(s, ident+1)).mkString("", "\n", "")}\n"
       case UnionOp(fnCode, children:_*) => s"UNION${if (fnCode != OpCode.UNION) "::" + fnCode else "_"}${children.map(o => printIR(o, ident+1)).mkString("(\n", ",\n", ")")}"
-      case UnionSPJOp(keys, children:_*) => s"UNION_SPJ::$keys::${children.map(o => printIR(o, ident+1)).mkString("(\n", ",\n", ")")}"
+      case UnionSPJOp(rId, hash, children:_*) => s"UNION_SPJ::$rId::${s.asInstanceOf[CollectionsStorageManager].allRulesAllIndexes(rId)(hash)}::${children.map(o => printIR(o, ident+1)).mkString("(\n", ",\n", ")")}"
       case DiffOp(children:_*) => s"DIFF\n${printIR(children.head, ident+1)}\n-${printIR(children(1), ident+1)}"
       case DebugNode(prefix, dbg) => s"DEBUG: $prefix"
       case DebugPeek(prefix, dbg, children:_*) => s"DEBUG PEEK: $prefix into: ${printIR(children.head)}"

@@ -1,11 +1,14 @@
 package datalog.execution
 
 import datalog.dsl.{Atom, Constant, Variable}
-import datalog.storage.NS
+import datalog.storage.{CollectionsStorageManager, NS}
+import datalog.tools.Debug.debug
 
 import scala.collection.mutable
 import scala.quoted.*
 import scala.reflect.ClassTag
+
+type AllIndexes = mutable.Map[String, JoinIndexes]
 
 /**
  * Wrapper object for join keys for IDB rules
@@ -78,20 +81,24 @@ object JoinIndexes {
     new JoinIndexes(bodyVars, constants.toMap, projects, deps, rule)
   }
 
-  def getSorted[T: ClassTag](order: Int, input: Array[T], sortBy: T => Int, oldAtoms: Array[Atom]): (Array[T], JoinIndexes) = {
-    var tToAtom = input.zipWithIndex.map((t, i) => (t, oldAtoms(i + 1))).sortBy((t, _) => sortBy(t))
-    if (order == -1) tToAtom = tToAtom.reverse
-    val newAtoms = oldAtoms.head +: tToAtom.map(_._2)
-    val sortedK = JoinIndexes(newAtoms)
-    val sortedT = tToAtom.map(_._1)
-    (sortedT, sortedK)
+  def getSorted[T: ClassTag](input: Array[T], sortBy: T => Int, rId: Int, oldHash: String, sm: CollectionsStorageManager, order: Int): (Array[T], String) = {
+    if (order != 0)
+      val oldAtoms = sm.allRulesAllIndexes(rId)(oldHash).atoms
+      debug(s"in getSorted: deps=", () => s"${sm.allRulesAllIndexes(rId)(oldHash).deps.map(s => sm.ns(s)).mkString("", ",", "")} current relation sizes: ${input.map(i => s"${sortBy(i)}|").mkString("", ", ", "")}")
+      var tToAtom = input.zipWithIndex.map((t, i) => (t, oldAtoms(i + 1))).sortBy((t, _) => sortBy(t))
+      if (order == -1) tToAtom = tToAtom.reverse
+      val newHash = JoinIndexes.getRuleHash(oldAtoms.head +: tToAtom.map(_._2))
+      val sortedT = tToAtom.map(_._1)
+      (sortedT, newHash)
+    else
+      (input, oldHash)
   }
 
-  def allOrders(rule: Array[Atom]): Map[String, JoinIndexes] = {
-    rule.drop(1).permutations.map(r =>
+  def allOrders(rule: Array[Atom]): AllIndexes = {
+    mutable.Map[String, JoinIndexes](rule.drop(1).permutations.map(r =>
       val toRet = JoinIndexes(rule.head +: r)
-      (toRet.hash, toRet)
-    ).toMap[String, JoinIndexes]
+      toRet.hash -> toRet
+    ).toSeq:_*)
   }
 
   def getRuleHash(rule: Array[Atom]): String = rule.map(r => r.hash).mkString("", "", "")
