@@ -52,129 +52,101 @@ class andersen_benchmark() extends ExampleBenchmarkGenerator("andersen") with an
     blackhole.consume(run(programs(p), result))
   }
 
-  @Benchmark def seminaive_collections_reduce_view(blackhole: Blackhole): Unit = {
-    val p = "SemiNaiveCollectionsReduceView"
+
+
+  @Benchmark def jit_staged_spju_collections(blackhole: Blackhole): Unit = {
+    val p = "JITStagedUnionSPJCollections"
     if (!programs.contains(p))
       throw new Exception(f"skip test $p for current env")
     blackhole.consume(run(programs(p), result))
   }
 
-  @Benchmark def seminaive_collections_reduce_noview(blackhole: Blackhole): Unit = {
-    val p = "SemiNaiveCollectionsReduceNoView"
+  @Benchmark def jit_staged_spju_best_unsorted_unsorted_collections(blackhole: Blackhole): Unit = {
+    val p = "JITStagedUnionSPJS1B"
     if (!programs.contains(p))
       throw new Exception(f"skip test $p for current env")
     blackhole.consume(run(programs(p), result))
   }
 
-  @Benchmark def seminaive_collections_fold_view(blackhole: Blackhole): Unit = {
-    val p = "SemiNaiveCollectionsFoldView"
+  @Benchmark def jit_staged_spju_worst_unsorted_unsorted_collections(blackhole: Blackhole): Unit = {
+    val p = "JITStagedUnionSPJS1W"
     if (!programs.contains(p))
       throw new Exception(f"skip test $p for current env")
     blackhole.consume(run(programs(p), result))
   }
 
-  @Benchmark def seminaive_collections_fold_noview(blackhole: Blackhole): Unit = {
-    val p = "SemiNaiveCollectionsFoldNoView"
+  @Benchmark def jit_staged_spju_best_best_unsorted_collections(blackhole: Blackhole): Unit = {
+    val p = "JITStagedUnionSPJS1BS2B"
     if (!programs.contains(p))
       throw new Exception(f"skip test $p for current env")
     blackhole.consume(run(programs(p), result))
   }
 
-
-
-  @Benchmark def erb_staged_spju_collections(blackhole: Blackhole): Unit = {
-    val p = "ERBStagedSPJUCollections"
+  @Benchmark def jit_staged_spju_worst_worst_unsorted_collections(blackhole: Blackhole): Unit = {
+    val p = "JITStagedUnionSPJS1WS2W"
     if (!programs.contains(p))
       throw new Exception(f"skip test $p for current env")
     blackhole.consume(run(programs(p), result))
   }
 
-  @Benchmark def erb_staged_spju_best_unsorted_unsorted_collections(blackhole: Blackhole): Unit = {
-    val p = "ERBStagedSPJUBestUnsortedUnsorted"
+  @Benchmark def jit_staged_spju_worst_worst_worst_collections(blackhole: Blackhole): Unit = {
+    val p = "JITStagedUnionSPJS1WS2WS3W"
     if (!programs.contains(p))
       throw new Exception(f"skip test $p for current env")
     blackhole.consume(run(programs(p), result))
   }
 
-  @Benchmark def erb_staged_spju_worst_unsorted_unsorted_collections(blackhole: Blackhole): Unit = {
-    val p = "ERBStagedSPJUWorstUnsortedUnsorted"
-    if (!programs.contains(p))
-      throw new Exception(f"skip test $p for current env")
-    blackhole.consume(run(programs(p), result))
-  }
-
-  @Benchmark def erb_staged_spju_best_best_unsorted_collections(blackhole: Blackhole): Unit = {
-    val p = "ERBStagedSPJUBestBestUnsorted"
-    if (!programs.contains(p))
-      throw new Exception(f"skip test $p for current env")
-    blackhole.consume(run(programs(p), result))
-  }
-
-  @Benchmark def erb_staged_spju_worst_worst_unsorted_collections(blackhole: Blackhole): Unit = {
-    val p = "ERBStagedSPJUWorstWorstUnsorted"
-    if (!programs.contains(p))
-      throw new Exception(f"skip test $p for current env")
-    blackhole.consume(run(programs(p), result))
-  }
-
-  @Benchmark def erb_staged_spju_worst_worst_worst_collections(blackhole: Blackhole): Unit = {
-    val p = "ERBStagedSPJUWorstWorstWorst"
-    if (!programs.contains(p))
-      throw new Exception(f"skip test $p for current env")
-    blackhole.consume(run(programs(p), result))
-  }
-
-  @Benchmark def erb_staged_spju_best_best_best_collections(blackhole: Blackhole): Unit = {
-    val p = "ERBStagedSPJUBestBestBest"
+  @Benchmark def jit_staged_spju_best_best_best_collections(blackhole: Blackhole): Unit = {
+    val p = "JITStagedUnionSPJS1BS2BS3B"
     if (!programs.contains(p))
       throw new Exception(f"skip test $p for current env")
     blackhole.consume(run(programs(p), result))
   }
 
   @Benchmark def interpreted_staged_spju_collections(blackhole: Blackhole): Unit = {
-    val p = "InterpretedStagedSPJUCollections"
+    val p = "InterpretedCollections"
     if (!programs.contains(p))
       throw new Exception(f"skip test $p for current env")
     blackhole.consume(run(programs(p), result))
   }
 
   @Benchmark def interpreted_staged_spju_best_unsorted_unsorted_collections(blackhole: Blackhole): Unit = {
-    val p = "InterpretedStagedSPJUBestUnsortedUnsorted"
+    val p = "InterpretedS1B"
     if (!programs.contains(p))
       throw new Exception(f"skip test $p for current env")
     blackhole.consume(run(programs(p), result))
   }
 
   @Benchmark def interpreted_staged_spju_best_best_unsorted_collections(blackhole: Blackhole): Unit = {
-    val p = "InterpretedStagedSPJUBestBestUnsorted"
+    val p = "InterpretedS1BS2B"
     if (!programs.contains(p))
       throw new Exception(f"skip test $p for current env")
     blackhole.consume(run(programs(p), result))
   }
 
   @Benchmark def interpreted_staged_spju_worst_worst_unsorted_collections(blackhole: Blackhole): Unit = {
-    val p = "InterpretedStagedSPJUWorstWorstUnsorted"
+    val p = "InterpretedS1WS2W"
     if (!programs.contains(p))
       throw new Exception(f"skip test $p for current env")
     blackhole.consume(run(programs(p), result))
   }
 
   @Benchmark def interpreted_staged_spju_worst_unsorted_unsorted_collections(blackhole: Blackhole): Unit = {
-    val p = "InterpretedStagedSPJUWorstUnsortedUnsorted"
+    val p = "InterpretedS1W"
     if (!programs.contains(p))
       throw new Exception(f"skip test $p for current env")
     blackhole.consume(run(programs(p), result))
   }
 
   @Benchmark def interpreted_staged_spju_worst_worst_worst_collections(blackhole: Blackhole): Unit = {
-    val p = "InterpretedStagedSPJUWorstWorstWorst"
+    val p = "InterpretedS1WS2WS3W"
     if (!programs.contains(p))
       throw new Exception(f"skip test $p for current env")
     blackhole.consume(run(programs(p), result))
   }
 
   @Benchmark def interpreted_staged_spju_best_best_best_collections(blackhole: Blackhole): Unit = {
-    val p = "InterpretedStagedSPJUBestBestBest"
+    val p = "InterpretedS1BS2BS3B"
     if (!programs.contains(p))
       throw new Exception(f"skip test $p for current env")
     blackhole.consume(run(programs(p), result))
