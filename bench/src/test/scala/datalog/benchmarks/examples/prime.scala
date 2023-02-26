@@ -89,6 +89,89 @@ class prime_benchmark() extends ExampleBenchmarkGenerator("prime") with prime {
     blackhole.consume(run(programs(p), result))
   }
 
+  @Benchmark def jit_staged_spju_fpj_bbx_tn2_tv2_collections(blackhole: Blackhole): Unit = {
+    val p = "JITStagedFPJ_TN2TV2_S1BS2B"
+    if (!programs.contains(p))
+      throw new Exception(f"skip test $p for current env")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  @Benchmark def jit_staged_spju_fpj_bbb_tn2_tv2_collections(blackhole: Blackhole): Unit = {
+    val p = "JITStagedFPJ_TN2TV2_S1BS2BS3B"
+    if (!programs.contains(p))
+      throw new Exception(f"skip test $p for current env")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  @Benchmark def jit_staged_spju_fpj_bbx_tn0_tv1_collections(blackhole: Blackhole): Unit = {
+    val p = "JITStagedFPJ_TN0TV1_S1BS2B"
+    if (!programs.contains(p))
+      throw new Exception(f"skip test $p for current env")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  @Benchmark def jit_staged_spju_fpj_bbb_tn0_tv1_collections(blackhole: Blackhole): Unit = {
+    val p = "JITStagedFPJ_TN0TV1_S1BS2BS3B"
+    if (!programs.contains(p))
+      throw new Exception(f"skip test $p for current env")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  @Benchmark def jit_staged_spju_fpj_bbx_tn1_tv2_collections(blackhole: Blackhole): Unit = {
+    val p = "JITStagedFPJ_TN1TV2_S1BS2B"
+    if (!programs.contains(p))
+      throw new Exception(f"skip test $p for current env")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  @Benchmark def jit_staged_spju_fpj_bbb_tn1_tv2_collections(blackhole: Blackhole): Unit = {
+    val p = "JITStagedFPJ_TN1TV2_S1BS2BS3B"
+    if (!programs.contains(p))
+      throw new Exception(f"skip test $p for current env")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  @Benchmark def jit_staged_spju_fpj_bbx_tn1_tv5_collections(blackhole: Blackhole): Unit = {
+    val p = "JITStagedFPJ_TN1TV5_S1BS2B"
+    if (!programs.contains(p))
+      throw new Exception(f"skip test $p for current env")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  @Benchmark def jit_staged_spju_fpj_bbb_tn1_tv5_collections(blackhole: Blackhole): Unit = {
+    val p = "JITStagedFPJ_TN1TV5_S1BS2BS3B"
+    if (!programs.contains(p))
+      throw new Exception(f"skip test $p for current env")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  @Benchmark def jit_staged_spju_fpj_bbx_tn5_tv2_collections(blackhole: Blackhole): Unit = {
+    val p = "JITStagedFPJ_TN5TV2_S1BS2B"
+    if (!programs.contains(p))
+      throw new Exception(f"skip test $p for current env")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  @Benchmark def jit_staged_spju_fpj_bbb_tn5_tv2_collections(blackhole: Blackhole): Unit = {
+    val p = "JITStagedFPJ_TN5TV2_S1BS2BS3B"
+    if (!programs.contains(p))
+      throw new Exception(f"skip test $p for current env")
+    blackhole.consume(run(programs(p), result))
+  }
+  @Benchmark def jit_staged_spju_fpj_bbx_tn2_tv10_collections(blackhole: Blackhole): Unit = {
+    val p = "JITStagedFPJ_TN2TV10_S1BS2B"
+    if (!programs.contains(p))
+      throw new Exception(f"skip test $p for current env")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  @Benchmark def jit_staged_spju_fpj_bbb_tn2_tv10_collections(blackhole: Blackhole): Unit = {
+    val p = "JITStagedFPJ_TN2TV10_S1BS2BS3B"
+    if (!programs.contains(p))
+      throw new Exception(f"skip test $p for current env")
+    blackhole.consume(run(programs(p), result))
+  }
+
   @Benchmark def jit_staged_spju_worst_worst_worst_collections(blackhole: Blackhole): Unit = {
     val p = "JITStagedUnionSPJS1WS2WS3W"
     if (!programs.contains(p))

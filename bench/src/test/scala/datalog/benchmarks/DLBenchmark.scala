@@ -48,10 +48,20 @@ abstract class DLBenchmark {
           else if (context.contains("FPJ")) ir.OpCode.SPJ
           else if (context.contains("UnionSPJ")) ir.OpCode.EVAL_RULE_BODY
           else throw new Exception(s"Unknown type of JIT staged $context")
+        val threshVR = "TV([0-9]*)".r
+        val threshNR = "TN([0-9]*)".r
+        val thresholdN = context match {
+          case threshNR(t) => t.toInt
+          case _ => 1
+        }
+        val thresholdV = context match {
+          case threshVR(t) => t.toInt // TODO: handle floats
+          case _ => 0
+        }
         if (context.contains("Snippet"))
-          Program(StagedSnippetExecutionEngine(CollectionsStorageManager(preSortAhead = preSA, sortAhead=sA, sortOnline=sO), JITOptions(label, aot, !nonblocking)))
+          Program(StagedSnippetExecutionEngine(CollectionsStorageManager(preSortAhead = preSA, sortAhead=sA, sortOnline=sO), JITOptions(label, aot, !nonblocking, thresholdN, thresholdV)))
         else
-          Program(StagedExecutionEngine(CollectionsStorageManager(preSortAhead = preSA, sortAhead=sA, sortOnline=sO), JITOptions(label, aot, !nonblocking)))
+          Program(StagedExecutionEngine(CollectionsStorageManager(preSortAhead = preSA, sortAhead=sA, sortOnline=sO), JITOptions(label, aot, !nonblocking, thresholdN, thresholdV)))
       case _ => // WARNING: MUnit just returns null pointers everywhere if an error or assert is triggered in beforeEach
         throw new Exception(s"Unknown engine construction ${context}") // TODO: this is reported as passing
     }

@@ -14,7 +14,7 @@ import scala.concurrent.{Await, Future, blocking}
 import scala.util.{Failure, Success}
 import scala.quoted.*
 
-case class JITOptions(granularity: OpCode = OpCode.PROGRAM, aot: Boolean = true, block: Boolean = true) {
+case class JITOptions(granularity: OpCode = OpCode.PROGRAM, aot: Boolean = true, block: Boolean = true, thresholdNum: Int = 0, thresholdVal: Float = 2) {
 //  if ((granularity == OpCode.OTHER || granularity == OpCode.PROGRAM) && (!aot || !block))
 //    throw new Exception(s"Invalid JIT options: with $granularity, aot and block must be true: $aot, $block")
   private val unique = Seq(OpCode.DOWHILE, OpCode.EVAL_NAIVE, OpCode.LOOP_BODY)
@@ -154,8 +154,27 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
         checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.children.map(o => sm => jitRel(o))))
 
       case op: ProjectJoinFilterOp if jitOptions.granularity == op.code =>
-        if (op.compiledFn == null && !jitOptions.aot)
+        if (!jitOptions.block && op.compiledFn == null && !jitOptions.aot)
           startCompileThreadRel(op, newDotty)
+        else if (jitOptions.block && op.blockingCompiledFn == null && !jitOptions.aot)
+          startCompileThreadRel(op, newDotty)
+        else
+          debug("", () => s"TV: ${jitOptions.thresholdVal}; TN: ${jitOptions.thresholdNum}::${op.children.sliding(2).map {
+              case Seq(x, y, _*) =>
+                val l = x.run(storageManager).size
+                val r = y.run(storageManager).size
+                if (l != 0  && r != 0) l.toFloat / r else 0
+              case _ => 0
+          }.mkString("(", ", ", ")")}")
+          val recompile = op.children.sliding(2).map{
+            case Seq(x, y, _*) =>
+              val l = x.run(storageManager).size
+              val r = y.run(storageManager).size
+              l != 0 && r != 0 && l.toFloat / r > jitOptions.thresholdVal
+            case _ => false
+          }.count(b => b) > jitOptions.thresholdNum
+          if (recompile)
+            startCompileThreadRel(op, newDotty)
         checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.children.map(o => sm => jitRel(o))))
 
       case op: DiffOp if jitOptions.granularity == op.code =>
