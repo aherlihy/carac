@@ -72,9 +72,11 @@ case class ProgramOp(override val children: IROp[Any]*) extends IROp[Any](childr
       case OpCode.EVAL_SN =>
         getSubTree(OpCode.LOOP_BODY).children(1)
       case OpCode.EVAL_RULE_SN => // gets a bit weird here bc there are multiple of these nodes, just gets the first one. Including insert+diff
-        getSubTree(OpCode.EVAL_SN).children.head
-      case OpCode.SPJ => // technically project
-        getSubTree(OpCode.EVAL_RULE_SN).children.head.children.head.children.head.children.head
+        getSubTree(OpCode.EVAL_SN).children.head.children.head.children.head.children.head
+      case OpCode.EVAL_RULE_BODY =>
+        getSubTree(OpCode.EVAL_RULE_SN).children.head
+      case OpCode.SPJ =>
+        getSubTree(OpCode.EVAL_RULE_BODY).children.head
       case OpCode.SCAN =>
         getSubTree(OpCode.SPJ).children.head.children.head
       case _ =>
@@ -268,10 +270,10 @@ case class UnionSPJOp(rId: RelationId, hash: String, override val children: Proj
   val code: OpCode = OpCode.EVAL_RULE_BODY
   // for now not filled out bc not planning on compiling higher than this
   override def run_continuation(storageManager: CollectionsStorageManager, opFns: Seq[CompiledRelFn]): CollectionsStorageManager#EDB =
-//    storageManager.union(opFns.map(o => o(storageManager)))
+    storageManager.union(opFns.map(o => o(storageManager)))
     // this is called if the compiled version isn't ready yet
-    // TODO: start compiling for the joins here?
-    ???
+//     TODO: start compiling for the joins here?
+//    ???
 
   override def run(storageManager: CollectionsStorageManager): CollectionsStorageManager#EDB =
     val sortedChildren = JoinIndexes.getPreSortAhead( // TODO: this isn't saved anywhere, in case this is traversed again

@@ -106,7 +106,6 @@ object JoinIndexes {
       input.map(c => ProjectJoinFilterOp(rId, newHash, newBody.map((_, oldP) => c.children(oldP)): _*))
     else
       input
-
   }
   def allOrders(rule: Array[Atom]): AllIndexes = {
     mutable.Map[String, JoinIndexes](rule.drop(1).permutations.map(r =>
