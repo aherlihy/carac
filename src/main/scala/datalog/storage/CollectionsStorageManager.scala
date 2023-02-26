@@ -3,7 +3,7 @@ package datalog.storage
 import datalog.dsl.{Atom, Constant, Variable}
 import datalog.execution.{JoinIndexes, AllIndexes}
 
-import scala.collection.{View, immutable, mutable}
+import scala.collection.{immutable, mutable}
 import datalog.tools.Debug.debug
 
 class CollectionsStorageManager(ns: NS = new NS(), val preSortAhead: Int = 1, val sortAhead: Int = 1, val sortOnline: Int = 1) extends SimpleStorageManager(ns) {
@@ -76,7 +76,7 @@ class CollectionsStorageManager(ns: NS = new NS(), val preSortAhead: Int = 1, va
   def joinProjectHelper_withHash(inputs: Seq[EDB], rId: Int, hash: String): EDB = {
     val originalK = allRulesAllIndexes(rId)(hash)
     if (inputs.size == 1) // just filter
-      inputs.view.head
+      inputs.head
         .filter(e =>
           val filteredC = originalK.constIndexes.filter((ind, _) => ind < e.size)
           prefilter(filteredC, 0, e) && filteredC.size == originalK.constIndexes.size)
@@ -87,14 +87,12 @@ class CollectionsStorageManager(ns: NS = new NS(), val preSortAhead: Int = 1, va
               case "c" => Some(idx)
               case _ => throw new Exception("Internal error: projecting something that is not a constant nor a variable")
             }).toIndexedSeq)
-        .to(mutable.ArrayBuffer)
     else
 //      val (sorted, newHash) = JoinIndexes.getSorted(inputs.toArray, edb => edb.size, rId, hash, this, sortAhead) // NOTE: already sorted in staged compiler/ProjectJoinFilterOp.run
-      val result = inputs.view
-        .map(i => i.view)
+      val result = inputs
         .foldLeft(
-          (EDB().view, 0, allRulesAllIndexes(rId)(hash))
-        )((combo: (View[Row[StorageTerm]], Int, JoinIndexes), innerT: View[Row[StorageTerm]]) =>
+          (EDB(), 0, allRulesAllIndexes(rId)(hash))
+        )((combo: (EDB, Int, JoinIndexes), innerT: EDB) =>
           val outerT = combo._1
           val atomI = combo._2
           var k = combo._3
@@ -131,12 +129,11 @@ class CollectionsStorageManager(ns: NS = new NS(), val preSortAhead: Int = 1, va
               case _ => throw new Exception("Internal error: projecting something that is not a constant nor a variable")
             }).toIndexedSeq
         )
-        .to(mutable.ArrayBuffer)
   }
 
   def joinProjectHelper(inputs: Seq[EDB], originalK: JoinIndexes): EDB = { // OLD, only keep around for benchmarks
     if (inputs.size == 1) // just filter
-      inputs.view.head
+      inputs.head
         .filter(e =>
           val filteredC = originalK.constIndexes.filter((ind, _) => ind < e.size)
           prefilter(filteredC, 0, e) && filteredC.size == originalK.constIndexes.size)
@@ -158,11 +155,10 @@ class CollectionsStorageManager(ns: NS = new NS(), val preSortAhead: Int = 1, va
         preSortedK = JoinIndexes(newAtoms)
         sorted = edbToAtom.map(_._1)
 
-      val result = sorted.view
-        .map(i => i.view)
+      val result = sorted
         .foldLeft(
-          (EDB().view, 0, preSortedK)
-        )((combo: (View[Row[StorageTerm]], Int, JoinIndexes), innerT: View[Row[StorageTerm]]) =>
+          (EDB(), 0, preSortedK)
+        )((combo: (EDB, Int, JoinIndexes), innerT: EDB) =>
           val outerT = combo._1
           val atomI = combo._2
           var k = combo._3
@@ -198,7 +194,6 @@ class CollectionsStorageManager(ns: NS = new NS(), val preSortAhead: Int = 1, va
               case _ => throw new Exception("Internal error: projecting something that is not a constant nor a variable")
             }).toIndexedSeq
         )
-        .to(mutable.ArrayBuffer)
   }
 
   /**
