@@ -28,6 +28,7 @@ type CompiledRelSnippetContinuationFn = (CollectionsStorageManager, Seq[Compiled
 abstract class IROp[T](val children: IROp[T]*) {
   val code: OpCode
   var compiledFn: Future[CollectionsStorageManager => T] = null
+  var blockingCompiledFn: CollectionsStorageManager => T = null
   var compiledSnippetContinuationFn: (CollectionsStorageManager, Seq[CollectionsStorageManager => T]) => T = null
 
   /**

@@ -533,12 +533,12 @@ def scratch(program: Program) =
 //  tc(program1)
 //  println("\n\n_______________________\n\n")
 
-    val jo = JITOptions(ir.OpCode.EVAL_RULE_BODY, aot = false, block = true)
-  println("COMPILED")
-  given engine3: ExecutionEngine = new StagedExecutionEngine(new CollectionsStorageManager(sortAhead = 1), jo)
-  val program3 = Program(engine3)
-  tc(program3)
-  println("\n\n_______________________\n\n")
+    val jo = JITOptions(ir.OpCode.SPJ, aot = false, block = true)
+    println("COMPILED")
+    given engine3: ExecutionEngine = new StagedExecutionEngine(new CollectionsStorageManager(sortAhead = 1), jo)
+    val program3 = Program(engine3)
+    func(program3)
+    println("\n\n_______________________\n\n")
 
 //  println("JIT Snippet")
 //  val engine4: ExecutionEngine = new StagedSnippetExecutionEngine(new CollectionsStorageManager(), jo)

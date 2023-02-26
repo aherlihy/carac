@@ -146,7 +146,7 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
   def jitRel(irTree: IROp[CollectionsStorageManager#EDB])(using jitOptions: JITOptions): CollectionsStorageManager#EDB = {
     //    println(s"IN INTERPRET REL_IR, code=${irTree.code}")
     // If async compiling, then make a new dotty for nodes for which there are multiple. TODO: pool?
-    lazy val newDotty = if (jitOptions.block) dedicatedDotty else staging.Compiler.make(getClass.getClassLoader)
+    lazy val newDotty = dedicatedDotty//if (jitOptions.block) dedicatedDotty else staging.Compiler.make(getClass.getClassLoader)
     irTree match {
       case op: UnionOp if jitOptions.granularity == op.code =>
         if (op.compiledFn == null && !jitOptions.aot)
@@ -165,8 +165,8 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
 
       case op: UnionSPJOp if jitOptions.granularity == op.code =>
         // TODO: if data has changed, then regenerate compiled code
-//        if (op.compiledFn == null && !jitOptions.aot)
-        startCompileThreadRel(op, newDotty)
+        if (op.compiledFn == null && !jitOptions.aot)
+          startCompileThreadRel(op, newDotty)
         checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.children.map(o => sm => jitRel(o))))
 
       case op: ScanOp =>
@@ -194,41 +194,52 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
   }
 
   inline def checkResult[T](value: Future[CollectionsStorageManager => T], op: IROp[T], default: () => T)(using jitOptions: JITOptions): T =
-    value.value match {
-      case Some(Success(run)) =>
-        debug(s"Compilation succeeded: ${op.code}", () => "")
-        stragglers.remove(op.compiledFn.hashCode()) // TODO: might not work, but jsut end up waiting for completed future
-        run(storageManager)
-      case Some(Failure(e)) =>
-        stragglers.remove(op.compiledFn.hashCode())
-        throw Exception(s"Error compiling ${op.code} with: ${e.getCause}")
-      case None =>
-        if (jitOptions.block)
-          debug(s"${op.code} compilation not ready yet, so blocking", () => "")
-          val res = Await.result(op.compiledFn, Duration.Inf)(storageManager)
+    if (jitOptions.block)
+      op.blockingCompiledFn(storageManager)
+    else
+      value.value match {
+        case Some(Success(run)) =>
+          debug(s"Compilation succeeded: ${op.code}", () => "")
+          stragglers.remove(op.compiledFn.hashCode()) // TODO: might not work, but jsut end up waiting for completed future
+          run(storageManager)
+        case Some(Failure(e)) =>
           stragglers.remove(op.compiledFn.hashCode())
-          res
-        else
-          debug(s"${op.code} compilation not ready yet, so defaulting", () => "")
-          default()
-    }
-  inline def startCompileThread(op: IROp[Any], dotty: staging.Compiler): Unit =
+          throw Exception(s"Error compiling ${op.code} with: ${e.getCause}")
+        case None =>
+          if (jitOptions.block) // TODO: clean this up
+            debug(s"${op.code} compilation not ready yet, so blocking", () => "")
+            val res = Await.result(op.compiledFn, Duration.Inf)(storageManager)
+            stragglers.remove(op.compiledFn.hashCode())
+            res
+          else
+            debug(s"${op.code} compilation not ready yet, so defaulting", () => "")
+            default()
+      }
+  inline def startCompileThread(op: IROp[Any], dotty: staging.Compiler)(using jitOptions: JITOptions): Unit =
     debug(s"starting online compilation for code ${op.code}", () => "")
-    given scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
-    op.compiledFn = Future {
-      given staging.Compiler = dotty; // dedicatedDotty //staging.Compiler.make(getClass.getClassLoader) // TODO: new dotty per thread, maybe concat
-      compiler.getCompiled(op)
-    }
-    stragglers.addOne(op.compiledFn.hashCode(), op.compiledFn)
+    if (jitOptions.block)
+      given staging.Compiler = dotty
+      op.blockingCompiledFn = compiler.getCompiled(op)
+    else
+      given scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
+      op.compiledFn = Future {
+        given staging.Compiler = dotty; // dedicatedDotty //staging.Compiler.make(getClass.getClassLoader) // TODO: new dotty per thread, maybe concat
+        compiler.getCompiled(op)
+      }
+      stragglers.addOne(op.compiledFn.hashCode(), op.compiledFn)
 
-  inline def startCompileThreadRel(op: IROp[CollectionsStorageManager#EDB], dotty: staging.Compiler): Unit =
+  inline def startCompileThreadRel(op: IROp[CollectionsStorageManager#EDB], dotty: staging.Compiler)(using jitOptions: JITOptions): Unit =
     debug(s"starting online compilation for code ${op.code}", () => "")
-    given scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
-    op.compiledFn = Future {
-      given staging.Compiler = dotty; // dedicatedDotty //staging.Compiler.make(getClass.getClassLoader) // TODO: new dotty per thread, maybe concat
-      compiler.getCompiledRel(op)
-    }
-    stragglers.addOne(op.compiledFn.hashCode(), op.compiledFn)
+    if (jitOptions.block)
+      given staging.Compiler = dotty
+      op.blockingCompiledFn = compiler.getCompiledRel(op)
+    else
+      given scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
+      op.compiledFn = Future {
+        given staging.Compiler = dotty; // dedicatedDotty //staging.Compiler.make(getClass.getClassLoader) // TODO: new dotty per thread, maybe concat
+        compiler.getCompiledRel(op)
+      }
+      stragglers.addOne(op.compiledFn.hashCode(), op.compiledFn)
 
 
   def jit(irTree: IROp[Any])(using jitOptions: JITOptions): Any = {
