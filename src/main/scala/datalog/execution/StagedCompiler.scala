@@ -73,29 +73,28 @@ class StagedCompiler(val storageManager: CollectionsStorageManager) {
         else
           '{ $stagedSM.EDB() }
 
-      case ProjectJoinFilterOp(rId, hash, children:_*) =>
-        val (sortedChildren, newHash) = JoinIndexes.getSortAhead(
+      case ProjectJoinFilterOp(rId, k, children:_*) =>
+        val (sortedChildren, newK) = JoinIndexes.getSortAhead(
           children.toArray,
           c => c.run(storageManager).size,
           rId,
-          hash,
+          k,
           storageManager
         )
         val compiledOps = Expr.ofSeq(sortedChildren.map(compileIRRelOp))
         '{
-          $stagedSM.joinProjectHelper_withHash(
+          $stagedSM.joinProjectHelper(
             $compiledOps,
-            ${ Expr(rId) },
-            ${ Expr(newHash) }
+            ${ Expr(newK) }
           )
         }
 
-      case UnionSPJOp(rId, hash, children:_*) =>
+      case UnionSPJOp(rId, k, children:_*) =>
         var sortedChildren = JoinIndexes.getPreSortAhead(
             children.toArray,
             a => storageManager.getKnownDerivedDB(a.rId).size,
             rId,
-            hash,
+            k,
             storageManager
           )
         val compiledOps = sortedChildren.map(compileIRRelOp)

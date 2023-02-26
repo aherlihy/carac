@@ -76,13 +76,13 @@ class StagedSnippetCompiler(val storageManager: CollectionsStorageManager) {
         else
           '{ $stagedSM.EDB() }
 
-      case ProjectJoinFilterOp(rId, hash, children:_*) =>
+      case ProjectJoinFilterOp(rId,k, children:_*) =>
         val compiledOps = '{ $stagedFns.map(s => s($stagedSM)) }
         // TODO[future]: inspect keys and optimize join algo
         '{
           $stagedSM.joinProjectHelper(
             $compiledOps,
-            ${ Expr(storageManager.allRulesAllIndexes(rId)(hash)) }
+            ${ Expr(k)}
           )
         }
 

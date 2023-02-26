@@ -215,36 +215,34 @@ case class ScanEDBOp(rId: RelationId) extends IROp[CollectionsStorageManager#EDB
  * @param joinIdx
  * @param children: [Scan*deps]
  */
-case class ProjectJoinFilterOp(rId: RelationId, hash: String, override val children: ScanOp*) extends IROp[CollectionsStorageManager#EDB](children:_*) {
+case class ProjectJoinFilterOp(rId: RelationId, k: JoinIndexes, override val children: ScanOp*) extends IROp[CollectionsStorageManager#EDB](children:_*) {
   val code: OpCode = OpCode.SPJ
 
   override def run_continuation(storageManager: CollectionsStorageManager, opFns: Seq[CompiledRelFn]): CollectionsStorageManager#EDB =
     val inputs = opFns.map(s => s(storageManager))
-    val (sorted, newHash) = JoinIndexes.getSortAhead(
+    val (sorted, newK) = JoinIndexes.getSortAhead(
       inputs.toArray,
       edb => edb.size,
       rId,
-      hash,
+      k,
       storageManager
     )
-    storageManager.joinProjectHelper_withHash(
+    storageManager.joinProjectHelper(
       sorted,
-      rId,
-      newHash
+      newK
     )
   override def run(storageManager: CollectionsStorageManager): CollectionsStorageManager#EDB =
     val inputs = children.map(s => s.run(storageManager))
-    val (sorted, newHash) = JoinIndexes.getSortAhead(
+    val (sorted, newK) = JoinIndexes.getSortAhead(
       inputs.toArray,
       edb => edb.size,
       rId,
-      hash,
+      k,
       storageManager
     )
-    storageManager.joinProjectHelper_withHash(
+    storageManager.joinProjectHelper(
       sorted,
-      rId,
-      newHash
+      newK
     )
 }
 
@@ -264,21 +262,21 @@ case class UnionOp(override val code: OpCode, override val children: IROp[Collec
  * @param code
  * @param children: [Scan*atoms]
  */
-case class UnionSPJOp(rId: RelationId, hash: String, override val children: ProjectJoinFilterOp*) extends IROp[CollectionsStorageManager#EDB](children:_*) {
+case class UnionSPJOp(rId: RelationId, k: JoinIndexes, override val children: ProjectJoinFilterOp*) extends IROp[CollectionsStorageManager#EDB](children:_*) {
   val code: OpCode = OpCode.EVAL_RULE_BODY
   // for now not filled out bc not planning on compiling higher than this
   override def run_continuation(storageManager: CollectionsStorageManager, opFns: Seq[CompiledRelFn]): CollectionsStorageManager#EDB =
-//    storageManager.union(opFns.map(o => o(storageManager)))
+    storageManager.union(opFns.map(o => o(storageManager)))
     // this is called if the compiled version isn't ready yet
     // TODO: start compiling for the joins here?
-    ???
+//    ???
 
   override def run(storageManager: CollectionsStorageManager): CollectionsStorageManager#EDB =
     val sortedChildren = JoinIndexes.getPreSortAhead( // TODO: this isn't saved anywhere, in case this is traversed again
       children.toArray,
       a => storageManager.getKnownDerivedDB(a.rId).size,
       rId,
-      hash,
+      k,
       storageManager
     )
     storageManager.union(sortedChildren.map(o => o.run(storageManager)))

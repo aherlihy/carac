@@ -82,27 +82,28 @@ object JoinIndexes {
     new JoinIndexes(bodyVars, constants.toMap, projects, deps, rule)
   }
 
-  def getSortAhead[T: ClassTag](input: Array[T], sortBy: T => Int, rId: Int, oldHash: String, sm: CollectionsStorageManager): (Array[T], String) = {
+  def getSortAhead[T: ClassTag](input: Array[T], sortBy: T => Int, rId: Int, oldK: JoinIndexes, sm: CollectionsStorageManager): (Array[T], JoinIndexes) = {
     if (sm.sortAhead != 0)
-      val oldAtoms = sm.allRulesAllIndexes(rId)(oldHash).atoms
-//      debug(s"in getSorted: deps=", () => s"${sm.allRulesAllIndexes(rId)(oldHash).deps.map(s => sm.ns(s)).mkString("", ",", "")} current relation sizes: ${input.map(i => s"${sortBy(i)}|").mkString("", ", ", "")}")
+      val oldAtoms = oldK.atoms
+//      debug(s"in getSorted: deps=", () => s"${oldK.deps.map(s => sm.ns(s)).mkString("", ",", "")} current relation sizes: ${input.map(i => s"${sortBy(i)}|").mkString("", ", ", "")}")
       var tToAtom = input.zipWithIndex.map((t, i) => (t, oldAtoms(i + 1))).sortBy((t, _) => sortBy(t))
       if (sm.sortAhead == -1) tToAtom = tToAtom.reverse
-      val newHash = JoinIndexes.getRuleHash(oldAtoms.head +: tToAtom.map(_._2))
+//      val newHash = JoinIndexes.getRuleHash(oldAtoms.head +: tToAtom.map(_._2))
+      val newK = JoinIndexes(oldAtoms.head +: tToAtom.map(_._2))
       val sortedT = tToAtom.map(_._1)
-      (sortedT, newHash)
+//      println(s"new order = ${newK.deps.map(d => sm.ns(d))}")
+      (sortedT, newK)
     else
-      (input, oldHash)
+      (input, oldK)
   }
 
-  def getPreSortAhead(input: Array[ProjectJoinFilterOp], sortBy: Atom => Int, rId: Int, oldHash: String, sm: CollectionsStorageManager): Array[ProjectJoinFilterOp] = {
-    val originalK = sm.allRulesAllIndexes(rId)(oldHash)
+  def getPreSortAhead(input: Array[ProjectJoinFilterOp], sortBy: Atom => Int, rId: Int, originalK: JoinIndexes, sm: CollectionsStorageManager): Array[ProjectJoinFilterOp] = {
     if (sm.preSortAhead != 0)
 //      debug(s"in compiler UNION[spj] deps=${originalK.deps.map(s => sm.ns(s)).mkString("", ",", "")} current relation sizes:", () => s"${originalK.atoms.drop(1).map(a => s"${sm.ns(a.rId)}:|${sortBy(a)}|").mkString("", ", ", "")}")
       var newBody = originalK.atoms.drop(1).zipWithIndex.sortBy((a, _) => sortBy(a))
       if (sm.preSortAhead == -1) newBody = newBody.reverse
       val newAtoms = originalK.atoms.head +: newBody.map(_._1)
-      val newHash = JoinIndexes.getRuleHash(newAtoms)
+      val newHash = JoinIndexes(newAtoms)
       input.map(c => ProjectJoinFilterOp(rId, newHash, newBody.map((_, oldP) => c.children(oldP)): _*))
     else
       input
