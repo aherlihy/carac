@@ -89,6 +89,7 @@ abstract class BenchmarkGenerator(directory: Path,
 //    "JITStagedFPJ",
     "JITStagedEvalRule",
     "JITStagedAsyncAOTEvalRule",
+    "JITStagedAOTEvalRule",
     "Interpreted"
   )
   (FPJs ++ rest).foreach(execution =>
