@@ -118,7 +118,6 @@ case class DoWhileOp(toCmp: DB, override val children:IROp[Any]*) extends IROp[A
  * @param children: [Any*]
  */
 case class SequenceOp(override val code: OpCode, override val children:IROp[Any]*) extends IROp[Any](children:_*) {
-  if (code == OpCode.EVAL_SN) println(s"${children.size}")
   override def run_continuation(storageManager: CollectionsStorageManager, opFns: Seq[CompiledFn]): Any =
     opFns.map(o => o(storageManager))
   override def run(storageManager: CollectionsStorageManager): Any =
