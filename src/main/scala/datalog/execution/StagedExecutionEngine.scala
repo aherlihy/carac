@@ -150,11 +150,11 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
     irTree match {
       case op: UnionSPJOp if jitOptions.granularity == op.code => // check if aot compile is ready
         startCompileThreadRel(op, dedicatedDotty)
-        checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.children.map(o => sm => jitRel(o))))
+        checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.children.map(o => (sm: CollectionsStorageManager) => jitRel(o))))
 
       case op: ProjectJoinFilterOp if jitOptions.granularity == op.code => // check if aot compile is ready
         startCompileThreadRel(op, dedicatedDotty)
-        checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.children.map(o => sm => jitRel(o))))
+        checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.children.map(o => (sm: CollectionsStorageManager) => jitRel(o))))
 //        if (!jitOptions.block && op.compiledFn == null && !jitOptions.aot)
 //          startCompileThreadRel(op, newDotty)
 //        else if (jitOptions.block && op.blockingCompiledFn == null && !jitOptions.aot)
@@ -176,10 +176,10 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
 //          }.count(b => b) > jitOptions.thresholdNum
 //          if (recompile)
 //            startCompileThreadRel(op, newDotty)
-//        checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.children.map(o => sm => jitRel(o))))
+//        checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.children.map(o => (sm: CollectionsStorageManager) => jitRel(o))))
       case op: UnionOp if jitOptions.granularity == op.code =>
         startCompileThreadRel(op, dedicatedDotty)
-        checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.children.map(o => sm => jitRel(o))))
+        checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.children.map(o => (sm: CollectionsStorageManager) => jitRel(o))))
 
       case op: ScanOp =>
         op.run(storageManager)
@@ -188,19 +188,19 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
         op.run(storageManager)
 
       case op: ProjectJoinFilterOp =>
-        op.run_continuation(storageManager, op.children.map(o => sm => jitRel(o)))
+        op.run_continuation(storageManager, op.children.map(o => (sm: CollectionsStorageManager) => jitRel(o)))
 
       case op: UnionOp =>
-        op.run_continuation(storageManager, op.children.map(o => sm => jitRel(o)))
+        op.run_continuation(storageManager, op.children.map(o => (sm: CollectionsStorageManager) => jitRel(o)))
 
       case op: UnionSPJOp =>
-        op.run_continuation(storageManager, op.children.map(o => sm => jitRel(o)))
+        op.run_continuation(storageManager, op.children.map(o => (sm: CollectionsStorageManager) => jitRel(o)))
 
       case op: DiffOp =>
-        op.run_continuation(storageManager, op.children.map(o => sm => jitRel(o)))
+        op.run_continuation(storageManager, op.children.map(o => (sm: CollectionsStorageManager) => jitRel(o)))
 
       case op: DebugPeek =>
-        op.run_continuation(storageManager, op.children.map(o => sm => jitRel(o)))
+        op.run_continuation(storageManager, op.children.map(o => (sm: CollectionsStorageManager) => jitRel(o)))
       case _ => throw new Exception("Error: interpretRelOp called with unit operation")
     }
   }
@@ -257,16 +257,16 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
         op.run_continuation(storageManager, Seq(sm => jit(op.children.head)))
 
       case op: DoWhileOp =>
-       op.run_continuation(storageManager, op.children.map(o => sm => jit(o)))
+       op.run_continuation(storageManager, op.children.map(o => (sm: CollectionsStorageManager) => jit(o)))
 
       case op: SequenceOp =>
-        op.run_continuation(storageManager, op.children.map(o => sm => jit(o)))
+        op.run_continuation(storageManager, op.children.map(o => (sm: CollectionsStorageManager) => jit(o)))
 
       case op: SwapAndClearOp =>
         op.run(storageManager)
 
       case op: InsertOp =>
-        op.run_continuation(storageManager, op.children.map(o => sm => jitRel(o.asInstanceOf[IROp[CollectionsStorageManager#EDB]])))
+        op.run_continuation(storageManager, op.children.map(o => (sm: CollectionsStorageManager) => jitRel(o.asInstanceOf[IROp[CollectionsStorageManager#EDB]])))
 
       case op: DebugNode =>
         op.run(storageManager)

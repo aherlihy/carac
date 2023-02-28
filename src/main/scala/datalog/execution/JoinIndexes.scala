@@ -103,7 +103,7 @@ object JoinIndexes {
       if (sm.preSortAhead == -1) newBody = newBody.reverse
       val newAtoms = originalK.atoms.head +: newBody.map(_._1)
       val newHash = JoinIndexes.getRuleHash(newAtoms)
-      input.map(c => ProjectJoinFilterOp(rId, newHash, newBody.map((_, oldP) => c.children(oldP)): _*))
+      input.map(c => ProjectJoinFilterOp(rId, newHash, newBody.map((_, oldP) => c.childrenSO(oldP)): _*))
     else
       input
   }

@@ -44,28 +44,28 @@ class StagedSnippetExecutionEngine(override val storageManager: CollectionsStora
         if (op.compiledSnippetContinuationFn == null)
           given staging.Compiler = dedicatedDotty
           op.compiledSnippetContinuationFn = snippetCompiler.getCompiledSnippetRel(op)
-        op.compiledSnippetContinuationFn(storageManager, op.children.map(o => sm => jitRel(o)))
+        op.compiledSnippetContinuationFn(storageManager, op.children.map(o => (sm: CollectionsStorageManager) => jitRel(o)))
 
       case op: ProjectJoinFilterOp =>
-        op.run_continuation(storageManager, op.children.map(o => sm => jitRel(o)))
+        op.run_continuation(storageManager, op.children.map(o => (sm: CollectionsStorageManager) => jitRel(o)))
 
       case op: UnionOp =>
-        op.run_continuation(storageManager, op.children.map(o => sm => jitRel(o)))
+        op.run_continuation(storageManager, op.children.map(o => (sm: CollectionsStorageManager) => jitRel(o)))
       
       case op: UnionSPJOp =>
-        op.run_continuation(storageManager, op.children.map(o => sm => jitRel(o)))
+        op.run_continuation(storageManager, op.children.map(o => (sm: CollectionsStorageManager) => jitRel(o)))
 
       case op: DiffOp if jitOptions.granularity == op.code =>
         if (op.compiledSnippetContinuationFn == null)
           given staging.Compiler = dedicatedDotty
           op.compiledSnippetContinuationFn = snippetCompiler.getCompiledSnippetRel(op)
-        op.compiledSnippetContinuationFn(storageManager, op.children.map(o => sm => jitRel(o)))
+        op.compiledSnippetContinuationFn(storageManager, op.children.map(o => (sm: CollectionsStorageManager) => jitRel(o)))
 
       case op: DiffOp =>
-        op.run_continuation(storageManager, op.children.map(o => sm => jitRel(o)))
+        op.run_continuation(storageManager, op.children.map(o => (sm: CollectionsStorageManager) => jitRel(o)))
 
       case op: DebugPeek =>
-        op.run_continuation(storageManager, op.children.map(o => sm => jitRel(o)))
+        op.run_continuation(storageManager, op.children.map(o => (sm: CollectionsStorageManager) => jitRel(o)))
 
       case _ => throw new Exception("Error: interpretRelOp called with unit operation")
     }
@@ -79,19 +79,19 @@ class StagedSnippetExecutionEngine(override val storageManager: CollectionsStora
           op.compiledSnippetContinuationFn = snippetCompiler.getCompiledSnippet(op)
         op.compiledSnippetContinuationFn(
           storageManager,
-          op.children.flatMap(o => o.children.map(o2 => sm => jit(o2)))) // or o2.run() for only interp
+          op.children.flatMap(o => o.children.map(o2 => (sm: CollectionsStorageManager) => jit(o2)))) // or o2.run() for only interp
 
       case op: ProgramOp =>
-        op.run_continuation(storageManager, op.children.map(o => sm => jit(o)))
+        op.run_continuation(storageManager, op.children.map(o => (sm: CollectionsStorageManager) => jit(o)))
 
       case op: DoWhileOp if jitOptions.granularity == op.code =>
         if (op.compiledSnippetContinuationFn == null)
           given staging.Compiler = dedicatedDotty
           op.compiledSnippetContinuationFn = snippetCompiler.getCompiledSnippet(op)
-        op.compiledSnippetContinuationFn(storageManager, op.children.map(o => sm => jit(o)))
+        op.compiledSnippetContinuationFn(storageManager, op.children.map(o => (sm: CollectionsStorageManager) => jit(o)))
 
       case op: DoWhileOp =>
-        op.run_continuation(storageManager, op.children.map(o => sm => jit(o)))
+        op.run_continuation(storageManager, op.children.map(o => (sm: CollectionsStorageManager) => jit(o)))
 
       case op: SequenceOp =>
         op.code match
@@ -101,9 +101,9 @@ class StagedSnippetExecutionEngine(override val storageManager: CollectionsStora
               op.compiledSnippetContinuationFn = snippetCompiler.getCompiledSnippet(op)
             op.compiledSnippetContinuationFn(
               storageManager,
-              op.children.flatMap(o => o.children.map(o2 => sm => jit(o2)))) // or o2.run(sm) for only interp
+              op.children.flatMap(o => o.children.map(o2 => (sm: CollectionsStorageManager) => jit(o2)))) // or o2.run(sm) for only interp
           case _ =>
-            op.run_continuation(storageManager, op.children.map(o => sm => jit(o)))
+            op.run_continuation(storageManager, op.children.map(o => (sm: CollectionsStorageManager) => jit(o)))
 
       case op: SwapAndClearOp =>
         op.run(storageManager)
@@ -112,10 +112,10 @@ class StagedSnippetExecutionEngine(override val storageManager: CollectionsStora
         if (op.compiledSnippetContinuationFn == null)
           given staging.Compiler = dedicatedDotty
           op.compiledSnippetContinuationFn = snippetCompiler.getCompiledSnippet(op)
-        op.compiledSnippetContinuationFn(storageManager, op.children.map(o => sm => jitRel(o.asInstanceOf[IROp[CollectionsStorageManager#EDB]])))
+        op.compiledSnippetContinuationFn(storageManager, op.children.map(o => (sm: CollectionsStorageManager) => jitRel(o.asInstanceOf[IROp[CollectionsStorageManager#EDB]])))
 
       case op: InsertOp =>
-        op.run_continuation(storageManager, op.children.map(o => sm => jitRel(o.asInstanceOf[IROp[CollectionsStorageManager#EDB]])))
+        op.run_continuation(storageManager, op.children.map(o => (sm: CollectionsStorageManager) => jitRel(o.asInstanceOf[IROp[CollectionsStorageManager#EDB]])))
       case op: DebugNode =>
         op.run(storageManager)
 
