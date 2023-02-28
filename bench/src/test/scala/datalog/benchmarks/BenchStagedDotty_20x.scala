@@ -159,13 +159,13 @@ class BenchStagedDotty_20x_full_cold {
     )
   }
 
-  @Benchmark def compile_loopBody(blackhole: Blackhole): Unit = {
-    given staging.Compiler = engine.dedicatedDotty
-
-    blackhole.consume(
-      engine.compiler.getCompiled(loopBody)
-    )
-  }
+//  @Benchmark def compile_loopBody(blackhole: Blackhole): Unit = {
+//    given staging.Compiler = engine.dedicatedDotty
+//
+//    blackhole.consume(
+//      engine.compiler.getCompiled(loopBody)
+//    )
+//  }
 
   @Benchmark def compile_projectJoinFilter(blackhole: Blackhole): Unit = {
     given staging.Compiler = engine.dedicatedDotty
@@ -254,13 +254,13 @@ class BenchStagedDotty_20x_full_warm {
 //      engine.compiler.getCompiled(snEval)
 //    )
 //  }
-  @Benchmark def compile_loopBody(blackhole: Blackhole): Unit = {
-    given staging.Compiler = engine.dedicatedDotty
-
-    blackhole.consume(
-      engine.compiler.getCompiled(loopBody)
-    )
-  }
+//  @Benchmark def compile_loopBody(blackhole: Blackhole): Unit = {
+//    given staging.Compiler = engine.dedicatedDotty
+//
+//    blackhole.consume(
+//      engine.compiler.getCompiled(loopBody)
+//    )
+//  }
 
   @Benchmark def compile_snEvalRule(blackhole: Blackhole): Unit = {
     given staging.Compiler = engine.dedicatedDotty
