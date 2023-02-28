@@ -10,6 +10,7 @@ import scala.collection.mutable
 import scala.io.Source
 import scala.jdk.StreamConverters.*
 import scala.util.Properties
+import scala.quoted.*
 
 abstract class ExampleBenchmarkGenerator(testname: String,
                                          val skip: Set[String] = Set(),

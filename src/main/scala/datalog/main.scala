@@ -605,7 +605,8 @@ def scratch(program: Program) =
 //    ackermann(program3a)
 //    println("\n\n_______________________\n\n")
 
-    val jo = JITOptions(ir.OpCode.EVAL_RULE_SN, aot = false, block = true)
+    val dotty = staging.Compiler.make(getClass.getClassLoader)
+    val jo = JITOptions(ir.OpCode.EVAL_RULE_SN, aot = false, block = true, dotty = dotty)
     println("JIT")
     given engine3: ExecutionEngine = new StagedExecutionEngine(new CollectionsStorageManager(sortAhead = 0, preSortAhead = 0, sortOnline = 0), jo)
     val program3 = Program(engine3)

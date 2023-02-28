@@ -6,11 +6,13 @@ import datalog.storage.*
 import datalog.tools.Debug.debug
 
 import scala.collection.mutable
+import scala.quoted.staging
 
 /**
  * Used for both hand-written benchmarks (ex: TransitiveClosure) to be run on all configs, and also auto-generated (ex: Examples)
  */
 abstract class DLBenchmark {
+  val dotty = staging.Compiler.make(getClass.getClassLoader)
   def pretest(program: Program): Unit
   val toSolve: String
   val description: String
@@ -25,14 +27,14 @@ abstract class DLBenchmark {
       case "NaiveRelational" =>                   Program(NaiveExecutionEngine(       RelationalStorageManager()))
       case "SemiNaiveCollections" =>              Program(SemiNaiveExecutionEngine(   CollectionsStorageManager()))
       case "NaiveCollections" =>                  Program(NaiveExecutionEngine(       CollectionsStorageManager()))
-      case "NaiveCompiledStagedCollections" =>    Program(NaiveStagedExecutionEngine( CollectionsStorageManager()))
-      case "NaiveInterpretedStagedCollections" => Program(NaiveStagedExecutionEngine( CollectionsStorageManager(),  JITOptions(granularity = ir.OpCode.OTHER)))
+      case "NaiveCompiledStagedCollections" =>    Program(NaiveStagedExecutionEngine( CollectionsStorageManager() ))
+      case "NaiveInterpretedStagedCollections" => Program(NaiveStagedExecutionEngine( CollectionsStorageManager(),  JITOptions(ir.OpCode.OTHER, dotty)))
       case "CompiledStagedCollections" =>         Program(StagedExecutionEngine(      CollectionsStorageManager()))
       case _ if context.contains("Interpreted") =>
         val preSA = if (context.contains("S1B")) 1 else if (context.contains("S1W")) -1 else 0
         val sA = if (context.contains("S2B")) 1 else if (context.contains("S2W")) -1 else 0
         val sO = if (context.contains("S3B")) 1 else if (context.contains("S3W")) -1 else 0
-        Program(StagedExecutionEngine(CollectionsStorageManager(preSortAhead = preSA, sortAhead=sA, sortOnline=sO), JITOptions(ir.OpCode.OTHER, false)))
+        Program(StagedExecutionEngine(CollectionsStorageManager(preSortAhead = preSA, sortAhead=sA, sortOnline=sO), JITOptions(ir.OpCode.OTHER, dotty, false)))
       case _ if context.contains("JIT") =>
         val preSA = if (context.contains("S1B")) 1 else if (context.contains("S1W")) -1 else 0
         val sA = if (context.contains("S2B")) 1 else if (context.contains("S2W")) -1 else 0
@@ -60,9 +62,13 @@ abstract class DLBenchmark {
           case _ => 0
         }
         if (context.contains("Snippet"))
-          Program(StagedSnippetExecutionEngine(CollectionsStorageManager(preSortAhead = preSA, sortAhead=sA, sortOnline=sO), JITOptions(label, aot, !nonblocking, thresholdN, thresholdV)))
+          Program(StagedSnippetExecutionEngine(
+            CollectionsStorageManager(preSortAhead = preSA, sortAhead=sA, sortOnline=sO),
+            JITOptions(label, dotty, aot, !nonblocking, thresholdN, thresholdV)))
         else
-          Program(StagedExecutionEngine(CollectionsStorageManager(preSortAhead = preSA, sortAhead=sA, sortOnline=sO), JITOptions(label, aot, !nonblocking, thresholdN, thresholdV)))
+          Program(StagedExecutionEngine(
+            CollectionsStorageManager(preSortAhead = preSA, sortAhead=sA, sortOnline=sO),
+            JITOptions(label, dotty, aot, !nonblocking, thresholdN, thresholdV)))
       case _ => // WARNING: MUnit just returns null pointers everywhere if an error or assert is triggered in beforeEach
         throw new Exception(s"Unknown engine construction ${context}") // TODO: this is reported as passing
     }

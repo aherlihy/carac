@@ -14,7 +14,7 @@ import scala.concurrent.{Await, Future, blocking}
 import scala.util.{Failure, Success}
 import scala.quoted.*
 
-case class JITOptions(granularity: OpCode = OpCode.PROGRAM, aot: Boolean = true, block: Boolean = true, thresholdNum: Int = 0, thresholdVal: Float = 2) {
+case class JITOptions(granularity: OpCode = OpCode.PROGRAM, dotty: staging.Compiler = null, aot: Boolean = true, block: Boolean = true, thresholdNum: Int = 0, thresholdVal: Float = 2) {
 //  if ((granularity == OpCode.OTHER || granularity == OpCode.PROGRAM) && (!aot || !block))
 //    throw new Exception(s"Invalid JIT options: with $granularity, aot and block must be true: $aot, $block")
   private val unique = Seq(OpCode.DOWHILE, OpCode.EVAL_NAIVE, OpCode.LOOP_BODY)
@@ -31,7 +31,7 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
   private val tCtx = ASTTransformerContext(using precedenceGraph)
   val transforms: Seq[Transformer] = Seq(/*CopyEliminationPass(using tCtx), JoinIndexPass(using tCtx)*/)
   val compiler: StagedCompiler = StagedCompiler(storageManager)
-  val dedicatedDotty: staging.Compiler = staging.Compiler.make(getClass.getClassLoader)
+  val dedicatedDotty: staging.Compiler = defaultJITOptions.dotty
   var stragglers: mutable.WeakHashMap[Int, Future[CompiledFn]] = mutable.WeakHashMap.empty // should be ok since we are only removing by ref and then iterating on values only?
 
   def createIR(ast: ASTNode)(using InterpreterContext): IROp[Any] = IRTreeGenerator().generateSemiNaive(ast)
@@ -146,7 +146,7 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
   def jitRel(irTree: IROp[CollectionsStorageManager#EDB])(using jitOptions: JITOptions): CollectionsStorageManager#EDB = {
 //    println(s"IN INTERPRET REL_IR, code=${irTree.code}")
     // If async compiling, then make a new dotty for nodes for which there are multiple. TODO: pool?
-    lazy val newDotty = dedicatedDotty//if (jitOptions.block) dedicatedDotty else staging.Compiler.make(getClass.getClassLoader)
+//    lazy val newDotty = dedicatedDotty//if (jitOptions.block) dedicatedDotty else staging.Compiler.make(getClass.getClassLoader)
     irTree match {
       case op: UnionSPJOp if jitOptions.granularity == op.code => // check if aot compile is ready
         checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.children.map(o => sm => jitRel(o))))
