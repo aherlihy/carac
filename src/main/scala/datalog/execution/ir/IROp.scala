@@ -282,14 +282,12 @@ case class UnionSPJOp(rId: RelationId, hash: String, override val children: Proj
   val code: OpCode = OpCode.EVAL_RULE_BODY
   // for now not filled out bc not planning on compiling higher than this
   override def run_continuation(storageManager: CollectionsStorageManager, opFns: Seq[CompiledRelFn]): CollectionsStorageManager#EDB =
-    println("in UnionSPJ cont")
     storageManager.union(opFns.map(o => o(storageManager)))
     // this is called if the compiled version isn't ready yet
 //     TODO: start compiling for the joins here?
 //    ???
 
   override def run(storageManager: CollectionsStorageManager): CollectionsStorageManager#EDB =
-    println("in Union SPJ run")
 //    val sortedChildren = JoinIndexes.getPreSortAhead( // TODO: this isn't saved anywhere, in case this is traversed again
 //      children.toArray,
 //      a => storageManager.getKnownDerivedDB(a.rId).size,
