@@ -25,8 +25,7 @@ type CompiledRelSnippetContinuationFn = (CollectionsStorageManager, Seq[Compiled
 /**
  * Intermediate representation based on Souffle's RAM
  */
-abstract class IROp[T](val c: IROp[T]*) {
-  var children = c.toArray
+abstract class IROp[T](val children: IROp[T]*) {
   val code: OpCode
   var compiledFn: Future[CollectionsStorageManager => T] = null
 //  var blockingCompiledFn: CollectionsStorageManager => T = null
@@ -45,7 +44,7 @@ abstract class IROp[T](val c: IROp[T]*) {
     throw new Exception(s"Error: calling run on likely rel op: $code")
 }
 
-//abstract class IROp[CollectionsStorageManager#EDB](override val c:IROp[CollectionsStorageManager#EDB]*) extends IROp(c:_*) {
+//abstract class IROp[CollectionsStorageManager#EDB](override val children:IROp[CollectionsStorageManager#EDB]*) extends IROp(children:_*) {
 //  var compiledRelFn: Future[CompiledRelFn] = null
 //  var compiledRelSnippetContinuationFn: CompiledRelSnippetContinuationFn = null
 //}
@@ -53,7 +52,7 @@ abstract class IROp[T](val c: IROp[T]*) {
 /**
  * @param children: SequenceOp[SequenceOp.NaiveEval, DoWhileOp]
  */
-case class ProgramOp(override val c:IROp[Any]*) extends IROp[Any](c:_*) {
+case class ProgramOp(override val children:IROp[Any]*) extends IROp[Any](children:_*) {
   val code: OpCode = OpCode.PROGRAM
   override def run_continuation(storageManager: CollectionsStorageManager, opFns: Seq[CollectionsStorageManager => Any]): Any =
     opFns.head(storageManager)
@@ -89,7 +88,7 @@ case class ProgramOp(override val c:IROp[Any]*) extends IROp[Any](c:_*) {
  * @param toCmp: DB
  * @param children: [SequenceOp.LoopBody]
  */
-case class DoWhileOp(toCmp: DB, override val c:IROp[Any]*) extends IROp[Any](c:_*) {
+case class DoWhileOp(toCmp: DB, override val children:IROp[Any]*) extends IROp[Any](children:_*) {
   val code: OpCode = OpCode.DOWHILE
   override def run_continuation(storageManager: CollectionsStorageManager, opFns: Seq[CompiledFn]): Any =
     while ( {
@@ -118,7 +117,7 @@ case class DoWhileOp(toCmp: DB, override val c:IROp[Any]*) extends IROp[Any](c:_
  * @param code
  * @param children: [Any*]
  */
-case class SequenceOp(override val code: OpCode, override val c:IROp[Any]*) extends IROp[Any](c:_*) {
+case class SequenceOp(override val code: OpCode, override val children:IROp[Any]*) extends IROp[Any](children:_*) {
   override def run_continuation(storageManager: CollectionsStorageManager, opFns: Seq[CompiledFn]): Any =
     opFns.map(o => o(storageManager))
   override def run(storageManager: CollectionsStorageManager): Any =
@@ -141,7 +140,7 @@ case class SwapAndClearOp() extends IROp[Any] {
  * @param knowledge
  * @param children: [Scan|Union, Scan?]
  */
-case class InsertOp(rId: RelationId, db: DB, knowledge: KNOWLEDGE, override val c:IROp[Any]*) extends IROp[Any](c:_*) {
+case class InsertOp(rId: RelationId, db: DB, knowledge: KNOWLEDGE, override val children:IROp[Any]*) extends IROp[Any](children:_*) {
   val code: OpCode = OpCode.INSERT
   override def run_continuation(storageManager:  CollectionsStorageManager, opFns: Seq[CompiledFn]): Any =
     val res = opFns.head.asInstanceOf[CompiledRelFn](storageManager)
@@ -219,9 +218,9 @@ case class ScanEDBOp(rId: RelationId) extends IROp[CollectionsStorageManager#EDB
  * @param joinIdx
  * @param children: [Scan*deps]
  */
-case class ProjectJoinFilterOp(rId: RelationId, var hash: String, override val c:ScanOp*) extends IROp[CollectionsStorageManager#EDB](c:_*) {
+case class ProjectJoinFilterOp(rId: RelationId, var hash: String, override val children:ScanOp*) extends IROp[CollectionsStorageManager#EDB](children:_*) {
   val code: OpCode = OpCode.SPJ
-  var childrenSO = c.toArray
+  var childrenSO = children.toArray
 
   override def run_continuation(storageManager: CollectionsStorageManager, opFns: Seq[CompiledRelFn]): CollectionsStorageManager#EDB =
 //    val inputs = opFns.map(s => s(storageManager))
@@ -246,7 +245,7 @@ case class ProjectJoinFilterOp(rId: RelationId, var hash: String, override val c
 //    val input = sorted.map(s => s.run(storageManager))
     val inputs = children.map(s => s.run(storageManager))
     val (sorted, newHash) = JoinIndexes.getSortAhead(
-      inputs,
+      inputs.toArray,
       edb => edb.size,
       rId,
       hash,
@@ -268,7 +267,7 @@ case class ProjectJoinFilterOp(rId: RelationId, var hash: String, override val c
  * @param code
  * @param children: [Scan|UnionSPJ*rules]
  */
-case class UnionOp(override val code: OpCode, override val c:IROp[CollectionsStorageManager#EDB]*) extends IROp[CollectionsStorageManager#EDB](c:_*) {
+case class UnionOp(override val code: OpCode, override val children:IROp[CollectionsStorageManager#EDB]*) extends IROp[CollectionsStorageManager#EDB](children:_*) {
   override def run_continuation(storageManager: CollectionsStorageManager, opFns: Seq[CompiledRelFn]): CollectionsStorageManager#EDB =
     storageManager.union(opFns.map(o => o(storageManager)))
   override def run(storageManager: CollectionsStorageManager): CollectionsStorageManager#EDB =
@@ -280,8 +279,8 @@ case class UnionOp(override val code: OpCode, override val c:IROp[CollectionsSto
  * @param code
  * @param children: [Scan*atoms]
  */
-case class UnionSPJOp(rId: RelationId, var hash: String, override val c:ProjectJoinFilterOp*) extends IROp[CollectionsStorageManager#EDB](c:_*) {
-  var childrenPJ = c.toArray
+case class UnionSPJOp(rId: RelationId, var hash: String, override val children:ProjectJoinFilterOp*) extends IROp[CollectionsStorageManager#EDB](children:_*) {
+  var childrenPJ = children.toArray
   val code: OpCode = OpCode.EVAL_RULE_BODY
   // for now not filled out bc not planning on compiling higher than this
   override def run_continuation(storageManager: CollectionsStorageManager, opFns: Seq[CompiledRelFn]): CollectionsStorageManager#EDB =
@@ -303,7 +302,7 @@ case class UnionSPJOp(rId: RelationId, var hash: String, override val c:ProjectJ
 /**
  * @param children: [Union|Scan, Scan]
  */
-case class DiffOp(override val c:IROp[CollectionsStorageManager#EDB]*) extends IROp[CollectionsStorageManager#EDB](c:_*) {
+case class DiffOp(override val children:IROp[CollectionsStorageManager#EDB]*) extends IROp[CollectionsStorageManager#EDB](children:_*) {
   val code: OpCode = OpCode.DIFF
   override def run_continuation(storageManager: CollectionsStorageManager, opFns: Seq[CompiledRelFn]): CollectionsStorageManager#EDB =
     storageManager.diff(opFns(0)(storageManager), opFns(1)(storageManager))
@@ -322,7 +321,7 @@ case class DebugNode(prefix: String, dbg: () => String) extends IROp[Any] {
  * @param dbg - more to write, potentially a toString method on children.head
  * @param children - [IROp[CollectionsStorageManager#EDB]] to return
  */
-case class DebugPeek(prefix: String, dbg: () => String, override val c:IROp[CollectionsStorageManager#EDB]*) extends IROp[CollectionsStorageManager#EDB](c:_*) {
+case class DebugPeek(prefix: String, dbg: () => String, override val children:IROp[CollectionsStorageManager#EDB]*) extends IROp[CollectionsStorageManager#EDB](children:_*) {
   val code: OpCode = OpCode.DEBUG
   override def run_continuation(storageManager: CollectionsStorageManager, opFns: Seq[CompiledRelFn]): CollectionsStorageManager#EDB =
     val res = opFns.head(storageManager)

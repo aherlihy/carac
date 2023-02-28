@@ -83,7 +83,7 @@ class StagedCompiler(val storageManager: CollectionsStorageManager) {
           storageManager
         )
         FPJOp.childrenSO = sortedChildren
-        FPJOp.children = sortedChildren.asInstanceOf[Array[IROp[CollectionsStorageManager#EDB]]] // save for next run so sorting is faster
+//        FPJOp.children = sortedChildren.asInstanceOf[Array[IROp[CollectionsStorageManager#EDB]]] // save for next run so sorting is faster
         FPJOp.hash = newHash
         val compiledOps = Expr.ofSeq(sortedChildren.map(compileIRRelOp))
         '{
@@ -104,7 +104,7 @@ class StagedCompiler(val storageManager: CollectionsStorageManager) {
             storageManager
           )
         USPJOp.childrenPJ = sortedChildren
-        USPJOp.children = sortedChildren.asInstanceOf[Array[IROp[CollectionsStorageManager#EDB]]]
+//        USPJOp.children = sortedChildren.asInstanceOf[Array[IROp[CollectionsStorageManager#EDB]]]
         USPJOp.hash = newHash
 
         val compiledOps = sortedChildren.map(compileIRRelOp)
