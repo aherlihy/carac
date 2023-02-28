@@ -85,7 +85,7 @@ object JoinIndexes {
   def getSortAhead[T: ClassTag](input: Array[T], sortBy: T => Int, rId: Int, oldHash: String, sm: CollectionsStorageManager): (Array[T], String) = {
     if (sm.sortAhead != 0)
       val oldAtoms = sm.allRulesAllIndexes(rId)(oldHash).atoms
-      println(s"in getSorted: deps=${oldAtoms.drop(1).map(s => sm.ns(s.rId)).mkString("", ",", "")} current relation sizes: ${input.map(i => s"${sortBy(i)}|").mkString("", ", ", "")}")
+//      println(s"in getSorted: deps=${oldAtoms.drop(1).map(s => sm.ns(s.rId)).mkString("", ",", "")} current relation sizes: ${input.map(i => s"${sortBy(i)}|").mkString("", ", ", "")}")
       var tToAtom = input.zipWithIndex.map((t, i) => (t, oldAtoms(i + 1))).sortBy((t, _) => sortBy(t))
       if (sm.sortAhead == -1) tToAtom = tToAtom.reverse
       val newHash = JoinIndexes.getRuleHash(oldAtoms.head +: tToAtom.map(_._2))
@@ -101,7 +101,7 @@ object JoinIndexes {
   def getPreSortAhead(input: Array[ProjectJoinFilterOp], sortBy: Atom => Int, rId: Int, oldHash: String, sm: CollectionsStorageManager): (Array[ProjectJoinFilterOp], String) = {
     val originalK = sm.allRulesAllIndexes(rId)(oldHash)
     if (sm.preSortAhead != 0)
-      println(s"in compiler UNION[spj] deps=${originalK.deps.map(s => sm.ns(s)).mkString("", ",", "")} current relation sizes: ${originalK.atoms.drop(1).map(a => s"${sm.ns(a.rId)}:|${sortBy(a)}|").mkString("", ", ", "")}")
+//      println(s"in compiler UNION[spj] deps=${originalK.deps.map(s => sm.ns(s)).mkString("", ",", "")} current relation sizes: ${originalK.atoms.drop(1).map(a => s"${sm.ns(a.rId)}:|${sortBy(a)}|").mkString("", ", ", "")}")
       var newBody = originalK.atoms.drop(1).zipWithIndex.sortBy((a, _) => sortBy(a))
       if (sm.preSortAhead == -1) newBody = newBody.reverse
       val newAtoms = originalK.atoms.head +: newBody.map(_._1)
