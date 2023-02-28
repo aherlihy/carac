@@ -256,7 +256,7 @@ case class ProjectJoinFilterOp(rId: RelationId, hash: String, override val child
 //  )
 //  storageManager.joinProjectHelper_withHash(
     storageManager.joinProjectHelper_withHash(
-      sorted,
+      inputs,
       rId,
       newHash
     )
@@ -295,7 +295,7 @@ case class UnionSPJOp(rId: RelationId, hash: String, override val children: Proj
       hash,
       storageManager
     )
-    storageManager.union(sortedChildren)
+    storageManager.union(sortedChildren.map(s => s.run(storageManager)))
 }
 /**
  * @param children: [Union|Scan, Scan]
