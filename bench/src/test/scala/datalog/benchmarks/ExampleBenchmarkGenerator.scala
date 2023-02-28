@@ -84,11 +84,11 @@ abstract class BenchmarkGenerator(directory: Path,
 //      "JITStagedAOTNaiveEvalBlocking",
 //    "JITStagedAOTSemiNaiveEvalNonBlocking", "JITStagedAOTLoopBodyNonBlocking",
 //    "JITStagedSemiNaiveEvalOnline", "JITStagedLoopBodyOnline",
-    "JITStagedAsyncUnionSPJ",
-    "JITStagedUnionSPJ",
-    "JITStagedFPJ",
+//    "JITStagedAsyncUnionSPJ",
+//    "JITStagedUnionSPJ",
+//    "JITStagedFPJ",
     "JITStagedEvalRule",
-    "JITStagedAsyncEvalRule",
+    "JITStagedAsyncAOTEvalRule",
     "Interpreted"
   )
   (FPJs ++ rest).foreach(execution =>
