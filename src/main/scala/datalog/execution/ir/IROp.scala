@@ -288,14 +288,14 @@ case class UnionSPJOp(rId: RelationId, hash: String, override val children: Proj
 //    ???
 
   override def run(storageManager: CollectionsStorageManager): CollectionsStorageManager#EDB =
-//    val sortedChildren = JoinIndexes.getPreSortAhead( // TODO: this isn't saved anywhere, in case this is traversed again
-//      children.toArray,
-//      a => storageManager.getKnownDerivedDB(a.rId).size,
-//      rId,
-//      hash,
-//      storageManager
-//    )
-    storageManager.union(children.map(o => o.run(storageManager)))
+    val sortedChildren = JoinIndexes.getPreSortAhead( // TODO: this isn't saved anywhere, in case this is traversed again
+      children.toArray,
+      a => storageManager.getKnownDerivedDB(a.rId).size,
+      rId,
+      hash,
+      storageManager
+    )
+    storageManager.union(sortedChildren)
 }
 /**
  * @param children: [Union|Scan, Scan]
