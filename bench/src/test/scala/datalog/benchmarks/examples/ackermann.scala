@@ -21,9 +21,9 @@ class ackermann_benchmark() extends ExampleBenchmarkGenerator(
   @Setup
   def s(): Unit = setup() // can't add annotations to super, so just call
 
-  @Setup(Level.Invocation)
-  def s2(): Unit =
-    for i <- 0 until 200 do programs("JITStagedEvalRuleS1BS2BS3B").namedRelation(toSolve).solve()
+//  @Setup(Level.Invocation)
+//  def s2(): Unit =
+//    for i <- 0 until 200 do programs("JITStagedEvalRuleS1BS2BS3B").namedRelation(toSolve).solve()
 
 
   @TearDown(Level.Invocation)
@@ -102,6 +102,20 @@ class ackermann_benchmark() extends ExampleBenchmarkGenerator(
 
   @Benchmark def now_jit_evalRule_best_sortahead_online(blackhole: Blackhole): Unit = {
     val p = "JITStagedEvalRuleS2BS3B"
+    if (!programs.contains(p))
+      throw new Exception(f"skip test $p for current env")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  @Benchmark def now_jit_unionSPJ_best_sortahead_online(blackhole: Blackhole): Unit = {
+    val p = "JITStagedUnionSPJS2BS3B"
+    if (!programs.contains(p))
+      throw new Exception(f"skip test $p for current env")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  @Benchmark def now_jit_fpj_best_sortahead_online(blackhole: Blackhole): Unit = {
+    val p = "JITStagedFPJS2BS3B"
     if (!programs.contains(p))
       throw new Exception(f"skip test $p for current env")
     blackhole.consume(run(programs(p), result))

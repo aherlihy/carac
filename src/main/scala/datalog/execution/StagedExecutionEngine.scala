@@ -149,9 +149,11 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
 //    lazy val newDotty = dedicatedDotty//if (jitOptions.block) dedicatedDotty else staging.Compiler.make(getClass.getClassLoader)
     irTree match {
       case op: UnionSPJOp if jitOptions.granularity == op.code => // check if aot compile is ready
+        startCompileThreadRel(op, dedicatedDotty)
         checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.children.map(o => sm => jitRel(o))))
 
       case op: ProjectJoinFilterOp if jitOptions.granularity == op.code => // check if aot compile is ready
+        startCompileThreadRel(op, dedicatedDotty)
         checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.children.map(o => sm => jitRel(o))))
 //        if (!jitOptions.block && op.compiledFn == null && !jitOptions.aot)
 //          startCompileThreadRel(op, newDotty)
