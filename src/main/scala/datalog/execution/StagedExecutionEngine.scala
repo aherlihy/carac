@@ -149,35 +149,37 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
 //    lazy val newDotty = dedicatedDotty//if (jitOptions.block) dedicatedDotty else staging.Compiler.make(getClass.getClassLoader)
     irTree match {
       case op: UnionSPJOp if jitOptions.granularity == op.code => // check if aot compile is ready
-//        startCompileThreadRel(op, dedicatedDotty)
-//        checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.children.map(o => (sm: CollectionsStorageManager) => jitRel(o))))
-
-        given scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
-        op.compiledRelArray = Future {
-          given staging.Compiler = dedicatedDotty; // dedicatedDotty //staging.Compiler.make(getClass.getClassLoader) // TODO: new dotty per thread, maybe concat
-          compiler.getCompiledUnionSPJ(op)
-        }
-//        Thread.sleep(1000)
-        storageManager.union(op.children.zipWithIndex.map((c, i) =>
-          op.compiledRelArray.value match {
-            case Some(Success(run)) =>
-              debug(s"Compilation succeeded: ${op.code}", () => "")
-//              stragglers.remove(op.compiledFn.hashCode()) // TODO: might not work, but jsut end up waiting for completed future
-              run(storageManager, i)
-            case Some(Failure(e)) =>
-//              stragglers.remove(op.compiledFn.hashCode())
-              throw Exception(s"Error compiling ${op.code} with: ${e.getCause}")
-            case None =>
-              if (jitOptions.block)
-                debug(s"${op.code} compilation not ready yet, so blocking", () => "")
-                val res = Await.result(op.compiledRelArray, Duration.Inf)(storageManager, i)
-//                stragglers.remove(op.compiledFn.hashCode())
-                res
-              else
-                debug(s"${op.code} subsection compilation not ready yet, so defaulting", () => "")
-                c.run(storageManager)
+        if (!jitOptions.aot) {
+          startCompileThreadRel(op, dedicatedDotty)
+          checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.children.map(o => (sm: CollectionsStorageManager) => jitRel(o))))
+        } else {
+          given scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
+          op.compiledRelArray = Future {
+            given staging.Compiler = dedicatedDotty; // dedicatedDotty //staging.Compiler.make(getClass.getClassLoader) // TODO: new dotty per thread, maybe concat
+            compiler.getCompiledUnionSPJ(op)
           }
-        ))
+          //        Thread.sleep(1000)
+          storageManager.union(op.children.zipWithIndex.map((c, i) =>
+            op.compiledRelArray.value match {
+              case Some(Success(run)) =>
+                debug(s"Compilation succeeded: ${op.code}", () => "")
+                //              stragglers.remove(op.compiledFn.hashCode()) // TODO: might not work, but jsut end up waiting for completed future
+                run(storageManager, i)
+              case Some(Failure(e)) =>
+                //              stragglers.remove(op.compiledFn.hashCode())
+                throw Exception(s"Error compiling ${op.code} with: ${e.getCause}")
+              case None =>
+                if (jitOptions.block)
+                  debug(s"${op.code} compilation not ready yet, so blocking", () => "")
+                  val res = Await.result(op.compiledRelArray, Duration.Inf)(storageManager, i)
+                  //                stragglers.remove(op.compiledFn.hashCode())
+                  res
+                else
+                  debug(s"${op.code} subsection compilation not ready yet, so defaulting", () => "")
+                  c.run(storageManager)
+            }
+          ))
+        }
 
       case op: ProjectJoinFilterOp if jitOptions.granularity == op.code => // check if aot compile is ready
         startCompileThreadRel(op, dedicatedDotty)
@@ -205,36 +207,38 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
 //            startCompileThreadRel(op, newDotty)
 //        checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.children.map(o => (sm: CollectionsStorageManager) => jitRel(o))))
       case op: UnionOp if jitOptions.granularity == op.code =>
-//        startCompileThreadRel(op, dedicatedDotty)
-//        checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.children.map(o => (sm: CollectionsStorageManager) => jitRel(o))))
-//
-        given scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
+        if (!jitOptions.aot) {
+          startCompileThreadRel(op, dedicatedDotty)
+          checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.children.map(o => (sm: CollectionsStorageManager) => jitRel(o))))
+        } else {
+          given scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
 
-        op.compiledRelArray = Future {
-          given staging.Compiler = dedicatedDotty; // dedicatedDotty //staging.Compiler.make(getClass.getClassLoader) // TODO: new dotty per thread, maybe concat
-          compiler.getCompiledEvalRule(op)
-        }
-//                Thread.sleep(1000)
-        storageManager.union(op.children.zipWithIndex.map((c, i) =>
-          op.compiledRelArray.value match {
-            case Some(Success(run)) =>
-              debug(s"Compilation succeeded: ${op.code}", () => "")
-              //              stragglers.remove(op.compiledFn.hashCode()) // TODO: might not work, but jsut end up waiting for completed future
-              run(storageManager, i)
-            case Some(Failure(e)) =>
-              //              stragglers.remove(op.compiledFn.hashCode())
-              throw Exception(s"Error compiling ${op.code} with: ${e.getCause}")
-            case None =>
-              if (jitOptions.block)
-                debug(s"${op.code} compilation not ready yet, so blocking", () => "")
-                val res = Await.result(op.compiledRelArray, Duration.Inf)(storageManager, i)
-                //                stragglers.remove(op.compiledFn.hashCode())
-                res
-              else
-                debug(s"${op.code} subsection compilation not ready yet, so defaulting", () => "")
-                c.run(storageManager)
+          op.compiledRelArray = Future {
+            given staging.Compiler = dedicatedDotty; // dedicatedDotty //staging.Compiler.make(getClass.getClassLoader) // TODO: new dotty per thread, maybe concat
+            compiler.getCompiledEvalRule(op)
           }
-        ))
+          //                Thread.sleep(1000)
+          storageManager.union(op.children.zipWithIndex.map((c, i) =>
+            op.compiledRelArray.value match {
+              case Some(Success(run)) =>
+                debug(s"Compilation succeeded: ${op.code}", () => "")
+                //              stragglers.remove(op.compiledFn.hashCode()) // TODO: might not work, but jsut end up waiting for completed future
+                run(storageManager, i)
+              case Some(Failure(e)) =>
+                //              stragglers.remove(op.compiledFn.hashCode())
+                throw Exception(s"Error compiling ${op.code} with: ${e.getCause}")
+              case None =>
+                if (jitOptions.block)
+                  debug(s"${op.code} compilation not ready yet, so blocking", () => "")
+                  val res = Await.result(op.compiledRelArray, Duration.Inf)(storageManager, i)
+                  //                stragglers.remove(op.compiledFn.hashCode())
+                  res
+                else
+                  debug(s"${op.code} subsection compilation not ready yet, so defaulting", () => "")
+                  c.run(storageManager)
+            }
+          ))
+        }
 
       case op: ScanOp =>
         op.run(storageManager)

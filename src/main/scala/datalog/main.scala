@@ -607,11 +607,11 @@ def scratch(program: Program) =
 //    isEqual(program3a)
 //    println("\n\n_______________________\n\n")
 //
-    val jo = JITOptions(ir.OpCode.EVAL_RULE_SN, dotty, aot = false, block = false)
+    val jo = JITOptions(ir.OpCode.EVAL_RULE_SN, dotty, aot = false, block = true)
     println("JIT")
     given engine3: ExecutionEngine = new StagedExecutionEngine(new CollectionsStorageManager(preSortAhead = 1, sortAhead = 1, sortOnline = 1), jo)
     val program3 = Program(engine3)
-    multiJoin(program3)
+    func(program3)
     println("\n\n_______________________\n\n")
 
 //  println("JIT Snippet")
