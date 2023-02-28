@@ -14,7 +14,7 @@ import scala.concurrent.{Await, Future, blocking}
 import scala.util.{Failure, Success}
 import scala.quoted.*
 
-case class JITOptions(granularity: OpCode = OpCode.PROGRAM, dotty: staging.Compiler = null, aot: Boolean = true, block: Boolean = true, thresholdNum: Int = 0, thresholdVal: Float = 2) {
+case class JITOptions(granularity: OpCode = OpCode.PROGRAM, dotty: staging.Compiler = staging.Compiler.make(getClass.getClassLoader), aot: Boolean = true, block: Boolean = true, thresholdNum: Int = 0, thresholdVal: Float = 2) {
 //  if ((granularity == OpCode.OTHER || granularity == OpCode.PROGRAM) && (!aot || !block))
 //    throw new Exception(s"Invalid JIT options: with $granularity, aot and block must be true: $aot, $block")
   private val unique = Seq(OpCode.DOWHILE, OpCode.EVAL_NAIVE, OpCode.LOOP_BODY)

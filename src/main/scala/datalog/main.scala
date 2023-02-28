@@ -180,9 +180,9 @@ def isEqual(program: Program): Unit = {
 
 
   equal("0", "0", "1") :- ()
-  equal(m, n, r) :- ( succ(pm, m) , succ(pn, n), equal(pm, pn, r) )
+  equal(m, n, r) :- (succ(pm, m), succ(pn, n), equal(pm, pn, r))
 
-  isEqual(r) :- equal("5", "5", r)
+  isEqual(r) :- equal("5", "7", r)
 
   succ("0", "1") :- ()
   succ("1", "2") :- ()
@@ -204,6 +204,7 @@ def isEqual(program: Program): Unit = {
   succ("17", "18") :- ()
   succ("18", "19") :- ()
   succ("19", "20") :- ()
+
   val res = isEqual.solve()
 
   println(s"RES LEN=${res.size}; res=$res")
@@ -590,27 +591,27 @@ def scratch(program: Program) =
 //  func(program0)
 //  println("\n\n_______________________\n\n")
 
-//    var sort = 1
-//    println(s"OLD SN: $sort")
-//    given engine1: ExecutionEngine = new SemiNaiveExecutionEngine(new CollectionsStorageManager())
-//    val program1 = Program(engine1)
-//    ackermann(program1)
-//    println("\n\n_______________________\n\n")
+  val dotty = staging.Compiler.make(getClass.getClassLoader)
+  var sort = 1
+    println(s"OLD SN: $sort")
+    given engine1: ExecutionEngine = new SemiNaiveExecutionEngine(new CollectionsStorageManager())
+    val program1 = Program(engine1)
+    func(program1)
+    println("\n\n_______________________\n\n")
 
-//    val jo2 = JITOptions(ir.OpCode.OTHER, aot = false, block = true)
-//    println("INTERP")
-//    given engine3a: ExecutionEngine = new StagedExecutionEngine(new CollectionsStorageManager(sortAhead = 1), jo2)
-//
-//    val program3a = Program(engine3a)
-//    ackermann(program3a)
-//    println("\n\n_______________________\n\n")
+    val jo2 = JITOptions(ir.OpCode.OTHER, dotty, aot = false, block = true)
+    println("INTERP")
+    given engine3a: ExecutionEngine = new StagedExecutionEngine(new CollectionsStorageManager(sortAhead = 1), jo2)
 
-    val dotty = staging.Compiler.make(getClass.getClassLoader)
-    val jo = JITOptions(ir.OpCode.SPJ, aot = false, block = true, dotty = dotty)
+    val program3a = Program(engine3a)
+    func(program3a)
+    println("\n\n_______________________\n\n")
+
+    val jo = JITOptions(ir.OpCode.SPJ, dotty, aot = false, block = true)
     println("JIT")
-    given engine3: ExecutionEngine = new StagedExecutionEngine(new CollectionsStorageManager(sortAhead = 0, preSortAhead = 0, sortOnline = 0), jo)
+    given engine3: ExecutionEngine = new StagedExecutionEngine(new CollectionsStorageManager(sortAhead = 0, preSortAhead = 1, sortOnline = 1), jo)
     val program3 = Program(engine3)
-    ackermann(program3)
+    func(program3)
     println("\n\n_______________________\n\n")
 
 //  println("JIT Snippet")

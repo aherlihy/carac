@@ -95,7 +95,7 @@ object JoinIndexes {
       (input, oldHash)
   }
 
-  def getPreSortAhead(input: Array[ProjectJoinFilterOp], sortBy: Atom => Int, rId: Int, oldHash: String, sm: CollectionsStorageManager): Array[ProjectJoinFilterOp] = {
+  def getPreSortAhead(input: Array[ProjectJoinFilterOp], sortBy: Atom => Int, rId: Int, oldHash: String, sm: CollectionsStorageManager): (Array[ProjectJoinFilterOp], String) = {
     val originalK = sm.allRulesAllIndexes(rId)(oldHash)
     if (sm.preSortAhead != 0)
 //      debug(s"in compiler UNION[spj] deps=${originalK.deps.map(s => sm.ns(s)).mkString("", ",", "")} current relation sizes:", () => s"${originalK.atoms.drop(1).map(a => s"${sm.ns(a.rId)}:|${sortBy(a)}|").mkString("", ", ", "")}")
@@ -103,9 +103,9 @@ object JoinIndexes {
       if (sm.preSortAhead == -1) newBody = newBody.reverse
       val newAtoms = originalK.atoms.head +: newBody.map(_._1)
       val newHash = JoinIndexes.getRuleHash(newAtoms)
-      input.map(c => ProjectJoinFilterOp(rId, newHash, newBody.map((_, oldP) => c.childrenSO(oldP)): _*))
+      (input.map(c => ProjectJoinFilterOp(rId, newHash, newBody.map((_, oldP) => c.childrenSO(oldP)): _*)), newHash)
     else
-      input
+      (input, oldHash)
   }
   def allOrders(rule: Array[Atom]): AllIndexes = {
     mutable.Map[String, JoinIndexes](rule.drop(1).permutations.map(r =>
