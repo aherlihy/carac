@@ -255,7 +255,6 @@ case class ProjectJoinFilterOp(rId: RelationId, var hash: String, override val c
 //    input,
 //    newK
 //  )
-//  storageManager.joinProjectHelper_withHash(
     storageManager.joinProjectHelper_withHash(
       sorted,
       rId,
@@ -280,7 +279,6 @@ case class UnionOp(override val code: OpCode, override val children:IROp[Collect
  * @param children: [Scan*atoms]
  */
 case class UnionSPJOp(rId: RelationId, var hash: String, override val children:ProjectJoinFilterOp*) extends IROp[CollectionsStorageManager#EDB](children:_*) {
-  var childrenPJ = children.toArray
   val code: OpCode = OpCode.EVAL_RULE_BODY
   // for now not filled out bc not planning on compiling higher than this
   override def run_continuation(storageManager: CollectionsStorageManager, opFns: Seq[CompiledRelFn]): CollectionsStorageManager#EDB =
@@ -291,7 +289,7 @@ case class UnionSPJOp(rId: RelationId, var hash: String, override val children:P
 
   override def run(storageManager: CollectionsStorageManager): CollectionsStorageManager#EDB =
     val (sortedChildren, _) = JoinIndexes.getPreSortAhead( // TODO: this isn't saved anywhere, in case this is traversed again
-      childrenPJ,
+      children.toArray,
       a => storageManager.getKnownDerivedDB(a.rId).size,
       rId,
       hash,

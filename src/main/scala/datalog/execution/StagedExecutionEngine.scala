@@ -154,7 +154,7 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
 
       case op: ProjectJoinFilterOp if jitOptions.granularity == op.code => // check if aot compile is ready
         startCompileThreadRel(op, dedicatedDotty)
-        checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.children.map(o => (sm: CollectionsStorageManager) => jitRel(o))))
+        checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.childrenSO.map(o => (sm: CollectionsStorageManager) => jitRel(o))))
 //        if (!jitOptions.block && op.compiledFn == null && !jitOptions.aot)
 //          startCompileThreadRel(op, newDotty)
 //        else if (jitOptions.block && op.blockingCompiledFn == null && !jitOptions.aot)

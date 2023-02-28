@@ -274,7 +274,7 @@ def cliquer(program: Program): Unit = {
 
   reachable("e", "f") :- ()
 
-  println("reachable=" + reachable.solve())
+  println("reachable=" + same_clique.solve().size)
 }
 
 def input_output(program: Program): Unit = {
@@ -596,22 +596,22 @@ def scratch(program: Program) =
     println(s"OLD SN: $sort")
     given engine1: ExecutionEngine = new SemiNaiveExecutionEngine(new CollectionsStorageManager())
     val program1 = Program(engine1)
-    func(program1)
+    cliquer(program1)
     println("\n\n_______________________\n\n")
 
     val jo2 = JITOptions(ir.OpCode.OTHER, dotty, aot = false, block = true)
     println("INTERP")
-    given engine3a: ExecutionEngine = new StagedExecutionEngine(new CollectionsStorageManager(sortAhead = 1), jo2)
+    given engine3a: ExecutionEngine = new StagedExecutionEngine(new CollectionsStorageManager(preSortAhead = 1, sortAhead = 1, sortOnline = 0), jo2)
 
     val program3a = Program(engine3a)
-    func(program3a)
+    cliquer(program3a)
     println("\n\n_______________________\n\n")
 
-    val jo = JITOptions(ir.OpCode.SPJ, dotty, aot = false, block = true)
+    val jo = JITOptions(ir.OpCode.EVAL_RULE_SN, dotty, aot = false, block = true)
     println("JIT")
-    given engine3: ExecutionEngine = new StagedExecutionEngine(new CollectionsStorageManager(sortAhead = 0, preSortAhead = 1, sortOnline = 1), jo)
+    given engine3: ExecutionEngine = new StagedExecutionEngine(new CollectionsStorageManager(preSortAhead = 1, sortAhead = 1, sortOnline = 1), jo)
     val program3 = Program(engine3)
-    func(program3)
+    cliquer(program3)
     println("\n\n_______________________\n\n")
 
 //  println("JIT Snippet")

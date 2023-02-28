@@ -95,17 +95,13 @@ class StagedCompiler(val storageManager: CollectionsStorageManager) {
         }
 
       case UnionSPJOp(rId, hash, children:_*) =>
-        val USPJOp = irTree.asInstanceOf[UnionSPJOp]
         val (sortedChildren, newHash) = JoinIndexes.getPreSortAhead(
-            USPJOp.childrenPJ,
+            children.toArray,
             a => storageManager.getKnownDerivedDB(a.rId).size,
             rId,
             hash,
             storageManager
           )
-        USPJOp.childrenPJ = sortedChildren
-//        USPJOp.children = sortedChildren.asInstanceOf[Array[IROp[CollectionsStorageManager#EDB]]]
-        USPJOp.hash = newHash
 
         val compiledOps = sortedChildren.map(compileIRRelOp)
         '{ $stagedSM.union(${Expr.ofSeq(compiledOps)}) }
