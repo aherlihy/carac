@@ -85,10 +85,13 @@ object JoinIndexes {
   def getSortAhead[T: ClassTag](input: Array[T], sortBy: T => Int, rId: Int, oldHash: String, sm: CollectionsStorageManager): (Array[T], String) = {
     if (sm.sortAhead != 0)
       val oldAtoms = sm.allRulesAllIndexes(rId)(oldHash).atoms
-      println(s"in getSorted: deps=${oldAtoms.map(s => sm.ns(s.rId)).mkString("", ",", "")} current relation sizes: ${input.map(i => s"${sortBy(i)}|").mkString("", ", ", "")}")
+//      println(s"in getSorted: deps=${oldAtoms.drop(1).map(s => sm.ns(s.rId)).mkString("", ",", "")} current relation sizes: ${input.map(i => s"${sortBy(i)}|").mkString("", ", ", "")}")
       var tToAtom = input.zipWithIndex.map((t, i) => (t, oldAtoms(i + 1))).sortBy((t, _) => sortBy(t))
       if (sm.sortAhead == -1) tToAtom = tToAtom.reverse
       val newHash = JoinIndexes.getRuleHash(oldAtoms.head +: tToAtom.map(_._2))
+//      if (!(tToAtom.map(_._2.rId) sameElements oldAtoms.drop(1).map(_.rId)))
+//        println("!!!!NOT THE SAME!")
+
       val sortedT = tToAtom.map(_._1)
       (sortedT, newHash)
     else

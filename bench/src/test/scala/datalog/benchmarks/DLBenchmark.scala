@@ -40,7 +40,7 @@ abstract class DLBenchmark {
         val sA = if (context.contains("S2B")) 1 else if (context.contains("S2W")) -1 else 0
         val sO = if (context.contains("S3B")) 1 else if (context.contains("S3W")) -1 else 0
         val aot = context.contains("AOT")
-        val nonblocking = context.contains("async")
+        val nonblocking = context.contains("Async")
         val label =
           if (context.contains("NaiveEval")) ir.OpCode.EVAL_NAIVE
           else if (context.contains("SemiNaiveEval")) ir.OpCode.EVAL_SN

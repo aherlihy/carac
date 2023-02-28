@@ -118,10 +118,15 @@ case class DoWhileOp(toCmp: DB, override val children:IROp[Any]*) extends IROp[A
  * @param children: [Any*]
  */
 case class SequenceOp(override val code: OpCode, override val children:IROp[Any]*) extends IROp[Any](children:_*) {
+  if (code == OpCode.EVAL_SN) println(s"${children.size}")
   override def run_continuation(storageManager: CollectionsStorageManager, opFns: Seq[CompiledFn]): Any =
     opFns.map(o => o(storageManager))
   override def run(storageManager: CollectionsStorageManager): Any =
     children.map(o => o.run(storageManager))
+//  def getBody(): UnionSPJOp =
+//    if (code != OpCode.EVAL_SN)
+//      throw new Exception("getBody only for EvalSN")
+//    children.children.head.children.head.children.head.children.head
 }
 
 case class SwapAndClearOp() extends IROp[Any] {
@@ -267,6 +272,7 @@ case class ProjectJoinFilterOp(rId: RelationId, var hash: String, override val c
  * @param children: [Scan|UnionSPJ*rules]
  */
 case class UnionOp(override val code: OpCode, override val children:IROp[CollectionsStorageManager#EDB]*) extends IROp[CollectionsStorageManager#EDB](children:_*) {
+  var compiledRelArray: Future[(CollectionsStorageManager, Int) => CollectionsStorageManager#EDB] = null
   override def run_continuation(storageManager: CollectionsStorageManager, opFns: Seq[CompiledRelFn]): CollectionsStorageManager#EDB =
     storageManager.union(opFns.map(o => o(storageManager)))
   override def run(storageManager: CollectionsStorageManager): CollectionsStorageManager#EDB =
@@ -280,6 +286,7 @@ case class UnionOp(override val code: OpCode, override val children:IROp[Collect
  */
 case class UnionSPJOp(rId: RelationId, var hash: String, override val children:ProjectJoinFilterOp*) extends IROp[CollectionsStorageManager#EDB](children:_*) {
   val code: OpCode = OpCode.EVAL_RULE_BODY
+  var compiledRelArray: Future[(CollectionsStorageManager, Int) => CollectionsStorageManager#EDB] = null
   // for now not filled out bc not planning on compiling higher than this
   override def run_continuation(storageManager: CollectionsStorageManager, opFns: Seq[CompiledRelFn]): CollectionsStorageManager#EDB =
     storageManager.union(opFns.map(o => o(storageManager)))

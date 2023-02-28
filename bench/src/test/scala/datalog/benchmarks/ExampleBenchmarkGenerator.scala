@@ -84,7 +84,7 @@ abstract class BenchmarkGenerator(directory: Path,
 //      "JITStagedAOTNaiveEvalBlocking",
 //    "JITStagedAOTSemiNaiveEvalNonBlocking", "JITStagedAOTLoopBodyNonBlocking",
 //    "JITStagedSemiNaiveEvalOnline", "JITStagedLoopBodyOnline",
-    "JITStagedUnionSPJ",
+    "JITStagedUnionSPJAsync",
     "JITStagedFPJ",
     "JITStagedEvalRule",
     "Interpreted"
