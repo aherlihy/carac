@@ -158,23 +158,23 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
           startCompileThreadRel(op, newDotty)
         else if (jitOptions.block && op.blockingCompiledFn == null && !jitOptions.aot)
           startCompileThreadRel(op, newDotty)
-        else
-          debug("", () => s"TV: ${jitOptions.thresholdVal}; TN: ${jitOptions.thresholdNum}::${op.children.sliding(2).map {
-              case Seq(x, y, _*) =>
-                val l = x.run(storageManager).size
-                val r = y.run(storageManager).size
-                if (l != 0  && r != 0) l.toFloat / r else 0
-              case _ => 0
-          }.mkString("(", ", ", ")")}")
-          val recompile = op.children.sliding(2).map{
-            case Seq(x, y, _*) =>
-              val l = x.run(storageManager).size
-              val r = y.run(storageManager).size
-              l != 0 && r != 0 && l.toFloat / r > jitOptions.thresholdVal
-            case _ => false
-          }.count(b => b) > jitOptions.thresholdNum
-          if (recompile)
-            startCompileThreadRel(op, newDotty)
+//        else
+//          debug("", () => s"TV: ${jitOptions.thresholdVal}; TN: ${jitOptions.thresholdNum}::${op.children.sliding(2).map {
+//              case Seq(x, y, _*) =>
+//                val l = x.run(storageManager).size
+//                val r = y.run(storageManager).size
+//                if (l != 0  && r != 0) l.toFloat / r else 0
+//              case _ => 0
+//          }.mkString("(", ", ", ")")}")
+//          val recompile = op.children.sliding(2).map{
+//            case Seq(x, y, _*) =>
+//              val l = x.run(storageManager).size
+//              val r = y.run(storageManager).size
+//              l != 0 && r != 0 && l.toFloat / r > jitOptions.thresholdVal
+//            case _ => false
+//          }.count(b => b) > jitOptions.thresholdNum
+//          if (recompile)
+//            startCompileThreadRel(op, newDotty)
         checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.children.map(o => sm => jitRel(o))))
 
       case op: DiffOp if jitOptions.granularity == op.code =>
@@ -330,6 +330,7 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
 
   override def solve(rId: Int, jitOptions: JITOptions = defaultJITOptions): Set[Seq[Term]] = {
     given JITOptions = jitOptions
+//    println(s"sort opts=${storageManager.preSortAhead}, ${storageManager.sortAhead}, ${storageManager.sortOnline}")
     debug("", () => s"solve $rId with options $jitOptions")
     // verify setup
     storageManager.verifyEDBs(precedenceGraph.idbs)

@@ -84,6 +84,7 @@ abstract class BenchmarkGenerator(directory: Path,
 //    "JITStagedAOTSemiNaiveEvalNonBlocking", "JITStagedAOTLoopBodyNonBlocking",
 //    "JITStagedSemiNaiveEvalOnline", "JITStagedLoopBodyOnline",
     "JITStagedUnionSPJ",
+    "JITStagedFPJ",
     "Interpreted"
   )
   (FPJs ++ rest).foreach(execution =>
@@ -94,6 +95,10 @@ abstract class BenchmarkGenerator(directory: Path,
       "S1WS2W",
       "S1BS2BS3B",
       "S1WS2WS3W",
+      "S2B",
+      "S2W",
+      "S2BS3B",
+      "S2WS3W"
       //      "CollectionsFoldView", "CollectionsFoldNoView",
 //      "CollectionsReduceView", "CollectionsReduceNoView",
 //      "CollectionsBestUnsorted", "CollectionsWorstUnsorted",

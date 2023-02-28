@@ -222,6 +222,7 @@ case class ProjectJoinFilterOp(rId: RelationId, hash: String, override val child
   val code: OpCode = OpCode.SPJ
 
   override def run_continuation(storageManager: CollectionsStorageManager, opFns: Seq[CompiledRelFn]): CollectionsStorageManager#EDB =
+    println("in cont")
     val inputs = opFns.map(s => s(storageManager))
     val (sorted, newHash) = JoinIndexes.getSortAhead(
       inputs.toArray,
@@ -236,6 +237,12 @@ case class ProjectJoinFilterOp(rId: RelationId, hash: String, override val child
       newHash
     )
   override def run(storageManager: CollectionsStorageManager): CollectionsStorageManager#EDB =
+//    val k = storageManager.allRulesAllIndexes(rId)(hash)
+//    var tToAtom = children.zipWithIndex.map((t, i) => (t, k.atoms(i + 1))).sortBy((t, _) => t.run(storageManager).size)
+//    if (storageManager.sortAhead == -1) tToAtom = tToAtom.reverse
+//    val newK = JoinIndexes((k.atoms.head +: tToAtom.map(_._2)).toArray)
+//    val sorted = tToAtom.map(_._1)
+//    val input = sorted.map(s => s.run(storageManager))
     val inputs = children.map(s => s.run(storageManager))
     val (sorted, newHash) = JoinIndexes.getSortAhead(
       inputs.toArray,
@@ -244,6 +251,11 @@ case class ProjectJoinFilterOp(rId: RelationId, hash: String, override val child
       hash,
       storageManager
     )
+//  storageManager.joinProjectHelper(
+//    input,
+//    newK
+//  )
+//  storageManager.joinProjectHelper_withHash(
     storageManager.joinProjectHelper_withHash(
       sorted,
       rId,
