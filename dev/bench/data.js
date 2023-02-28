@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1677599595559,
+  "lastUpdate": 1677601220340,
   "repoUrl": "https://github.com/aherlihy/carac",
   "entries": {
     "Benchmark": [
@@ -2344,6 +2344,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "datalog.benchmarks.Bench_ci.seminaive_relational",
             "value": 1.6348767688998183,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "herlihyap@gmail.com",
+            "name": "aherlihy",
+            "username": "aherlihy"
+          },
+          "committer": {
+            "email": "herlihyap@gmail.com",
+            "name": "aherlihy",
+            "username": "aherlihy"
+          },
+          "distinct": true,
+          "id": "4197b0cbbd7268f3e297532441f1b75f9ee202bb",
+          "message": "store ordered children in IROp",
+          "timestamp": "2023-02-28T17:13:33+01:00",
+          "tree_id": "e6d321968be7b514026c8d99e943337c63f14e7e",
+          "url": "https://github.com/aherlihy/carac/commit/4197b0cbbd7268f3e297532441f1b75f9ee202bb"
+        },
+        "date": 1677601219285,
+        "tool": "jmh",
+        "benches": [
+          {
+            "name": "datalog.benchmarks.Bench_ci.naive_collections",
+            "value": 4.732008821094631,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.Bench_ci.naive_relational",
+            "value": 4.787729939686557,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.Bench_ci.naive_staged_compiled",
+            "value": 5.988351005061266,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.Bench_ci.seminaive_collections",
+            "value": 4.725195770685195,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.Bench_ci.seminaive_relational",
+            "value": 1.9513940759658606,
             "unit": "s/op",
             "extra": "iterations: 5\nforks: 1\nthreads: 1"
           }
