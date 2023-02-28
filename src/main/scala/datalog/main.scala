@@ -597,20 +597,20 @@ def scratch(program: Program) =
 //    ackermann(program1)
 //    println("\n\n_______________________\n\n")
 
-    val jo2 = JITOptions(ir.OpCode.OTHER, aot = false, block = true)
-    println("INTERP")
-    given engine3a: ExecutionEngine = new StagedExecutionEngine(new CollectionsStorageManager(sortAhead = 1), jo2)
-
-    val program3a = Program(engine3a)
-    ackermann(program3a)
-    println("\n\n_______________________\n\n")
-
-//    val jo = JITOptions(ir.OpCode.SPJ, aot = false, block = true)
-//    println("COMPILED")
-//    given engine3: ExecutionEngine = new StagedExecutionEngine(new CollectionsStorageManager(sortAhead = 1), jo)
-//    val program3 = Program(engine3)
-//    ackermann(program3)
+//    val jo2 = JITOptions(ir.OpCode.OTHER, aot = false, block = true)
+//    println("INTERP")
+//    given engine3a: ExecutionEngine = new StagedExecutionEngine(new CollectionsStorageManager(sortAhead = 1), jo2)
+//
+//    val program3a = Program(engine3a)
+//    ackermann(program3a)
 //    println("\n\n_______________________\n\n")
+
+    val jo = JITOptions(ir.OpCode.EVAL_RULE_SN, aot = false, block = true)
+    println("JIT")
+    given engine3: ExecutionEngine = new StagedExecutionEngine(new CollectionsStorageManager(sortAhead = 0, preSortAhead = 0, sortOnline = 0), jo)
+    val program3 = Program(engine3)
+    ackermann(program3)
+    println("\n\n_______________________\n\n")
 
 //  println("JIT Snippet")
 //  val engine4: ExecutionEngine = new StagedSnippetExecutionEngine(new CollectionsStorageManager(), jo)

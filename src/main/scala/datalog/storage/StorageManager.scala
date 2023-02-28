@@ -37,6 +37,7 @@ enum KNOWLEDGE:
 trait StorageManager(val ns: NS) {
   /* A bit repetitive to have these types also defined in dsl but good to separate
    * user-facing API class with internal storage */
+  var iteration = 0
   type StorageVariable
   type StorageConstant
   case class StorageAtom(rId: RelationId, terms: Array[StorageTerm]) {

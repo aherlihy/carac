@@ -144,20 +144,19 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
   }
 
   def jitRel(irTree: IROp[CollectionsStorageManager#EDB])(using jitOptions: JITOptions): CollectionsStorageManager#EDB = {
-    //    println(s"IN INTERPRET REL_IR, code=${irTree.code}")
+//    println(s"IN INTERPRET REL_IR, code=${irTree.code}")
     // If async compiling, then make a new dotty for nodes for which there are multiple. TODO: pool?
     lazy val newDotty = dedicatedDotty//if (jitOptions.block) dedicatedDotty else staging.Compiler.make(getClass.getClassLoader)
     irTree match {
-      case op: UnionOp if jitOptions.granularity == op.code =>
-        if (op.compiledFn == null && !jitOptions.aot)
-          startCompileThreadRel(op, newDotty)
+      case op: UnionSPJOp if jitOptions.granularity == op.code => // check if aot compile is ready
         checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.children.map(o => sm => jitRel(o))))
 
-      case op: ProjectJoinFilterOp if jitOptions.granularity == op.code =>
-        if (!jitOptions.block && op.compiledFn == null && !jitOptions.aot)
-          startCompileThreadRel(op, newDotty)
-        else if (jitOptions.block && op.blockingCompiledFn == null && !jitOptions.aot)
-          startCompileThreadRel(op, newDotty)
+      case op: ProjectJoinFilterOp if jitOptions.granularity == op.code => // check if aot compile is ready
+        checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.children.map(o => sm => jitRel(o))))
+//        if (!jitOptions.block && op.compiledFn == null && !jitOptions.aot)
+//          startCompileThreadRel(op, newDotty)
+//        else if (jitOptions.block && op.blockingCompiledFn == null && !jitOptions.aot)
+//          startCompileThreadRel(op, newDotty)
 //        else
 //          debug("", () => s"TV: ${jitOptions.thresholdVal}; TN: ${jitOptions.thresholdNum}::${op.children.sliding(2).map {
 //              case Seq(x, y, _*) =>
@@ -175,17 +174,9 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
 //          }.count(b => b) > jitOptions.thresholdNum
 //          if (recompile)
 //            startCompileThreadRel(op, newDotty)
-        checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.children.map(o => sm => jitRel(o))))
-
-      case op: DiffOp if jitOptions.granularity == op.code =>
-        if (op.compiledFn == null && !jitOptions.aot)
-          startCompileThreadRel(op, dedicatedDotty)
-        checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.children.map(o => sm => jitRel(o))))
-
-      case op: UnionSPJOp if jitOptions.granularity == op.code =>
-        // TODO: if data has changed, then regenerate compiled code
-        if (op.compiledFn == null && !jitOptions.aot)
-          startCompileThreadRel(op, newDotty)
+//        checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.children.map(o => sm => jitRel(o))))
+      case op: UnionOp if jitOptions.granularity == op.code =>
+        startCompileThreadRel(op, dedicatedDotty)
         checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.children.map(o => sm => jitRel(o))))
 
       case op: ScanOp =>
@@ -213,93 +204,61 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
   }
 
   inline def checkResult[T](value: Future[CollectionsStorageManager => T], op: IROp[T], default: () => T)(using jitOptions: JITOptions): T =
-    if (jitOptions.block)
-      op.blockingCompiledFn(storageManager)
-    else
-      value.value match {
-        case Some(Success(run)) =>
-          debug(s"Compilation succeeded: ${op.code}", () => "")
-          stragglers.remove(op.compiledFn.hashCode()) // TODO: might not work, but jsut end up waiting for completed future
-          run(storageManager)
-        case Some(Failure(e)) =>
+    value.value match {
+      case Some(Success(run)) =>
+        debug(s"Compilation succeeded: ${op.code}", () => "")
+        stragglers.remove(op.compiledFn.hashCode()) // TODO: might not work, but jsut end up waiting for completed future
+        run(storageManager)
+      case Some(Failure(e)) =>
+        stragglers.remove(op.compiledFn.hashCode())
+        throw Exception(s"Error compiling ${op.code} with: ${e.getCause}")
+      case None =>
+        if (jitOptions.block)
+          debug(s"${op.code} compilation not ready yet, so blocking", () => "")
+          val res = Await.result(op.compiledFn, Duration.Inf)(storageManager)
           stragglers.remove(op.compiledFn.hashCode())
-          throw Exception(s"Error compiling ${op.code} with: ${e.getCause}")
-        case None =>
-          if (jitOptions.block) // TODO: clean this up
-            debug(s"${op.code} compilation not ready yet, so blocking", () => "")
-            val res = Await.result(op.compiledFn, Duration.Inf)(storageManager)
-            stragglers.remove(op.compiledFn.hashCode())
-            res
-          else
-            debug(s"${op.code} compilation not ready yet, so defaulting", () => "")
-            default()
-      }
+          res
+        else
+          debug(s"${op.code} compilation not ready yet, so defaulting", () => "")
+          default()
+    }
   inline def startCompileThread(op: IROp[Any], dotty: staging.Compiler)(using jitOptions: JITOptions): Unit =
     debug(s"starting online compilation for code ${op.code}", () => "")
-    if (jitOptions.block)
-      given staging.Compiler = dotty
-      op.blockingCompiledFn = compiler.getCompiled(op)
-    else
-      given scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
-      op.compiledFn = Future {
-        given staging.Compiler = dotty; // dedicatedDotty //staging.Compiler.make(getClass.getClassLoader) // TODO: new dotty per thread, maybe concat
-        compiler.getCompiled(op)
-      }
-      stragglers.addOne(op.compiledFn.hashCode(), op.compiledFn)
+//    if (jitOptions.block)
+//      given staging.Compiler = dotty
+//      op.blockingCompiledFn = compiler.getCompiled(op)
+//    else
+    given scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
+    op.compiledFn = Future {
+      given staging.Compiler = dotty; // dedicatedDotty //staging.Compiler.make(getClass.getClassLoader) // TODO: new dotty per thread, maybe concat
+      compiler.getCompiled(op)
+    }
+    stragglers.addOne(op.compiledFn.hashCode(), op.compiledFn)
 
   inline def startCompileThreadRel(op: IROp[CollectionsStorageManager#EDB], dotty: staging.Compiler)(using jitOptions: JITOptions): Unit =
-    debug(s"starting online compilation for code ${op.code}", () => "")
-    if (jitOptions.block)
-      given staging.Compiler = dotty
-      op.blockingCompiledFn = compiler.getCompiledRel(op)
-    else
-      given scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
-      op.compiledFn = Future {
-        given staging.Compiler = dotty; // dedicatedDotty //staging.Compiler.make(getClass.getClassLoader) // TODO: new dotty per thread, maybe concat
-        compiler.getCompiledRel(op)
-      }
-      stragglers.addOne(op.compiledFn.hashCode(), op.compiledFn)
+//    if (jitOptions.block)
+//      given staging.Compiler = dotty
+//      op.blockingCompiledFn = compiler.getCompiledRel(op)
+//    else
+    given scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
+    op.compiledFn = Future {
+      given staging.Compiler = dotty; // dedicatedDotty //staging.Compiler.make(getClass.getClassLoader) // TODO: new dotty per thread, maybe concat
+      compiler.getCompiledRel(op)
+    }
+    stragglers.addOne(op.compiledFn.hashCode(), op.compiledFn)
 
 
   def jit(irTree: IROp[Any])(using jitOptions: JITOptions): Any = {
-//    debug("", () => s"IN STAGED JIT IR, code=${irTree.code}, gran=${jitOptions.granularity}")
+    debug("", () => s"IN STAGED JIT IR, code=${irTree.code}, gran=${jitOptions.granularity}")
     irTree match {
       case op: ProgramOp =>
-        if (jitOptions.aot)
-          debug("", () => s"ahead-of-time compiling")
-          startCompileThread(op.getSubTree(jitOptions.granularity), dedicatedDotty)
-        // test if need to compile, if so:
-        if (op.compiledFn == null) // don't bother online async compile since only entered once
-          if (jitOptions.block && jitOptions.granularity == op.code)
-            startCompileThread(op, dedicatedDotty)
-            checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.children.map(o => sm => jit(o))))
-          else
-            op.run_continuation(storageManager, Seq(sm => jit(op.children.head)))
-        else
-          checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.children.map(o => sm => jit(o))))
-
-      case op: DoWhileOp if jitOptions.granularity == op.code =>
-        if (op.compiledFn == null && jitOptions.block)
-          startCompileThread(op, dedicatedDotty)
-          checkResult(op.compiledFn, op, () => op.run_continuation(storageManager,op.children.map(o => sm => jit(o))))
-        else
-          op.run_continuation(storageManager, Seq(sm => jit(op.children.head)))
+        op.run_continuation(storageManager, Seq(sm => jit(op.children.head)))
 
       case op: DoWhileOp =>
-        // test if need to compile, if so:
-        if (op.compiledFn == null) // don't bother online compile since only entered once
-          op.run_continuation(storageManager, Seq(sm => jit(op.children.head)))
-        else
-          checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.children.map(o => sm => jit(o))))
+       op.run_continuation(storageManager, op.children.map(o => sm => jit(o)))
 
       case op: SequenceOp =>
-        op.code match
-          case OpCode.EVAL_SN | OpCode.EVAL_NAIVE | OpCode.LOOP_BODY if jitOptions.granularity == op.code =>
-            if (op.compiledFn == null && !jitOptions.aot) // need to start compilation
-              startCompileThread(op, dedicatedDotty)
-            checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.children.map(o => sm => jit(o))))
-          case _ =>
-            op.run_continuation(storageManager, op.children.map(o => sm => jit(o)))
+        op.run_continuation(storageManager, op.children.map(o => sm => jit(o)))
 
       case op: SwapAndClearOp =>
         op.run(storageManager)
@@ -330,7 +289,7 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
 
   override def solve(rId: Int, jitOptions: JITOptions = defaultJITOptions): Set[Seq[Term]] = {
     given JITOptions = jitOptions
-//    println(s"sort opts=${storageManager.preSortAhead}, ${storageManager.sortAhead}, ${storageManager.sortOnline}")
+//    println(s"sort opts=${storageManager.preSortAhead}, ${storageManager.sortAhead}, ${storageManager.sortOnline} & gran=${jitOptions.granularity}")
     debug("", () => s"solve $rId with options $jitOptions")
     // verify setup
     storageManager.verifyEDBs(precedenceGraph.idbs)

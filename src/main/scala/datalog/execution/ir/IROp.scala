@@ -28,7 +28,7 @@ type CompiledRelSnippetContinuationFn = (CollectionsStorageManager, Seq[Compiled
 abstract class IROp[T](val children: IROp[T]*) {
   val code: OpCode
   var compiledFn: Future[CollectionsStorageManager => T] = null
-  var blockingCompiledFn: CollectionsStorageManager => T = null
+//  var blockingCompiledFn: CollectionsStorageManager => T = null
   var compiledSnippetContinuationFn: (CollectionsStorageManager, Seq[CollectionsStorageManager => T]) => T = null
 
   /**
@@ -222,19 +222,18 @@ case class ProjectJoinFilterOp(rId: RelationId, hash: String, override val child
   val code: OpCode = OpCode.SPJ
 
   override def run_continuation(storageManager: CollectionsStorageManager, opFns: Seq[CompiledRelFn]): CollectionsStorageManager#EDB =
-    println("in cont")
-    val inputs = opFns.map(s => s(storageManager))
-    val (sorted, newHash) = JoinIndexes.getSortAhead(
-      inputs.toArray,
-      edb => edb.size,
-      rId,
-      hash,
-      storageManager
-    )
+//    val inputs = opFns.map(s => s(storageManager))
+//    val (sorted, newHash) = JoinIndexes.getSortAhead(
+//      inputs.toArray,
+//      edb => edb.size,
+//      rId,
+//      hash,
+//      storageManager
+//    )
     storageManager.joinProjectHelper_withHash(
-      sorted,
+      opFns.map(o => o(storageManager)),
       rId,
-      newHash
+      hash
     )
   override def run(storageManager: CollectionsStorageManager): CollectionsStorageManager#EDB =
 //    val k = storageManager.allRulesAllIndexes(rId)(hash)
@@ -283,20 +282,22 @@ case class UnionSPJOp(rId: RelationId, hash: String, override val children: Proj
   val code: OpCode = OpCode.EVAL_RULE_BODY
   // for now not filled out bc not planning on compiling higher than this
   override def run_continuation(storageManager: CollectionsStorageManager, opFns: Seq[CompiledRelFn]): CollectionsStorageManager#EDB =
+    println("in UnionSPJ cont")
     storageManager.union(opFns.map(o => o(storageManager)))
     // this is called if the compiled version isn't ready yet
 //     TODO: start compiling for the joins here?
 //    ???
 
   override def run(storageManager: CollectionsStorageManager): CollectionsStorageManager#EDB =
-    val sortedChildren = JoinIndexes.getPreSortAhead( // TODO: this isn't saved anywhere, in case this is traversed again
-      children.toArray,
-      a => storageManager.getKnownDerivedDB(a.rId).size,
-      rId,
-      hash,
-      storageManager
-    )
-    storageManager.union(sortedChildren.map(o => o.run(storageManager)))
+    println("in Union SPJ run")
+//    val sortedChildren = JoinIndexes.getPreSortAhead( // TODO: this isn't saved anywhere, in case this is traversed again
+//      children.toArray,
+//      a => storageManager.getKnownDerivedDB(a.rId).size,
+//      rId,
+//      hash,
+//      storageManager
+//    )
+    storageManager.union(children.map(o => o.run(storageManager)))
 }
 /**
  * @param children: [Union|Scan, Scan]

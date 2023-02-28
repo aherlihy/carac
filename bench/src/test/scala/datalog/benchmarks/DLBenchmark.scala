@@ -46,6 +46,7 @@ abstract class DLBenchmark {
           else if (context.contains("Loop")) ir.OpCode.DOWHILE
           else if (context.contains("Program")) ir.OpCode.PROGRAM
           else if (context.contains("FPJ")) ir.OpCode.SPJ
+          else if (context.contains("EvalRule")) ir.OpCode.EVAL_RULE_SN
           else if (context.contains("UnionSPJ")) ir.OpCode.EVAL_RULE_BODY
           else throw new Exception(s"Unknown type of JIT staged $context")
         val threshVR = "TV([0-9]*)".r

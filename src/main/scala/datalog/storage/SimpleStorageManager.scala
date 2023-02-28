@@ -48,6 +48,7 @@ abstract class SimpleStorageManager(override val ns: NS) extends StorageManager(
    */
   def initEvaluation(): Unit = {
     // TODO: for now reinit with each solve(), don't keep around previous discovered facts. Future work -> incremental
+    iteration = 0
     dbId = 0
     knownDbId = dbId
     derivedDB.addOne(dbId, FactDatabase())
@@ -90,7 +91,7 @@ abstract class SimpleStorageManager(override val ns: NS) extends StorageManager(
     debug("Final IDB Result[known]: ", () => s"@$knownDbId")
     getKnownDerivedDB(rId).map(s => s.toSeq).toSet
   def getNewIDBResult(rId: RelationId): Set[Seq[Term]] =
-    debug("Final IDB Result[new]: ", () => s"@$newDbId")
+    debug(s"Final IDB Result[new]", () => s" at iteration $iteration: @$newDbId")
     getNewDerivedDB(rId).map(s => s.toSeq).toSet
   def getEDBResult(rId: RelationId): Set[Seq[Term]] = edbs.getOrElse(rId, EDB()).map(s => s.toSeq).toSet
 
@@ -106,6 +107,7 @@ abstract class SimpleStorageManager(override val ns: NS) extends StorageManager(
     derivedDB(newDbId).foreach((i, e) => e.clear())
 
   def swapKnowledge(): Unit = {
+    iteration += 1
     val t = knownDbId
     knownDbId = newDbId
     newDbId = t
