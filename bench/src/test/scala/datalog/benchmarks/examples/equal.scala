@@ -336,4 +336,117 @@ class equal_benchmark() extends ExampleBenchmarkGenerator("equal") with equal {
       throw new Exception(f"skip test $p for current env")
     blackhole.consume(run(programs(p), result))
   }
+
+  @Benchmark def now_interpreted(blackhole: Blackhole): Unit = {
+    val p = "InterpretedCollections"
+    if (!programs.contains(p))
+      throw new Exception(f"skip test $p for current env")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  @Benchmark def now_interpreted_best_sortahead(blackhole: Blackhole): Unit = {
+    val p = "InterpretedS2B"
+    if (!programs.contains(p))
+      throw new Exception(f"skip test $p for current env")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  @Benchmark def now_interpreted_worst_sortahead(blackhole: Blackhole): Unit = {
+    val p = "InterpretedS2W"
+    if (!programs.contains(p))
+      throw new Exception(f"skip test $p for current env")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  @Benchmark def now_interpreted_best_sortahead_online(blackhole: Blackhole): Unit = {
+    val p = "InterpretedS2BS3B"
+    if (!programs.contains(p))
+      throw new Exception(f"skip test $p for current env")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  @Benchmark def now_interpreted_worst_sortahead_online(blackhole: Blackhole): Unit = {
+    val p = "InterpretedS2WS3W"
+    if (!programs.contains(p))
+      throw new Exception(f"skip test $p for current env")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  @Benchmark def now_interpreted_best_presort_sortahead_online(blackhole: Blackhole): Unit = {
+    val p = "InterpretedS1BS2BS3B"
+    if (!programs.contains(p))
+      throw new Exception(f"skip test $p for current env")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  @Benchmark def now_interpreted_worst_presort_sortahead_online(blackhole: Blackhole): Unit = {
+    val p = "InterpretedS1WS2WS3W"
+    if (!programs.contains(p))
+      throw new Exception(f"skip test $p for current env")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  // JIT
+  @Benchmark def now_jit_evalRule(blackhole: Blackhole): Unit = {
+    val p = "JITStagedEvalRuleCollections"
+    if (!programs.contains(p))
+      throw new Exception(f"skip test $p for current env")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  @Benchmark def now_jit_evalRule_best_sortahead(blackhole: Blackhole): Unit = {
+    val p = "JITStagedEvalRuleS2B"
+    if (!programs.contains(p))
+      throw new Exception(f"skip test $p for current env")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  @Benchmark def now_jit_evalRule_worst_sortahead(blackhole: Blackhole): Unit = {
+    val p = "JITStagedEvalRuleS2W"
+    if (!programs.contains(p))
+      throw new Exception(f"skip test $p for current env")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  @Benchmark def now_jit_evalRule_best_sortahead_online(blackhole: Blackhole): Unit = {
+    val p = "JITStagedEvalRuleS2BS3B"
+    if (!programs.contains(p))
+      throw new Exception(f"skip test $p for current env")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  @Benchmark def now_jit_unionSPJ_best_sortahead_online(blackhole: Blackhole): Unit = {
+    val p = "JITStagedUnionSPJS2BS3B"
+    if (!programs.contains(p))
+      throw new Exception(f"skip test $p for current env")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  @Benchmark def now_jit_fpj_best_sortahead_online(blackhole: Blackhole): Unit = {
+    val p = "JITStagedFPJS2BS3B"
+    if (!programs.contains(p))
+      throw new Exception(f"skip test $p for current env")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  @Benchmark def now_jit_evalRule_worst_sortahead_online(blackhole: Blackhole): Unit = {
+    val p = "JITStagedEvalRuleS2WS3W"
+    if (!programs.contains(p))
+      throw new Exception(f"skip test $p for current env")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  @Benchmark def now_jit_evalRule_best_presort_sortahead_online(blackhole: Blackhole): Unit = {
+    val p = "JITStagedEvalRuleS1BS2BS3B"
+    if (!programs.contains(p))
+      throw new Exception(f"skip test $p for current env")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  @Benchmark def now_jit_evalRule_worst_presort_sortahead_online(blackhole: Blackhole): Unit = {
+    val p = "JITStagedEvalRuleS1WS2WS3W"
+    if (!programs.contains(p))
+      throw new Exception(f"skip test $p for current env")
+    blackhole.consume(run(programs(p), result))
+  }
 }
