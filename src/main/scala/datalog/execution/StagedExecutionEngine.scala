@@ -214,7 +214,7 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
           given staging.Compiler = dedicatedDotty; // dedicatedDotty //staging.Compiler.make(getClass.getClassLoader) // TODO: new dotty per thread, maybe concat
           compiler.getCompiledEvalRule(op)
         }
-        //        Thread.sleep(1000)
+//                Thread.sleep(1000)
         storageManager.union(op.children.zipWithIndex.map((c, i) =>
           op.compiledRelArray.value match {
             case Some(Success(run)) =>
@@ -306,7 +306,7 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
 
 
   def jit(irTree: IROp[Any])(using jitOptions: JITOptions): Any = {
-    debug("", () => s"IN STAGED JIT IR, code=${irTree.code}, gran=${jitOptions.granularity}")
+//    debug("", () => s"IN STAGED JIT IR, code=${irTree.code}, gran=${jitOptions.granularity}")
     irTree match {
       case op: ProgramOp =>
         op.run_continuation(storageManager, Seq(sm => jit(op.children.head)))
