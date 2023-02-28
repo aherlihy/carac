@@ -101,7 +101,7 @@ object JoinIndexes {
   def getPreSortAhead(input: Array[ProjectJoinFilterOp], sortBy: Atom => Int, rId: Int, oldHash: String, sm: CollectionsStorageManager): (Array[ProjectJoinFilterOp], String) = {
     val originalK = sm.allRulesAllIndexes(rId)(oldHash)
     if (sm.preSortAhead != 0)
-//      debug(s"in compiler UNION[spj] deps=${originalK.deps.map(s => sm.ns(s)).mkString("", ",", "")} current relation sizes:", () => s"${originalK.atoms.drop(1).map(a => s"${sm.ns(a.rId)}:|${sortBy(a)}|").mkString("", ", ", "")}")
+//      println(s"in compiler UNION[spj] deps=${originalK.deps.map(s => sm.ns(s)).mkString("", ",", "")} current relation sizes: ${originalK.atoms.drop(1).map(a => s"${sm.ns(a.rId)}:|${sortBy(a)}|").mkString("", ", ", "")}")
       var newBody = originalK.atoms.drop(1).zipWithIndex.sortBy((a, _) => sortBy(a))
       if (sm.preSortAhead == -1) newBody = newBody.reverse
       val newAtoms = originalK.atoms.head +: newBody.map(_._1)

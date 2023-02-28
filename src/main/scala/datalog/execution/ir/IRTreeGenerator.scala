@@ -88,15 +88,18 @@ class IRTreeGenerator(using val ctx: InterpreterContext) {
             hash,
             k.deps.map(d => {
               var found = false
+              var scan: ScanOp = null
+              val derived = k.deps.zipWithIndex.flatMap((r, i) => {
+                if (r == d && !found && i > idx)
+                  found = true
+                  idx = i
+                  scan = ScanOp(r, DB.Delta, KNOWLEDGE.Known)
+                  None
+                else
+                  Some(ScanOp(r, DB.Derived, KNOWLEDGE.Known))
+              })
               ProjectJoinFilterOp(atoms.head.rId, hash,
-                k.deps.zipWithIndex.map((r, i) => {
-                  if (r == d && !found && i > idx)
-                    found = true
-                    idx = i
-                    ScanOp(r, DB.Delta, KNOWLEDGE.Known)
-                  else
-                    ScanOp(r, DB.Derived, KNOWLEDGE.Known)
-                }):_*
+                (scan +: derived):_*
               )
             }):_*
           )

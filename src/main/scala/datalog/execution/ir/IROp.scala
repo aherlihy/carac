@@ -241,29 +241,30 @@ case class ProjectJoinFilterOp(rId: RelationId, var hash: String, override val c
       hash
     )
   override def run(storageManager: CollectionsStorageManager): CollectionsStorageManager#EDB =
-//    val k = storageManager.allRulesAllIndexes(rId)(hash)
-//    var tToAtom = children.zipWithIndex.map((t, i) => (t, k.atoms(i + 1))).sortBy((t, _) => t.run(storageManager).size)
-//    if (storageManager.sortAhead == -1) tToAtom = tToAtom.reverse
-//    val newK = JoinIndexes((k.atoms.head +: tToAtom.map(_._2)).toArray)
-//    val sorted = tToAtom.map(_._1)
-//    val input = sorted.map(s => s.run(storageManager))
-    val inputs = children.map(s => s.run(storageManager))
-    val (sorted, newHash) = JoinIndexes.getSortAhead(
-      inputs.toArray,
-      edb => edb.size,
-      rId,
-      hash,
-      storageManager
+    val k = storageManager.allRulesAllIndexes(rId)(hash)
+    var tToAtom = children.zipWithIndex.map((t, i) => (t, k.atoms(i + 1))).sortBy((t, _) => t.run(storageManager).size)
+    if (storageManager.sortAhead == -1) tToAtom = tToAtom.reverse
+    val newK = JoinIndexes((k.atoms.head +: tToAtom.map(_._2)).toArray)
+    val sorted = tToAtom.map(_._1)
+    val input = sorted.map(s => s.run(storageManager))
+    storageManager.joinProjectHelper(
+      input,
+      newK
     )
-//  storageManager.joinProjectHelper(
-//    input,
-//    newK
+
+//  val inputs = children.map(s => s.run(storageManager))
+//  val (sorted, newHash) = JoinIndexes.getSortAhead(
+//    inputs.toArray,
+//    edb => edb.size,
+//    rId,
+//    hash,
+//    storageManager
 //  )
-    storageManager.joinProjectHelper_withHash(
-      sorted,
-      rId,
-      newHash
-    )
+//  storageManager.joinProjectHelper_withHash(
+//      sorted,
+//      rId,
+//      newHash
+//    )
 }
 
 /**
@@ -294,14 +295,15 @@ case class UnionSPJOp(rId: RelationId, var hash: String, override val children:P
 //    ???
 
   override def run(storageManager: CollectionsStorageManager): CollectionsStorageManager#EDB =
-    val (sortedChildren, _) = JoinIndexes.getPreSortAhead( // TODO: this isn't saved anywhere, in case this is traversed again
-      children.toArray,
-      a => storageManager.getKnownDerivedDB(a.rId).size,
-      rId,
-      hash,
-      storageManager
-    )
-    storageManager.union(sortedChildren.map((s: ProjectJoinFilterOp) => s.run(storageManager)))
+//    val (sortedChildren, _) = JoinIndexes.getPreSortAhead( // TODO: this isn't saved anywhere, in case this is traversed again
+//      children.toArray,
+//      a => storageManager.getKnownDerivedDB(a.rId).size,
+//      rId,
+//      hash,
+//      storageManager
+//    )
+//    storageManager.union(sortedChildren.map((s: ProjectJoinFilterOp) => s.run(storageManager)))
+    storageManager.union(children.map(c => c.run(storageManager)))
 }
 /**
  * @param children: [Union|Scan, Scan]
