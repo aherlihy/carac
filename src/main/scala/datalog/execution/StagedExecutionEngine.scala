@@ -215,7 +215,7 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
           println("starting compile")
           given scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
           op.compiledRelArray = Future {
-            given staging.Compiler = dedicatedDotty; //staging.Compiler.make(getClass.getClassLoader) // TODO: new dotty per thread, maybe concat
+            given staging.Compiler = staging.Compiler.make(getClass.getClassLoader) // TODO: new dotty per thread, maybe concat
             compiler.getCompiledEvalRule(op)
           }
           //                Thread.sleep(1000)
