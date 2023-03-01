@@ -184,18 +184,15 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
       case op: ProjectJoinFilterOp if jitOptions.granularity == op.code => // check if aot compile is ready
         startCompileThreadRel(op, dedicatedDotty)
         checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.childrenSO.map(o => (sm: CollectionsStorageManager) => jitRel(o))))
-//        if (!jitOptions.block && op.compiledFn == null && !jitOptions.aot)
-//          startCompileThreadRel(op, newDotty)
-//        else if (jitOptions.block && op.blockingCompiledFn == null && !jitOptions.aot)
-//          startCompileThreadRel(op, newDotty)
-//        else
-//          debug("", () => s"TV: ${jitOptions.thresholdVal}; TN: ${jitOptions.thresholdNum}::${op.children.sliding(2).map {
+
+      case op: UnionOp if jitOptions.granularity == op.code =>
+//          println(s"TV: ${jitOptions.thresholdVal}; TN: ${jitOptions.thresholdNum}::${op.children.sliding(2).map {
 //              case Seq(x, y, _*) =>
 //                val l = x.run(storageManager).size
 //                val r = y.run(storageManager).size
-//                if (l != 0  && r != 0) l.toFloat / r else 0
-//              case _ => 0
-//          }.mkString("(", ", ", ")")}")
+//                if (l != 0  && r != 0) l.toFloat / r else -1
+//              case _ => -1
+//          }.filter(f => f < 0).mkString("(", ", ", ")")}")
 //          val recompile = op.children.sliding(2).map{
 //            case Seq(x, y, _*) =>
 //              val l = x.run(storageManager).size
@@ -203,18 +200,22 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
 //              l != 0 && r != 0 && l.toFloat / r > jitOptions.thresholdVal
 //            case _ => false
 //          }.count(b => b) > jitOptions.thresholdNum
-//          if (recompile)
-//            startCompileThreadRel(op, newDotty)
-//        checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.children.map(o => (sm: CollectionsStorageManager) => jitRel(o))))
-      case op: UnionOp if jitOptions.granularity == op.code =>
+//                  if (recompile)
+//                    startCompileThreadRel(op, newDotty)
+//                checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.children.map(o => (sm: CollectionsStorageManager) => jitRel(o))))
+
+//        if (!jitOptions.aot && op.compiledFn != null && storageManager.deltaDB(storageManager.knownDbId).values.map(_.size).exists(_ > jitOptions.thresholdNum)) {
+//          op.compiledFn(storageManager)
+//        } else if (jitOptions.aot && op.compiledRelArray != null && storageManager.deltaDB(storageManager.knownDbId).values.map(_.size).exists(_ > jitOptions.thresholdNum)) {
+//          op.compiledRelArray(storageManager)
         if (!jitOptions.aot) {
           startCompileThreadRel(op, dedicatedDotty)
           checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.children.map(o => (sm: CollectionsStorageManager) => jitRel(o))))
         } else {
+          println("starting compile")
           given scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
-
           op.compiledRelArray = Future {
-            given staging.Compiler = dedicatedDotty; // dedicatedDotty //staging.Compiler.make(getClass.getClassLoader) // TODO: new dotty per thread, maybe concat
+            given staging.Compiler = dedicatedDotty; //staging.Compiler.make(getClass.getClassLoader) // TODO: new dotty per thread, maybe concat
             compiler.getCompiledEvalRule(op)
           }
           //                Thread.sleep(1000)
@@ -318,8 +319,13 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
       case op: DoWhileOp =>
        op.run_continuation(storageManager, op.children.map(o => (sm: CollectionsStorageManager) => jit(o)))
 
+      case op: SequenceOp if irTree.code == OpCode.EVAL_SN =>
+        // TODO: inspect delta known and recompile conditionally only if the deltas have changed enough
+        op.run_continuation(storageManager, op.children.map(o => (sm: CollectionsStorageManager) => jit(o)))
+
       case op: SequenceOp =>
         op.run_continuation(storageManager, op.children.map(o => (sm: CollectionsStorageManager) => jit(o)))
+
 
       case op: SwapAndClearOp =>
         op.run(storageManager)

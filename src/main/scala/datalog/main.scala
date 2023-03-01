@@ -592,11 +592,11 @@ def scratch(program: Program) =
 //  println("\n\n_______________________\n\n")
 
   val dotty = staging.Compiler.make(getClass.getClassLoader)
-//  var sort = 1
+  var sort = 1
 //    println(s"OLD SN: $sort")
 //    given engine1: ExecutionEngine = new SemiNaiveExecutionEngine(new CollectionsStorageManager())
 //    val program1 = Program(engine1)
-//    isEqual(program1)
+//    func(program1)
 //    println("\n\n_______________________\n\n")
 
 //    val jo2 = JITOptions(ir.OpCode.OTHER, dotty, aot = false, block = true)
@@ -607,11 +607,11 @@ def scratch(program: Program) =
 //    isEqual(program3a)
 //    println("\n\n_______________________\n\n")
 //
-    val jo = JITOptions(ir.OpCode.EVAL_RULE_SN, dotty, aot = false, block = true)
+    val jo = JITOptions(ir.OpCode.EVAL_RULE_SN, dotty, aot = true, block = false)
     println("JIT")
     given engine3: ExecutionEngine = new StagedExecutionEngine(new CollectionsStorageManager(preSortAhead = 1, sortAhead = 1, sortOnline = 1), jo)
     val program3 = Program(engine3)
-    func(program3)
+    ackermann(program3)
     println("\n\n_______________________\n\n")
 
 //  println("JIT Snippet")
