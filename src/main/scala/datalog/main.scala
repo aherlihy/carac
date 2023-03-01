@@ -609,7 +609,7 @@ def scratch(program: Program) =
 //
     val jo = JITOptions(ir.OpCode.EVAL_RULE_SN, dotty, aot = false, block = true)
     println("JIT")
-    given engine3: ExecutionEngine = new StagedExecutionEngine(new CollectionsStorageManager(preSortAhead = 1, sortAhead = 1, sortOnline = 1), jo)
+    given engine3: ExecutionEngine = new StagedExecutionEngine(new CollectionsStorageManager(preSortAhead = 0, sortAhead = 0, sortOnline = 0), jo)
     val program3 = Program(engine3)
     ackermann(program3)
     println("\n\n_______________________\n\n")

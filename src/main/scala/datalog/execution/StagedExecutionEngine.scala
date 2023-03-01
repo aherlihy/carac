@@ -22,7 +22,7 @@ case class JITOptions(granularity: OpCode = OpCode.PROGRAM, dotty: staging.Compi
     throw new Exception(s"Cannot online, async compile singleton IR nodes: $granularity (theres no point)")
 }
 
-class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defaultJITOptions: JITOptions = JITOptions()) extends ExecutionEngine {
+class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defaultJITOptions: JITOptions) extends ExecutionEngine {
   import storageManager.EDB
   val precedenceGraph = new PrecedenceGraph(using storageManager.ns)
   val prebuiltOpKeys: mutable.Map[Int, mutable.ArrayBuffer[JoinIndexes]] = mutable.Map[Int, mutable.ArrayBuffer[JoinIndexes]]() // TODO: currently unused, mb remove from EE
@@ -357,10 +357,10 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
     stragglers.clear()
   }
 
-  override def solve(rId: Int, jitOptions: JITOptions = defaultJITOptions): Set[Seq[Term]] = {
-    given JITOptions = jitOptions
-//    println(s"sort opts=${storageManager.preSortAhead}, ${storageManager.sortAhead}, ${storageManager.sortOnline} & gran=${jitOptions.granularity}")
-    debug("", () => s"solve $rId with options $jitOptions")
+  override def solve(rId: Int): Set[Seq[Term]] = {
+    given JITOptions = defaultJITOptions
+//    println(s"sort opts=${storageManager.preSortAhead}, ${storageManager.sortAhead}, ${storageManager.sortOnline} & gran=${defaultJITOptions.granularity}")
+    debug("", () => s"solve $rId with options $defaultJITOptions")
     // verify setup
     storageManager.verifyEDBs(precedenceGraph.idbs)
     if (storageManager.edbs.contains(rId) && !precedenceGraph.idbs.contains(rId)) { // if just an edb predicate then return
@@ -391,9 +391,9 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
     val irTree = createIR(transformedAST)
 
     debug("IRTree: ", () => storageManager.printer.printIR(irTree))
-    if (jitOptions.granularity == OpCode.OTHER) // i.e. never compile
+    if (defaultJITOptions.granularity == OpCode.OTHER) // i.e. never compile
       solveInterpreted(irTree, irCtx)
-    else if (jitOptions.granularity == OpCode.PROGRAM && jitOptions.aot && jitOptions.block) // i.e. compile asap
+    else if (defaultJITOptions.granularity == OpCode.PROGRAM && defaultJITOptions.aot && defaultJITOptions.block) // i.e. compile asap
       solveCompiled(irTree, irCtx)
     else
       solveJIT(irTree, irCtx)

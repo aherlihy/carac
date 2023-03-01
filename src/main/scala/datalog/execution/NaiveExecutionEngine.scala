@@ -67,7 +67,7 @@ class NaiveExecutionEngine(val storageManager: StorageManager) extends Execution
     })
   }
 
-  def solve(toSolve: RelationId, JITOptions: JITOptions = JITOptions()): Set[Seq[Term]] = {
+  def solve(toSolve: RelationId): Set[Seq[Term]] = {
     storageManager.verifyEDBs(idbs.keys.to(mutable.Set))
     if (storageManager.edbs.contains(toSolve) && !idbs.contains(toSolve)) { // if just an edb predicate then return
       return storageManager.getEDBResult(toSolve)

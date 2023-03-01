@@ -1,7 +1,7 @@
 package test
 
 import datalog.dsl.{Constant, Program, Term}
-import datalog.execution.{JoinIndexes, StagedExecutionEngine, StagedCompiler}
+import datalog.execution.{JITOptions, JoinIndexes, StagedCompiler, StagedExecutionEngine}
 import datalog.execution.ast.ASTNode
 import datalog.execution.ir.*
 import datalog.storage.{CollectionsStorageManager, DB, KNOWLEDGE, StorageManager}
@@ -17,7 +17,9 @@ import scala.util.matching.Regex
  */
 class StagedCompileTest extends munit.FunSuite {
   val storageManager = new CollectionsStorageManager()
-  val engine = new StagedExecutionEngine(storageManager)
+  val dotty = staging.Compiler.make(getClass.getClassLoader)
+  val jo = JITOptions()
+  val engine = new StagedExecutionEngine(storageManager, jo)
   val program = new Program(engine)
   val edge = program.relation[Constant]("edge")
   val edb = program.relation[Constant]("edb")

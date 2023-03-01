@@ -8,6 +8,7 @@ import java.nio.file.{Files, Path, Paths}
 import scala.collection.mutable
 import scala.io.Source
 import scala.jdk.StreamConverters.*
+import scala.quoted.staging
 import scala.util.Properties
 //import scala.quoted.*
 //import scala.quoted.staging.*
@@ -21,6 +22,7 @@ abstract class ExampleTestGenerator(testname: String,
 abstract class TestGenerator(directory: Path,
                              skip: Set[String] = Set(),
                              val tags: Set[String] = Set()) extends munit.FunSuite {
+  val dotty = staging.Compiler.make(getClass.getClassLoader)
   def pretest(program: Program): Unit
   val mTags = tags.map(t => new munit.Tag(t))
   val toSolve: String
@@ -100,7 +102,7 @@ abstract class TestGenerator(directory: Path,
           case "InterpretedStagedCollections" =>
             Program(StagedExecutionEngine(CollectionsStorageManager(), JITOptions(granularity = ir.OpCode.OTHER)))
           case "CompiledStagedCollections" =>
-            Program(StagedExecutionEngine(CollectionsStorageManager())) // default is compiled
+            Program(StagedExecutionEngine(CollectionsStorageManager(), JITOptions(granularity = ir.OpCode.PROGRAM, dotty = dotty, aot = false, block = true, thresholdNum = 0, thresholdVal = 0))) // default is compiled
           case "JITStagedB3Collections" =>
             Program(StagedExecutionEngine(CollectionsStorageManager(preSortAhead = 1, sortAhead = 1, sortOnline = 1), JITOptions(ir.OpCode.EVAL_RULE_BODY, aot = false, block = false)))
           case "JITStagedB2Collections" =>

@@ -43,7 +43,7 @@ class SemiNaiveExecutionEngine(override val storageManager: StorageManager) exte
     })
   }
 
-  override def solve(rId: RelationId, JITOptions: JITOptions = JITOptions()): Set[Seq[Term]] = {
+  override def solve(rId: RelationId): Set[Seq[Term]] = {
     storageManager.verifyEDBs(idbs.keys.to(mutable.Set))
     if (storageManager.edbs.contains(rId) && !idbs.contains(rId)) { // if just an edb predicate then return
       return storageManager.getEDBResult(rId)

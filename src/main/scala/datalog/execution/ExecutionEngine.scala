@@ -15,7 +15,7 @@ trait ExecutionEngine {
   def insertIDB(rId: RelationId, rule: Seq[Atom]): Unit
   def insertEDB(body: Atom): Unit
 
-  def solve(rId: RelationId, jitOptions: JITOptions = JITOptions()): Set[Seq[Term]]
+  def solve(rId: RelationId): Set[Seq[Term]]
   def get(rId: RelationId): Set[Seq[Term]]
   def get(name: String): Set[Seq[Term]]
 

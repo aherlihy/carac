@@ -6,13 +6,14 @@ import datalog.storage.{CollectionsStorageManager, RelationalStorageManager}
 import test.graphs.*
 
 class NaiveStagedCompiledTransitiveClosure extends munit.FunSuite {
+  val jo = JITOptions()
   List(
-    Acyclic(new Program(new NaiveStagedExecutionEngine(new CollectionsStorageManager()))),
-    MultiIsolatedCycle(new Program(new NaiveStagedExecutionEngine(new CollectionsStorageManager()))),
-    SingleCycle(new Program(new NaiveStagedExecutionEngine(new CollectionsStorageManager()))),
-    RecursivePath(new Program(new NaiveStagedExecutionEngine(new CollectionsStorageManager()))),
-    TopSort(new Program(new NaiveStagedExecutionEngine(new CollectionsStorageManager()))),
-    MultiJoin(new Program(new NaiveStagedExecutionEngine(new CollectionsStorageManager())))
+    Acyclic(new Program(new NaiveStagedExecutionEngine(new CollectionsStorageManager(), jo))),
+    MultiIsolatedCycle(new Program(new NaiveStagedExecutionEngine(new CollectionsStorageManager(), jo))),
+    SingleCycle(new Program(new NaiveStagedExecutionEngine(new CollectionsStorageManager(), jo))),
+    RecursivePath(new Program(new NaiveStagedExecutionEngine(new CollectionsStorageManager(), jo))),
+    TopSort(new Program(new NaiveStagedExecutionEngine(new CollectionsStorageManager(), jo))),
+    MultiJoin(new Program(new NaiveStagedExecutionEngine(new CollectionsStorageManager(), jo)))
   ).map(graph =>
     graph.queries.map((hint, query) => {
       test(graph.description + "." + query.description) {
@@ -46,13 +47,14 @@ class NaiveStagedInterpretedTransitiveClosure extends munit.FunSuite {
 }
 
 class SemiNaiveStagedCompiledTransitiveClosure extends munit.FunSuite {
+  val jo = JITOptions()
   List(
-    Acyclic(new Program(new StagedExecutionEngine(new CollectionsStorageManager()))),
-    MultiIsolatedCycle(new Program(new StagedExecutionEngine(new CollectionsStorageManager()))),
-    SingleCycle(new Program(new StagedExecutionEngine(new CollectionsStorageManager()))),
-    RecursivePath(new Program(new StagedExecutionEngine(new CollectionsStorageManager()))),
-    TopSort(new Program(new StagedExecutionEngine(new CollectionsStorageManager()))),
-    MultiJoin(new Program(new StagedExecutionEngine(new CollectionsStorageManager())))
+    Acyclic(new Program(new StagedExecutionEngine(new CollectionsStorageManager(), jo))),
+    MultiIsolatedCycle(new Program(new StagedExecutionEngine(new CollectionsStorageManager(), jo))),
+    SingleCycle(new Program(new StagedExecutionEngine(new CollectionsStorageManager(), jo))),
+    RecursivePath(new Program(new StagedExecutionEngine(new CollectionsStorageManager(), jo))),
+    TopSort(new Program(new StagedExecutionEngine(new CollectionsStorageManager(), jo))),
+    MultiJoin(new Program(new StagedExecutionEngine(new CollectionsStorageManager(), jo)))
   ).map(graph =>
     graph.queries.map((hint, query) => {
       test(graph.description + "." + query.description) {

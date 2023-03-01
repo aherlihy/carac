@@ -29,7 +29,7 @@ abstract class DLBenchmark {
       case "NaiveCollections" =>                  Program(NaiveExecutionEngine(       CollectionsStorageManager()))
       case "NaiveCompiledStagedCollections" =>    Program(NaiveStagedExecutionEngine( CollectionsStorageManager() ))
       case "NaiveInterpretedStagedCollections" => Program(NaiveStagedExecutionEngine( CollectionsStorageManager(),  JITOptions(ir.OpCode.OTHER, dotty)))
-      case "CompiledStagedCollections" =>         Program(StagedExecutionEngine(      CollectionsStorageManager()))
+      case "CompiledStagedCollections" =>         Program(StagedExecutionEngine(      CollectionsStorageManager(), JITOptions(dotty = dotty)))
       case _ if context.contains("Interpreted") =>
         val preSA = if (context.contains("S1B")) 1 else if (context.contains("S1W")) -1 else 0
         val sA = if (context.contains("S2B")) 1 else if (context.contains("S2W")) -1 else 0
