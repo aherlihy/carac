@@ -21,11 +21,11 @@ class ackermann_benchmark() extends ExampleBenchmarkGenerator(
   @Setup
   def s(): Unit = setup() // can't add annotations to super, so just call
 
-//  @Setup(Level.Invocation)
-//  def s2(): Unit = {
-//    for i <- 0 until 80 do
-//      programs("JITStagedEvalRuleS1BS2BS3B").namedRelation(toSolve).solve()
-//  }
+  @Setup(Level.Invocation)
+  def s2(): Unit = {
+    for i <- 0 until 80 do
+      programs("JITStagedEvalRuleS1BS2BS3B").namedRelation(toSolve).solve()
+  }
 
   @TearDown(Level.Invocation)
   def f(): Unit = finish()
