@@ -273,6 +273,9 @@ case class ProjectJoinFilterOp(rId: RelationId, var hash: String, override val c
  */
 case class UnionOp(override val code: OpCode, override val children:IROp[CollectionsStorageManager#EDB]*) extends IROp[CollectionsStorageManager#EDB](children:_*) {
   var compiledRelArray: Future[(CollectionsStorageManager, Int) => CollectionsStorageManager#EDB] = null
+  var blockingCompiledRelFn: CompiledRelFn = null
+  var blockingCompiledRelArray: (CollectionsStorageManager, Int) => CollectionsStorageManager#EDB = null
+
   override def run_continuation(storageManager: CollectionsStorageManager, opFns: Seq[CompiledRelFn]): CollectionsStorageManager#EDB =
     storageManager.union(opFns.map(o => o(storageManager)))
   override def run(storageManager: CollectionsStorageManager): CollectionsStorageManager#EDB =

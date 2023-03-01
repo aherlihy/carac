@@ -102,9 +102,9 @@ abstract class TestGenerator(directory: Path,
           case "CompiledStagedCollections" =>
             Program(StagedExecutionEngine(CollectionsStorageManager())) // default is compiled
           case "JITStagedB3Collections" =>
-            Program(StagedExecutionEngine(CollectionsStorageManager(preSortAhead = 1, sortAhead = 1, sortOnline = 1), JITOptions(ir.OpCode.EVAL_RULE_BODY, aot = false, block = true)))
+            Program(StagedExecutionEngine(CollectionsStorageManager(preSortAhead = 1, sortAhead = 1, sortOnline = 1), JITOptions(ir.OpCode.EVAL_RULE_BODY, aot = false, block = false)))
           case "JITStagedB2Collections" =>
-            Program(StagedExecutionEngine(CollectionsStorageManager(preSortAhead = 1, sortAhead = 1, sortOnline = 0), JITOptions(ir.OpCode.EVAL_RULE_BODY, aot = false, block = true)))
+            Program(StagedExecutionEngine(CollectionsStorageManager(preSortAhead = 1, sortAhead = 1, sortOnline = 0), JITOptions(ir.OpCode.EVAL_RULE_BODY, aot = true, block = false)))
           case "JITStagedB1Collections" =>
             Program(StagedExecutionEngine(CollectionsStorageManager(preSortAhead = 0, sortAhead = 0, sortOnline = 0), JITOptions(ir.OpCode.EVAL_RULE_BODY, aot = false, block = true)))
           case _ => // WARNING: MUnit just returns null pointers everywhere if an error or assert is triggered in beforeEach

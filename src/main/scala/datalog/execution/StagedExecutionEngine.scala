@@ -208,11 +208,14 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
 //          op.compiledFn(storageManager)
 //        } else if (jitOptions.aot && op.compiledRelArray != null && storageManager.deltaDB(storageManager.knownDbId).values.map(_.size).exists(_ > jitOptions.thresholdNum)) {
 //          op.compiledRelArray(storageManager)
-        if (!jitOptions.aot) {
+        if (!jitOptions.aot && !jitOptions.block) {
           startCompileThreadRel(op, dedicatedDotty)
           checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.children.map(o => (sm: CollectionsStorageManager) => jitRel(o))))
+        } else if (!jitOptions.aot && jitOptions.block) {
+          given staging.Compiler = dedicatedDotty
+          op.blockingCompiledRelFn = compiler.getCompiledRel(op)
+          op.blockingCompiledRelFn(storageManager)
         } else {
-          println("starting compile")
           given scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
           op.compiledRelArray = Future {
             given staging.Compiler = dedicatedDotty // staging.Compiler.make(getClass.getClassLoader) // TODO: new dotty per thread, maybe concat
