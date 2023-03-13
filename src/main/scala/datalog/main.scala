@@ -578,7 +578,7 @@ def anon_var(program: Program) = {
   A5(14, i) :- (Check(a, b, c, d, __, f), In(a, b, c, d, __, f, i))
   A5(15, i) :- (Check(a, __, c, d, __, __), In(a, __, c, d, __, __, i))
 
-  val res = A5.solve()
+  val res = A1.solve()
   println(s"RES=${res.size}")
 }
 
