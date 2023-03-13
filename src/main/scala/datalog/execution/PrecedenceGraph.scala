@@ -11,7 +11,7 @@ class Node(r: Int) (using ns: NS) {
   val rId: Int = r
   var idx: Int = -1
   var lowLink: Int = -1
-  val edges: mutable.Set[Node] = mutable.Set[Node]()
+  var edges: mutable.Set[Node] = mutable.Set[Node]()
   var onStack: Boolean = false
   override def toString() =
     "{" + ns(rId) + ": " + "recursive=" + recursive
@@ -40,6 +40,13 @@ class PrecedenceGraph(using ns: NS /* for debugging */) {
         node.recursive = true
       }
     })
+  }
+
+  def updateNodeAlias(rId: Int, aliases: mutable.Map[Int, Int]): Unit = {
+    val node = nodes(rId)
+    node.edges = node.edges.map(edgeNode =>
+      nodes(aliases.getOrElse(edgeNode.rId, edgeNode.rId))
+    )
   }
 
   def addNode(rId: Int, deps: Seq[Int]): Unit = {

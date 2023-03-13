@@ -2,7 +2,7 @@ package datalog.execution
 
 import datalog.dsl.{Atom, Constant, Term, Variable}
 import datalog.execution.ast.*
-import datalog.execution.ast.transform.{ASTTransformerContext, CopyEliminationPass, JoinIndexPass, Transformer}
+import datalog.execution.ast.transform.{ASTTransformerContext, CopyEliminationPass, Transformer}
 import datalog.execution.ir.*
 import datalog.storage.{CollectionsStorageManager, DB, KNOWLEDGE, StorageManager}
 import datalog.tools.Debug.debug
@@ -33,9 +33,9 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, val d
   val precedenceGraph = new PrecedenceGraph(using storageManager.ns)
   val prebuiltOpKeys: mutable.Map[Int, mutable.ArrayBuffer[JoinIndexes]] = mutable.Map[Int, mutable.ArrayBuffer[JoinIndexes]]() // TODO: currently unused, mb remove from EE
   val ast: ProgramNode = ProgramNode()
-  private val tCtx = ASTTransformerContext(using precedenceGraph)
+  private val tCtx = ASTTransformerContext(using precedenceGraph)(using storageManager)
   given JITOptions = defaultJITOptions
-  val transforms: Seq[Transformer] = Seq(/*CopyEliminationPass(using tCtx), JoinIndexPass(using tCtx)*/)
+  val transforms: Seq[Transformer] = Seq(CopyEliminationPass(using tCtx))
   val compiler: StagedCompiler = StagedCompiler(storageManager)
   compiler.clearDottyThread()
   var stragglers: mutable.WeakHashMap[Int, Future[CompiledFn]] = mutable.WeakHashMap.empty // should be ok since we are only removing by ref and then iterating on values only?
@@ -386,7 +386,7 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, val d
     given irCtx: InterpreterContext = InterpreterContext(storageManager, precedenceGraph, toSolve)
     debug("AST: ", () => storageManager.printer.printAST(ast))
     debug("TRANSFORMED: ", () => storageManager.printer.printAST(transformedAST))
-//    debug("PG: ", () => irCtx.sortedRelations.toString())
+    debug("PG: ", () => irCtx.sortedRelations.toString())
 
     val irTree = createIR(transformedAST)
 

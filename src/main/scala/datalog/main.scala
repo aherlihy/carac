@@ -605,17 +605,17 @@ def scratch(program: Program) =
   println(a2.solve())
 
 @main def main = {
-  val engine = new SemiNaiveExecutionEngine(new CollectionsStorageManager())
-  val program = Program(engine)
-  println("SemiNaive")
-  anon_var(program)
-  println("\n\n_______________________\n\n")
+//  val engine = new SemiNaiveExecutionEngine(new CollectionsStorageManager())
+//  val program = Program(engine)
+//  println("SemiNaive")
+//  acyclic(program)
+//  println("\n\n_______________________\n\n")
 
-  println("OLD N")
-  given engine0: ExecutionEngine = new NaiveExecutionEngine(new CollectionsStorageManager())
-  val program0 = Program(engine0)
-  anon_var(program0)
-  println("\n\n_______________________\n\n")
+//  println("OLD N")
+//  given engine0: ExecutionEngine = new NaiveExecutionEngine(new CollectionsStorageManager())
+//  val program0 = Program(engine0)
+//  acyclic(program0)
+//  println("\n\n_______________________\n\n")
 
   val dotty = staging.Compiler.make(getClass.getClassLoader)
   var sort = 1
@@ -637,7 +637,7 @@ def scratch(program: Program) =
     println("JIT")
     given engine3: ExecutionEngine = new StagedExecutionEngine(new CollectionsStorageManager(), jo)
     val program3 = Program(engine3)
-    anon_var(program3)
+    acyclic(program3)
     println("\n\n_______________________\n\n")
 
 //  println("JIT Snippet")
