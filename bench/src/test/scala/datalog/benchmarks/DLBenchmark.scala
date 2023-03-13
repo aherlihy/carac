@@ -34,7 +34,7 @@ abstract class DLBenchmark {
         val preSA = if (context.contains("S1B")) 1 else if (context.contains("S1W")) -1 else 0
         val sA = if (context.contains("S2B")) 1 else if (context.contains("S2W")) -1 else 0
         val sO = if (context.contains("S3B")) 1 else if (context.contains("S3W")) -1 else 0
-        Program(StagedExecutionEngine(CollectionsStorageManager(preSortAhead = preSA, sortAhead=sA, sortOnline=sO), JITOptions(ir.OpCode.OTHER, dotty, false)))
+        Program(StagedExecutionEngine(CollectionsStorageManager(), JITOptions(ir.OpCode.OTHER, dotty, false, sortOrder = (preSA, sA, sO))))
       case _ if context.contains("JIT") =>
         val preSA = if (context.contains("S1B")) 1 else if (context.contains("S1W")) -1 else 0
         val sA = if (context.contains("S2B")) 1 else if (context.contains("S2W")) -1 else 0
@@ -63,12 +63,12 @@ abstract class DLBenchmark {
         }
         if (context.contains("Snippet"))
           Program(StagedSnippetExecutionEngine(
-            CollectionsStorageManager(preSortAhead = preSA, sortAhead=sA, sortOnline=sO),
-            JITOptions(label, dotty, aot, !nonblocking, thresholdN, thresholdV)))
+            CollectionsStorageManager(),
+            JITOptions(label, dotty, aot, !nonblocking, thresholdN, thresholdV, sortOrder = (preSA, sA, sO))))
         else
           Program(StagedExecutionEngine(
-            CollectionsStorageManager(preSortAhead = preSA, sortAhead=sA, sortOnline=sO),
-            JITOptions(label, dotty, aot, !nonblocking, thresholdN, thresholdV)))
+            CollectionsStorageManager(),
+            JITOptions(label, dotty, aot, !nonblocking, thresholdN, thresholdV, sortOrder = (preSA, sA, sO))))
       case _ => // WARNING: MUnit just returns null pointers everywhere if an error or assert is triggered in beforeEach
         throw new Exception(s"Unknown engine construction ${context}") // TODO: this is reported as passing
     }

@@ -24,7 +24,7 @@ import scala.util.{Failure, Success}
 class StagedSnippetExecutionEngine(override val storageManager: CollectionsStorageManager,
                                    defaultJITOptions: JITOptions = JITOptions()) extends StagedExecutionEngine(storageManager, defaultJITOptions) {
   import storageManager.EDB
-  val snippetCompiler: StagedSnippetCompiler = StagedSnippetCompiler(storageManager)
+  val snippetCompiler: StagedSnippetCompiler = StagedSnippetCompiler(storageManager)(using defaultJITOptions)
   override def jitRel(irTree: IROp[CollectionsStorageManager#EDB])(using jitOptions: JITOptions): CollectionsStorageManager#EDB = {
     debug("", () => s"IN SNIPPET JIT REL IR, code=${irTree.code}")
     irTree match {

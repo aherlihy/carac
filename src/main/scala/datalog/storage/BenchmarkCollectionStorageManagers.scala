@@ -6,8 +6,12 @@ import datalog.dsl.{Atom, Constant, Variable}
 import scala.collection.{View, immutable, mutable}
 import datalog.tools.Debug.debug
 
-class CollectionsStorageManagerReduceView(ns: NS = new NS()) extends CollectionsStorageManager(ns, 0, 0) {
-  override def joinProjectHelper(inputs: Seq[EDB], originalK: JoinIndexes): EDB = {
+/**
+ * Try out reduce vs. fold, or view vs. no view for benchmarking
+ * @param ns
+ */
+class CollectionsStorageManagerReduceView() extends CollectionsStorageManager() {
+  override def joinProjectHelper(inputs: Seq[EDB], originalK: JoinIndexes, sortOrder: (Int, Int, Int)): EDB = {
     if (inputs.size == 1) // just filter
       inputs.view.head
         .filter(e =>
@@ -50,8 +54,8 @@ class CollectionsStorageManagerReduceView(ns: NS = new NS()) extends Collections
   }
 
 }
-class CollectionsStorageManagerReduceNoView(ns: NS = new NS()) extends CollectionsStorageManager(ns, 0, 0) {
-  override def joinProjectHelper(inputs: Seq[EDB], originalK: JoinIndexes): EDB = {
+class CollectionsStorageManagerReduceNoView() extends CollectionsStorageManager() {
+  override def joinProjectHelper(inputs: Seq[EDB], originalK: JoinIndexes, sortOrder: (Int, Int, Int)): EDB = {
     if (inputs.size == 1) // just filter
       inputs.head
         .filter(e =>
@@ -90,8 +94,8 @@ class CollectionsStorageManagerReduceNoView(ns: NS = new NS()) extends Collectio
         )
   }
 }
-class CollectionsStorageManagerFoldView(ns: NS = new NS(), sortAhead: Int = 0, sortOnline: Int = 0) extends CollectionsStorageManager(ns, sortAhead, sortOnline) {
-  override def joinProjectHelper(inputs: Seq[EDB], originalK: JoinIndexes): EDB = {
+class CollectionsStorageManagerFoldView() extends CollectionsStorageManager() {
+  override def joinProjectHelper(inputs: Seq[EDB], originalK: JoinIndexes, sortOrder: (Int, Int, Int)): EDB = {
     if (inputs.size == 1) // just filter
       inputs.view.head
         .filter(e =>
@@ -144,8 +148,8 @@ class CollectionsStorageManagerFoldView(ns: NS = new NS(), sortAhead: Int = 0, s
   }
 }
 
-class CollectionsStorageManagerFoldNoView(ns: NS = new NS(), sortAhead: Int = 0, sortOnline: Int = 0) extends CollectionsStorageManager(ns, sortAhead, sortOnline) {
-  override def joinProjectHelper(inputs: Seq[EDB], originalK: JoinIndexes): EDB = {
+class CollectionsStorageManagerFoldNoView() extends CollectionsStorageManager() {
+  override def joinProjectHelper(inputs: Seq[EDB], originalK: JoinIndexes, sortOrder: (Int, Int, Int)): EDB = {
     if (inputs.size == 1) // just filter
       inputs.head
         .filter(e =>

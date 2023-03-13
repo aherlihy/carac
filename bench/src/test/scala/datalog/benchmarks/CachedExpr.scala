@@ -1,8 +1,4 @@
-//package datalog.benchmarks
-//
-//class CachedExpr {
-//
-//}
+// Commented out until caching allowed by Dotty
 //package datalog.benchmarks
 //
 //import datalog.dsl.{Constant, Program, Relation}

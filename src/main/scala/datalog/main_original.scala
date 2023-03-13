@@ -26,7 +26,7 @@ import scala.util.Random
   val sort = 0
   println(s"OLD SN: $sort")
 
-  given engine1a: ExecutionEngine = new SemiNaiveExecutionEngine(new CollectionsStorageManager(sortAhead = sort))
+  given engine1a: ExecutionEngine = new SemiNaiveExecutionEngine(new CollectionsStorageManager())
 
   val program1a = Program(engine1a)
   func(program1a)

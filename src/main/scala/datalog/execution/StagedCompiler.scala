@@ -9,7 +9,7 @@ import scala.quoted.*
 /**
  * Separate out compile logic from StagedExecutionEngine
  */
-class StagedCompiler(val storageManager: CollectionsStorageManager) {
+class StagedCompiler(val storageManager: CollectionsStorageManager)(using val jitOptions: JITOptions) {
   given ToExpr[Constant] with {
     def apply(x: Constant)(using Quotes) = {
       x match {
@@ -105,7 +105,8 @@ class StagedCompiler(val storageManager: CollectionsStorageManager) {
           $stagedSM.joinProjectHelper_withHash(
             $compiledOps,
             ${ Expr(rId) },
-            ${ Expr(newHash) }
+            ${ Expr(newHash) },
+            ${ Expr(jitOptions.sortOrder) }
           )
         }
 

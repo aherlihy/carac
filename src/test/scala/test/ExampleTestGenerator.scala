@@ -104,18 +104,18 @@ abstract class TestGenerator(directory: Path,
           case "CompiledStagedCollections" =>
             Program(StagedExecutionEngine(CollectionsStorageManager(), JITOptions(granularity = ir.OpCode.PROGRAM, dotty = dotty, aot = false, block = true, thresholdNum = 0, thresholdVal = 0))) // default is compiled
           case "JITStagedB3Collections" =>
-            Program(StagedExecutionEngine(CollectionsStorageManager(preSortAhead = 1, sortAhead = 1, sortOnline = 1), JITOptions(ir.OpCode.EVAL_RULE_BODY, aot = false, block = false)))
+            Program(StagedExecutionEngine(CollectionsStorageManager(), JITOptions(ir.OpCode.EVAL_RULE_BODY, aot = false, block = false, sortOrder = (1, 1, 1))))
           case "JITStagedB2Collections" =>
-            Program(StagedExecutionEngine(CollectionsStorageManager(preSortAhead = 1, sortAhead = 1, sortOnline = 0), JITOptions(ir.OpCode.EVAL_RULE_BODY, aot = true, block = false)))
+            Program(StagedExecutionEngine(CollectionsStorageManager(), JITOptions(ir.OpCode.EVAL_RULE_BODY, aot = true, block = false, sortOrder = (1, 1, 0))))
           case "JITStagedB1Collections" =>
-            Program(StagedExecutionEngine(CollectionsStorageManager(preSortAhead = 0, sortAhead = 0, sortOnline = 0), JITOptions(ir.OpCode.EVAL_RULE_BODY, aot = false, block = true)))
+            Program(StagedExecutionEngine(CollectionsStorageManager(), JITOptions(ir.OpCode.EVAL_RULE_BODY, aot = false, block = true, sortOrder = (0, 0, 0))))
           case _ => // WARNING: MUnit just returns null pointers everywhere if an error or assert is triggered in beforeEach
             throw new Exception(s"Unknown engine construction ${context.test.name}") // TODO: this is reported as passing
         }
         inputFacts.foreach((edbName, factInput) =>
           val fact = program.relation[Constant](edbName)
           factInput.foreach(f => fact(f: _*) :- ())
-          if (factInput.size == 0) {
+          if (factInput.length == 0) {
             val edbs = program.ee.storageManager.edbs.asInstanceOf[mutable.Map[Int, Any]]
           }
         )

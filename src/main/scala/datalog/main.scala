@@ -457,6 +457,32 @@ def anon_var(program: Program) = {
   val In = program.relation[Constant]("In")
   val A1 = program.relation[Constant]("A1")
 
+
+  In(7, 10, 9, 8, 7, 8, 4) :- ()
+  In(3, 5, 2, 4, 6, 9, 8) :- ()
+  In(1, 10, 8, 8, 9, 1, 9) :- ()
+  In(8, 7, 6, 5, 3, 6, 3) :- ()
+  In(7, 6, 9, 4, 9, 9, 4) :- ()
+  In(2, 3, 1, 10, 5, 8, 7) :- ()
+  In(8, 8, 10, 10, 7, 6, 4) :- ()
+  In(2, 3, 5, 5, 6, 10, 4) :- ()
+  In(3, 6, 6, 8, 9, 3, 3) :- ()
+  In(6, 9, 7, 7, 5, 3, 3) :- ()
+  In(2, 1, 4, 6, 8, 2, 6) :- ()
+  In(4, 5, 2, 5, 2, 7, 6) :- ()
+
+
+  Check(4, 8, 10, 6, 10, 10) :- ()
+  Check(8, 5, 8, 2, 1, 3) :- ()
+  Check(1, 10, 10, 10, 10, 10) :- ()
+  Check(5, 2, 4, 8, 3, 9) :- ()
+  Check(9, 5, 6, 6, 3, 8) :- ()
+  Check(6, 3, 7, 9, 9, 9) :- ()
+  Check(1, 9, 8, 1, 5, 10) :- ()
+  Check(9, 4, 5, 7, 5, 8) :- ()
+  Check(9, 7, 5, 9, 4, 3) :- ()
+  Check(6, 8, 7, 9, 6, 6) :- ()
+
   val a, b, c, d, e, f, i = program.variable()
 
   A1(1, i) :- (Check(__, b, c, d, e, f), In(__, b, c, d, e, f, i))
@@ -579,17 +605,17 @@ def scratch(program: Program) =
   println(a2.solve())
 
 @main def main = {
-  //  val engine = new SemiNaiveStagedExecutionEngine(new CollectionsStorageManager())
-  //  val program = Program(engine)
-  //  println("staged")
-  //  run(program)
-  //  reversible(program, engine)
-  //  val run = multiJoin
-//  println("OLD N")
-//  given engine0: ExecutionEngine = new NaiveExecutionEngine(new CollectionsStorageManager())
-//  val program0 = Program(engine0)
-//  func(program0)
-//  println("\n\n_______________________\n\n")
+  val engine = new SemiNaiveExecutionEngine(new CollectionsStorageManager())
+  val program = Program(engine)
+  println("SemiNaive")
+  anon_var(program)
+  println("\n\n_______________________\n\n")
+
+  println("OLD N")
+  given engine0: ExecutionEngine = new NaiveExecutionEngine(new CollectionsStorageManager())
+  val program0 = Program(engine0)
+  anon_var(program0)
+  println("\n\n_______________________\n\n")
 
   val dotty = staging.Compiler.make(getClass.getClassLoader)
   var sort = 1
@@ -607,11 +633,11 @@ def scratch(program: Program) =
 //    isEqual(program3a)
 //    println("\n\n_______________________\n\n")
 //
-    val jo = JITOptions(ir.OpCode.EVAL_RULE_SN, dotty, aot = false, block = true)
+    val jo = JITOptions(ir.OpCode.EVAL_RULE_SN, dotty, aot = false, block = true, sortOrder = (0, 0, 0))
     println("JIT")
-    given engine3: ExecutionEngine = new StagedExecutionEngine(new CollectionsStorageManager(preSortAhead = 0, sortAhead = 0, sortOnline = 0), jo)
+    given engine3: ExecutionEngine = new StagedExecutionEngine(new CollectionsStorageManager(), jo)
     val program3 = Program(engine3)
-    ackermann(program3)
+    anon_var(program3)
     println("\n\n_______________________\n\n")
 
 //  println("JIT Snippet")

@@ -1,13 +1,13 @@
 package datalog.execution.ir
 
-import datalog.execution.StagedCompiler
+import datalog.execution.{JITOptions, StagedCompiler}
 import datalog.execution.ast.{ASTNode, AllRulesNode, LogicAtom, ProgramNode, RuleNode}
-import datalog.storage.{DB, KNOWLEDGE, RelationId, CollectionsStorageManager}
+import datalog.storage.{CollectionsStorageManager, DB, KNOWLEDGE, RelationId}
 import datalog.tools.Debug.debug
 
 import scala.collection.mutable
 
-class IRTreeGenerator(using val ctx: InterpreterContext) {
+class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
   def naiveEval(ruleMap: mutable.Map[RelationId, ASTNode], copyToDelta: Boolean = false): IROp[Any] =
     SequenceOp(
       OpCode.EVAL_NAIVE,

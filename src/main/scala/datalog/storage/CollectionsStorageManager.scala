@@ -6,7 +6,7 @@ import datalog.execution.{JoinIndexes, AllIndexes}
 import scala.collection.{immutable, mutable}
 import datalog.tools.Debug.debug
 
-class CollectionsStorageManager(ns: NS = new NS(), val preSortAhead: Int = 1, val sortAhead: Int = 1, val sortOnline: Int = 1) extends SimpleStorageManager(ns) {
+class CollectionsStorageManager(ns: NS = new NS()) extends SimpleStorageManager(ns) {
   val allRulesAllIndexes: mutable.Map[RelationId, AllIndexes] = mutable.Map.empty
 
   inline def scanFilter(k: JoinIndexes, maxIdx: Int)(get: Int => StorageTerm = x => x) = {
@@ -73,7 +73,7 @@ class CollectionsStorageManager(ns: NS = new NS(), val preSortAhead: Int = 1, va
     )
   }
 
-  def joinProjectHelper_withHash(inputs: Seq[EDB], rId: Int, hash: String): EDB = {
+  def joinProjectHelper_withHash(inputs: Seq[EDB], rId: Int, hash: String, sortOrder: (Int, Int, Int)): EDB = {
     val originalK = allRulesAllIndexes(rId)(hash)
     if (inputs.size == 1) // just filter
       inputs.head
@@ -100,9 +100,9 @@ class CollectionsStorageManager(ns: NS = new NS(), val preSortAhead: Int = 1, va
             (innerT, atomI + 1, k)
           else
             val (inner, outer) =
-              if (atomI > 1 && ((sortOnline == 1 && outerT.size > innerT.size) || (sortOnline == -1 && innerT.size > outerT.size)))
+              if (atomI > 1 && ((sortOrder._3 == 1 && outerT.size > innerT.size) || (sortOrder._3 == -1 && innerT.size > outerT.size)))
                 val body = k.atoms.drop(1)
-                val newerHash = JoinIndexes.getRuleHash(Array(k.atoms.head, body(atomI)) ++ body.dropRight(body.size - atomI) ++ body.drop(atomI + 1))
+                val newerHash = JoinIndexes.getRuleHash(Array(k.atoms.head, body(atomI)) ++ body.dropRight(body.length - atomI) ++ body.drop(atomI + 1))
                 k = allRulesAllIndexes(rId)(newerHash)
                 (outerT, innerT)
               else
@@ -131,7 +131,7 @@ class CollectionsStorageManager(ns: NS = new NS(), val preSortAhead: Int = 1, va
         )
   }
 
-  def joinProjectHelper(inputs: Seq[EDB], originalK: JoinIndexes): EDB = { // OLD, only keep around for benchmarks
+  def joinProjectHelper(inputs: Seq[EDB], originalK: JoinIndexes, sortOrder: (Int, Int, Int)): EDB = { // OLD, only keep around for benchmarks
     if (inputs.size == 1) // just filter
       inputs.head
         .filter(e =>
@@ -148,9 +148,9 @@ class CollectionsStorageManager(ns: NS = new NS(), val preSortAhead: Int = 1, va
     else
       var preSortedK = originalK // TODO: find better ways to reduce with 2 acc
       var sorted = inputs
-      if (sortAhead != 0)
+      if (sortOrder._2 != 0)
         var edbToAtom = inputs.toArray.zipWithIndex.map((edb, i) => (edb, originalK.atoms(i + 1))).sortBy((edb, _) => edb.size)
-        if (sortAhead == -1) edbToAtom = edbToAtom.reverse
+        if (sortOrder._2 == -1) edbToAtom = edbToAtom.reverse
         val newAtoms = originalK.atoms.head +: edbToAtom.map(_._2)
         preSortedK = JoinIndexes(newAtoms)
         sorted = edbToAtom.map(_._1)
@@ -166,7 +166,7 @@ class CollectionsStorageManager(ns: NS = new NS(), val preSortAhead: Int = 1, va
             (innerT, atomI + 1, k)
           else
             val (inner, outer) =
-              if (atomI > 1 && ((sortOnline == 1 && outerT.size > innerT.size) || (sortOnline == -1 && innerT.size > outerT.size)))
+              if (atomI > 1 && ((sortOrder._3 == 1 && outerT.size > innerT.size) || (sortOrder._3 == -1 && innerT.size > outerT.size)))
                 val body = k.atoms.drop(1)
                 k = JoinIndexes(Array(k.atoms.head, body(atomI)) ++ body.dropRight(body.size - atomI) ++ body.drop(atomI + 1))
                 (outerT, innerT)
@@ -205,19 +205,13 @@ class CollectionsStorageManager(ns: NS = new NS(), val preSortAhead: Int = 1, va
    */
   def SPJU(rId: RelationId, keys: mutable.ArrayBuffer[JoinIndexes]): EDB = {
     debug("SPJU:", () => s"r=${ns(rId)} keys=${printer.snPlanToString(keys)} knownDBId $knownDbId")
-      keys.flatMap(originalK => // union of each definition of rId
-        if (originalK.edb)
+      keys.flatMap(k => // union of each definition of rId
+        if (k.edb)
           edbs.getOrElse(rId, EDB())
         else
           var idx = -1 // if dep is featured more than once, only us delta once, but at a different pos each time
-          originalK.deps.flatMap(d => {
+          k.deps.flatMap(d => {
             var found = false // TODO: perhaps need entry in derived/delta for each atom instead of each relation?
-            var k = originalK
-            if (preSortAhead != 0)
-              var newBody = originalK.atoms.drop(1).sortBy(a => derivedDB(knownDbId).getOrElse(a.rId, edbs.getOrElse(a.rId, EDB())).size)
-              if (preSortAhead == -1) newBody = newBody.reverse
-              val newAtoms = originalK.atoms.head +: newBody
-              k = JoinIndexes(newAtoms)
             joinProjectHelper(
               k.deps.zipWithIndex.map((r, i) =>
                 if (r == d && !found && i > idx) {
@@ -228,7 +222,7 @@ class CollectionsStorageManager(ns: NS = new NS(), val preSortAhead: Int = 1, va
                 else {
                   derivedDB(knownDbId).getOrElse(r, edbs.getOrElse(r, EDB())) // TODO: warn if EDB is empty? Right now can't tell the difference between undeclared and empty EDB
                 }
-              ), k)
+              ), k, (0, 0, 0)) // don't sort when not staging
           }).toSet
       )
   }

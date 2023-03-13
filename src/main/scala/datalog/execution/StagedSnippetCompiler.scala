@@ -13,7 +13,7 @@ import scala.quoted.*
  * interpretation (maybe for save points for de-optimizations?) but this is mostly just a POC
  * that it's possible.
  */
-class StagedSnippetCompiler(val storageManager: CollectionsStorageManager) {
+class StagedSnippetCompiler(val storageManager: CollectionsStorageManager)(using val jitOptions: JITOptions) {
   given ToExpr[Constant] with {
     def apply(x: Constant)(using Quotes) = {
       x match {
@@ -82,7 +82,8 @@ class StagedSnippetCompiler(val storageManager: CollectionsStorageManager) {
         '{
           $stagedSM.joinProjectHelper(
             $compiledOps,
-            ${ Expr(storageManager.allRulesAllIndexes(rId)(hash)) }
+            ${ Expr(storageManager.allRulesAllIndexes(rId)(hash)) },
+            ${ Expr(jitOptions.sortOrder) }
           )
         }
 

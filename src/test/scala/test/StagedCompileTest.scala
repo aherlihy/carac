@@ -18,7 +18,7 @@ import scala.util.matching.Regex
 class StagedCompileTest extends munit.FunSuite {
   val storageManager = new CollectionsStorageManager()
   val dotty = staging.Compiler.make(getClass.getClassLoader)
-  val jo = JITOptions()
+  given jo: JITOptions = JITOptions()
   val engine = new StagedExecutionEngine(storageManager, jo)
   val program = new Program(engine)
   val edge = program.relation[Constant]("edge")

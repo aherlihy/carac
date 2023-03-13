@@ -1,7 +1,7 @@
 package datalog.execution
 
 import datalog.dsl.{Atom, Constant, Variable}
-import datalog.execution.ir.{ProjectJoinFilterOp}
+import datalog.execution.ir.ProjectJoinFilterOp
 import datalog.storage.{CollectionsStorageManager, NS}
 import datalog.tools.Debug.debug
 
@@ -82,15 +82,13 @@ object JoinIndexes {
     new JoinIndexes(bodyVars, constants.toMap, projects, deps, rule)
   }
 
-  def getSortAhead[T: ClassTag](input: Array[T], sortBy: T => Int, rId: Int, oldHash: String, sm: CollectionsStorageManager): (Array[T], String) = {
-    if (sm.sortAhead != 0)
+  def getSortAhead[T: ClassTag](input: Array[T], sortBy: T => Int, rId: Int, oldHash: String, sm: CollectionsStorageManager)(using jitOptions: JITOptions): (Array[T], String) = {
+    if (jitOptions.sortOrder._2 != 0)
       val oldAtoms = sm.allRulesAllIndexes(rId)(oldHash).atoms
-//      println(s"in getSorted: deps=${oldAtoms.drop(1).map(s => sm.ns(s.rId)).mkString("", ",", "")} current relation sizes: ${input.map(i => s"${sortBy(i)}|").mkString("", ", ", "")}")
+//      debug("", () => s"in getSorted: deps=${oldAtoms.drop(1).map(s => sm.ns(s.rId)).mkString("", ",", "")} current relation sizes: ${input.map(i => s"${sortBy(i)}|").mkString("", ", ", "")}")
       var tToAtom = input.zipWithIndex.map((t, i) => (t, oldAtoms(i + 1))).sortBy((t, _) => sortBy(t))
-      if (sm.sortAhead == -1) tToAtom = tToAtom.reverse
+      if (jitOptions.sortOrder._2 == -1) tToAtom = tToAtom.reverse
       val newHash = JoinIndexes.getRuleHash(oldAtoms.head +: tToAtom.map(_._2))
-//      if (!(tToAtom.map(_._2.rId) sameElements oldAtoms.drop(1).map(_.rId)))
-//        println("!!!!NOT THE SAME!")
 
       val sortedT = tToAtom.map(_._1)
       (sortedT, newHash)
@@ -98,12 +96,12 @@ object JoinIndexes {
       (input, oldHash)
   }
 
-  def getPreSortAhead(input: Array[ProjectJoinFilterOp], sortBy: Atom => Int, rId: Int, oldHash: String, sm: CollectionsStorageManager): (Array[ProjectJoinFilterOp], String) = {
+  def getPreSortAhead(input: Array[ProjectJoinFilterOp], sortBy: Atom => Int, rId: Int, oldHash: String, sm: CollectionsStorageManager)(using jitOptions: JITOptions): (Array[ProjectJoinFilterOp], String) = {
     val originalK = sm.allRulesAllIndexes(rId)(oldHash)
-    if (sm.preSortAhead != 0)
-//      println(s"in compiler UNION[spj] deps=${originalK.deps.map(s => sm.ns(s)).mkString("", ",", "")} current relation sizes: ${originalK.atoms.drop(1).map(a => s"${sm.ns(a.rId)}:|${sortBy(a)}|").mkString("", ", ", "")}")
+    if (jitOptions.sortOrder._1 != 0)
+//      debug("", () => s"in compiler UNION[spj] deps=${originalK.deps.map(s => sm.ns(s)).mkString("", ",", "")} current relation sizes: ${originalK.atoms.drop(1).map(a => s"${sm.ns(a.rId)}:|${sortBy(a)}|").mkString("", ", ", "")}")
       var newBody = originalK.atoms.drop(1).zipWithIndex.sortBy((a, _) => sortBy(a))
-      if (sm.preSortAhead == -1) newBody = newBody.reverse
+      if (jitOptions.sortOrder._1 == -1) newBody = newBody.reverse
       val newAtoms = originalK.atoms.head +: newBody.map(_._1)
       val newHash = JoinIndexes.getRuleHash(newAtoms)
       (input.map(c => ProjectJoinFilterOp(rId, newHash, newBody.map((_, oldP) => c.childrenSO(oldP)): _*)), newHash)
@@ -119,9 +117,3 @@ object JoinIndexes {
 
   def getRuleHash(rule: Array[Atom]): String = rule.map(r => r.hash).mkString("", "", "")
 }
-
-
-//given ToExpr[JoinIndexes] with {
-//  def apply(joinIndexes: JoinIndexes)(using Quotes) =
-
-//}
