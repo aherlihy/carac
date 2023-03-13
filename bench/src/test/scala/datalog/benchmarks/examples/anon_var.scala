@@ -17,6 +17,7 @@ import java.nio.file.Paths
 class anon_var_benchmark extends ExampleBenchmarkGenerator(
   "anon_var"
 ) with anon_var {
+  override val toSolve: String = "A1"
   @Setup
   def s(): Unit = setup() // can't add annotations to super, so just call
 

@@ -11,7 +11,7 @@ class anon_var_test extends ExampleTestGenerator(
 ) with anon_var
 
 trait anon_var {
-  val toSolve = "A1"
+  val toSolve = "_"
   def pretest(program: Program): Unit = {
     val Check = program.namedRelation[Constant]("Check")
 

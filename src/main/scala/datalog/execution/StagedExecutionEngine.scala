@@ -28,7 +28,7 @@ case class JITOptions(
     throw new Exception(s"Cannot online, async compile singleton IR nodes: $granularity (theres no point)")
 }
 
-class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defaultJITOptions: JITOptions = JITOptions()) extends ExecutionEngine {
+class StagedExecutionEngine(val storageManager: CollectionsStorageManager, val defaultJITOptions: JITOptions = JITOptions()) extends ExecutionEngine {
   import storageManager.EDB
   val precedenceGraph = new PrecedenceGraph(using storageManager.ns)
   val prebuiltOpKeys: mutable.Map[Int, mutable.ArrayBuffer[JoinIndexes]] = mutable.Map[Int, mutable.ArrayBuffer[JoinIndexes]]() // TODO: currently unused, mb remove from EE

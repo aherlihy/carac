@@ -88,10 +88,10 @@ abstract class SimpleStorageManager(override val ns: NS) extends StorageManager(
   def getNewDeltaDB(rId: RelationId): EDB =
     deltaDB(newDbId).getOrElse(rId, edbs.getOrElse(rId, EDB()))
   def getKnownIDBResult(rId: RelationId): Set[Seq[Term]] =
-    debug("Final IDB Result[known]: ", () => s"@$knownDbId")
+    debug("Final IDB Result[known]: ", () => s"at iteration $iteration: @$knownDbId, count=${getKnownDerivedDB(rId).length}")
     getKnownDerivedDB(rId).map(s => s.toSeq).toSet
   def getNewIDBResult(rId: RelationId): Set[Seq[Term]] =
-    debug(s"Final IDB Result[new]", () => s" at iteration $iteration: @$newDbId")
+    debug(s"Final IDB Result[new]", () => s" at iteration $iteration: @$newDbId, count=${getNewDerivedDB(rId).length}")
     getNewDerivedDB(rId).map(s => s.toSeq).toSet
   def getEDBResult(rId: RelationId): Set[Seq[Term]] = edbs.getOrElse(rId, EDB()).map(s => s.toSeq).toSet
 

@@ -6,6 +6,12 @@ import datalog.tools.Debug.debug
 
 import scala.collection.mutable
 
+/**
+ * Shallow embedding version of the execution engine, i.e. no AST. Used mostly to compare results and step through
+ * since much easier to debug than the staged versions.
+ *
+ * @param storageManager
+ */
 class SemiNaiveExecutionEngine(override val storageManager: StorageManager) extends NaiveExecutionEngine(storageManager) {
   import storageManager.{EDB, Table}
 
