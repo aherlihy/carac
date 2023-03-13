@@ -33,12 +33,11 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
   val precedenceGraph = new PrecedenceGraph(using storageManager.ns)
   val prebuiltOpKeys: mutable.Map[Int, mutable.ArrayBuffer[JoinIndexes]] = mutable.Map[Int, mutable.ArrayBuffer[JoinIndexes]]() // TODO: currently unused, mb remove from EE
   val ast: ProgramNode = ProgramNode()
-  private var knownDbId = -1
   private val tCtx = ASTTransformerContext(using precedenceGraph)
   given JITOptions = defaultJITOptions
   val transforms: Seq[Transformer] = Seq(/*CopyEliminationPass(using tCtx), JoinIndexPass(using tCtx)*/)
   val compiler: StagedCompiler = StagedCompiler(storageManager)
-  val dedicatedDotty: staging.Compiler = defaultJITOptions.dotty
+  compiler.clearDottyThread()
   var stragglers: mutable.WeakHashMap[Int, Future[CompiledFn]] = mutable.WeakHashMap.empty // should be ok since we are only removing by ref and then iterating on values only?
 
   def createIR(ast: ASTNode)(using InterpreterContext): IROp[Any] = IRTreeGenerator().generateSemiNaive(ast)
@@ -122,7 +121,6 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
   // Separate these out for easier benchmarking
 
   def preCompile(irTree: IROp[Any]): CompiledFn = {
-    given staging.Compiler = dedicatedDotty
     compiler.getCompiled(irTree)
   }
   def solvePreCompiled(compiled: CompiledFn, ctx: InterpreterContext): Set[Seq[Term]] = {
@@ -132,7 +130,6 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
 
   def solveCompiled(irTree: IROp[Any], ctx: InterpreterContext): Set[Seq[Term]] = {
     debug("", () => "compile-only mode")
-    given staging.Compiler = dedicatedDotty
     val compiled = compiler.getCompiled(irTree)
     compiled(storageManager)
     storageManager.getNewIDBResult(ctx.toSolve)
@@ -157,12 +154,12 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
     irTree match {
       case op: UnionSPJOp if jitOptions.granularity == op.code => // check if aot compile is ready
         if (!jitOptions.aot) {
-          startCompileThreadRel(op, dedicatedDotty)
+          startCompileThreadRel(op)
           checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.children.map(o => (sm: CollectionsStorageManager) => jitRel(o))))
         } else {
           given scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
           op.compiledRelArray = Future {
-            given staging.Compiler = dedicatedDotty; // dedicatedDotty //staging.Compiler.make(getClass.getClassLoader) // TODO: new dotty per thread, maybe concat
+//            given staging.Compiler = dedicatedDotty; // dedicatedDotty //staging.Compiler.make(getClass.getClassLoader) // TODO: new dotty per thread, maybe concat
             compiler.getCompiledUnionSPJ(op)
           }
           //        Thread.sleep(1000)
@@ -189,7 +186,7 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
         }
 
       case op: ProjectJoinFilterOp if jitOptions.granularity == op.code => // check if aot compile is ready
-        startCompileThreadRel(op, dedicatedDotty)
+        startCompileThreadRel(op)
         checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.childrenSO.map(o => (sm: CollectionsStorageManager) => jitRel(o))))
 
       case op: UnionOp if jitOptions.granularity == op.code =>
@@ -216,16 +213,14 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
 //        } else if (jitOptions.aot && op.compiledRelArray != null && storageManager.deltaDB(storageManager.knownDbId).values.map(_.size).exists(_ > jitOptions.thresholdNum)) {
 //          op.compiledRelArray(storageManager)
         if (!jitOptions.aot && !jitOptions.block) {
-          startCompileThreadRel(op, dedicatedDotty)
+          startCompileThreadRel(op)
           checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.children.map(o => (sm: CollectionsStorageManager) => jitRel(o))))
         } else if (!jitOptions.aot && jitOptions.block) {
-          given staging.Compiler = dedicatedDotty
           op.blockingCompiledRelFn = compiler.getCompiledRel(op)
           op.blockingCompiledRelFn(storageManager)
         } else {
           given scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
           op.compiledRelArray = Future {
-            given staging.Compiler = dedicatedDotty // staging.Compiler.make(getClass.getClassLoader) // TODO: new dotty per thread, maybe concat
             compiler.getCompiledEvalRule(op)
           }
           //                Thread.sleep(1000)
@@ -302,19 +297,17 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
 //    else
     given scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
     op.compiledFn = Future {
-      given staging.Compiler = dotty; // dedicatedDotty //staging.Compiler.make(getClass.getClassLoader) // TODO: new dotty per thread, maybe concat
       compiler.getCompiled(op)
     }
     stragglers.addOne(op.compiledFn.hashCode(), op.compiledFn)
 
-  inline def startCompileThreadRel(op: IROp[CollectionsStorageManager#EDB], dotty: staging.Compiler)(using jitOptions: JITOptions): Unit =
+  inline def startCompileThreadRel(op: IROp[CollectionsStorageManager#EDB])(using jitOptions: JITOptions): Unit =
 //    if (jitOptions.block)
 //      given staging.Compiler = dotty
 //      op.blockingCompiledFn = compiler.getCompiledRel(op)
 //    else
     given scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
     op.compiledFn = Future {
-      given staging.Compiler = dotty; // dedicatedDotty //staging.Compiler.make(getClass.getClassLoader) // TODO: new dotty per thread, maybe concat
       compiler.getCompiledRel(op)
     }
     stragglers.addOne(op.compiledFn.hashCode(), op.compiledFn)

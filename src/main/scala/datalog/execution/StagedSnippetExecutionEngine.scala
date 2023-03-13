@@ -25,12 +25,12 @@ class StagedSnippetExecutionEngine(override val storageManager: CollectionsStora
                                    defaultJITOptions: JITOptions = JITOptions()) extends StagedExecutionEngine(storageManager, defaultJITOptions) {
   import storageManager.EDB
   val snippetCompiler: StagedSnippetCompiler = StagedSnippetCompiler(storageManager)(using defaultJITOptions)
+  given staging.Compiler = defaultJITOptions.dotty
   override def jitRel(irTree: IROp[CollectionsStorageManager#EDB])(using jitOptions: JITOptions): CollectionsStorageManager#EDB = {
     debug("", () => s"IN SNIPPET JIT REL IR, code=${irTree.code}")
     irTree match {
       case op: ScanOp if jitOptions.granularity == op.code =>
         if (op.compiledSnippetContinuationFn == null)
-          given staging.Compiler = dedicatedDotty
           op.compiledSnippetContinuationFn = snippetCompiler.getCompiledSnippetRel(op)
         op.compiledSnippetContinuationFn(storageManager, Seq.empty) // TODO: weird
 
@@ -42,7 +42,6 @@ class StagedSnippetExecutionEngine(override val storageManager: CollectionsStora
 
       case op: ProjectJoinFilterOp if jitOptions.granularity == op.code =>
         if (op.compiledSnippetContinuationFn == null)
-          given staging.Compiler = dedicatedDotty
           op.compiledSnippetContinuationFn = snippetCompiler.getCompiledSnippetRel(op)
         op.compiledSnippetContinuationFn(storageManager, op.children.map(o => (sm: CollectionsStorageManager) => jitRel(o)))
 
@@ -57,7 +56,6 @@ class StagedSnippetExecutionEngine(override val storageManager: CollectionsStora
 
       case op: DiffOp if jitOptions.granularity == op.code =>
         if (op.compiledSnippetContinuationFn == null)
-          given staging.Compiler = dedicatedDotty
           op.compiledSnippetContinuationFn = snippetCompiler.getCompiledSnippetRel(op)
         op.compiledSnippetContinuationFn(storageManager, op.children.map(o => (sm: CollectionsStorageManager) => jitRel(o)))
 
@@ -75,7 +73,6 @@ class StagedSnippetExecutionEngine(override val storageManager: CollectionsStora
     irTree match {
       case op: ProgramOp if jitOptions.granularity == op.code =>
         if (op.compiledSnippetContinuationFn == null)
-          given staging.Compiler = dedicatedDotty
           op.compiledSnippetContinuationFn = snippetCompiler.getCompiledSnippet(op)
         op.compiledSnippetContinuationFn(
           storageManager,
@@ -86,7 +83,6 @@ class StagedSnippetExecutionEngine(override val storageManager: CollectionsStora
 
       case op: DoWhileOp if jitOptions.granularity == op.code =>
         if (op.compiledSnippetContinuationFn == null)
-          given staging.Compiler = dedicatedDotty
           op.compiledSnippetContinuationFn = snippetCompiler.getCompiledSnippet(op)
         op.compiledSnippetContinuationFn(storageManager, op.children.map(o => (sm: CollectionsStorageManager) => jit(o)))
 
@@ -97,7 +93,6 @@ class StagedSnippetExecutionEngine(override val storageManager: CollectionsStora
         op.code match
           case OpCode.EVAL_SN | OpCode.EVAL_NAIVE | OpCode.LOOP_BODY if jitOptions.granularity == op.code =>
             if (op.compiledSnippetContinuationFn == null)
-              given staging.Compiler = dedicatedDotty
               op.compiledSnippetContinuationFn = snippetCompiler.getCompiledSnippet(op)
             op.compiledSnippetContinuationFn(
               storageManager,
@@ -110,7 +105,6 @@ class StagedSnippetExecutionEngine(override val storageManager: CollectionsStora
 
       case op: InsertOp if jitOptions.granularity == op.code =>
         if (op.compiledSnippetContinuationFn == null)
-          given staging.Compiler = dedicatedDotty
           op.compiledSnippetContinuationFn = snippetCompiler.getCompiledSnippet(op)
         op.compiledSnippetContinuationFn(storageManager, op.children.map(o => (sm: CollectionsStorageManager) => jitRel(o.asInstanceOf[IROp[CollectionsStorageManager#EDB]])))
 

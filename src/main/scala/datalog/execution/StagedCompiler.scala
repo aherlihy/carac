@@ -10,6 +10,7 @@ import scala.quoted.*
  * Separate out compile logic from StagedExecutionEngine
  */
 class StagedCompiler(val storageManager: CollectionsStorageManager)(using val jitOptions: JITOptions) {
+  given staging.Compiler = jitOptions.dotty
   given ToExpr[Constant] with {
     def apply(x: Constant)(using Quotes) = {
       x match {
@@ -214,10 +215,10 @@ class StagedCompiler(val storageManager: CollectionsStorageManager)(using val ji
     }
   }
 
-  def clearDottyThread(compiler: staging.Compiler) =
-    val driverField = compiler.getClass.getDeclaredField("driver")
+  def clearDottyThread() =
+    val driverField = jitOptions.dotty.getClass.getDeclaredField("driver")
     driverField.setAccessible(true)
-    val driver = driverField.get(compiler)
+    val driver = driverField.get(jitOptions.dotty)
     val contextBaseField = driver.getClass.getDeclaredField("contextBase")
     contextBaseField.setAccessible(true)
     val contextBase = contextBaseField.get(driver)
@@ -225,47 +226,47 @@ class StagedCompiler(val storageManager: CollectionsStorageManager)(using val ji
     threadField.setAccessible(true)
     threadField.set(contextBase, null)
 
-  def getCompiled(irTree: IROp[Any])(using compiler: staging.Compiler): CompiledFn = {
+  def getCompiled(irTree: IROp[Any]): CompiledFn = {
     val result = staging.run {
       val res: Expr[CompiledFn] =
         '{ (stagedSm: CollectionsStorageManager) => ${ compileIR(irTree)(using 'stagedSm) } }
       debug("generated code: ", () => res.show)
       res
     }
-    clearDottyThread(compiler)
+    clearDottyThread()
     result
   }
 
-  def getCompiledUnionSPJ(irTree: UnionSPJOp)(using compiler: staging.Compiler): (CollectionsStorageManager, Int) => CollectionsStorageManager#EDB = {
+  def getCompiledUnionSPJ(irTree: UnionSPJOp): (CollectionsStorageManager, Int) => CollectionsStorageManager#EDB = {
     val result = staging.run {
       val res: Expr[(CollectionsStorageManager, Int) => CollectionsStorageManager#EDB] =
         '{ (stagedSm: CollectionsStorageManager, i: Int) => ${ compileIRUnionSPJ(irTree)(using 'stagedSm)(using 'i) } }
       debug("generated code: ", () => res.show)
       res
     }
-    clearDottyThread(compiler)
+    clearDottyThread()
     result
   }
 
-  def getCompiledEvalRule(irTree: UnionOp)(using compiler: staging.Compiler): (CollectionsStorageManager, Int) => CollectionsStorageManager#EDB = {
+  def getCompiledEvalRule(irTree: UnionOp): (CollectionsStorageManager, Int) => CollectionsStorageManager#EDB = {
     val result = staging.run {
       val res: Expr[(CollectionsStorageManager, Int) => CollectionsStorageManager#EDB] =
         '{ (stagedSm: CollectionsStorageManager, i: Int) => ${ compileIREvalRule(irTree)(using 'stagedSm)(using 'i) } }
       debug("generated code: ", () => res.show)
       res
     }
-    clearDottyThread(compiler)
+    clearDottyThread()
     result
   }
 
-  def getCompiledRel(irTree: IROp[CollectionsStorageManager#EDB])(using compiler: staging.Compiler): CompiledRelFn = {
+  def getCompiledRel(irTree: IROp[CollectionsStorageManager#EDB]): CompiledRelFn = {
     val result = staging.run {
       val res: Expr[CompiledRelFn] =
         '{ (stagedSm: CollectionsStorageManager) => ${ compileIRRelOp(irTree)(using 'stagedSm) } }
       debug("generated code: ", () => res.show)
       res
     }
-    clearDottyThread(compiler)
+    clearDottyThread()
     result
   }
 }
