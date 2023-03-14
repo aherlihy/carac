@@ -10,18 +10,15 @@ final val NilTuple: Option[Nothing] = None
 
 final val dbg = true//false
 class RelationalOperators[S <: StorageManager](val storageManager: S) {
-  type edbRow = storageManager.Row[storageManager.StorageTerm]
-  type table[T] = storageManager.Table[T]
-
   trait RelOperator {
     def open(): Unit
 
-    def next(): Option[edbRow]
+    def next(): Option[SimpleRow]
 
     def close(): Unit
 
-    def toList(): mutable.ArrayBuffer[edbRow] = { // TODO: fix this to use iterator override
-      val list = mutable.ArrayBuffer[edbRow]()
+    def toList(): mutable.ArrayBuffer[SimpleRow] = { // TODO: fix this to use iterator override
+      val list = mutable.ArrayBuffer[SimpleRow]()
       this.open()
       while (
         this.next() match {
@@ -33,13 +30,13 @@ class RelationalOperators[S <: StorageManager](val storageManager: S) {
       this.close()
       list
     }
-//      final override def iterator: Iterator[edbRow] =
-//        new Iterator[edbRow] with AutoCloseable {
+//      final override def iterator: Iterator[SimpleRow] =
+//        new Iterator[SimpleRow] with AutoCloseable {
 //          private val op =
 //            RelOperator.this.clone().asInstanceOf[RelOperator]
 //          op.open()
 //
-//          var n: Option[Option[edbRow]] = Option.empty
+//          var n: Option[Option[SimpleRow]] = Option.empty
 //
 //          def prepareNext(): Unit = {
 //            if (n.nonEmpty) return
@@ -51,7 +48,7 @@ class RelationalOperators[S <: StorageManager](val storageManager: S) {
 //            n.get.nonEmpty
 //          }
 //
-//          override def next(): edbRow = {
+//          override def next(): SimpleRow = {
 //            prepareNext()
 //            val ret = n.get
 //            assert(ret.nonEmpty)
@@ -69,19 +66,19 @@ class RelationalOperators[S <: StorageManager](val storageManager: S) {
 
   case class EmptyScan() extends RelOperator {
     def open(): Unit = {}
-    def next(): Option[edbRow] = NilTuple
+    def next(): Option[SimpleRow] = NilTuple
     def close(): Unit = {}
   }
 
-  case class Scan(relation: storageManager.Relation[storageManager.StorageTerm], rId: Int) extends RelOperator {
+  case class Scan(relation: EDB, rId: Int) extends RelOperator {
     private var currentId: Int = 0
-    private var length: Long = relation.size
+    private var length: Long = relation.length
 
     def open(): Unit = {
 //      debug(s"SCAN[$rId]")
     }
 
-    def next(): Option[edbRow] = {
+    def next(): Option[SimpleRow] = {
       if (currentId >= length) {
         NilTuple
       } else {
@@ -95,11 +92,11 @@ class RelationalOperators[S <: StorageManager](val storageManager: S) {
 
   // TODO: most likely will combine Scan+Filter, or split out Join+Filter
   case class Filter(input: RelOperator)
-                   (cond: edbRow => Boolean) extends RelOperator {
+                   (cond: SimpleRow => Boolean) extends RelOperator {
 
     def open(): Unit = input.open()
 
-    override def next(): Option[edbRow] = {
+    override def next(): Option[SimpleRow] = {
       var nextTuple = input.next()
       while (nextTuple match {
         case Some(n) => !cond(n)
@@ -117,7 +114,7 @@ class RelationalOperators[S <: StorageManager](val storageManager: S) {
       input.open()
     }
 
-    override def next(): Option[edbRow] = {
+    override def next(): Option[SimpleRow] = {
       if (ixs.isEmpty) {
         return input.next()
       }
@@ -129,7 +126,7 @@ class RelationalOperators[S <: StorageManager](val storageManager: S) {
                 case "v" => t.lift(idx.asInstanceOf[Int])
                 case "c" => Some(idx)
                 case _ => throw new Exception("Internal error: projecting something that is not a constant nor a variable")
-              }).asInstanceOf[edbRow]
+              }).asInstanceOf[SimpleRow]
           )
         case _ => NilTuple
       }
@@ -142,10 +139,10 @@ class RelationalOperators[S <: StorageManager](val storageManager: S) {
                      variables: Seq[Seq[Int]],
                      constants: Map[Int, Constant]) extends RelOperator {
 
-    private var outputRelation= mutable.ArrayBuffer[edbRow]()
+    private var outputRelation= mutable.ArrayBuffer[SimpleRow]()
     private var index = 0
 
-    def scanFilter(maxIdx: Int)(get: Int => storageManager.StorageTerm = x => x.asInstanceOf[storageManager.StorageTerm]) = {
+    def scanFilter(maxIdx: Int)(get: Int => StorageTerm = x => x.asInstanceOf[StorageTerm]) = {
       val vCmp = variables.isEmpty || variables.forall(condition =>
         if (condition.head >= maxIdx)
           true
@@ -163,26 +160,26 @@ class RelationalOperators[S <: StorageManager](val storageManager: S) {
 
     override def open(): Unit = {
       index = 0
-      val inputList: Seq[mutable.ArrayBuffer[edbRow]] = inputs.map(i => i.toList())
+      val inputList: Seq[mutable.ArrayBuffer[SimpleRow]] = inputs.map(i => i.toList())
 
       outputRelation = inputList
         .reduceLeft((outer, inner) => {
           outer.flatMap(outerTuple => {
             inner.flatMap(innerTuple => {
               val get = (i: Int) => {
-                outerTuple.applyOrElse(i, j => innerTuple(j - outerTuple.size))
+                outerTuple.applyOrElse(i, j => innerTuple(j - outerTuple.length))
               }
-              if(scanFilter(innerTuple.size + outerTuple.size)(get))
-                Some((outerTuple ++ innerTuple).asInstanceOf[edbRow])
+              if(scanFilter(innerTuple.length + outerTuple.length)(get))
+                Some((outerTuple.prependedAll(innerTuple)).asInstanceOf[SimpleRow])
               else
                 None
             })
           })
         })
-        .filter(r => scanFilter(r.size)(r))
+        .filter(r => scanFilter(r.length)(r))
     }
-    def next(): Option[edbRow] = {
-      if (index >= outputRelation.size)
+    def next(): Option[SimpleRow] = {
+      if (index >= outputRelation.length)
         NilTuple
       else {
         index += 1
@@ -204,14 +201,14 @@ class RelationalOperators[S <: StorageManager](val storageManager: S) {
   case class Union(ops: Seq[RelOperator]) extends RelOperator {
 //    private var currentRel: Int = 0
 //    private var length: Long = ops.length
-    private var outputRelation: IndexedSeq[edbRow] = IndexedSeq()
+    private var outputRelation: IndexedSeq[SimpleRow] = IndexedSeq()
     private var index = 0
     def open(): Unit = {
       val opResults = ops.map(o => o.toList())
       outputRelation = opResults.flatten.toSet.toIndexedSeq
     }
-    def next(): Option[edbRow] = {
-      if (index >= outputRelation.size)
+    def next(): Option[SimpleRow] = {
+      if (index >= outputRelation.length)
         NilTuple
       else
         index += 1
@@ -232,12 +229,12 @@ class RelationalOperators[S <: StorageManager](val storageManager: S) {
     def close(): Unit = ops.foreach(o => o.close())
   }
   case class Diff(ops: mutable.ArrayBuffer[RelOperator]) extends RelOperator {
-    private var outputRelation: IndexedSeq[edbRow] = IndexedSeq()
+    private var outputRelation: IndexedSeq[SimpleRow] = IndexedSeq()
     private var index = 0
     def open(): Unit =
       outputRelation = ops.map(o => o.toList()).toSet.reduce((l, r) => l diff r).toIndexedSeq
-    def next(): Option[edbRow] = {
-      if (index >= outputRelation.size)
+    def next(): Option[SimpleRow] = {
+      if (index >= outputRelation.length)
         NilTuple
       else
         index += 1

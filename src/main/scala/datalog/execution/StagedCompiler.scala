@@ -2,7 +2,7 @@ package datalog.execution
 
 import datalog.dsl.{Atom, Constant, Variable, Term}
 import datalog.execution.ir.*
-import datalog.storage.{CollectionsStorageManager, DB, KNOWLEDGE, StorageManager}
+import datalog.storage.{CollectionsStorageManager, DB, KNOWLEDGE, StorageManager, EDB}
 import datalog.tools.Debug.debug
 
 import scala.quoted.*
@@ -47,14 +47,14 @@ class StagedCompiler(val storageManager: CollectionsStorageManager)(using val ji
     }
   }
 
-  def compileIREvalRule(uOp: UnionOp)(using stagedSM: Expr[CollectionsStorageManager])(using i: Expr[Int])(using Quotes): Expr[CollectionsStorageManager#EDB] = {
+  def compileIREvalRule(uOp: UnionOp)(using stagedSM: Expr[CollectionsStorageManager])(using i: Expr[Int])(using Quotes): Expr[EDB] = {
     '{ ${Expr.ofSeq(uOp.children.toSeq.map(compileIRRelOp))}($i) }
   }
 
-  def compileIRUnionSPJ(uOp: UnionSPJOp)(using stagedSM: Expr[CollectionsStorageManager])(using i: Expr[Int])(using Quotes): Expr[CollectionsStorageManager#EDB] = {
+  def compileIRUnionSPJ(uOp: UnionSPJOp)(using stagedSM: Expr[CollectionsStorageManager])(using i: Expr[Int])(using Quotes): Expr[EDB] = {
     val (sortedChildren, newHash) = JoinIndexes.getPreSortAhead(
       uOp.children.toArray,
-      a => storageManager.getKnownDerivedDB(a.rId).size,
+      a => storageManager.getKnownDerivedDB(a.rId).length,
       uOp.rId,
       uOp.hash,
       storageManager
@@ -63,7 +63,7 @@ class StagedCompiler(val storageManager: CollectionsStorageManager)(using val ji
   }
 
   //  def compileIRRelOp[T](irTree: IRRelOp)(using stagedSM: Expr[StorageManager {type EDB = T}], t: Type[T])(using Quotes): Expr[T] = { // TODO: Instead of parameterizing, use staged path dependent type: i.e. stagedSM.EDB
-  def compileIRRelOp(irTree: IROp[CollectionsStorageManager#EDB])(using stagedSM: Expr[CollectionsStorageManager])(using Quotes): Expr[CollectionsStorageManager#EDB] = {
+  def compileIRRelOp(irTree: IROp[EDB])(using stagedSM: Expr[CollectionsStorageManager])(using Quotes): Expr[EDB] = {
     irTree match {
       case ScanOp(rId, db, knowledge) =>
         db match {
@@ -87,19 +87,19 @@ class StagedCompiler(val storageManager: CollectionsStorageManager)(using val ji
         if (storageManager.edbs.contains(rId))
           '{ $stagedSM.edbs(${ Expr(rId) }) }
         else
-          '{ $stagedSM.EDB() }
+          '{ $stagedSM.getEmptyEDB() }
 
       case ProjectJoinFilterOp(rId, hash, children:_*) =>
         val FPJOp = irTree.asInstanceOf[ProjectJoinFilterOp]
         val (sortedChildren, newHash) = JoinIndexes.getSortAhead(
           FPJOp.childrenSO,
-          c => c.run(storageManager).size,
+          c => c.run(storageManager).length,
           rId,
           hash,
           storageManager
         )
         FPJOp.childrenSO = sortedChildren
-//        FPJOp.children = sortedChildren.asInstanceOf[Array[IROp[CollectionsStorageManager#EDB]]] // save for next run so sorting is faster
+//        FPJOp.children = sortedChildren.asInstanceOf[Array[IROp[EDB]]] // save for next run so sorting is faster
         FPJOp.hash = newHash
         val compiledOps = Expr.ofSeq(sortedChildren.map(compileIRRelOp))
         '{
@@ -114,7 +114,7 @@ class StagedCompiler(val storageManager: CollectionsStorageManager)(using val ji
       case UnionSPJOp(rId, hash, children:_*) =>
         val (sortedChildren, newHash) = JoinIndexes.getPreSortAhead(
             children.toArray,
-            a => storageManager.getKnownDerivedDB(a.rId).size,
+            a => storageManager.getKnownDerivedDB(a.rId).length,
             rId,
             hash,
             storageManager
@@ -126,10 +126,10 @@ class StagedCompiler(val storageManager: CollectionsStorageManager)(using val ji
       case UnionOp(label, children:_*) =>
         val compiledOps = children.map(compileIRRelOp)
         label match
-          case OpCode.EVAL_RULE_NAIVE if children.size > heuristics.max_deps =>
+          case OpCode.EVAL_RULE_NAIVE if children.length > heuristics.max_deps =>
             val lambdaOps = compiledOps.map(e => '{ def eval_rule_lambda() = $e; eval_rule_lambda() })
             '{ $stagedSM.union(${Expr.ofSeq(lambdaOps)}) }
-          case OpCode.EVAL_RULE_SN if children.size > heuristics.max_deps =>
+          case OpCode.EVAL_RULE_SN if children.length > heuristics.max_deps =>
             val lambdaOps = compiledOps.map(e => '{ def eval_rule_sn_lambda() = $e; eval_rule_sn_lambda() })
             '{ $stagedSM.union(${ Expr.ofSeq(lambdaOps) }) }
           case _ =>
@@ -174,11 +174,11 @@ class StagedCompiler(val storageManager: CollectionsStorageManager)(using val ji
       case SequenceOp(label, children:_*) =>
         val cOps = children.map(compileIR)
         label match
-          case OpCode.EVAL_NAIVE if children.size / 2 > heuristics.max_relations =>
+          case OpCode.EVAL_NAIVE if children.length / 2 > heuristics.max_relations =>
             cOps.reduceLeft((acc, next) =>
               '{ $acc ; def eval_naive_lambda() = $next; eval_naive_lambda() }
             )
-          case OpCode.EVAL_SN if children.size > heuristics.max_relations =>
+          case OpCode.EVAL_SN if children.length > heuristics.max_relations =>
             cOps.reduceLeft((acc, next) =>
               '{ $acc ; def eval_sn_lambda() = $next; eval_sn_lambda() }
             )
@@ -188,8 +188,8 @@ class StagedCompiler(val storageManager: CollectionsStorageManager)(using val ji
             )
 
       case InsertOp(rId, db, knowledge, children:_*) =>
-        val res = compileIRRelOp(children.head.asInstanceOf[IROp[CollectionsStorageManager#EDB]])
-        val res2 = if (children.size > 1) compileIRRelOp(children(1).asInstanceOf[IROp[CollectionsStorageManager#EDB]]) else '{ $stagedSM.EDB() }
+        val res = compileIRRelOp(children.head.asInstanceOf[IROp[EDB]])
+        val res2 = if (children.length > 1) compileIRRelOp(children(1).asInstanceOf[IROp[EDB]]) else '{ $stagedSM.getEmptyEDB() }
         db match {
           case DB.Derived =>
             knowledge match {
@@ -211,7 +211,7 @@ class StagedCompiler(val storageManager: CollectionsStorageManager)(using val ji
         '{ debug(${ Expr(prefix) }, () => $stagedSM.printer.toString()) }
 
       case _ =>
-        compileIRRelOp(irTree.asInstanceOf[IROp[CollectionsStorageManager#EDB]])(using stagedSM)
+        compileIRRelOp(irTree.asInstanceOf[IROp[EDB]])(using stagedSM)
     }
   }
 
@@ -237,9 +237,9 @@ class StagedCompiler(val storageManager: CollectionsStorageManager)(using val ji
     result
   }
 
-  def getCompiledUnionSPJ(irTree: UnionSPJOp): (CollectionsStorageManager, Int) => CollectionsStorageManager#EDB = {
+  def getCompiledUnionSPJ(irTree: UnionSPJOp): (CollectionsStorageManager, Int) => EDB = {
     val result = staging.run {
-      val res: Expr[(CollectionsStorageManager, Int) => CollectionsStorageManager#EDB] =
+      val res: Expr[(CollectionsStorageManager, Int) => EDB] =
         '{ (stagedSm: CollectionsStorageManager, i: Int) => ${ compileIRUnionSPJ(irTree)(using 'stagedSm)(using 'i) } }
       debug("generated code: ", () => res.show)
       res
@@ -248,9 +248,9 @@ class StagedCompiler(val storageManager: CollectionsStorageManager)(using val ji
     result
   }
 
-  def getCompiledEvalRule(irTree: UnionOp): (CollectionsStorageManager, Int) => CollectionsStorageManager#EDB = {
+  def getCompiledEvalRule(irTree: UnionOp): (CollectionsStorageManager, Int) => EDB = {
     val result = staging.run {
-      val res: Expr[(CollectionsStorageManager, Int) => CollectionsStorageManager#EDB] =
+      val res: Expr[(CollectionsStorageManager, Int) => EDB] =
         '{ (stagedSm: CollectionsStorageManager, i: Int) => ${ compileIREvalRule(irTree)(using 'stagedSm)(using 'i) } }
       debug("generated code: ", () => res.show)
       res
@@ -259,7 +259,7 @@ class StagedCompiler(val storageManager: CollectionsStorageManager)(using val ji
     result
   }
 
-  def getCompiledRel(irTree: IROp[CollectionsStorageManager#EDB]): CompiledRelFn = {
+  def getCompiledRel(irTree: IROp[EDB]): CompiledRelFn = {
     val result = staging.run {
       val res: Expr[CompiledRelFn] =
         '{ (stagedSm: CollectionsStorageManager) => ${ compileIRRelOp(irTree)(using 'stagedSm) } }

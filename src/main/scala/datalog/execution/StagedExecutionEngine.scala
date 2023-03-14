@@ -4,7 +4,7 @@ import datalog.dsl.{Atom, Constant, Term, Variable}
 import datalog.execution.ast.*
 import datalog.execution.ast.transform.{ASTTransformerContext, CopyEliminationPass, Transformer}
 import datalog.execution.ir.*
-import datalog.storage.{CollectionsStorageManager, DB, KNOWLEDGE, StorageManager}
+import datalog.storage.{CollectionsStorageManager, DB, KNOWLEDGE, StorageManager, EDB}
 import datalog.tools.Debug.debug
 
 import scala.collection.mutable
@@ -29,7 +29,6 @@ case class JITOptions(
 }
 
 class StagedExecutionEngine(val storageManager: CollectionsStorageManager, val defaultJITOptions: JITOptions = JITOptions()) extends ExecutionEngine {
-  import storageManager.EDB
   val precedenceGraph = new PrecedenceGraph(using storageManager.ns)
   val prebuiltOpKeys: mutable.Map[Int, mutable.ArrayBuffer[JoinIndexes]] = mutable.Map[Int, mutable.ArrayBuffer[JoinIndexes]]() // TODO: currently unused, mb remove from EE
   val ast: ProgramNode = ProgramNode()
@@ -147,7 +146,7 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, val d
     storageManager.getNewIDBResult(ctx.toSolve)
   }
 
-  def jitRel(irTree: IROp[CollectionsStorageManager#EDB])(using jitOptions: JITOptions): CollectionsStorageManager#EDB = {
+  def jitRel(irTree: IROp[EDB])(using jitOptions: JITOptions): EDB = {
 //    println(s"IN INTERPRET REL_IR, code=${irTree.code}")
     // If async compiling, then make a new dotty for nodes for which there are multiple. TODO: pool?
 //    lazy val newDotty = dedicatedDotty//if (jitOptions.block) dedicatedDotty else staging.Compiler.make(getClass.getClassLoader)
@@ -301,7 +300,7 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, val d
     }
     stragglers.addOne(op.compiledFn.hashCode(), op.compiledFn)
 
-  inline def startCompileThreadRel(op: IROp[CollectionsStorageManager#EDB])(using jitOptions: JITOptions): Unit =
+  inline def startCompileThreadRel(op: IROp[EDB])(using jitOptions: JITOptions): Unit =
 //    if (jitOptions.block)
 //      given staging.Compiler = dotty
 //      op.blockingCompiledFn = compiler.getCompiledRel(op)
@@ -334,13 +333,13 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, val d
         op.run(storageManager)
 
       case op: InsertOp =>
-        op.run_continuation(storageManager, op.children.map(o => (sm: CollectionsStorageManager) => jitRel(o.asInstanceOf[IROp[CollectionsStorageManager#EDB]])))
+        op.run_continuation(storageManager, op.children.map(o => (sm: CollectionsStorageManager) => jitRel(o.asInstanceOf[IROp[EDB]])))
 
       case op: DebugNode =>
         op.run(storageManager)
 
       case _ =>
-        jitRel(irTree.asInstanceOf[IROp[CollectionsStorageManager#EDB]])
+        jitRel(irTree.asInstanceOf[IROp[EDB]])
 //        throw new Exception(s"Error: unhandled node type $irTree")
     }
   }
@@ -400,6 +399,5 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, val d
   }
 }
 class NaiveStagedExecutionEngine(storageManager: CollectionsStorageManager, defaultJITOptions: JITOptions = JITOptions()) extends StagedExecutionEngine(storageManager, defaultJITOptions) {
-  import storageManager.EDB
   override def createIR(ast: ASTNode)(using InterpreterContext): IROp[Any] = IRTreeGenerator().generateNaive(ast)
 }

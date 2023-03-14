@@ -2,7 +2,7 @@ package datalog.execution
 
 import datalog.dsl.{Atom, Constant, Variable, Term}
 import datalog.execution.ir.*
-import datalog.storage.{CollectionsStorageManager, DB, KNOWLEDGE, StorageManager}
+import datalog.storage.{CollectionsStorageManager, DB, KNOWLEDGE, StorageManager, EDB}
 import datalog.tools.Debug.debug
 
 import scala.quoted.*
@@ -50,7 +50,7 @@ class StagedSnippetCompiler(val storageManager: CollectionsStorageManager)(using
     }
   }
 
-  def compileIRRelOp(irTree: IROp[CollectionsStorageManager#EDB])(using stagedSM: Expr[CollectionsStorageManager])(using stagedFns: Expr[Seq[CompiledRelFn]])(using Quotes): Expr[CollectionsStorageManager#EDB] = { // TODO: Instead of parameterizing, use staged path dependent type: i.e. stagedSM.EDB
+  def compileIRRelOp(irTree: IROp[EDB])(using stagedSM: Expr[CollectionsStorageManager])(using stagedFns: Expr[Seq[CompiledRelFn]])(using Quotes): Expr[EDB] = { // TODO: Instead of parameterizing, use staged path dependent type: i.e. stagedSM.getEmptyEDB
     irTree match {
       case ScanOp(rId, db, knowledge) =>
         db match { // TODO[future]: Since edb is accessed upon first iteration, potentially optimize away getOrElse
@@ -74,7 +74,7 @@ class StagedSnippetCompiler(val storageManager: CollectionsStorageManager)(using
         if (storageManager.edbs.contains(rId))
           '{ $stagedSM.edbs(${ Expr(rId) }) }
         else
-          '{ $stagedSM.EDB() }
+          '{ $stagedSM.getEmptyEDB() }
 
       case ProjectJoinFilterOp(rId, hash, children:_*) =>
         val compiledOps = '{ $stagedFns.map(s => s($stagedSM)) }
@@ -106,7 +106,7 @@ class StagedSnippetCompiler(val storageManager: CollectionsStorageManager)(using
     }
   }
 
-  def compileIR(irTree: IROp[Any])(using stagedSM: Expr[CollectionsStorageManager])(using stagedFns: Expr[Seq[CompiledFn]])(using Quotes): Expr[Any] = { // TODO: Instead of parameterizing, use staged path dependent type: i.e. stagedSM.EDB
+  def compileIR(irTree: IROp[Any])(using stagedSM: Expr[CollectionsStorageManager])(using stagedFns: Expr[Seq[CompiledFn]])(using Quotes): Expr[Any] = { // TODO: Instead of parameterizing, use staged path dependent type: i.e. stagedSM.getEmptyEDB
     irTree match {
       case ProgramOp(children) =>
         '{ $stagedFns(0)($stagedSM) }
@@ -132,8 +132,8 @@ class StagedSnippetCompiler(val storageManager: CollectionsStorageManager)(using
         '{ $stagedFns.foreach(s => s($stagedSM)) } // no need to generate lambdas bc already there!
 
       case InsertOp(rId, db, knowledge, children:_*) =>
-        val res = '{ $stagedFns(0)($stagedSM).asInstanceOf[CollectionsStorageManager#EDB] }
-        val res2 = if (children.size > 1) '{ $stagedFns(1)($stagedSM).asInstanceOf[CollectionsStorageManager#EDB] } else '{ $stagedSM.EDB() }
+        val res = '{ $stagedFns(0)($stagedSM).asInstanceOf[EDB] }
+        val res2 = if (children.size > 1) '{ $stagedFns(1)($stagedSM).asInstanceOf[EDB] } else '{ $stagedSM.getEmptyEDB() }
         db match {
           case DB.Derived =>
             knowledge match {
@@ -168,9 +168,9 @@ class StagedSnippetCompiler(val storageManager: CollectionsStorageManager)(using
     }
   }
 
-  def getCompiledSnippetRel(irTree: IROp[CollectionsStorageManager#EDB])(using staging.Compiler): ((CollectionsStorageManager, Seq[CompiledRelFn]) => CollectionsStorageManager#EDB) = {
+  def getCompiledSnippetRel(irTree: IROp[EDB])(using staging.Compiler): ((CollectionsStorageManager, Seq[CompiledRelFn]) => EDB) = {
     staging.run {
-      val res: Expr[(CollectionsStorageManager, Seq[CompiledRelFn]) => CollectionsStorageManager#EDB] =
+      val res: Expr[(CollectionsStorageManager, Seq[CompiledRelFn]) => EDB] =
         '{ (stagedSm: CollectionsStorageManager, stagedFns: Seq[CompiledRelFn]) => ${ compileIRRelOp(irTree)(using 'stagedSm)(using 'stagedFns) } }
       debug("generated code: ", () => res.show)
       res

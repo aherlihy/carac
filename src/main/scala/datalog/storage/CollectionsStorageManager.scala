@@ -31,16 +31,16 @@ class CollectionsStorageManager(ns: NS = new NS()) extends SimpleStorageManager(
         outer.flatMap(outerTuple => {
           inner.flatMap(innerTuple => {
             val get = (i: Int) => {
-              outerTuple.applyOrElse(i, j => innerTuple(j - outerTuple.size))
+              outerTuple.applyOrElse(i, j => innerTuple(j - outerTuple.length))
             }
-            if(scanFilter(k, innerTuple.size + outerTuple.size)(get))
+            if(scanFilter(k, innerTuple.length + outerTuple.length)(get))
               Some(outerTuple ++ innerTuple)
             else
               None
           })
         })
       })
-      .filter(r => scanFilter(k, r.size)(r))
+      .filter(r => scanFilter(k, r.length)(r))
   }
 
   def projectHelper(input: EDB, k: JoinIndexes): EDB = {
@@ -62,24 +62,24 @@ class CollectionsStorageManager(ns: NS = new NS()) extends SimpleStorageManager(
 
   inline def toJoin(k: JoinIndexes, innerTuple: Row[StorageTerm], outerTuple: Row[StorageTerm]): Boolean = {
     k.varIndexes.isEmpty || k.varIndexes.forall(condition =>
-      if (condition.head >= innerTuple.size + outerTuple.size)
+      if (condition.head >= innerTuple.length + outerTuple.length)
         true
       else
-        val toCompare = innerTuple.applyOrElse(condition.head, j => outerTuple(j - innerTuple.size))
+        val toCompare = innerTuple.applyOrElse(condition.head, j => outerTuple(j - innerTuple.length))
         condition.drop(1).forall(idx =>
-          idx >= innerTuple.size + outerTuple.size ||
-            innerTuple.applyOrElse(idx, j => outerTuple(j - innerTuple.size)) == toCompare
+          idx >= innerTuple.length + outerTuple.length ||
+            innerTuple.applyOrElse(idx, j => outerTuple(j - innerTuple.length)) == toCompare
         )
     )
   }
 
   def joinProjectHelper_withHash(inputs: Seq[EDB], rId: Int, hash: String, sortOrder: (Int, Int, Int)): EDB = {
     val originalK = allRulesAllIndexes(rId)(hash)
-    if (inputs.size == 1) // just filter
+    if (inputs.length == 1) // just filter
       inputs.head
         .filter(e =>
-          val filteredC = originalK.constIndexes.filter((ind, _) => ind < e.size)
-          prefilter(filteredC, 0, e) && filteredC.size == originalK.constIndexes.size)
+          val filteredC = originalK.constIndexes.filter((ind, _) => ind < e.length)
+          prefilter(filteredC, 0, e) && filteredC.length == originalK.constIndexes.length)
         .map(t =>
           originalK.projIndexes.flatMap((typ, idx) =>
             typ match {
@@ -88,10 +88,10 @@ class CollectionsStorageManager(ns: NS = new NS()) extends SimpleStorageManager(
               case _ => throw new Exception("Internal error: projecting something that is not a constant nor a variable")
             }).toIndexedSeq)
     else
-//      val (sorted, newHash) = JoinIndexes.getSorted(inputs.toArray, edb => edb.size, rId, hash, this, sortAhead) // NOTE: already sorted in staged compiler/ProjectJoinFilterOp.run
+//      val (sorted, newHash) = JoinIndexes.getSorted(inputs.toArray, edb => edb.length, rId, hash, this, sortAhead) // NOTE: already sorted in staged compiler/ProjectJoinFilterOp.run
       val result = inputs
         .foldLeft(
-          (EDB(), 0, allRulesAllIndexes(rId)(hash))
+          (SimpleEDB(), 0, allRulesAllIndexes(rId)(hash))
         )((combo: (EDB, Int, JoinIndexes), innerT: EDB) =>
           val outerT = combo._1
           val atomI = combo._2
@@ -100,7 +100,7 @@ class CollectionsStorageManager(ns: NS = new NS()) extends SimpleStorageManager(
             (innerT, atomI + 1, k)
           else
             val (inner, outer) =
-              if (atomI > 1 && ((sortOrder._3 == 1 && outerT.size > innerT.size) || (sortOrder._3 == -1 && innerT.size > outerT.size)))
+              if (atomI > 1 && ((sortOrder._3 == 1 && outerT.length > innerT.length) || (sortOrder._3 == -1 && innerT.length > outerT.length)))
                 val body = k.atoms.drop(1)
                 val newerHash = JoinIndexes.getRuleHash(Array(k.atoms.head, body(atomI)) ++ body.dropRight(body.length - atomI) ++ body.drop(atomI + 1))
                 k = allRulesAllIndexes(rId)(newerHash)
@@ -109,18 +109,18 @@ class CollectionsStorageManager(ns: NS = new NS()) extends SimpleStorageManager(
                 (innerT, outerT)
             val edbResult = outer
               .filter(o =>
-                prefilter(k.constIndexes.filter((i, _) => i < o.size), 0, o)
+                prefilter(k.constIndexes.filter((i, _) => i < o.length), 0, o)
               ) // filter outer tuple
               .flatMap(outerTuple =>
                 inner
                   .filter(i =>
-                    prefilter(k.constIndexes.filter((ind, _) => ind >= outerTuple.size && ind < (outerTuple.size + i.size)), outerTuple.size, i) && toJoin(k, outerTuple, i)
+                    prefilter(k.constIndexes.filter((ind, _) => ind >= outerTuple.length && ind < (outerTuple.length + i.length)), outerTuple.length, i) && toJoin(k, outerTuple, i)
                   )
                   .map(innerTuple => outerTuple ++ innerTuple))
             (edbResult, atomI + 1, k)
         )
       result._1
-        .filter(edb => result._3.constIndexes.filter((i, _) => i >= edb.size).isEmpty)
+        .filter(edb => result._3.constIndexes.filter((i, _) => i >= edb.length).isEmpty)
         .map(t =>
           result._3.projIndexes.flatMap((typ, idx) =>
             typ match {
@@ -132,11 +132,11 @@ class CollectionsStorageManager(ns: NS = new NS()) extends SimpleStorageManager(
   }
 
   def joinProjectHelper(inputs: Seq[EDB], originalK: JoinIndexes, sortOrder: (Int, Int, Int)): EDB = { // OLD, only keep around for benchmarks
-    if (inputs.size == 1) // just filter
+    if (inputs.length == 1) // just filter
       inputs.head
         .filter(e =>
-          val filteredC = originalK.constIndexes.filter((ind, _) => ind < e.size)
-          prefilter(filteredC, 0, e) && filteredC.size == originalK.constIndexes.size)
+          val filteredC = originalK.constIndexes.filter((ind, _) => ind < e.length)
+          prefilter(filteredC, 0, e) && filteredC.length == originalK.constIndexes.length)
         .map(t =>
           originalK.projIndexes.flatMap((typ, idx) =>
             typ match {
@@ -149,7 +149,7 @@ class CollectionsStorageManager(ns: NS = new NS()) extends SimpleStorageManager(
       var preSortedK = originalK // TODO: find better ways to reduce with 2 acc
       var sorted = inputs
       if (sortOrder._2 != 0)
-        var edbToAtom = inputs.toArray.zipWithIndex.map((edb, i) => (edb, originalK.atoms(i + 1))).sortBy((edb, _) => edb.size)
+        var edbToAtom = inputs.toArray.zipWithIndex.map((edb, i) => (edb, originalK.atoms(i + 1))).sortBy((edb, _) => edb.length)
         if (sortOrder._2 == -1) edbToAtom = edbToAtom.reverse
         val newAtoms = originalK.atoms.head +: edbToAtom.map(_._2)
         preSortedK = JoinIndexes(newAtoms)
@@ -157,7 +157,7 @@ class CollectionsStorageManager(ns: NS = new NS()) extends SimpleStorageManager(
 
       val result = sorted
         .foldLeft(
-          (EDB(), 0, preSortedK)
+          (SimpleEDB(), 0, preSortedK)
         )((combo: (EDB, Int, JoinIndexes), innerT: EDB) =>
           val outerT = combo._1
           val atomI = combo._2
@@ -166,26 +166,26 @@ class CollectionsStorageManager(ns: NS = new NS()) extends SimpleStorageManager(
             (innerT, atomI + 1, k)
           else
             val (inner, outer) =
-              if (atomI > 1 && ((sortOrder._3 == 1 && outerT.size > innerT.size) || (sortOrder._3 == -1 && innerT.size > outerT.size)))
+              if (atomI > 1 && ((sortOrder._3 == 1 && outerT.length > innerT.length) || (sortOrder._3 == -1 && innerT.length > outerT.length)))
                 val body = k.atoms.drop(1)
-                k = JoinIndexes(Array(k.atoms.head, body(atomI)) ++ body.dropRight(body.size - atomI) ++ body.drop(atomI + 1))
+                k = JoinIndexes(Array(k.atoms.head, body(atomI)) ++ body.dropRight(body.length - atomI) ++ body.drop(atomI + 1))
                 (outerT, innerT)
               else
                 (innerT, outerT)
             val edbResult = outer
               .filter(o =>
-                prefilter(k.constIndexes.filter((i, _) => i < o.size), 0, o)
+                prefilter(k.constIndexes.filter((i, _) => i < o.length), 0, o)
               ) // filter outer tuple
               .flatMap(outerTuple =>
                 inner
                   .filter(i =>
-                    prefilter(k.constIndexes.filter((ind, _) => ind >= outerTuple.size && ind < (outerTuple.size + i.size)), outerTuple.size, i) && toJoin(k, outerTuple, i)
+                    prefilter(k.constIndexes.filter((ind, _) => ind >= outerTuple.length && ind < (outerTuple.length + i.length)), outerTuple.length, i) && toJoin(k, outerTuple, i)
                   )
                   .map(innerTuple => outerTuple ++ innerTuple))
             (edbResult, atomI + 1, k)
           )
       result._1
-        .filter(edb => result._3.constIndexes.filter((i, _) => i >= edb.size).isEmpty)
+        .filter(edb => result._3.constIndexes.filter((i, _) => i >= edb.length).isEmpty)
         .map(t =>
           result._3.projIndexes.flatMap((typ, idx) =>
             typ match {
@@ -207,7 +207,7 @@ class CollectionsStorageManager(ns: NS = new NS()) extends SimpleStorageManager(
     debug("SPJU:", () => s"r=${ns(rId)} keys=${printer.snPlanToString(keys)} knownDBId $knownDbId")
       keys.flatMap(k => // union of each definition of rId
         if (k.edb)
-          edbs.getOrElse(rId, EDB())
+          edbs.getOrElse(rId, SimpleEDB())
         else
           var idx = -1 // if dep is featured more than once, only us delta once, but at a different pos each time
           k.deps.flatMap(d => {
@@ -220,7 +220,7 @@ class CollectionsStorageManager(ns: NS = new NS()) extends SimpleStorageManager(
                   deltaDB(knownDbId)(r)
                 }
                 else {
-                  derivedDB(knownDbId).getOrElse(r, edbs.getOrElse(r, EDB())) // TODO: warn if EDB is empty? Right now can't tell the difference between undeclared and empty EDB
+                  derivedDB(knownDbId).getOrElse(r, edbs.getOrElse(r, SimpleEDB())) // TODO: warn if EDB is empty? Right now can't tell the difference between undeclared and empty EDB
                 }
               ), k, (0, 0, 0)) // don't sort when not staging
           }).toSet
@@ -231,11 +231,11 @@ class CollectionsStorageManager(ns: NS = new NS()) extends SimpleStorageManager(
     debug("NaiveSPJU:", () => s"r=${ns(rId)} keys=${printer.naivePlanToString(keys)} knownDBId $knownDbId")
     keys.flatMap(k => { // for each idb rule
       if (k.edb)
-        edbs.getOrElse(rId, EDB())
+        edbs.getOrElse(rId, SimpleEDB())
       else
         projectHelper(
           joinHelper(
-            k.deps.map(r => derivedDB(knownDbId).getOrElse(r, edbs.getOrElse(r, EDB()))), k // TODO: warn if EDB is empty? Right now can't tell the difference between undeclared and empty EDB)
+            k.deps.map(r => derivedDB(knownDbId).getOrElse(r, edbs.getOrElse(r, SimpleEDB()))), k // TODO: warn if EDB is empty? Right now can't tell the difference between undeclared and empty EDB)
           ), k).toSet
     })
   }

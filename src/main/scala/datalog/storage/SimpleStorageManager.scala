@@ -6,23 +6,51 @@ import datalog.tools.Debug.debug
 
 import scala.collection.{immutable, mutable}
 
+class SimpleEDB(val wrapped: mutable.ArrayBuffer[SimpleRow]) extends EDB {
+  def this(elems: SimpleRow*) = this(mutable.ArrayBuffer[SimpleRow](elems*))
+  def asSimpleEDB(to: Relation[StorageTerm]): SimpleEDB = to.asInstanceOf[SimpleEDB]
+  def asSimpleRow(to: Row[StorageTerm]): SimpleRow = to.asInstanceOf[SimpleRow]
+
+  export wrapped.{length, clear, nonEmpty, toSet}
+
+  def addOne(elem: Row[StorageTerm]): this.type =
+    wrapped.addOne(asSimpleRow(elem))
+    this
+  def diff(that: Relation[StorageTerm]): Relation[StorageTerm] =
+    SimpleEDB(wrapped.diff(asSimpleEDB(that).wrapped))
+  def prependedAll(suffix: Relation[StorageTerm]): Relation[StorageTerm] =
+    SimpleEDB(wrapped.prependedAll(asSimpleEDB(suffix).wrapped))
+
+  def getSetOfSeq: Set[Seq[StorageTerm]] = wrapped.map(s => s.toSeq).toSet
+
+}
+object SimpleEDB {
+  extension (edbs: Seq[EDB])
+    def unionEDB: EDB =
+      SimpleEDB(edbs.flatten(using _.asInstanceOf[SimpleEDB].wrapped).distinct.to(mutable.ArrayBuffer))
+}
+class SimpleRow(val wrapped: Seq[StorageTerm]) extends Row[StorageTerm] {
+  def toSeq = wrapped
+  def length: Int = wrapped.length
+}
+
 abstract class SimpleStorageManager(override val ns: NS) extends StorageManager(ns) {
-  type StorageTerm = Term
-  type StorageVariable = Variable
-  type StorageConstant = Constant
-  type Row[+T] = Seq[T] // IndexedSeq and staging not compatible
-  def Row[T](c: T*) = Seq[T](c: _*)
-  type Table[T] = mutable.ArrayBuffer[T]
-  def Table[T](r: T*) = mutable.ArrayBuffer[T](r: _*)
-  type Relation[T] = Table[Row[T]]
-  def Relation[T](c: Row[T]*) = Table[Row[T]](c: _*)
+//  type StorageTerm = Term
+//  type StorageVariable = Variable
+//  type StorageConstant = Constant
+//  type Row[+T] = Seq[T] // IndexedSeq and staging not compatible
+//  def Row[T](c: T*) = Seq[T](c: _*)
+//  type Table[T] = mutable.ArrayBuffer[T]
+//  def Table[T](r: T*) = mutable.ArrayBuffer[T](r: _*)
+//  type Relation[T] = Table[Row[T]]
+//  def Relation[T](c: Row[T]*) = Table[Row[T]](c: _*)
 
   type Database[K, V] = mutable.Map[K, V]
 
   type FactDatabase = Database[RelationId, EDB]
   def FactDatabase(e: (RelationId, EDB)*) = mutable.Map[RelationId, EDB](e: _*)
 
-  def EDB(c: Row[StorageTerm]*) = Relation[StorageTerm](c: _*)
+//  def EDB(c: Row[StorageTerm]*) = Relation[StorageTerm](c: _*)
 
   // "database", i.e. relationID => Relation
   val edbs: FactDatabase = FactDatabase()
@@ -55,7 +83,7 @@ abstract class SimpleStorageManager(override val ns: NS) extends StorageManager(
     deltaDB.addOne(dbId, FactDatabase())
 
     edbs.foreach((k, relation) => {
-      deltaDB(dbId)(k) = EDB()
+      deltaDB(dbId)(k) = SimpleEDB()
     }) // Delta-EDB is just empty sets
     dbId += 1
 
@@ -64,44 +92,45 @@ abstract class SimpleStorageManager(override val ns: NS) extends StorageManager(
     deltaDB.addOne(dbId, FactDatabase())
 
     edbs.foreach((k, relation) => {
-      deltaDB(dbId)(k) = EDB()
+      deltaDB(dbId)(k) = SimpleEDB()
     }) // Delta-EDB is just empty sets
     dbId += 1
   }
 
   override def insertEDB(rule: Atom): Unit = {
     if (edbs.contains(rule.rId))
-      edbs(rule.rId).addOne(rule.terms)
+      edbs(rule.rId).addOne(SimpleRow(rule.terms))
     else
-      edbs(rule.rId) = EDB()
-      edbs(rule.rId).addOne(rule.terms)
+      edbs(rule.rId) = SimpleEDB()
+      edbs(rule.rId).addOne(SimpleRow(rule.terms))
   }
+  def getEmptyEDB(): EDB = SimpleEDB()
 
   def edb(rId: RelationId): EDB = edbs(rId)
 
   def getKnownDerivedDB(rId: RelationId): EDB =
-    derivedDB(knownDbId).getOrElse(rId, edbs.getOrElse(rId, EDB()))
+    derivedDB(knownDbId).getOrElse(rId, edbs.getOrElse(rId, SimpleEDB()))
   def getNewDerivedDB(rId: RelationId): EDB =
-    derivedDB(newDbId).getOrElse(rId, edbs.getOrElse(rId, EDB()))
+    derivedDB(newDbId).getOrElse(rId, edbs.getOrElse(rId, SimpleEDB()))
   def getKnownDeltaDB(rId: RelationId): EDB =
-    deltaDB(knownDbId).getOrElse(rId, edbs.getOrElse(rId, EDB()))
+    deltaDB(knownDbId).getOrElse(rId, edbs.getOrElse(rId, SimpleEDB()))
   def getNewDeltaDB(rId: RelationId): EDB =
-    deltaDB(newDbId).getOrElse(rId, edbs.getOrElse(rId, EDB()))
+    deltaDB(newDbId).getOrElse(rId, edbs.getOrElse(rId, SimpleEDB()))
   def getKnownIDBResult(rId: RelationId): Set[Seq[Term]] =
     debug("Final IDB Result[known]: ", () => s"at iteration $iteration: @$knownDbId, count=${getKnownDerivedDB(rId).length}")
-    getKnownDerivedDB(rId).map(s => s.toSeq).toSet
+    getKnownDerivedDB(rId).getSetOfSeq
   def getNewIDBResult(rId: RelationId): Set[Seq[Term]] =
     debug(s"Final IDB Result[new]", () => s" at iteration $iteration: @$newDbId, count=${getNewDerivedDB(rId).length}")
-    getNewDerivedDB(rId).map(s => s.toSeq).toSet
-  def getEDBResult(rId: RelationId): Set[Seq[Term]] = edbs.getOrElse(rId, EDB()).map(s => s.toSeq).toSet
-
-  def resetKnownDerived(rId: RelationId, rules: Relation[StorageTerm], prev: Relation[StorageTerm] = Relation[StorageTerm]()): Unit =
-    derivedDB(knownDbId)(rId) = rules ++ prev
-  def resetKnownDelta(rId: RelationId, rules: Relation[StorageTerm]): Unit =
+    getNewDerivedDB(rId).getSetOfSeq
+  def getEDBResult(rId: RelationId): Set[Seq[Term]] =
+    edbs.getOrElse(rId, SimpleEDB()).getSetOfSeq
+  def resetKnownDerived(rId: RelationId, rules: EDB, prev: EDB = SimpleEDB()): Unit =
+    derivedDB(knownDbId)(rId) = rules.prependedAll(prev)
+  def resetKnownDelta(rId: RelationId, rules: EDB): Unit =
     deltaDB(knownDbId)(rId) = rules
-  def resetNewDerived(rId: RelationId, rules: Relation[StorageTerm], prev: Relation[StorageTerm] = Relation[StorageTerm]()): Unit =
-    derivedDB(newDbId)(rId) = rules ++ prev
-  def resetNewDelta(rId: RelationId, rules: Relation[StorageTerm]): Unit =
+  def resetNewDerived(rId: RelationId, rules: EDB, prev: EDB = SimpleEDB()): Unit =
+    derivedDB(newDbId)(rId) = rules.prependedAll(prev)
+  def resetNewDelta(rId: RelationId, rules: EDB): Unit =
     deltaDB(newDbId)(rId) = rules
   def clearNewDerived(): Unit =
     derivedDB(newDbId).foreach((i, e) => e.clear())
@@ -120,12 +149,15 @@ abstract class SimpleStorageManager(override val ns: NS) extends StorageManager(
   def verifyEDBs(idbList: mutable.Set[RelationId]): Unit = {
     ns.rIds().foreach(rId =>
       if (!edbs.contains(rId) && !idbList.contains(rId)) // treat undefined relations as empty edbs
-        edbs(rId) = EDB()
+        edbs(rId) = SimpleEDB()
     )
   }
 
   def union(edbs: Seq[EDB]): EDB =
-    edbs.flatten.distinct.to(mutable.ArrayBuffer)
+//    edbs.head.union(edbs.drop(1))
+    import SimpleEDB.unionEDB
+    edbs.unionEDB
+
   def diff(lhs: EDB, rhs: EDB): EDB =
     lhs diff rhs
 }

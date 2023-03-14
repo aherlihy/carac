@@ -24,11 +24,11 @@ class RelationalStorageManager(ns: NS = NS()) extends SimpleStorageManager(ns) {
     val plan = Union(
         keys.map(k =>
           if (k.edb)
-            Scan(edbs.getOrElse(rId, EDB()), rId)
+            Scan(edbs.getOrElse(rId, SimpleEDB()), rId)
           else
             Project(
               Join(k.deps.map(r => Scan(
-                derivedDB(knownDbId).getOrElse(r, edbs.getOrElse(r, EDB())), r) // TODO: warn if EDB is empty? Right now can't tell the difference between undeclared and empty EDB
+                derivedDB(knownDbId).getOrElse(r, edbs.getOrElse(r, SimpleEDB())), r) // TODO: warn if EDB is empty? Right now can't tell the difference between undeclared and empty EDB
               ), k.varIndexes, k.constIndexes),
               k.projIndexes
             )
@@ -50,7 +50,7 @@ class RelationalStorageManager(ns: NS = NS()) extends SimpleStorageManager(ns) {
     val plan = Union(
       keys.map(k => // for each idb rule
         if (k.edb)
-          Scan(edbs.getOrElse(rId, EDB()), rId)
+          Scan(edbs.getOrElse(rId, SimpleEDB()), rId)
         else
           var idx = -1 // if dep is featured more than once, only us delta once, but at a different pos each time
           Union(
@@ -62,9 +62,9 @@ class RelationalStorageManager(ns: NS = NS()) extends SimpleStorageManager(ns) {
                     if (r == d && !found && i > idx)
                       found = true
                       idx = i
-                      Scan(deltaDB(knownDbId).getOrElse(r, EDB()), r)
+                      Scan(deltaDB(knownDbId).getOrElse(r, SimpleEDB()), r)
                     else
-                      Scan(derivedDB(knownDbId).getOrElse(r, edbs.getOrElse(r, EDB())), r)
+                      Scan(derivedDB(knownDbId).getOrElse(r, edbs.getOrElse(r, SimpleEDB())), r)
                   }),
                   k.varIndexes,
                   k.constIndexes

@@ -1,6 +1,6 @@
 package datalog.storage
 
-import datalog.dsl.{Atom, Term, Variable}
+import datalog.dsl.{Atom, Term, Variable, Constant}
 import datalog.execution.{JoinIndexes, AllIndexes}
 
 import scala.collection.mutable
@@ -34,23 +34,37 @@ enum DB:
 enum KNOWLEDGE:
   case New, Known
 
-trait StorageManager(val ns: NS) {
-  /* A bit repetitive to have these types also defined in dsl but good to separate
-   * user-facing API class with internal storage */
-  var iteration = 0
-  type StorageVariable
-  type StorageConstant
-  case class StorageAtom(rId: RelationId, terms: Array[StorageTerm]) {
-    override def toString: String = ns(rId) + terms.mkString("(", ", ", ")")
-  }
-  type Row [+T] <: Seq[T] with immutable.SeqOps[T, Row, Row[T]]
-  type Table[T] <: mutable.ArrayBuffer[T]
-  type Relation[T] <: Table[Row[T]] & mutable.ArrayBuffer[Row[T]]
+// TODO: expand to other types
+type StorageTerm = Term
+type StorageVariable = Variable
+type StorageConstant = Constant
 
-  type StorageTerm = StorageVariable | StorageConstant
-  type EDB = Relation[StorageTerm]
-  def EDB(c: Row[StorageTerm]*): EDB
-  type IDB = Relation[StorageAtom]
+trait Row[+T] {
+  def toSeq: immutable.Seq[T]
+  def length: Int
+}
+trait Relation[T] {
+  def addOne(elem: Row[T]): this.type
+  def length: Int
+  def clear(): Unit
+  def nonEmpty: Boolean
+  def diff(that: Relation[T]): Relation[T]
+  def prependedAll(suffix: Relation[T]): Relation[T]
+  def getSetOfSeq: Set[Seq[T]]
+//  def toIterableOnce: IterableOnce[Row[T]]
+}
+type EDB = Relation[StorageTerm]
+
+trait StorageManager(val ns: NS) {
+  var iteration = 0
+//  type StorageVariable
+//  type StorageConstant
+//  type Row [+T] <: Seq[T] with immutable.SeqOps[T, Row, Row[T]]
+//  type Table[T] <: mutable.ArrayBuffer[T]
+//  type Relation[T] <: Table[Row[T]] & mutable.ArrayBuffer[Row[T]]
+//
+//  type EDB = Relation[StorageTerm]
+//  def EDB(c: Row[StorageTerm]*): EDB
   type Database[K, V] <: mutable.Map[K, V]
   type FactDatabase <: Database[RelationId, EDB] & mutable.Map[RelationId, EDB]
 
@@ -66,6 +80,7 @@ trait StorageManager(val ns: NS) {
   def initEvaluation(): Unit
 
   def insertEDB(rule: Atom): Unit
+  def getEmptyEDB(): EDB
 
   def edb(rId: RelationId): EDB
 
@@ -77,8 +92,8 @@ trait StorageManager(val ns: NS) {
   def getNewIDBResult(rId: RelationId): Set[Seq[Term]]
   def getEDBResult(rId: RelationId): Set[Seq[Term]]
 
-  def resetKnownDerived(rId: RelationId, rules: EDB, prev: EDB = EDB()): Unit
-  def resetNewDerived(rId: RelationId, rules: EDB, prev: EDB = EDB()): Unit
+  def resetKnownDerived(rId: RelationId, rules: EDB, prev: EDB): Unit
+  def resetNewDerived(rId: RelationId, rules: EDB, prev: EDB): Unit
   def resetNewDelta(rId: RelationId, rules: EDB): Unit
   def resetKnownDelta(rId: RelationId, rules: EDB): Unit
   def clearNewDerived(): Unit

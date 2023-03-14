@@ -1,7 +1,7 @@
 package datalog.execution
 
 import datalog.dsl.{Atom, Constant, Term, Variable}
-import datalog.storage.{RelationId, SimpleStorageManager, StorageManager}
+import datalog.storage.{RelationId, StorageManager, EDB}
 import datalog.tools.Debug.debug
 
 import scala.collection.mutable
@@ -13,8 +13,6 @@ import scala.collection.mutable
  * @param storageManager
  */
 class SemiNaiveExecutionEngine(override val storageManager: StorageManager) extends NaiveExecutionEngine(storageManager) {
-  import storageManager.{EDB, Table}
-
   def evalRuleSN(rId: RelationId): EDB = {
     storageManager.SPJU(rId, getOperatorKeys(rId))
   }
@@ -41,7 +39,7 @@ class SemiNaiveExecutionEngine(override val storageManager: StorageManager) exte
 //      System.gc()
 //      val mb = 1024 * 1024
 //      val runtime = Runtime.getRuntime
-//      println(s"after SPJU for relation ${storageManager.ns(r)}, query=${storageManager.printer.snPlanToString(getOperatorKeys(rId).asInstanceOf[this.storageManager.Table[JoinIndexes]])} results in MB")
+//      println(s"after SPJU for relation ${storageManager.ns(r)}, query=${storageManager.printer.snPlanToString(getOperatorKeys(rId)JoinIndexes])} results in MB")
 //      println("** Used Memory:  " + (runtime.totalMemory - runtime.freeMemory) / mb)
 //      println("** Free Memory:  " + runtime.freeMemory / mb)
 //      println("** Total Memory: " + runtime.totalMemory / mb)
