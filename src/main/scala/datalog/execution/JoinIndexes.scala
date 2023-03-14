@@ -2,7 +2,7 @@ package datalog.execution
 
 import datalog.dsl.{Atom, Constant, Variable}
 import datalog.execution.ir.ProjectJoinFilterOp
-import datalog.storage.{CollectionsStorageManager, NS}
+import datalog.storage.{StorageManager, NS}
 import datalog.tools.Debug.debug
 
 import scala.collection.mutable
@@ -82,7 +82,7 @@ object JoinIndexes {
     new JoinIndexes(bodyVars, constants.toMap, projects, deps, rule)
   }
 
-  def getSortAhead[T: ClassTag](input: Array[T], sortBy: T => Int, rId: Int, oldHash: String, sm: CollectionsStorageManager)(using jitOptions: JITOptions): (Array[T], String) = {
+  def getSortAhead[T: ClassTag](input: Array[T], sortBy: T => Int, rId: Int, oldHash: String, sm: StorageManager)(using jitOptions: JITOptions): (Array[T], String) = {
     if (jitOptions.sortOrder._2 != 0)
       val oldAtoms = sm.allRulesAllIndexes(rId)(oldHash).atoms
 //      debug("", () => s"in getSorted: deps=${oldAtoms.drop(1).map(s => sm.ns(s.rId)).mkString("", ",", "")} current relation sizes: ${input.map(i => s"${sortBy(i)}|").mkString("", ", ", "")}")
@@ -96,7 +96,7 @@ object JoinIndexes {
       (input, oldHash)
   }
 
-  def getPreSortAhead(input: Array[ProjectJoinFilterOp], sortBy: Atom => Int, rId: Int, oldHash: String, sm: CollectionsStorageManager)(using jitOptions: JITOptions): (Array[ProjectJoinFilterOp], String) = {
+  def getPreSortAhead(input: Array[ProjectJoinFilterOp], sortBy: Atom => Int, rId: Int, oldHash: String, sm: StorageManager)(using jitOptions: JITOptions): (Array[ProjectJoinFilterOp], String) = {
     val originalK = sm.allRulesAllIndexes(rId)(oldHash)
     if (jitOptions.sortOrder._1 != 0)
 //      debug("", () => s"in compiler UNION[spj] deps=${originalK.deps.map(s => sm.ns(s)).mkString("", ",", "")} current relation sizes: ${originalK.atoms.drop(1).map(a => s"${sm.ns(a.rId)}:|${sortBy(a)}|").mkString("", ", ", "")}")

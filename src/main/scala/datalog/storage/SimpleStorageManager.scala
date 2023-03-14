@@ -1,7 +1,7 @@
 package datalog.storage
 
 import datalog.dsl.{Atom, Constant, Term, Variable}
-import datalog.execution.JoinIndexes
+import datalog.execution.{JoinIndexes, AllIndexes}
 import datalog.tools.Debug.debug
 
 import scala.collection.{immutable, mutable}
@@ -62,6 +62,7 @@ abstract class SimpleStorageManager(override val ns: NS) extends StorageManager(
   val derivedDB: Database[KnowledgeId, FactDatabase] = mutable.Map[KnowledgeId, FactDatabase]()
   val deltaDB: Database[KnowledgeId, FactDatabase] = mutable.Map[KnowledgeId, FactDatabase]()
 
+  val allRulesAllIndexes: mutable.Map[RelationId, AllIndexes] = mutable.Map.empty
   val printer: Printer[this.type] = Printer[this.type](this)
 
   val relOps: RelationalOperators[this.type] = RelationalOperators(this)

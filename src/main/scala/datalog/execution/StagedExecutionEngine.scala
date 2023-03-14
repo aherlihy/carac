@@ -4,7 +4,7 @@ import datalog.dsl.{Atom, Constant, Term, Variable}
 import datalog.execution.ast.*
 import datalog.execution.ast.transform.{ASTTransformerContext, CopyEliminationPass, Transformer}
 import datalog.execution.ir.*
-import datalog.storage.{CollectionsStorageManager, DB, KNOWLEDGE, StorageManager, EDB}
+import datalog.storage.{DB, KNOWLEDGE, StorageManager, EDB}
 import datalog.tools.Debug.debug
 
 import scala.collection.mutable
@@ -28,7 +28,7 @@ case class JITOptions(
     throw new Exception(s"Cannot online, async compile singleton IR nodes: $granularity (theres no point)")
 }
 
-class StagedExecutionEngine(val storageManager: CollectionsStorageManager, val defaultJITOptions: JITOptions = JITOptions()) extends ExecutionEngine {
+class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOptions: JITOptions = JITOptions()) extends ExecutionEngine {
   val precedenceGraph = new PrecedenceGraph(using storageManager.ns)
   val prebuiltOpKeys: mutable.Map[Int, mutable.ArrayBuffer[JoinIndexes]] = mutable.Map[Int, mutable.ArrayBuffer[JoinIndexes]]() // TODO: currently unused, mb remove from EE
   val ast: ProgramNode = ProgramNode()
@@ -154,7 +154,7 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, val d
       case op: UnionSPJOp if jitOptions.granularity == op.code => // check if aot compile is ready
         if (!jitOptions.aot) {
           startCompileThreadRel(op)
-          checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.children.map(o => (sm: CollectionsStorageManager) => jitRel(o))))
+          checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jitRel(o))))
         } else {
           given scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
           op.compiledRelArray = Future {
@@ -186,34 +186,34 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, val d
 
       case op: ProjectJoinFilterOp if jitOptions.granularity == op.code => // check if aot compile is ready
         startCompileThreadRel(op)
-        checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.childrenSO.map(o => (sm: CollectionsStorageManager) => jitRel(o))))
+        checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.childrenSO.map(o => (sm: StorageManager) => jitRel(o))))
 
       case op: UnionOp if jitOptions.granularity == op.code =>
 //          println(s"TV: ${jitOptions.thresholdVal}; TN: ${jitOptions.thresholdNum}::${op.children.sliding(2).map {
 //              case Seq(x, y, _*) =>
-//                val l = x.run(storageManager).size
-//                val r = y.run(storageManager).size
+//                val l = x.run(storageManager).length
+//                val r = y.run(storageManager).length
 //                if (l != 0  && r != 0) l.toFloat / r else -1
 //              case _ => -1
 //          }.filter(f => f < 0).mkString("(", ", ", ")")}")
 //          val recompile = op.children.sliding(2).map{
 //            case Seq(x, y, _*) =>
-//              val l = x.run(storageManager).size
-//              val r = y.run(storageManager).size
+//              val l = x.run(storageManager).length
+//              val r = y.run(storageManager).length
 //              l != 0 && r != 0 && l.toFloat / r > jitOptions.thresholdVal
 //            case _ => false
 //          }.count(b => b) > jitOptions.thresholdNum
 //                  if (recompile)
 //                    startCompileThreadRel(op, newDotty)
-//                checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.children.map(o => (sm: CollectionsStorageManager) => jitRel(o))))
+//                checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jitRel(o))))
 
-//        if (!jitOptions.aot && op.compiledFn != null && storageManager.deltaDB(storageManager.knownDbId).values.map(_.size).exists(_ > jitOptions.thresholdNum)) {
+//        if (!jitOptions.aot && op.compiledFn != null && storageManager.deltaDB(storageManager.knownDbId).values.map(_.length).exists(_ > jitOptions.thresholdNum)) {
 //          op.compiledFn(storageManager)
-//        } else if (jitOptions.aot && op.compiledRelArray != null && storageManager.deltaDB(storageManager.knownDbId).values.map(_.size).exists(_ > jitOptions.thresholdNum)) {
+//        } else if (jitOptions.aot && op.compiledRelArray != null && storageManager.deltaDB(storageManager.knownDbId).values.map(_.length).exists(_ > jitOptions.thresholdNum)) {
 //          op.compiledRelArray(storageManager)
         if (!jitOptions.aot && !jitOptions.block) {
           startCompileThreadRel(op)
-          checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.children.map(o => (sm: CollectionsStorageManager) => jitRel(o))))
+          checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jitRel(o))))
         } else if (!jitOptions.aot && jitOptions.block) {
           op.blockingCompiledRelFn = compiler.getCompiledRel(op)
           op.blockingCompiledRelFn(storageManager)
@@ -252,24 +252,24 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, val d
         op.run(storageManager)
 
       case op: ProjectJoinFilterOp =>
-        op.run_continuation(storageManager, op.children.map(o => (sm: CollectionsStorageManager) => jitRel(o)))
+        op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jitRel(o)))
 
       case op: UnionOp =>
-        op.run_continuation(storageManager, op.children.map(o => (sm: CollectionsStorageManager) => jitRel(o)))
+        op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jitRel(o)))
 
       case op: UnionSPJOp =>
-        op.run_continuation(storageManager, op.children.map(o => (sm: CollectionsStorageManager) => jitRel(o)))
+        op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jitRel(o)))
 
       case op: DiffOp =>
-        op.run_continuation(storageManager, op.children.map(o => (sm: CollectionsStorageManager) => jitRel(o)))
+        op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jitRel(o)))
 
       case op: DebugPeek =>
-        op.run_continuation(storageManager, op.children.map(o => (sm: CollectionsStorageManager) => jitRel(o)))
+        op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jitRel(o)))
       case _ => throw new Exception("Error: interpretRelOp called with unit operation")
     }
   }
 
-  inline def checkResult[T](value: Future[CollectionsStorageManager => T], op: IROp[T], default: () => T)(using jitOptions: JITOptions): T =
+  inline def checkResult[T](value: Future[StorageManager => T], op: IROp[T], default: () => T)(using jitOptions: JITOptions): T =
     value.value match {
       case Some(Success(run)) =>
         debug(s"Compilation succeeded: ${op.code}", () => "")
@@ -319,21 +319,21 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, val d
         op.run_continuation(storageManager, Seq(sm => jit(op.children.head)))
 
       case op: DoWhileOp =>
-       op.run_continuation(storageManager, op.children.map(o => (sm: CollectionsStorageManager) => jit(o)))
+       op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o)))
 
       case op: SequenceOp if irTree.code == OpCode.EVAL_SN =>
         // TODO: inspect delta known and recompile conditionally only if the deltas have changed enough
-        op.run_continuation(storageManager, op.children.map(o => (sm: CollectionsStorageManager) => jit(o)))
+        op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o)))
 
       case op: SequenceOp =>
-        op.run_continuation(storageManager, op.children.map(o => (sm: CollectionsStorageManager) => jit(o)))
+        op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o)))
 
 
       case op: SwapAndClearOp =>
         op.run(storageManager)
 
       case op: InsertOp =>
-        op.run_continuation(storageManager, op.children.map(o => (sm: CollectionsStorageManager) => jitRel(o.asInstanceOf[IROp[EDB]])))
+        op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jitRel(o.asInstanceOf[IROp[EDB]])))
 
       case op: DebugNode =>
         op.run(storageManager)
@@ -398,6 +398,6 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, val d
       solveJIT(irTree, irCtx)
   }
 }
-class NaiveStagedExecutionEngine(storageManager: CollectionsStorageManager, defaultJITOptions: JITOptions = JITOptions()) extends StagedExecutionEngine(storageManager, defaultJITOptions) {
+class NaiveStagedExecutionEngine(storageManager: StorageManager, defaultJITOptions: JITOptions = JITOptions()) extends StagedExecutionEngine(storageManager, defaultJITOptions) {
   override def createIR(ast: ASTNode)(using InterpreterContext): IROp[Any] = IRTreeGenerator().generateNaive(ast)
 }

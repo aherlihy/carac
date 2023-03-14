@@ -74,6 +74,8 @@ trait StorageManager(val ns: NS) {
   var knownDbId: KnowledgeId
   var newDbId: KnowledgeId
 
+  val allRulesAllIndexes: mutable.Map[RelationId, AllIndexes]
+
   val printer: Printer[this.type]
 
   def initRelation(rId: RelationId, name: String): Unit
@@ -107,6 +109,7 @@ trait StorageManager(val ns: NS) {
   def joinHelper(inputs: Seq[EDB], k: JoinIndexes): EDB
   def projectHelper(input: EDB, k: JoinIndexes): EDB
   def joinProjectHelper(inputs: Seq[EDB], k: JoinIndexes, sortOrder: (Int, Int, Int)): EDB
+  def joinProjectHelper_withHash(inputs: Seq[EDB], rId: Int, hash: String, sortOrder: (Int, Int, Int)): EDB
   def diff(lhs: EDB, rhs: EDB): EDB
   def union(edbs: Seq[EDB]): EDB
 

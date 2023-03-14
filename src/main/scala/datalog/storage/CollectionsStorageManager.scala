@@ -7,7 +7,6 @@ import scala.collection.{immutable, mutable}
 import datalog.tools.Debug.debug
 
 class CollectionsStorageManager(ns: NS = new NS()) extends SimpleStorageManager(ns) {
-  val allRulesAllIndexes: mutable.Map[RelationId, AllIndexes] = mutable.Map.empty
 
   inline def scanFilter(k: JoinIndexes, maxIdx: Int)(get: Int => StorageTerm = x => x) = {
     val vCmp = k.varIndexes.isEmpty || k.varIndexes.forall(condition =>

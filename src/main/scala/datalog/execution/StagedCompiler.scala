@@ -2,14 +2,14 @@ package datalog.execution
 
 import datalog.dsl.{Atom, Constant, Variable, Term}
 import datalog.execution.ir.*
-import datalog.storage.{CollectionsStorageManager, DB, KNOWLEDGE, StorageManager, EDB}
+import datalog.storage.{StorageManager, DB, KNOWLEDGE, EDB}
 import datalog.tools.Debug.debug
 
 import scala.quoted.*
 /**
  * Separate out compile logic from StagedExecutionEngine
  */
-class StagedCompiler(val storageManager: CollectionsStorageManager)(using val jitOptions: JITOptions) {
+class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: JITOptions) {
   given staging.Compiler = jitOptions.dotty
   given ToExpr[Constant] with {
     def apply(x: Constant)(using Quotes) = {
@@ -47,11 +47,11 @@ class StagedCompiler(val storageManager: CollectionsStorageManager)(using val ji
     }
   }
 
-  def compileIREvalRule(uOp: UnionOp)(using stagedSM: Expr[CollectionsStorageManager])(using i: Expr[Int])(using Quotes): Expr[EDB] = {
+  def compileIREvalRule(uOp: UnionOp)(using stagedSM: Expr[StorageManager])(using i: Expr[Int])(using Quotes): Expr[EDB] = {
     '{ ${Expr.ofSeq(uOp.children.toSeq.map(compileIRRelOp))}($i) }
   }
 
-  def compileIRUnionSPJ(uOp: UnionSPJOp)(using stagedSM: Expr[CollectionsStorageManager])(using i: Expr[Int])(using Quotes): Expr[EDB] = {
+  def compileIRUnionSPJ(uOp: UnionSPJOp)(using stagedSM: Expr[StorageManager])(using i: Expr[Int])(using Quotes): Expr[EDB] = {
     val (sortedChildren, newHash) = JoinIndexes.getPreSortAhead(
       uOp.children.toArray,
       a => storageManager.getKnownDerivedDB(a.rId).length,
@@ -63,7 +63,7 @@ class StagedCompiler(val storageManager: CollectionsStorageManager)(using val ji
   }
 
   //  def compileIRRelOp[T](irTree: IRRelOp)(using stagedSM: Expr[StorageManager {type EDB = T}], t: Type[T])(using Quotes): Expr[T] = { // TODO: Instead of parameterizing, use staged path dependent type: i.e. stagedSM.EDB
-  def compileIRRelOp(irTree: IROp[EDB])(using stagedSM: Expr[CollectionsStorageManager])(using Quotes): Expr[EDB] = {
+  def compileIRRelOp(irTree: IROp[EDB])(using stagedSM: Expr[StorageManager])(using Quotes): Expr[EDB] = {
     irTree match {
       case ScanOp(rId, db, knowledge) =>
         db match {
@@ -149,7 +149,7 @@ class StagedCompiler(val storageManager: CollectionsStorageManager)(using val ji
   }
 
 //  def compileIR[T](irTree: IROp)(using stagedSM: Expr[StorageManager {type EDB = T}], t: Type[T])(using Quotes): Expr[Any] = { // TODO: Instead of parameterizing, use staged path dependent type: i.e. stagedSM.EDB
-  def compileIR(irTree: IROp[Any])(using stagedSM: Expr[CollectionsStorageManager])(using Quotes): Expr[Any] = {
+  def compileIR(irTree: IROp[Any])(using stagedSM: Expr[StorageManager])(using Quotes): Expr[Any] = {
     irTree match {
       case ProgramOp(children:_*) =>
         compileIR(children.head)
@@ -229,7 +229,7 @@ class StagedCompiler(val storageManager: CollectionsStorageManager)(using val ji
   def getCompiled(irTree: IROp[Any]): CompiledFn = {
     val result = staging.run {
       val res: Expr[CompiledFn] =
-        '{ (stagedSm: CollectionsStorageManager) => ${ compileIR(irTree)(using 'stagedSm) } }
+        '{ (stagedSm: StorageManager) => ${ compileIR(irTree)(using 'stagedSm) } }
       debug("generated code: ", () => res.show)
       res
     }
@@ -237,10 +237,10 @@ class StagedCompiler(val storageManager: CollectionsStorageManager)(using val ji
     result
   }
 
-  def getCompiledUnionSPJ(irTree: UnionSPJOp): (CollectionsStorageManager, Int) => EDB = {
+  def getCompiledUnionSPJ(irTree: UnionSPJOp): (StorageManager, Int) => EDB = {
     val result = staging.run {
-      val res: Expr[(CollectionsStorageManager, Int) => EDB] =
-        '{ (stagedSm: CollectionsStorageManager, i: Int) => ${ compileIRUnionSPJ(irTree)(using 'stagedSm)(using 'i) } }
+      val res: Expr[(StorageManager, Int) => EDB] =
+        '{ (stagedSm: StorageManager, i: Int) => ${ compileIRUnionSPJ(irTree)(using 'stagedSm)(using 'i) } }
       debug("generated code: ", () => res.show)
       res
     }
@@ -248,10 +248,10 @@ class StagedCompiler(val storageManager: CollectionsStorageManager)(using val ji
     result
   }
 
-  def getCompiledEvalRule(irTree: UnionOp): (CollectionsStorageManager, Int) => EDB = {
+  def getCompiledEvalRule(irTree: UnionOp): (StorageManager, Int) => EDB = {
     val result = staging.run {
-      val res: Expr[(CollectionsStorageManager, Int) => EDB] =
-        '{ (stagedSm: CollectionsStorageManager, i: Int) => ${ compileIREvalRule(irTree)(using 'stagedSm)(using 'i) } }
+      val res: Expr[(StorageManager, Int) => EDB] =
+        '{ (stagedSm: StorageManager, i: Int) => ${ compileIREvalRule(irTree)(using 'stagedSm)(using 'i) } }
       debug("generated code: ", () => res.show)
       res
     }
@@ -262,7 +262,7 @@ class StagedCompiler(val storageManager: CollectionsStorageManager)(using val ji
   def getCompiledRel(irTree: IROp[EDB]): CompiledRelFn = {
     val result = staging.run {
       val res: Expr[CompiledRelFn] =
-        '{ (stagedSm: CollectionsStorageManager) => ${ compileIRRelOp(irTree)(using 'stagedSm) } }
+        '{ (stagedSm: StorageManager) => ${ compileIRRelOp(irTree)(using 'stagedSm) } }
       debug("generated code: ", () => res.show)
       res
     }
