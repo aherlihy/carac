@@ -17,8 +17,8 @@ class RelationalOperators[S <: StorageManager](val storageManager: S) {
 
     def close(): Unit
 
-    def toList(): mutable.ArrayBuffer[SimpleRow] = { // TODO: fix this to use iterator override
-      val list = mutable.ArrayBuffer[SimpleRow]()
+    def toList(): SimpleEDB = { // TODO: fix this to use iterator override
+      val list = SimpleEDB()
       this.open()
       while (
         this.next() match {
@@ -83,7 +83,7 @@ class RelationalOperators[S <: StorageManager](val storageManager: S) {
         NilTuple
       } else {
         currentId = currentId + 1
-        Option(relation(currentId - 1))
+        Option(relation(currentId - 1).asInstanceOf[SimpleRow])
       }
     }
 
@@ -139,7 +139,7 @@ class RelationalOperators[S <: StorageManager](val storageManager: S) {
                      variables: Seq[Seq[Int]],
                      constants: Map[Int, Constant]) extends RelOperator {
 
-    private var outputRelation= mutable.ArrayBuffer[SimpleRow]()
+    private var outputRelation = SimpleEDB()
     private var index = 0
 
     def scanFilter(maxIdx: Int)(get: Int => StorageTerm = x => x.asInstanceOf[StorageTerm]) = {
@@ -160,7 +160,7 @@ class RelationalOperators[S <: StorageManager](val storageManager: S) {
 
     override def open(): Unit = {
       index = 0
-      val inputList: Seq[mutable.ArrayBuffer[SimpleRow]] = inputs.map(i => i.toList())
+      val inputList: Seq[SimpleEDB] = inputs.map(i => i.toList())
 
       outputRelation = inputList
         .reduceLeft((outer, inner) => {
@@ -170,13 +170,13 @@ class RelationalOperators[S <: StorageManager](val storageManager: S) {
                 outerTuple.applyOrElse(i, j => innerTuple(j - outerTuple.length))
               }
               if(scanFilter(innerTuple.length + outerTuple.length)(get))
-                Some((outerTuple.prependedAll(innerTuple)).asInstanceOf[SimpleRow])
+                Some(outerTuple.concat(innerTuple))
               else
                 None
             })
           })
         })
-        .filter(r => scanFilter(r.length)(r))
+        .filter(r => scanFilter(r.length)(r.apply))
     }
     def next(): Option[SimpleRow] = {
       if (index >= outputRelation.length)
@@ -201,11 +201,13 @@ class RelationalOperators[S <: StorageManager](val storageManager: S) {
   case class Union(ops: Seq[RelOperator]) extends RelOperator {
 //    private var currentRel: Int = 0
 //    private var length: Long = ops.length
-    private var outputRelation: IndexedSeq[SimpleRow] = IndexedSeq()
+    private var outputRelation: SimpleEDB = SimpleEDB()
     private var index = 0
     def open(): Unit = {
       val opResults = ops.map(o => o.toList())
-      outputRelation = opResults.flatten.toSet.toIndexedSeq
+//      outputRelation = opResults.flatten.toSet.toIndexedSeq
+      import SimpleEDB.unionEDB
+      opResults.unionEDB
     }
     def next(): Option[SimpleRow] = {
       if (index >= outputRelation.length)
@@ -229,16 +231,16 @@ class RelationalOperators[S <: StorageManager](val storageManager: S) {
     def close(): Unit = ops.foreach(o => o.close())
   }
   case class Diff(ops: mutable.ArrayBuffer[RelOperator]) extends RelOperator {
-    private var outputRelation: IndexedSeq[SimpleRow] = IndexedSeq()
+    private var outputRelation: Relation[StorageTerm] = SimpleEDB()
     private var index = 0
     def open(): Unit =
-      outputRelation = ops.map(o => o.toList()).toSet.reduce((l, r) => l diff r).toIndexedSeq
+      outputRelation = ops.map(o => o.toList()).toSet.reduce((l, r) => l diff r)
     def next(): Option[SimpleRow] = {
       if (index >= outputRelation.length)
         NilTuple
       else
         index += 1
-        Option(outputRelation(index - 1))
+        Option(outputRelation(index - 1).asInstanceOf[SimpleRow])
     }
     def close(): Unit = ops.foreach(o => o.close())
   }

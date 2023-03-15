@@ -39,11 +39,18 @@ type StorageTerm = Term
 type StorageVariable = Variable
 type StorageConstant = Constant
 
-trait Row[+T] {
+trait Row[T] {
   def toSeq: immutable.Seq[T]
   def length: Int
+  def apply(n: Int): T
+  def applyOrElse[A1 <: Int, B1 >: T](x: A1, default: (A1) => B1): B1
+  def concat(suffix: Row[T]): Row[T]
+//  def concat[B >: T](suffix: Row[B]): Row[B]
+  def lift: Int => Option[T]
+  def mkString(start: String, sep: String, end: String): String
+  def iterator: Iterator[T]
 }
-trait Relation[T] {
+trait Relation[T] extends IterableOnce[Row[T]] {
   def addOne(elem: Row[T]): this.type
   def length: Int
   def clear(): Unit
@@ -52,6 +59,16 @@ trait Relation[T] {
   def prependedAll(suffix: Relation[T]): Relation[T]
   def getSetOfSeq: Set[Seq[T]]
 //  def toIterableOnce: IterableOnce[Row[T]]
+//  def map[B](f: Row[T] => B): Relation[B]
+  def map(f: Row[T] => Row[T]): Relation[T]
+//  def flatMap(f: Row[T] => Relation[Row[T]]): Relation[T]
+  def filter(pred: Row[T] => Boolean): Relation[T]
+  def flatMap(f: Row[T] => IterableOnce[Row[T]]): Relation[T]
+  def apply(n: Int): Row[T]
+  def mkString(start: String, sep: String, end: String): String
+  def iterator: Iterator[Row[T]]
+  def factToString: String
+//  def removeDuplicates(): Relation[T]
 }
 type EDB = Relation[StorageTerm]
 

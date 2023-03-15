@@ -27,29 +27,35 @@ class CollectionsStorageManager(ns: NS = new NS()) extends SimpleStorageManager(
   override def joinHelper(inputs: Seq[EDB], k: JoinIndexes): EDB = {
     inputs
       .reduceLeft((outer: EDB, inner: EDB) => {
+        var count0 = 0
         outer.flatMap(outerTuple => {
+          count0+=1
+          println(s"in outer, at $count0 of ${outer.length}")
+          var count = 0
           inner.flatMap(innerTuple => {
+            println(s"in inner=$count/${inner.length}, outer=$count0/${outer.length}")
+            count+=1
             val get = (i: Int) => {
               outerTuple.applyOrElse(i, j => innerTuple(j - outerTuple.length))
             }
             if(scanFilter(k, innerTuple.length + outerTuple.length)(get))
-              Some(outerTuple ++ innerTuple)
+              Some(outerTuple.concat(innerTuple))
             else
               None
           })
         })
       })
-      .filter(r => scanFilter(k, r.length)(r))
+      .filter(r => scanFilter(k, r.length)(r.apply))
   }
 
-  def projectHelper(input: EDB, k: JoinIndexes): EDB = {
-    input.map(t =>
-      k.projIndexes.flatMap((typ, idx) =>
+  def projectHelper(input: EDB, k: JoinIndexes): SimpleEDB = {
+    input.asInstanceOf[SimpleEDB].map(t =>
+      SimpleRow(k.projIndexes.flatMap((typ, idx) =>
         typ match {
           case "v" => t.lift(idx.asInstanceOf[Int])
           case "c" => Some(idx)
           case _ => throw new Exception("Internal error: projecting something that is not a constant nor a variable")
-        }).toIndexedSeq
+        }))
     )
   }
 
@@ -78,14 +84,14 @@ class CollectionsStorageManager(ns: NS = new NS()) extends SimpleStorageManager(
       inputs.head
         .filter(e =>
           val filteredC = originalK.constIndexes.filter((ind, _) => ind < e.length)
-          prefilter(filteredC, 0, e) && filteredC.length == originalK.constIndexes.length)
+          prefilter(filteredC, 0, e) && filteredC.size == originalK.constIndexes.size)
         .map(t =>
-          originalK.projIndexes.flatMap((typ, idx) =>
+          SimpleRow(originalK.projIndexes.flatMap((typ, idx) =>
             typ match {
               case "v" => t.lift(idx.asInstanceOf[Int])
               case "c" => Some(idx)
               case _ => throw new Exception("Internal error: projecting something that is not a constant nor a variable")
-            }).toIndexedSeq)
+            })))
     else
 //      val (sorted, newHash) = JoinIndexes.getSorted(inputs.toArray, edb => edb.length, rId, hash, this, sortAhead) // NOTE: already sorted in staged compiler/ProjectJoinFilterOp.run
       val result = inputs
@@ -115,35 +121,38 @@ class CollectionsStorageManager(ns: NS = new NS()) extends SimpleStorageManager(
                   .filter(i =>
                     prefilter(k.constIndexes.filter((ind, _) => ind >= outerTuple.length && ind < (outerTuple.length + i.length)), outerTuple.length, i) && toJoin(k, outerTuple, i)
                   )
-                  .map(innerTuple => outerTuple ++ innerTuple))
+                  .map(innerTuple => outerTuple.concat(innerTuple)))
             (edbResult, atomI + 1, k)
         )
-      result._1
+      result._1.asInstanceOf[SimpleEDB]
         .filter(edb => result._3.constIndexes.filter((i, _) => i >= edb.length).isEmpty)
         .map(t =>
-          result._3.projIndexes.flatMap((typ, idx) =>
-            typ match {
-              case "v" => t.lift(idx.asInstanceOf[Int])
-              case "c" => Some(idx)
-              case _ => throw new Exception("Internal error: projecting something that is not a constant nor a variable")
-            }).toIndexedSeq
+          SimpleRow(
+            result._3.projIndexes.flatMap((typ, idx) =>
+              typ match {
+                case "v" => t.lift(idx.asInstanceOf[Int])
+                case "c" => Some(idx)
+                case _ => throw new Exception("Internal error: projecting something that is not a constant nor a variable")
+              })
+          )
         )
   }
 
-  def joinProjectHelper(inputs: Seq[EDB], originalK: JoinIndexes, sortOrder: (Int, Int, Int)): EDB = { // OLD, only keep around for benchmarks
+  def joinProjectHelper(inputs: Seq[EDB], originalK: JoinIndexes, sortOrder: (Int, Int, Int)): SimpleEDB = { // OLD, only keep around for benchmarks
     if (inputs.length == 1) // just filter
       inputs.head
+        .asInstanceOf[SimpleEDB]
         .filter(e =>
           val filteredC = originalK.constIndexes.filter((ind, _) => ind < e.length)
-          prefilter(filteredC, 0, e) && filteredC.length == originalK.constIndexes.length)
+          prefilter(filteredC, 0, e) && filteredC.size == originalK.constIndexes.size)
         .map(t =>
-          originalK.projIndexes.flatMap((typ, idx) =>
+          SimpleRow(originalK.projIndexes.flatMap((typ, idx) =>
             typ match {
               case "v" => t.lift(idx.asInstanceOf[Int])
               case "c" => Some(idx)
               case _ => throw new Exception("Internal error: projecting something that is not a constant nor a variable")
-            }).toIndexedSeq)
-        .to(mutable.ArrayBuffer)
+            })))
+
     else
       var preSortedK = originalK // TODO: find better ways to reduce with 2 acc
       var sorted = inputs
@@ -180,18 +189,20 @@ class CollectionsStorageManager(ns: NS = new NS()) extends SimpleStorageManager(
                   .filter(i =>
                     prefilter(k.constIndexes.filter((ind, _) => ind >= outerTuple.length && ind < (outerTuple.length + i.length)), outerTuple.length, i) && toJoin(k, outerTuple, i)
                   )
-                  .map(innerTuple => outerTuple ++ innerTuple))
+                  .map(innerTuple => outerTuple.concat(innerTuple)))
             (edbResult, atomI + 1, k)
           )
-      result._1
+      result._1.asInstanceOf[SimpleEDB]
         .filter(edb => result._3.constIndexes.filter((i, _) => i >= edb.length).isEmpty)
         .map(t =>
-          result._3.projIndexes.flatMap((typ, idx) =>
-            typ match {
-              case "v" => t.lift(idx.asInstanceOf[Int])
-              case "c" => Some(idx)
-              case _ => throw new Exception("Internal error: projecting something that is not a constant nor a variable")
-            }).toIndexedSeq
+          SimpleRow(
+            result._3.projIndexes.flatMap((typ, idx) =>
+              typ match {
+                case "v" => t.lift(idx.asInstanceOf[Int])
+                case "c" => Some(idx)
+                case _ => throw new Exception("Internal error: projecting something that is not a constant nor a variable")
+              })
+          )
         )
   }
 
@@ -204,9 +215,9 @@ class CollectionsStorageManager(ns: NS = new NS()) extends SimpleStorageManager(
    */
   def SPJU(rId: RelationId, keys: mutable.ArrayBuffer[JoinIndexes]): EDB = {
     debug("SPJU:", () => s"r=${ns(rId)} keys=${printer.snPlanToString(keys)} knownDBId $knownDbId")
-      keys.flatMap(k => // union of each definition of rId
+      SimpleEDB(keys.flatMap(k => // union of each definition of rId
         if (k.edb)
-          edbs.getOrElse(rId, SimpleEDB())
+          edbs.getOrElse(rId, SimpleEDB()).asInstanceOf[SimpleEDB].wrapped
         else
           var idx = -1 // if dep is featured more than once, only us delta once, but at a different pos each time
           k.deps.flatMap(d => {
@@ -221,21 +232,24 @@ class CollectionsStorageManager(ns: NS = new NS()) extends SimpleStorageManager(
                 else {
                   derivedDB(knownDbId).getOrElse(r, edbs.getOrElse(r, SimpleEDB())) // TODO: warn if EDB is empty? Right now can't tell the difference between undeclared and empty EDB
                 }
-              ), k, (0, 0, 0)) // don't sort when not staging
+              ), k, (0, 0, 0)).wrapped // don't sort when not staging
           }).toSet
-      )
+      ))
   }
 
   def naiveSPJU(rId: RelationId, keys: mutable.ArrayBuffer[JoinIndexes]): EDB = {
     debug("NaiveSPJU:", () => s"r=${ns(rId)} keys=${printer.naivePlanToString(keys)} knownDBId $knownDbId")
-    keys.flatMap(k => { // for each idb rule
-      if (k.edb)
-        edbs.getOrElse(rId, SimpleEDB())
-      else
-        projectHelper(
-          joinHelper(
-            k.deps.map(r => derivedDB(knownDbId).getOrElse(r, edbs.getOrElse(r, SimpleEDB()))), k // TODO: warn if EDB is empty? Right now can't tell the difference between undeclared and empty EDB)
-          ), k).toSet
-    })
+    SimpleEDB(
+      keys.flatMap(k => { // for each idb rule
+        if (k.edb)
+          edbs.getOrElse(rId, SimpleEDB()).asInstanceOf[SimpleEDB].wrapped
+        else
+          projectHelper(
+            joinHelper(
+              k.deps.map(r => derivedDB(knownDbId).getOrElse(r, edbs.getOrElse(r, SimpleEDB()))), k // TODO: warn if EDB is empty? Right now can't tell the difference between undeclared and empty EDB)
+            ), k
+          ).wrapped
+      })
+    )
   }
 }

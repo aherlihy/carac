@@ -10,7 +10,8 @@ import scala.collection.{immutable, mutable}
 // Keep pretty print stuff separate bc long and ugly, mb put it in a macro
 class Printer[S <: StorageManager](val sm: S) {
   def factToString(r: EDB): String = {
-    r.map(s => s.mkString("(", ", ", ")")).mkString("[", ", ", "]")
+//    r.map(s => s.mkString("(", ", ", ")")).mkString("[", ", ", "]")
+    r.factToString
   }
 
   def atomToString(a: Seq[Atom]): String = {
@@ -26,7 +27,7 @@ class Printer[S <: StorageManager](val sm: S) {
       .map((k, v) => (sm.ns(k), factToString(v)))
       .mkString("[\n  ", ",\n  ", "]")
   }
-  def naivePlanToString(keys: Relation[JoinIndexes]): String = {
+  def naivePlanToString(keys: mutable.ArrayBuffer[JoinIndexes]): String = {
     "Union( " +
       keys.map(k =>
         if (k.edb)
@@ -44,7 +45,7 @@ class Printer[S <: StorageManager](val sm: S) {
       " )"
   }
 
-  def snPlanToString(keys: Relation[JoinIndexes]): String = {
+  def snPlanToString(keys: mutable.ArrayBuffer[JoinIndexes]): String = {
     "UNION( " +
       keys.map(k =>
         if (k.edb)

@@ -604,12 +604,45 @@ def scratch(program: Program) =
 
   println(a2.solve())
 
+def isAfter(program: Program) =
+  val edge = program.relation[Constant]("edge")
+  val isBefore = program.relation[Constant]("isBefore")
+  val isAfter = program.relation[Constant]("isAfter")
+
+  val x, y, z = program.variable()
+
+  edge("A", "B") :- ()
+  edge("A", "D") :- ()
+  edge("A", "E") :- ()
+  edge("B", "C") :- ()
+  edge("C", "D") :- ()
+  edge("C", "E") :- ()
+  edge("D", "E") :- ()
+  edge("E", "F") :- ()
+  edge("F", "G") :- ()
+  edge("F", "H") :- ()
+  edge("F", "I") :- ()
+  edge("G", "J") :- ()
+  edge("H", "K") :- ()
+  edge("I", "L") :- ()
+  edge("J", "M") :- ()
+  edge("K", "M") :- ()
+  edge("L", "M") :- ()
+
+  isBefore(x, y) :- edge(x, y)
+  isBefore(x, y) :- (isBefore(x, z), isBefore(z, y))
+
+  isAfter(x, y) :- edge(y, x)
+  isAfter(x, y) :- (isAfter(z, x), isAfter(y, z))
+
+  println(isAfter.solve().size)
+
 @main def main = {
-//  val engine = new SemiNaiveExecutionEngine(new CollectionsStorageManager())
-//  val program = Program(engine)
-//  println("SemiNaive")
-//  acyclic(program)
-//  println("\n\n_______________________\n\n")
+  val engine = new NaiveExecutionEngine(new CollectionsStorageManager())
+  val program = Program(engine)
+  println("SemiNaive")
+  isAfter(program)
+  println("\n\n_______________________\n\n")
 
 //  println("OLD N")
 //  given engine0: ExecutionEngine = new NaiveExecutionEngine(new CollectionsStorageManager())
@@ -633,12 +666,12 @@ def scratch(program: Program) =
 //    isEqual(program3a)
 //    println("\n\n_______________________\n\n")
 //
-    val jo = JITOptions(ir.OpCode.EVAL_RULE_SN, dotty, aot = false, block = true, sortOrder = (0, 0, 0))
-    println("JIT")
-    given engine3: ExecutionEngine = new StagedExecutionEngine(new CollectionsStorageManager(), jo)
-    val program3 = Program(engine3)
-    acyclic(program3)
-    println("\n\n_______________________\n\n")
+//    val jo = JITOptions(ir.OpCode.EVAL_RULE_SN, dotty, aot = false, block = true, sortOrder = (0, 0, 0))
+//    println("JIT")
+//    given engine3: ExecutionEngine = new StagedExecutionEngine(new CollectionsStorageManager(), jo)
+//    val program3 = Program(engine3)
+//    acyclic(program3)
+//    println("\n\n_______________________\n\n")
 
 //  println("JIT Snippet")
 //  val engine4: ExecutionEngine = new StagedSnippetExecutionEngine(new CollectionsStorageManager(), jo)

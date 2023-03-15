@@ -1,17 +1,17 @@
 package datalog.storage
 
 import datalog.dsl.{Atom, Constant, Term, Variable}
-import datalog.execution.{JoinIndexes, AllIndexes}
+import datalog.execution.{AllIndexes, JoinIndexes}
 import datalog.tools.Debug.debug
 
-import scala.collection.{immutable, mutable}
+import scala.collection.{Iterator, immutable, mutable}
 
 class SimpleEDB(val wrapped: mutable.ArrayBuffer[SimpleRow]) extends EDB {
   def this(elems: SimpleRow*) = this(mutable.ArrayBuffer[SimpleRow](elems*))
   def asSimpleEDB(to: Relation[StorageTerm]): SimpleEDB = to.asInstanceOf[SimpleEDB]
   def asSimpleRow(to: Row[StorageTerm]): SimpleRow = to.asInstanceOf[SimpleRow]
 
-  export wrapped.{length, clear, nonEmpty, toSet}
+  export wrapped.{length, clear, nonEmpty, toSet, apply, mkString, iterator}
 
   def addOne(elem: Row[StorageTerm]): this.type =
     wrapped.addOne(asSimpleRow(elem))
@@ -20,18 +20,44 @@ class SimpleEDB(val wrapped: mutable.ArrayBuffer[SimpleRow]) extends EDB {
     SimpleEDB(wrapped.diff(asSimpleEDB(that).wrapped))
   def prependedAll(suffix: Relation[StorageTerm]): Relation[StorageTerm] =
     SimpleEDB(wrapped.prependedAll(asSimpleEDB(suffix).wrapped))
+  def getSetOfSeq: Set[Seq[StorageTerm]] =
+    wrapped.map(s => s.toSeq).toSet
 
-  def getSetOfSeq: Set[Seq[StorageTerm]] = wrapped.map(s => s.toSeq).toSet
+  def map(f: Row[StorageTerm] => Row[StorageTerm]): SimpleEDB =
+    SimpleEDB(wrapped.map(e => asSimpleRow(f(e))))
+  def filter(f: Row[StorageTerm] => Boolean): SimpleEDB =
+    SimpleEDB(wrapped.filter(f))
+
+  def flatMap(f: Row[StorageTerm] => IterableOnce[Row[StorageTerm]]): SimpleEDB =
+    SimpleEDB(wrapped.flatMap(e => f(e)).asInstanceOf[mutable.ArrayBuffer[SimpleRow]])
+
+  def factToString: String = ""
+
+
+  //  def map(f: Row[StorageTerm] => Row[StorageTerm]): Relation[StorageTerm] = // for now can't map over different type
+////    SimpleEDB(wrapped.map(e => asSimpleRow(f(e))))
+//    ???
+//  def flatMap(f: Row[StorageTerm] => IterableOnce[Row[StorageTerm]]): Relation[StorageTerm] =
+////    SimpleEDB(wrapped.flatMap())
+//    ???
+
+
 
 }
 object SimpleEDB {
   extension (edbs: Seq[EDB])
     def unionEDB: EDB =
       SimpleEDB(edbs.flatten(using _.asInstanceOf[SimpleEDB].wrapped).distinct.to(mutable.ArrayBuffer))
+//  extension (edbs: mutable.ArrayBuffer[EDB])
+//    def flatMap[B](f: (EDB) => IterableOnce[B]): mutable.ArrayBuffer[B] =
+//      edbs.flatMap(e => f(e))
 }
 class SimpleRow(val wrapped: Seq[StorageTerm]) extends Row[StorageTerm] {
   def toSeq = wrapped
   def length: Int = wrapped.length
+  def concat(suffix: Row[StorageTerm]): SimpleRow =
+    SimpleRow(wrapped.concat(suffix.asInstanceOf[SimpleRow].wrapped))
+  export wrapped.{apply, applyOrElse, iterator, lift, mkString}
 }
 
 abstract class SimpleStorageManager(override val ns: NS) extends StorageManager(ns) {

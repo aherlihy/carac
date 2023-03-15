@@ -89,7 +89,6 @@ class NaiveExecutionEngine(val storageManager: StorageManager) extends Execution
       evalNaive(relations)
 
       setDiff = !storageManager.compareDerivedDBs()
-
     }
     storageManager.getKnownIDBResult(toSolve)
   }
