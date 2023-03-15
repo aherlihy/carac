@@ -25,49 +25,8 @@ class StagedSnippetExecutionEngine(override val storageManager: StorageManager,
                                    defaultJITOptions: JITOptions = JITOptions()) extends StagedExecutionEngine(storageManager, defaultJITOptions) {
   val snippetCompiler: StagedSnippetCompiler = StagedSnippetCompiler(storageManager)(using defaultJITOptions)
   given staging.Compiler = defaultJITOptions.dotty
-  override def jitRel(irTree: IROp[EDB])(using jitOptions: JITOptions): EDB = {
-    debug("", () => s"IN SNIPPET JIT REL IR, code=${irTree.code}")
-    irTree match {
-      case op: ScanOp if jitOptions.granularity == op.code =>
-        if (op.compiledSnippetContinuationFn == null)
-          op.compiledSnippetContinuationFn = snippetCompiler.getCompiledSnippetRel(op)
-        op.compiledSnippetContinuationFn(storageManager, Seq.empty) // TODO: weird
 
-      case op: ScanOp =>
-        op.run(storageManager)
-
-      case op: ScanEDBOp =>
-        op.run(storageManager)
-
-      case op: ProjectJoinFilterOp if jitOptions.granularity == op.code =>
-        if (op.compiledSnippetContinuationFn == null)
-          op.compiledSnippetContinuationFn = snippetCompiler.getCompiledSnippetRel(op)
-        op.compiledSnippetContinuationFn(storageManager, op.children.map(o => (sm: StorageManager) => jitRel(o)))
-
-      case op: ProjectJoinFilterOp =>
-        op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jitRel(o)))
-
-      case op: UnionOp =>
-        op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jitRel(o)))
-      
-      case op: UnionSPJOp =>
-        op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jitRel(o)))
-
-      case op: DiffOp if jitOptions.granularity == op.code =>
-        if (op.compiledSnippetContinuationFn == null)
-          op.compiledSnippetContinuationFn = snippetCompiler.getCompiledSnippetRel(op)
-        op.compiledSnippetContinuationFn(storageManager, op.children.map(o => (sm: StorageManager) => jitRel(o)))
-
-      case op: DiffOp =>
-        op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jitRel(o)))
-
-      case op: DebugPeek =>
-        op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jitRel(o)))
-
-      case _ => throw new Exception("Error: interpretRelOp called with unit operation")
-    }
-  }
-  override def jit(irTree: IROp[Any])(using jitOptions: JITOptions): Any = {
+  override def jit[T](irTree: IROp[T])(using jitOptions: JITOptions): T = {
     debug("", () => s"IN SNIPPET IR, code=${irTree.code}")
     irTree match {
       case op: ProgramOp if jitOptions.granularity == op.code =>
@@ -105,16 +64,50 @@ class StagedSnippetExecutionEngine(override val storageManager: StorageManager,
       case op: InsertOp if jitOptions.granularity == op.code =>
         if (op.compiledSnippetContinuationFn == null)
           op.compiledSnippetContinuationFn = snippetCompiler.getCompiledSnippet(op)
-        op.compiledSnippetContinuationFn(storageManager, op.children.map(o => (sm: StorageManager) => jitRel(o.asInstanceOf[IROp[EDB]])))
+        op.compiledSnippetContinuationFn(storageManager, op.children.map(o => (sm: StorageManager) => jit(o.asInstanceOf[IROp[EDB]])))
 
       case op: InsertOp =>
-        op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jitRel(o.asInstanceOf[IROp[EDB]])))
+        op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o.asInstanceOf[IROp[EDB]])))
       case op: DebugNode =>
         op.run(storageManager)
 
-      case _ =>
-        jitRel(irTree.asInstanceOf[IROp[EDB]])
-//        throw new Exception(s"Error: unhandled node type $irTree")
+      case op: ScanOp if jitOptions.granularity == op.code =>
+        if (op.compiledSnippetContinuationFn == null)
+          op.compiledSnippetContinuationFn = snippetCompiler.getCompiledSnippetRel(op)
+        op.compiledSnippetContinuationFn(storageManager, Seq.empty) // TODO: weird
+
+      case op: ScanOp =>
+        op.run(storageManager)
+
+      case op: ScanEDBOp =>
+        op.run(storageManager)
+
+      case op: ProjectJoinFilterOp if jitOptions.granularity == op.code =>
+        if (op.compiledSnippetContinuationFn == null)
+          op.compiledSnippetContinuationFn = snippetCompiler.getCompiledSnippetRel(op)
+        op.compiledSnippetContinuationFn(storageManager, op.children.map(o => (sm: StorageManager) => jit(o)))
+
+      case op: ProjectJoinFilterOp =>
+        op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o)))
+
+      case op: UnionOp =>
+        op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o)))
+
+      case op: UnionSPJOp =>
+        op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o)))
+
+      case op: DiffOp if jitOptions.granularity == op.code =>
+        if (op.compiledSnippetContinuationFn == null)
+          op.compiledSnippetContinuationFn = snippetCompiler.getCompiledSnippetRel(op)
+        op.compiledSnippetContinuationFn(storageManager, op.children.map(o => (sm: StorageManager) => jit(o)))
+
+      case op: DiffOp =>
+        op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o)))
+
+      case op: DebugPeek =>
+        op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o)))
+
+      case _ => throw new Exception("Error: interpretRelOp called with unit operation")
     }
   }
 }

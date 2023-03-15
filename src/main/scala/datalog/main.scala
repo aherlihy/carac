@@ -638,11 +638,11 @@ def isAfter(program: Program) =
   println(isAfter.solve().size)
 
 @main def main = {
-  val engine = new NaiveExecutionEngine(new VolcanoStorageManager())
-  val program = Program(engine)
-  println("SemiNaive")
-  tc(program)
-  println("\n\n_______________________\n\n")
+//  val engine = new NaiveExecutionEngine(new VolcanoStorageManager())
+//  val program = Program(engine)
+//  println("SemiNaive")
+//  tc(program)
+//  println("\n\n_______________________\n\n")
 
 //  println("OLD N")
 //  given engine0: ExecutionEngine = new NaiveExecutionEngine(new DefaultStorageManager())
@@ -666,12 +666,12 @@ def isAfter(program: Program) =
 //    isEqual(program3a)
 //    println("\n\n_______________________\n\n")
 //
-//    val jo = JITOptions(ir.OpCode.EVAL_RULE_SN, dotty, aot = false, block = true, sortOrder = (0, 0, 0))
-//    println("JIT")
-//    given engine3: ExecutionEngine = new StagedExecutionEngine(new DefaultStorageManager(), jo)
-//    val program3 = Program(engine3)
-//    acyclic(program3)
-//    println("\n\n_______________________\n\n")
+    val jo = JITOptions(ir.OpCode.EVAL_RULE_SN, dotty, aot = false, block = true, sortOrder = (0, 0, 0))
+    println("JIT")
+    given engine3: ExecutionEngine = new StagedExecutionEngine(new DefaultStorageManager(), jo)
+    val program3 = Program(engine3)
+    acyclic(program3)
+    println("\n\n_______________________\n\n")
 
 //  println("JIT Snippet")
 //  val engine4: ExecutionEngine = new StagedSnippetExecutionEngine(new DefaultStorageManager(), jo)
