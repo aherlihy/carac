@@ -78,7 +78,7 @@ abstract class BenchmarkGenerator(directory: Path,
   val FPJs = Seq((0, 1), (1, 2), (1, 5), (2, 2), (5, 2), (2, 10)).map((n: Int, v: Int) => s"JITStagedFPJ_TN${n}TV${v}_")
   val rest = Seq(
 //    "SemiNaive",
-//    "Naive", "InterpretedStaged", "CompiledStaged",
+    "Naive", "InterpretedStaged", "CompiledStaged",
 //    "JITStagedSemiNaiveEvalBlocking", "JITStagedProgramBlocking", "JITStagedJoinBlocking",
 //    "JITStagedSnippetSemiNaiveEvalBlocking", "JITStagedSnippetProgramBlocking", "JITStagedSnippetJoinBlocking",
 //      "JITStagedAOTNaiveEvalBlocking",

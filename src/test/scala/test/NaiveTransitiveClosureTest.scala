@@ -24,7 +24,7 @@ class NaiveVolcanoTransitiveClosure extends munit.FunSuite {
     }
   }))
 }
-class NaiveCollectionTransitiveClosure extends munit.FunSuite {
+class NaiveDefaultTransitiveClosure extends munit.FunSuite {
   List(
     Acyclic(new Program(new NaiveExecutionEngine(new DefaultStorageManager()))),
     MultiIsolatedCycle(new Program(new NaiveExecutionEngine(new DefaultStorageManager()))),

@@ -25,7 +25,7 @@ class SemiNaiveVolcanoTransitiveClosure extends munit.FunSuite {
     }))
 }
 
-class SemiNaiveCollectionTransitiveClosure extends munit.FunSuite {
+class SemiNaiveDefaultTransitiveClosure extends munit.FunSuite {
   List(
     Acyclic(new Program(new SemiNaiveExecutionEngine(new DefaultStorageManager()))),
     MultiIsolatedCycle(new Program(new SemiNaiveExecutionEngine(new DefaultStorageManager()))),
