@@ -14,8 +14,7 @@ object SimpleCasts {
   def asSimpleRow(to: Row[StorageTerm]): SimpleRow = to.asInstanceOf[SimpleRow]
 }
 
-class SimpleEDB(val wrapped: mutable.ArrayBuffer[SimpleRow]) extends EDB with IterableOnce[SimpleRow] {
-  def this(elems: SimpleRow*) = this(mutable.ArrayBuffer[SimpleRow](elems*))
+case class SimpleEDB(val wrapped: mutable.ArrayBuffer[SimpleRow]) extends EDB with IterableOnce[SimpleRow] {
   export wrapped.{ length, clear, nonEmpty, toSet, apply, mkString, iterator }
 
   def addOne(elem: SimpleRow): this.type =
@@ -24,8 +23,8 @@ class SimpleEDB(val wrapped: mutable.ArrayBuffer[SimpleRow]) extends EDB with It
   def diff(that: SimpleEDB): SimpleEDB =
     SimpleEDB(wrapped.diff(that.wrapped))
 
-  def prependedAll(suffix: SimpleEDB): SimpleEDB =
-    SimpleEDB(wrapped.prependedAll(suffix.wrapped))
+  def concat(suffix: SimpleEDB): SimpleEDB =
+    SimpleEDB(wrapped.concat(suffix.wrapped))
 
   def getSetOfSeq: Set[Seq[StorageTerm]] =
     wrapped.map(s => s.toSeq).toSet
@@ -45,18 +44,22 @@ object SimpleEDB {
   extension (edbs: Seq[EDB])
     def unionEDB: EDB =
       SimpleEDB(edbs.flatten(using e => asSimpleEDB(e).wrapped).distinct.to(mutable.ArrayBuffer))
+  def apply(elems: SimpleRow*): SimpleEDB = new SimpleEDB(mutable.ArrayBuffer[SimpleRow](elems*))
 }
-class SimpleRow(val wrapped: Seq[StorageTerm]) extends Row[StorageTerm] {
+case class SimpleRow(val wrapped: Seq[StorageTerm]) extends Row[StorageTerm] {
   def toSeq = wrapped
   def length: Int = wrapped.length
   def concat(suffix: Row[StorageTerm]): SimpleRow =
     SimpleRow(wrapped.concat(asSimpleRow(suffix).wrapped))
   export wrapped.{ apply, applyOrElse, iterator, lift, mkString }
 }
-class SimpleDatabase(val wrapped: mutable.Map[RelationId, SimpleEDB]) extends Database[SimpleEDB] {
-  def this(elems: (RelationId, SimpleEDB)*) = this(mutable.Map[RelationId, SimpleEDB](elems*))
+case class SimpleDatabase(val wrapped: mutable.Map[RelationId, SimpleEDB]) extends Database[SimpleEDB] {
   export wrapped.{ apply, getOrElse, foreach, contains, update, exists, toSeq }
 }
+object SimpleDatabase {
+  def apply(elems: (RelationId, SimpleEDB)*): SimpleDatabase = new SimpleDatabase(mutable.Map[RelationId, SimpleEDB](elems *))
+}
+
 
 abstract class SimpleStorageManager(override val ns: NS) extends StorageManager(ns) {
 //  type StorageTerm = Term
@@ -128,6 +131,7 @@ abstract class SimpleStorageManager(override val ns: NS) extends StorageManager(
   def getEmptyEDB(): SimpleEDB = SimpleEDB()
   def getEDB(rId: RelationId): SimpleEDB = edbs(rId)
   def edbContains(rId: RelationId): Boolean = edbs.contains(rId)
+  def getAllEDBS(): mutable.Map[RelationId, Any] = edbs.wrapped.asInstanceOf[mutable.Map[RelationId, Any]]
 
   // Read intermediate results
   def getKnownDerivedDB(rId: RelationId): SimpleEDB =
@@ -153,13 +157,13 @@ abstract class SimpleStorageManager(override val ns: NS) extends StorageManager(
   def resetKnownDerived(rId: RelationId, rulesEDB: EDB, prevEDB: EDB = SimpleEDB()): Unit =
     val rules = asSimpleEDB(rulesEDB)
     val prev = asSimpleEDB(prevEDB)
-    derivedDB(knownDbId)(rId) = rules.prependedAll(prev)
+    derivedDB(knownDbId)(rId) = rules.concat(prev)
   def resetKnownDelta(rId: RelationId, rules: EDB): Unit =
     deltaDB(knownDbId)(rId) = asSimpleEDB(rules)
   def resetNewDerived(rId: RelationId, rulesEDB: EDB, prevEDB: EDB = SimpleEDB()): Unit =
     val rules = asSimpleEDB(rulesEDB)
     val prev = asSimpleEDB(prevEDB)
-    derivedDB(newDbId)(rId) = rules.prependedAll(prev)
+    derivedDB(newDbId)(rId) = rules.concat(prev) // TODO: maybe use insert not concat
   def resetNewDelta(rId: RelationId, rules: EDB): Unit =
     deltaDB(newDbId)(rId) = asSimpleEDB(rules)
   def clearNewDerived(): Unit =

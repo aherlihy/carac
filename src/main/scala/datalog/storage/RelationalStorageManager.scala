@@ -7,10 +7,10 @@ import datalog.execution.{AllIndexes, JoinIndexes}
 import scala.collection.{immutable, mutable}
 
 class RelationalStorageManager(ns: NS = NS()) extends SimpleStorageManager(ns) {
-  def joinHelper(inputs: Seq[EDB], k: JoinIndexes): EDB = throw new Exception("shouldn't be called")
-  def projectHelper(input: EDB, k: JoinIndexes): EDB = throw new Exception("shouldn't be called")
-  def joinProjectHelper(inputs: Seq[EDB], k: JoinIndexes, sortOrder: (Int, Int, Int)): EDB = throw new Exception("shouldn't be called")
-  def joinProjectHelper_withHash(inputs: Seq[EDB], rId: Int, hash: String, sortOrder: (Int, Int, Int)): EDB = throw new Exception("shouldn't be called")
+  def joinHelper(inputs: Seq[EDB], k: JoinIndexes): EDB = ???
+  def projectHelper(input: EDB, k: JoinIndexes): EDB = ???
+  def joinProjectHelper(inputs: Seq[EDB], k: JoinIndexes, sortOrder: (Int, Int, Int)): EDB = ???
+  def joinProjectHelper_withHash(inputs: Seq[EDB], rId: Int, hash: String, sortOrder: (Int, Int, Int)): EDB = ???
   /**
    * Use relational operators to evaluate an IDB rule using Naive algo
    *

@@ -230,7 +230,7 @@ class CollectionsStorageManager(ns: NS = new NS()) extends SimpleStorageManager(
                   derivedDB(knownDbId).getOrElse(r, edbs.getOrElse(r, SimpleEDB())) // TODO: warn if EDB is empty? Right now can't tell the difference between undeclared and empty EDB
                 }
               ), k, (0, 0, 0)).wrapped // don't sort when not staging
-          }).toSet
+          }).distinct
       ))
   }
 
@@ -245,7 +245,7 @@ class CollectionsStorageManager(ns: NS = new NS()) extends SimpleStorageManager(
             joinHelper(
               k.deps.map(r => derivedDB(knownDbId).getOrElse(r, edbs.getOrElse(r, SimpleEDB()))), k // TODO: warn if EDB is empty? Right now can't tell the difference between undeclared and empty EDB)
             ), k
-          ).wrapped
+          ).wrapped.distinct
       })
     )
   }

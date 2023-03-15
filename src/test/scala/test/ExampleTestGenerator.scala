@@ -116,7 +116,7 @@ abstract class TestGenerator(directory: Path,
           val fact = program.relation[Constant](edbName)
           factInput.foreach(f => fact(f: _*) :- ())
           if (factInput.isEmpty) {
-            val edbs = program.ee.storageManager.edbs.asInstanceOf[mutable.Map[Int, Any]]
+            val edbs = program.ee.storageManager.getAllEDBS()
           }
         )
         pretest(program)

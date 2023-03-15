@@ -63,7 +63,7 @@ class SemiNaiveExecutionEngine(override val storageManager: StorageManager) exte
     storageManager.initEvaluation()
     var count = 0
 
-    debug("initial state @ -1", storageManager.printer.toString)
+    debug("initial state @ -1", storageManager.toString)
     evalNaive(relations, true) // this fills derived[new] and and delta[new]
 
     var setDiff = true

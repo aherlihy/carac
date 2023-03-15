@@ -84,7 +84,7 @@ class NaiveExecutionEngine(val storageManager: StorageManager) extends Execution
       storageManager.swapKnowledge()
       storageManager.clearNewDerived()
 
-      debug(s"initial state @ $count", storageManager.printer.toString)
+      debug(s"initial state @ $count", storageManager.toString)
       count += 1
       evalNaive(relations)
 

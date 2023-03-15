@@ -638,7 +638,7 @@ def isAfter(program: Program) =
   println(isAfter.solve().size)
 
 @main def main = {
-  val engine = new NaiveExecutionEngine(new CollectionsStorageManager())
+  val engine = new NaiveExecutionEngine(new RelationalStorageManager())
   val program = Program(engine)
   println("SemiNaive")
   tc(program)

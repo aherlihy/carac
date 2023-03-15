@@ -8,7 +8,6 @@ import scala.collection.mutable
 // Indicates the end of the stream
 final val NilTuple: Option[Nothing] = None
 
-final val dbg = true//false
 class RelationalOperators[S <: StorageManager](val storageManager: S) {
   trait RelOperator {
     def open(): Unit
@@ -22,9 +21,9 @@ class RelationalOperators[S <: StorageManager](val storageManager: S) {
       this.open()
       while (
         this.next() match {
-          case Some(r) => {
-            list.addOne(r); true
-          }
+          case Some(r) =>
+            list.addOne(r)
+            true
           case _ => false
         }) {}
       this.close()
@@ -62,8 +61,6 @@ class RelationalOperators[S <: StorageManager](val storageManager: S) {
 //        }
   }
 
-  // def scan(rId: Int): RelOperator = Scan(rId)
-
   case class EmptyScan() extends RelOperator {
     def open(): Unit = {}
     def next(): Option[SimpleRow] = NilTuple
@@ -82,7 +79,7 @@ class RelationalOperators[S <: StorageManager](val storageManager: S) {
       if (currentId >= length) {
         NilTuple
       } else {
-        currentId = currentId + 1
+        currentId += 1
         Option(relation(currentId - 1))
       }
     }
@@ -90,7 +87,7 @@ class RelationalOperators[S <: StorageManager](val storageManager: S) {
     def close(): Unit = {}
   }
 
-  // TODO: most likely will combine Scan+Filter, or split out Join+Filter
+  // NOTE: this isn't currently used by SPJU bc merged scan+filter
   case class Filter(input: RelOperator)
                    (cond: SimpleRow => Boolean) extends RelOperator {
 
@@ -177,6 +174,7 @@ class RelationalOperators[S <: StorageManager](val storageManager: S) {
           })
         })
         .filter(r => scanFilter(r.length)(r.apply))
+      println(s"outputRel=$outputRelation")
     }
     def next(): Option[SimpleRow] = {
       if (index >= outputRelation.length)
