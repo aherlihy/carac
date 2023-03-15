@@ -7,10 +7,11 @@ import datalog.execution.{AllIndexes, JoinIndexes}
 import scala.collection.{immutable, mutable}
 
 /**
- * This is a classic pull-based/volcano model for query operators.
+ * This is a classic pull-based/volcano model for query operators that operate over the CollectionsTypes,
+ * which are essentially just wrapped Scala collections.
  * @param ns
  */
-class VolcanoStorageManager(ns: NS = NS()) extends SimpleStorageManager(ns) {
+class VolcanoStorageManager(ns: NS = NS()) extends CollectionsStorageManager(ns) {
   def joinHelper(inputs: Seq[EDB], k: JoinIndexes): EDB = ???
   def projectHelper(input: EDB, k: JoinIndexes): EDB = ???
   def joinProjectHelper(inputs: Seq[EDB], k: JoinIndexes, sortOrder: (Int, Int, Int)): EDB = ???
@@ -29,11 +30,11 @@ class VolcanoStorageManager(ns: NS = NS()) extends SimpleStorageManager(ns) {
     val plan = Union(
         keys.map(k =>
           if (k.edb)
-            Scan(edbs.getOrElse(rId, SimpleEDB()), rId)
+            Scan(edbs.getOrElse(rId, CollectionsEDB()), rId)
           else
             Project(
               Join(k.deps.map(r => Scan(
-                derivedDB(knownDbId).getOrElse(r, edbs.getOrElse(r, SimpleEDB())), r) // TODO: warn if EDB is empty? Right now can't tell the difference between undeclared and empty EDB
+                derivedDB(knownDbId).getOrElse(r, edbs.getOrElse(r, CollectionsEDB())), r) // TODO: warn if EDB is empty? Right now can't tell the difference between undeclared and empty EDB
               ), k.varIndexes, k.constIndexes),
               k.projIndexes
             )
@@ -55,7 +56,7 @@ class VolcanoStorageManager(ns: NS = NS()) extends SimpleStorageManager(ns) {
     val plan = Union(
       keys.map(k => // for each idb rule
         if (k.edb)
-          Scan(edbs.getOrElse(rId, SimpleEDB()), rId)
+          Scan(edbs.getOrElse(rId, CollectionsEDB()), rId)
         else
           var idx = -1 // if dep is featured more than once, only us delta once, but at a different pos each time
           Union(
@@ -67,9 +68,9 @@ class VolcanoStorageManager(ns: NS = NS()) extends SimpleStorageManager(ns) {
                     if (r == d && !found && i > idx)
                       found = true
                       idx = i
-                      Scan(deltaDB(knownDbId).getOrElse(r, SimpleEDB()), r)
+                      Scan(deltaDB(knownDbId).getOrElse(r, CollectionsEDB()), r)
                     else
-                      Scan(derivedDB(knownDbId).getOrElse(r, edbs.getOrElse(r, SimpleEDB())), r)
+                      Scan(derivedDB(knownDbId).getOrElse(r, edbs.getOrElse(r, CollectionsEDB())), r)
                   }),
                   k.varIndexes,
                   k.constIndexes

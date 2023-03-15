@@ -1,7 +1,7 @@
 package datalog.storage
 
 import datalog.dsl.Constant
-import datalog.storage.SimpleCasts.asSimpleEDB
+import datalog.storage.CollectionsCasts.asCollectionsEDB
 import datalog.tools.Debug.debug
 
 import scala.collection.mutable
@@ -12,19 +12,19 @@ final val NilTuple: Option[Nothing] = None
 /**
  * These are relational operators for the pull-based Volcano engine.
  *
- * @param storageManager: Right now this is always going to be a SimpleStorageManager. If needed can be
- * made more general to operate over EDBs instead of SimpleEDBs and so on.
+ * @param storageManager: Right now this is always going to be a CollectionsStorageManager. If needed can be
+ * made more general to operate over EDBs instead of CollectionsEDBs and so on.
  */
 class VolcanoOperators[S <: StorageManager](val storageManager: S) {
   trait VolOperator {
     def open(): Unit
 
-    def next(): Option[SimpleRow]
+    def next(): Option[CollectionsRow]
 
     def close(): Unit
 
-    def toList(): SimpleEDB = { // TODO: fix this to use iterator override
-      val list = SimpleEDB()
+    def toList(): CollectionsEDB = { // TODO: fix this to use iterator override
+      val list = CollectionsEDB()
       this.open()
       while (
         this.next() match {
@@ -36,13 +36,13 @@ class VolcanoOperators[S <: StorageManager](val storageManager: S) {
       this.close()
       list
     }
-//      final override def iterator: Iterator[SimpleRow] =
-//        new Iterator[SimpleRow] with AutoCloseable {
+//      final override def iterator: Iterator[CollectionsRow] =
+//        new Iterator[CollectionsRow] with AutoCloseable {
 //          private val op =
 //            RelOperator.this.clone().asInstanceOf[RelOperator]
 //          op.open()
 //
-//          var n: Option[Option[SimpleRow]] = Option.empty
+//          var n: Option[Option[CollectionsRow]] = Option.empty
 //
 //          def prepareNext(): Unit = {
 //            if (n.nonEmpty) return
@@ -54,7 +54,7 @@ class VolcanoOperators[S <: StorageManager](val storageManager: S) {
 //            n.get.nonEmpty
 //          }
 //
-//          override def next(): SimpleRow = {
+//          override def next(): CollectionsRow = {
 //            prepareNext()
 //            val ret = n.get
 //            assert(ret.nonEmpty)
@@ -70,11 +70,11 @@ class VolcanoOperators[S <: StorageManager](val storageManager: S) {
 
   case class EmptyScan() extends VolOperator {
     def open(): Unit = {}
-    def next(): Option[SimpleRow] = NilTuple
+    def next(): Option[CollectionsRow] = NilTuple
     def close(): Unit = {}
   }
 
-  case class Scan(relation: SimpleEDB, rId: Int) extends VolOperator {
+  case class Scan(relation: CollectionsEDB, rId: Int) extends VolOperator {
     private var currentId: Int = 0
     private var length: Long = relation.length
 
@@ -82,7 +82,7 @@ class VolcanoOperators[S <: StorageManager](val storageManager: S) {
 //      debug(s"SCAN[$rId]")
     }
 
-    def next(): Option[SimpleRow] = {
+    def next(): Option[CollectionsRow] = {
       if (currentId >= length) {
         NilTuple
       } else {
@@ -96,11 +96,11 @@ class VolcanoOperators[S <: StorageManager](val storageManager: S) {
 
   // NOTE: this isn't currently used by SPJU bc merged scan+filter
   case class Filter(input: VolOperator)
-                   (cond: SimpleRow => Boolean) extends VolOperator {
+                   (cond: CollectionsRow => Boolean) extends VolOperator {
 
     def open(): Unit = input.open()
 
-    override def next(): Option[SimpleRow] = {
+    override def next(): Option[CollectionsRow] = {
       var nextTuple = input.next()
       while (nextTuple match {
         case Some(n) => !cond(n)
@@ -118,14 +118,14 @@ class VolcanoOperators[S <: StorageManager](val storageManager: S) {
       input.open()
     }
 
-    override def next(): Option[SimpleRow] = {
+    override def next(): Option[CollectionsRow] = {
       if (ixs.isEmpty) {
         return input.next()
       }
       input.next() match {
         case Some(t) =>
           Some(
-            SimpleRow(ixs.flatMap((typ, idx) =>
+            CollectionsRow(ixs.flatMap((typ, idx) =>
               typ match {
                 case "v" => t.lift(idx.asInstanceOf[Int])
                 case "c" => Some(idx)
@@ -143,7 +143,7 @@ class VolcanoOperators[S <: StorageManager](val storageManager: S) {
                   variables: Seq[Seq[Int]],
                   constants: Map[Int, Constant]) extends VolOperator {
 
-    private var outputRelation = SimpleEDB()
+    private var outputRelation = CollectionsEDB()
     private var index = 0
 
     def scanFilter(maxIdx: Int)(get: Int => StorageTerm = x => x.asInstanceOf[StorageTerm]) = {
@@ -164,7 +164,7 @@ class VolcanoOperators[S <: StorageManager](val storageManager: S) {
 
     override def open(): Unit = {
       index = 0
-      val inputList: Seq[SimpleEDB] = inputs.map(i => i.toList())
+      val inputList: Seq[CollectionsEDB] = inputs.map(i => i.toList())
 
       outputRelation = inputList
         .reduceLeft((outer, inner) => {
@@ -182,7 +182,7 @@ class VolcanoOperators[S <: StorageManager](val storageManager: S) {
         })
         .filter(r => scanFilter(r.length)(r.apply))
     }
-    def next(): Option[SimpleRow] = {
+    def next(): Option[CollectionsRow] = {
       if (index >= outputRelation.length)
         NilTuple
       else {
@@ -203,14 +203,14 @@ class VolcanoOperators[S <: StorageManager](val storageManager: S) {
    * @param ops
    */
   case class Union(ops: Seq[VolOperator]) extends VolOperator {
-    private var outputRelation: SimpleEDB = SimpleEDB()
+    private var outputRelation: CollectionsEDB = CollectionsEDB()
     private var index = 0
     def open(): Unit = {
       val opResults = ops.map(o => o.toList())
-      import SimpleEDB.unionEDB
-      outputRelation = asSimpleEDB(opResults.unionEDB)
+      import CollectionsEDB.unionEDB
+      outputRelation = asCollectionsEDB(opResults.unionEDB)
     }
-    def next(): Option[SimpleRow] = {
+    def next(): Option[CollectionsRow] = {
       if (index >= outputRelation.length)
         NilTuple
       else
@@ -220,11 +220,11 @@ class VolcanoOperators[S <: StorageManager](val storageManager: S) {
     def close(): Unit = ops.foreach(o => o.close())
   }
   case class Diff(ops: mutable.ArrayBuffer[VolOperator]) extends VolOperator {
-    private var outputRelation: SimpleEDB = SimpleEDB()
+    private var outputRelation: CollectionsEDB = CollectionsEDB()
     private var index = 0
     def open(): Unit =
       outputRelation = ops.map(o => o.toList()).toSet.reduce((l, r) => l diff r)
-    def next(): Option[SimpleRow] = {
+    def next(): Option[CollectionsRow] = {
       if (index >= outputRelation.length)
         NilTuple
       else

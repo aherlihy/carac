@@ -2,21 +2,21 @@ package datalog.storage
 
 import datalog.dsl.{Atom, Constant, Term, Variable}
 import datalog.execution.{AllIndexes, JoinIndexes}
-import SimpleCasts.*
+import CollectionsCasts.*
 import datalog.tools.Debug.debug
 
 import scala.collection.{Iterator, immutable, mutable}
 
-abstract class SimpleStorageManager(override val ns: NS) extends StorageManager(ns) {
+abstract class CollectionsStorageManager(override val ns: NS) extends StorageManager(ns) {
   // "database", i.e. relationID => Relation
-  protected val edbs: SimpleDatabase = SimpleDatabase()
+  protected val edbs: CollectionsDatabase = CollectionsDatabase()
   var knownDbId: KnowledgeId = -1
   var newDbId: KnowledgeId = -1
 
   // dbID => database, because we swap between read (known) and write (new)
   var dbId = 0
-  protected val derivedDB: mutable.Map[KnowledgeId, SimpleDatabase] = mutable.Map[KnowledgeId, SimpleDatabase]()
-  protected val deltaDB: mutable.Map[KnowledgeId, SimpleDatabase] = mutable.Map[KnowledgeId, SimpleDatabase]()
+  protected val derivedDB: mutable.Map[KnowledgeId, CollectionsDatabase] = mutable.Map[KnowledgeId, CollectionsDatabase]()
+  protected val deltaDB: mutable.Map[KnowledgeId, CollectionsDatabase] = mutable.Map[KnowledgeId, CollectionsDatabase]()
 
   val allRulesAllIndexes: mutable.Map[RelationId, AllIndexes] = mutable.Map.empty
   val printer: Printer[this.type] = Printer[this.type](this)
@@ -36,20 +36,20 @@ abstract class SimpleStorageManager(override val ns: NS) extends StorageManager(
     iteration = 0
     dbId = 0
     knownDbId = dbId
-    derivedDB.addOne(dbId, SimpleDatabase())
-    deltaDB.addOne(dbId, SimpleDatabase())
+    derivedDB.addOne(dbId, CollectionsDatabase())
+    deltaDB.addOne(dbId, CollectionsDatabase())
 
     edbs.foreach((k, relation) => {
-      deltaDB(dbId)(k) = SimpleEDB()
+      deltaDB(dbId)(k) = CollectionsEDB()
     }) // Delta-EDB is just empty sets
     dbId += 1
 
     newDbId = dbId
-    derivedDB.addOne(dbId, SimpleDatabase())
-    deltaDB.addOne(dbId, SimpleDatabase())
+    derivedDB.addOne(dbId, CollectionsDatabase())
+    deltaDB.addOne(dbId, CollectionsDatabase())
 
     edbs.foreach((k, relation) => {
-      deltaDB(dbId)(k) = SimpleEDB()
+      deltaDB(dbId)(k) = CollectionsEDB()
     }) // Delta-EDB is just empty sets
     dbId += 1
   }
@@ -57,25 +57,25 @@ abstract class SimpleStorageManager(override val ns: NS) extends StorageManager(
   // Read & Write EDBs
   override def insertEDB(rule: Atom): Unit = {
     if (edbs.contains(rule.rId))
-      edbs(rule.rId).addOne(SimpleRow(rule.terms))
+      edbs(rule.rId).addOne(CollectionsRow(rule.terms))
     else
-      edbs(rule.rId) = SimpleEDB()
-      edbs(rule.rId).addOne(SimpleRow(rule.terms))
+      edbs(rule.rId) = CollectionsEDB()
+      edbs(rule.rId).addOne(CollectionsRow(rule.terms))
   }
-  def getEmptyEDB(): SimpleEDB = SimpleEDB()
-  def getEDB(rId: RelationId): SimpleEDB = edbs(rId)
+  def getEmptyEDB(): CollectionsEDB = CollectionsEDB()
+  def getEDB(rId: RelationId): CollectionsEDB = edbs(rId)
   def edbContains(rId: RelationId): Boolean = edbs.contains(rId)
   def getAllEDBS(): mutable.Map[RelationId, Any] = edbs.wrapped.asInstanceOf[mutable.Map[RelationId, Any]]
 
   // Read intermediate results
-  def getKnownDerivedDB(rId: RelationId): SimpleEDB =
-    derivedDB(knownDbId).getOrElse(rId, edbs.getOrElse(rId, SimpleEDB()))
-  def getNewDerivedDB(rId: RelationId): SimpleEDB =
-    derivedDB(newDbId).getOrElse(rId, edbs.getOrElse(rId, SimpleEDB()))
-  def getKnownDeltaDB(rId: RelationId): SimpleEDB =
-    deltaDB(knownDbId).getOrElse(rId, edbs.getOrElse(rId, SimpleEDB()))
-  def getNewDeltaDB(rId: RelationId): SimpleEDB =
-    deltaDB(newDbId).getOrElse(rId, edbs.getOrElse(rId, SimpleEDB()))
+  def getKnownDerivedDB(rId: RelationId): CollectionsEDB =
+    derivedDB(knownDbId).getOrElse(rId, edbs.getOrElse(rId, CollectionsEDB()))
+  def getNewDerivedDB(rId: RelationId): CollectionsEDB =
+    derivedDB(newDbId).getOrElse(rId, edbs.getOrElse(rId, CollectionsEDB()))
+  def getKnownDeltaDB(rId: RelationId): CollectionsEDB =
+    deltaDB(knownDbId).getOrElse(rId, edbs.getOrElse(rId, CollectionsEDB()))
+  def getNewDeltaDB(rId: RelationId): CollectionsEDB =
+    deltaDB(newDbId).getOrElse(rId, edbs.getOrElse(rId, CollectionsEDB()))
 
   // Read final results
   def getKnownIDBResult(rId: RelationId): Set[Seq[Term]] =
@@ -85,21 +85,21 @@ abstract class SimpleStorageManager(override val ns: NS) extends StorageManager(
     debug(s"Final IDB Result[new]", () => s" at iteration $iteration: @$newDbId, count=${getNewDerivedDB(rId).length}")
     getNewDerivedDB(rId).getSetOfSeq
   def getEDBResult(rId: RelationId): Set[Seq[Term]] =
-    edbs.getOrElse(rId, SimpleEDB()).getSetOfSeq
+    edbs.getOrElse(rId, CollectionsEDB()).getSetOfSeq
 
   // Write intermediate results
-  def resetKnownDerived(rId: RelationId, rulesEDB: EDB, prevEDB: EDB = SimpleEDB()): Unit =
-    val rules = asSimpleEDB(rulesEDB)
-    val prev = asSimpleEDB(prevEDB)
+  def resetKnownDerived(rId: RelationId, rulesEDB: EDB, prevEDB: EDB = CollectionsEDB()): Unit =
+    val rules = asCollectionsEDB(rulesEDB)
+    val prev = asCollectionsEDB(prevEDB)
     derivedDB(knownDbId)(rId) = rules.concat(prev)
   def resetKnownDelta(rId: RelationId, rules: EDB): Unit =
-    deltaDB(knownDbId)(rId) = asSimpleEDB(rules)
-  def resetNewDerived(rId: RelationId, rulesEDB: EDB, prevEDB: EDB = SimpleEDB()): Unit =
-    val rules = asSimpleEDB(rulesEDB)
-    val prev = asSimpleEDB(prevEDB)
+    deltaDB(knownDbId)(rId) = asCollectionsEDB(rules)
+  def resetNewDerived(rId: RelationId, rulesEDB: EDB, prevEDB: EDB = CollectionsEDB()): Unit =
+    val rules = asCollectionsEDB(rulesEDB)
+    val prev = asCollectionsEDB(prevEDB)
     derivedDB(newDbId)(rId) = rules.concat(prev) // TODO: maybe use insert not concat
   def resetNewDelta(rId: RelationId, rules: EDB): Unit =
-    deltaDB(newDbId)(rId) = asSimpleEDB(rules)
+    deltaDB(newDbId)(rId) = asCollectionsEDB(rules)
   def clearNewDerived(): Unit =
     derivedDB(newDbId).foreach((i, e) => e.clear())
 
@@ -118,22 +118,22 @@ abstract class SimpleStorageManager(override val ns: NS) extends StorageManager(
   def verifyEDBs(idbList: mutable.Set[RelationId]): Unit = {
     ns.rIds().foreach(rId =>
       if (!edbs.contains(rId) && !idbList.contains(rId)) // treat undefined relations as empty edbs
-        edbs(rId) = SimpleEDB()
+        edbs(rId) = CollectionsEDB()
     )
   }
 
   // Volcano helpers
   def union(edbs: Seq[EDB]): EDB =
-    import SimpleEDB.unionEDB
+    import CollectionsEDB.unionEDB
     edbs.unionEDB
 
   def diff(lhsEDB: EDB, rhsEDB: EDB): EDB =
-    val lhs = asSimpleEDB(lhsEDB)
-    val rhs = asSimpleEDB(rhsEDB)
+    val lhs = asCollectionsEDB(lhsEDB)
+    val rhs = asCollectionsEDB(rhsEDB)
     lhs diff rhs
 
   override def toString() = {
-    def printHelperRelation(i: Int, db: SimpleDatabase): String = {
+    def printHelperRelation(i: Int, db: CollectionsDatabase): String = {
       val name = if (i == knownDbId) "known" else if (i == newDbId) "new" else s"!!!OTHER($i)"
       "\n" + name + ": " + printer.edbToString(db)
     }
