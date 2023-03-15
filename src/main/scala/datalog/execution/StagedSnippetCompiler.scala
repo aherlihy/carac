@@ -71,8 +71,8 @@ class StagedSnippetCompiler(val storageManager: StorageManager)(using val jitOpt
         }
 
       case ScanEDBOp(rId) =>
-        if (storageManager.edbs.contains(rId))
-          '{ $stagedSM.edbs(${ Expr(rId) }) }
+        if (storageManager.edbContains(rId))
+          '{ $stagedSM.getEDB(${ Expr(rId) }) }
         else
           '{ $stagedSM.getEmptyEDB() }
 

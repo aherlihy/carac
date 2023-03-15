@@ -97,7 +97,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
   def generateProgramTree(rId: Int): (IROp[Any], InterpreterContext) = {
     // verify setup
     storageManager.verifyEDBs(precedenceGraph.idbs)
-    if (storageManager.edbs.contains(rId) && !precedenceGraph.idbs.contains(rId)) { // if just an edb predicate then return
+    if (storageManager.edbContains(rId) && !precedenceGraph.idbs.contains(rId)) { // if just an edb predicate then return
       debug("Returning EDB without any IDB rule: ", () => storageManager.ns(rId))
       throw new Exception("NOTE: using generateProgramTree which is only for benchmarking")
     }
@@ -109,7 +109,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
     var toSolve = rId
     if (tCtx.aliases.contains(rId))
       toSolve = tCtx.aliases.getOrElse(rId, rId)
-      if (storageManager.edbs.contains(toSolve) && !precedenceGraph.idbs.contains(toSolve)) { // if just an edb predicate then return
+      if (storageManager.edbContains(toSolve) && !precedenceGraph.idbs.contains(toSolve)) { // if just an edb predicate then return
         throw new Exception("NOTE: using generateProgramTree which is only for benchmarking")
       }
     given irCtx: InterpreterContext = InterpreterContext(storageManager, precedenceGraph, toSolve)
@@ -362,7 +362,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
     debug("", () => s"solve $rId with options $defaultJITOptions")
     // verify setup
     storageManager.verifyEDBs(precedenceGraph.idbs)
-    if (storageManager.edbs.contains(rId) && !precedenceGraph.idbs.contains(rId)) { // if just an edb predicate then return
+    if (storageManager.edbContains(rId) && !precedenceGraph.idbs.contains(rId)) { // if just an edb predicate then return
       debug("Returning EDB without any IDB rule: ", () => storageManager.ns(rId))
       return storageManager.getEDBResult(rId)
     }
@@ -376,7 +376,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
     if (tCtx.aliases.contains(rId)) {
       toSolve = tCtx.aliases.getOrElse(rId, rId)
       debug("aliased:", () => s"${storageManager.ns(rId)} => ${storageManager.ns(toSolve)}")
-      if (storageManager.edbs.contains(toSolve) && !precedenceGraph.idbs.contains(toSolve)) { // if just an edb predicate then return
+      if (storageManager.edbContains(toSolve) && !precedenceGraph.idbs.contains(toSolve)) { // if just an edb predicate then return
         debug("Returning EDB as IDB aliased to EDB: ", () => storageManager.ns(toSolve))
         return storageManager.getEDBResult(toSolve)
       }

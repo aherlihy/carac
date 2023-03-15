@@ -40,35 +40,34 @@ type StorageVariable = Variable
 type StorageConstant = Constant
 
 trait Row[T] {
-  def toSeq: immutable.Seq[T]
-  def length: Int
-  def apply(n: Int): T
-  def applyOrElse[A1 <: Int, B1 >: T](x: A1, default: (A1) => B1): B1
-  def concat(suffix: Row[T]): Row[T]
-//  def concat[B >: T](suffix: Row[B]): Row[B]
-  def lift: Int => Option[T]
-  def mkString(start: String, sep: String, end: String): String
-  def iterator: Iterator[T]
+//  def toSeq: immutable.Seq[T]
+//  def length: Int
+//  def apply(n: Int): T
+//  def applyOrElse[A1 <: Int, B1 >: T](x: A1, default: (A1) => B1): B1
+//  def concat(suffix: Row[T]): Row[T]
+//  def lift: Int => Option[T]
+//  def mkString(start: String, sep: String, end: String): String
+//  def iterator: Iterator[T]
 }
 trait Relation[T] extends IterableOnce[Row[T]] {
-  def addOne(elem: Row[T]): this.type
-  def length: Int
-  def clear(): Unit
-  def nonEmpty: Boolean
-  def diff(that: Relation[T]): Relation[T]
-  def prependedAll(suffix: Relation[T]): Relation[T]
-  def getSetOfSeq: Set[Seq[T]]
-//  def toIterableOnce: IterableOnce[Row[T]]
-//  def map[B](f: Row[T] => B): Relation[B]
-  def map(f: Row[T] => Row[T]): Relation[T]
-//  def flatMap(f: Row[T] => Relation[Row[T]]): Relation[T]
-  def filter(pred: Row[T] => Boolean): Relation[T]
-  def flatMap(f: Row[T] => IterableOnce[Row[T]]): Relation[T]
-  def apply(n: Int): Row[T]
-  def mkString(start: String, sep: String, end: String): String
-  def iterator: Iterator[Row[T]]
+//  def addOne(elem: Row[T]): this.type // storage only
+  def length: Int // everywhere
+//  def clear(): Unit // storage only
+//  def nonEmpty: Boolean // storage only
+//  def diff(that: Relation[T]): Relation[T] // storage only
+//  def prependedAll(suffix: Relation[T]): Relation[T] // storage only
+//  def getSetOfSeq: Set[Seq[T]] // storage only
+//  def map(f: Row[T] => Row[T]): Relation[T]
+//  def filter(pred: Row[T] => Boolean): Relation[T]
+//  def flatMap(f: Row[T] => IterableOnce[Row[T]]): Relation[T]
+//  def apply(n: Int): Row[T]
+//  def mkString(start: String, sep: String, end: String): String
+//  def iterator: Iterator[Row[T]]
   def factToString: String
-//  def removeDuplicates(): Relation[T]
+}
+
+trait Database[T <: EDB] {
+  def toSeq: Seq[(RelationId, T)]
 }
 type EDB = Relation[StorageTerm]
 
@@ -82,12 +81,12 @@ trait StorageManager(val ns: NS) {
 //
 //  type EDB = Relation[StorageTerm]
 //  def EDB(c: Row[StorageTerm]*): EDB
-  type Database[K, V] <: mutable.Map[K, V]
-  type FactDatabase <: Database[RelationId, EDB] & mutable.Map[RelationId, EDB]
-
-  val derivedDB: Database[KnowledgeId, FactDatabase]
-  val deltaDB: Database[KnowledgeId, FactDatabase]
-  val edbs: FactDatabase
+//  type Database[K, V] <: mutable.Map[K, V]
+//  type FactDatabase <: Database[RelationId, EDB] & mutable.Map[RelationId, EDB]
+//
+//  val derivedDB: Database[KnowledgeId, FactDatabase]
+//  val deltaDB: Database[KnowledgeId, FactDatabase]
+//  val edbs: FactDatabase
   var knownDbId: KnowledgeId
   var newDbId: KnowledgeId
 
@@ -100,8 +99,8 @@ trait StorageManager(val ns: NS) {
 
   def insertEDB(rule: Atom): Unit
   def getEmptyEDB(): EDB
-
-  def edb(rId: RelationId): EDB
+  def edbContains(rId: RelationId): Boolean
+  def getEDB(rId: RelationId): EDB
 
   def getKnownDerivedDB(rId: RelationId): EDB
   def getNewDerivedDB(rId: RelationId): EDB

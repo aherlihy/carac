@@ -22,7 +22,7 @@ class Printer[S <: StorageManager](val sm: S) {
     r.map(s => if (s.isEmpty) "<empty>" else s.head.toString + s.drop(1).mkString(" :- ", ",", ""))
       .mkString("[", "; ", "]")
   }
-  def edbToString(db: sm.FactDatabase): String = {
+  def edbToString(db: Database[?]): String = {
     immutable.ListMap(db.toSeq.sortBy(_._1):_*)
       .map((k, v) => (sm.ns(k), factToString(v)))
       .mkString("[\n  ", ",\n  ", "]")
@@ -76,17 +76,7 @@ class Printer[S <: StorageManager](val sm: S) {
       " )"
   }
 
-  override def toString() = {
-    def printHelperRelation(i: Int, db: sm.FactDatabase): String = {
-      val name = if (i == sm.knownDbId) "known" else if (i == sm.newDbId) "new" else s"!!!OTHER($i)"
-      "\n" + name + ": " + edbToString(db)
-    }
-    "+++++\n" +
-      "EDB:" + edbToString(sm.edbs) +
-      "\nDERIVED:" + sm.derivedDB.map(printHelperRelation).mkString("[", ", ", "]") +
-      "\nDELTA:" + sm.deltaDB.map(printHelperRelation).mkString("[", ", ", "]") +
-      "\n+++++"
-  }
+
 
   /**
    * Print IDBs stored in the regular SN/N Execution Engines
@@ -102,7 +92,7 @@ class Printer[S <: StorageManager](val sm: S) {
   def printAST(node: ASTNode): String = {
     node match {
       case ProgramNode(allRules) => "PROGRAM\n" + allRules.map((rId, rules) => s"  ${sm.ns(rId)} => ${printAST(rules)}").mkString("", "\n", "")
-      case AllRulesNode(rules, rId, edb) => s"${if (edb) "{EDB}"+factToString(sm.edbs(rId))+"{IDB}" else ""}${rules.map(printAST).mkString("[", "\n\t", "  ]")}"
+      case AllRulesNode(rules, rId, edb) => s"${if (edb) "{EDB}"+factToString(sm.getEDB(rId))+"{IDB}" else ""}${rules.map(printAST).mkString("[", "\n\t", "  ]")}"
       case RuleNode(head, body, atoms, hash) =>
         s"\n\t${printAST(head)} :- ${body.map(printAST).mkString("(", ", ", ")")}" +
           s" => idx=${sm.allRulesAllIndexes(atoms.head.rId)(hash).toStringWithNS(sm.ns)}\n"

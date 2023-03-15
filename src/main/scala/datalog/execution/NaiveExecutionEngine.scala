@@ -42,7 +42,7 @@ class NaiveExecutionEngine(val storageManager: StorageManager) extends Execution
   }
 
   def insertEDB(rule: Atom): Unit = {
-    if (!storageManager.edbs.contains(rule.rId))
+    if (!storageManager.edbContains(rule.rId))
       prebuiltOpKeys.getOrElseUpdate(rule.rId, mutable.ArrayBuffer[JoinIndexes]()).addOne(JoinIndexes(IndexedSeq(), Map(), IndexedSeq(), Seq(rule.rId), Array(rule), true))
     storageManager.insertEDB(rule)
   }
@@ -68,7 +68,7 @@ class NaiveExecutionEngine(val storageManager: StorageManager) extends Execution
 
   def solve(toSolve: RelationId): Set[Seq[Term]] = {
     storageManager.verifyEDBs(idbs.keys.to(mutable.Set))
-    if (storageManager.edbs.contains(toSolve) && !idbs.contains(toSolve)) { // if just an edb predicate then return
+    if (storageManager.edbContains(toSolve) && !idbs.contains(toSolve)) { // if just an edb predicate then return
       return storageManager.getEDBResult(toSolve)
     }
     if (!idbs.contains(toSolve)) {

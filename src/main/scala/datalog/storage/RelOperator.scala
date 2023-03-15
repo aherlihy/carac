@@ -70,7 +70,7 @@ class RelationalOperators[S <: StorageManager](val storageManager: S) {
     def close(): Unit = {}
   }
 
-  case class Scan(relation: EDB, rId: Int) extends RelOperator {
+  case class Scan(relation: SimpleEDB, rId: Int) extends RelOperator {
     private var currentId: Int = 0
     private var length: Long = relation.length
 
@@ -83,7 +83,7 @@ class RelationalOperators[S <: StorageManager](val storageManager: S) {
         NilTuple
       } else {
         currentId = currentId + 1
-        Option(relation(currentId - 1).asInstanceOf[SimpleRow])
+        Option(relation(currentId - 1))
       }
     }
 
@@ -121,12 +121,12 @@ class RelationalOperators[S <: StorageManager](val storageManager: S) {
       input.next() match {
         case Some(t) =>
           Some(
-            ixs.flatMap((typ, idx) =>
+            SimpleRow(ixs.flatMap((typ, idx) =>
               typ match {
                 case "v" => t.lift(idx.asInstanceOf[Int])
                 case "c" => Some(idx)
                 case _ => throw new Exception("Internal error: projecting something that is not a constant nor a variable")
-              }).asInstanceOf[SimpleRow]
+              }))
           )
         case _ => NilTuple
       }
@@ -231,7 +231,7 @@ class RelationalOperators[S <: StorageManager](val storageManager: S) {
     def close(): Unit = ops.foreach(o => o.close())
   }
   case class Diff(ops: mutable.ArrayBuffer[RelOperator]) extends RelOperator {
-    private var outputRelation: Relation[StorageTerm] = SimpleEDB()
+    private var outputRelation: SimpleEDB = SimpleEDB()
     private var index = 0
     def open(): Unit =
       outputRelation = ops.map(o => o.toList()).toSet.reduce((l, r) => l diff r)
@@ -240,7 +240,7 @@ class RelationalOperators[S <: StorageManager](val storageManager: S) {
         NilTuple
       else
         index += 1
-        Option(outputRelation(index - 1).asInstanceOf[SimpleRow])
+        Option(outputRelation(index - 1))
     }
     def close(): Unit = ops.foreach(o => o.close())
   }

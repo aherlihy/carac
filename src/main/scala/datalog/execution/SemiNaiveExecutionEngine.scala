@@ -20,7 +20,6 @@ class SemiNaiveExecutionEngine(override val storageManager: StorageManager) exte
   def evalSN(rId: RelationId, relations: Seq[RelationId]): Unit = {
     debug("evalSN for ", () => storageManager.ns(rId))
     relations.foreach(r => {
-      if (!storageManager.derivedDB(storageManager.knownDbId).contains(r)) throw new Exception(s"Relation ${storageManager.ns(r)}, id=${r} is not in derived.known")
       val prev = storageManager.getKnownDerivedDB(r)
       debug(s"\tderived[known][${storageManager.ns(r)}] =", () => storageManager.printer.factToString(prev))
       val res = evalRuleSN(r)
@@ -49,7 +48,7 @@ class SemiNaiveExecutionEngine(override val storageManager: StorageManager) exte
 
   override def solve(rId: RelationId): Set[Seq[Term]] = {
     storageManager.verifyEDBs(idbs.keys.to(mutable.Set))
-    if (storageManager.edbs.contains(rId) && !idbs.contains(rId)) { // if just an edb predicate then return
+    if (storageManager.edbContains(rId) && !idbs.contains(rId)) { // if just an edb predicate then return
       return storageManager.getEDBResult(rId)
     }
     if (!idbs.contains(rId)) {

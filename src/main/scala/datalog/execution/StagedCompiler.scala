@@ -84,8 +84,8 @@ class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: J
         }
 
       case ScanEDBOp(rId) =>
-        if (storageManager.edbs.contains(rId))
-          '{ $stagedSM.edbs(${ Expr(rId) }) }
+        if (storageManager.edbContains(rId))
+          '{ $stagedSM.getEDB(${ Expr(rId) }) }
         else
           '{ $stagedSM.getEmptyEDB() }
 

@@ -641,7 +641,7 @@ def isAfter(program: Program) =
   val engine = new NaiveExecutionEngine(new CollectionsStorageManager())
   val program = Program(engine)
   println("SemiNaive")
-  isAfter(program)
+  tc(program)
   println("\n\n_______________________\n\n")
 
 //  println("OLD N")

@@ -202,7 +202,10 @@ case class ScanOp(rId: RelationId, db: DB, knowledge: KNOWLEDGE)(using JITOption
 case class ScanEDBOp(rId: RelationId)(using JITOptions) extends IROp[EDB] {
   val code: OpCode = OpCode.SCANEDB
   override def run(storageManager: StorageManager): EDB =
-    storageManager.edbs.getOrElse(rId, storageManager.getEmptyEDB())
+    if (storageManager.edbContains(rId))
+      storageManager.getEDB(rId)
+    else
+      storageManager.getEmptyEDB()
 
   override def run_continuation(storageManager: StorageManager, opFns: Seq[CompiledRelFn]): EDB =
     run(storageManager)
