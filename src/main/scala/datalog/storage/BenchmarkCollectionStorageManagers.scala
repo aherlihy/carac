@@ -10,7 +10,7 @@
 // * Try out reduce vs. fold, or view vs. no view for benchmarking
 // * @param ns
 // */
-//class CollectionsStorageManagerReduceView() extends CollectionsStorageManager() {
+//class DefaultStorageManagerReduceView() extends DefaultStorageManager() {
 //  override def joinProjectHelper(inputs: Seq[EDB], originalK: JoinIndexes, sortOrder: (Int, Int, Int)): EDB = {
 //    if (inputs.length == 1) // just filter
 //      inputs.view.head
@@ -54,7 +54,7 @@
 //  }
 //
 //}
-//class CollectionsStorageManagerReduceNoView() extends CollectionsStorageManager() {
+//class DefaultStorageManagerReduceNoView() extends DefaultStorageManager() {
 //  override def joinProjectHelper(inputs: Seq[EDB], originalK: JoinIndexes, sortOrder: (Int, Int, Int)): EDB = {
 //    if (inputs.length == 1) // just filter
 //      inputs.head
@@ -94,7 +94,7 @@
 //        )
 //  }
 //}
-//class CollectionsStorageManagerFoldView() extends CollectionsStorageManager() {
+//class DefaultStorageManagerFoldView() extends DefaultStorageManager() {
 //  override def joinProjectHelper(inputs: Seq[EDB], originalK: JoinIndexes, sortOrder: (Int, Int, Int)): EDB = {
 //    if (inputs.length == 1) // just filter
 //      inputs.view.head
@@ -148,7 +148,7 @@
 //  }
 //}
 //
-//class CollectionsStorageManagerFoldNoView() extends CollectionsStorageManager() {
+//class DefaultStorageManagerFoldNoView() extends DefaultStorageManager() {
 //  override def joinProjectHelper(inputs: Seq[EDB], originalK: JoinIndexes, sortOrder: (Int, Int, Int)): EDB = {
 //    if (inputs.length == 1) // just filter
 //      inputs.head

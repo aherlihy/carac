@@ -4,7 +4,7 @@
 //import datalog.execution.{JITOptions, JoinIndexes, StagedCompiler, StagedExecutionEngine}
 //import datalog.execution.ast.ASTNode
 //import datalog.execution.ir.*
-//import datalog.storage.{CollectionsStorageManager, DB, KNOWLEDGE, StorageManager}
+//import datalog.storage.{DefaultStorageManager, DB, KNOWLEDGE, StorageManager}
 //import datalog.tools.Debug.debug
 //
 //import scala.collection.mutable
@@ -16,7 +16,7 @@
 // * TODO: replace regex with reflection
 // */
 //class StagedCompileTest extends munit.FunSuite {
-//  val storageManager = new CollectionsStorageManager()
+//  val storageManager = new DefaultStorageManager()
 //  val dotty = staging.Compiler.make(getClass.getClassLoader)
 //  given jo: JITOptions = JITOptions()
 //  val engine = new StagedExecutionEngine(storageManager, jo)
@@ -50,7 +50,7 @@
 //    given staging.Compiler = staging.Compiler.make(getClass.getClassLoader)
 //    staging.run {
 //      val res: Expr[CompiledFn] =
-//        '{ (stagedSm: CollectionsStorageManager) => ${ engine.compiler.compileIR(miniprog)(using 'stagedSm) } }
+//        '{ (stagedSm: DefaultStorageManager) => ${ engine.compiler.compileIR(miniprog)(using 'stagedSm) } }
 //      debug("generated code: ", () => res.show)
 //      val strRes = res.show
 //      check.foldLeft(strRes)((generatedString, op) =>
@@ -60,12 +60,12 @@
 //    }
 //  }
 //
-//  def compileCheckRel(miniprog: IROp[CollectionsStorageManager#EDB], check: (String => String)*): CompiledRelFn = {
+//  def compileCheckRel(miniprog: IROp[DefaultStorageManager#EDB], check: (String => String)*): CompiledRelFn = {
 //    given staging.Compiler = staging.Compiler.make(getClass.getClassLoader)
 //
 //    staging.run {
 //      val res: Expr[CompiledRelFn] =
-//        '{ (stagedSm: CollectionsStorageManager) => ${ engine.compiler.compileIRRelOp(miniprog)(using 'stagedSm) } }
+//        '{ (stagedSm: DefaultStorageManager) => ${ engine.compiler.compileIRRelOp(miniprog)(using 'stagedSm) } }
 //      debug("generated code: ", () => res.show)
 //      val strRes = res.show
 //      check.foldLeft(strRes)((generatedString, op) =>

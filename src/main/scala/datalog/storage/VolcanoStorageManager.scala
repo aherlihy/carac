@@ -6,7 +6,11 @@ import datalog.execution.{AllIndexes, JoinIndexes}
 
 import scala.collection.{immutable, mutable}
 
-class RelationalStorageManager(ns: NS = NS()) extends SimpleStorageManager(ns) {
+/**
+ * This is a classic pull-based/volcano model for query operators.
+ * @param ns
+ */
+class VolcanoStorageManager(ns: NS = NS()) extends SimpleStorageManager(ns) {
   def joinHelper(inputs: Seq[EDB], k: JoinIndexes): EDB = ???
   def projectHelper(input: EDB, k: JoinIndexes): EDB = ???
   def joinProjectHelper(inputs: Seq[EDB], k: JoinIndexes, sortOrder: (Int, Int, Int)): EDB = ???

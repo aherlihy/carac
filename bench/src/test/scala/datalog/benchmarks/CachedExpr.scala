@@ -4,7 +4,7 @@
 //import datalog.dsl.{Constant, Program, Relation}
 //import datalog.execution.ir.OpCode
 //import datalog.execution.{CompiledStagedExecutionEngine, ir}
-//import datalog.storage.CollectionsStorageManager
+//import datalog.storage.DefaultStorageManager
 //import org.openjdk.jmh.annotations.{Benchmark, BenchmarkMode, Fork, Level, Measurement, Mode, Scope, Setup, State, TearDown, Warmup}
 //import org.openjdk.jmh.infra.Blackhole
 //
@@ -17,7 +17,7 @@
 //@State(Scope.Thread)
 //@BenchmarkMode(Array(Mode.AverageTime))
 //class BenchStagedCachedExpr {
-//  var storage: CollectionsStorageManager = null
+//  var storage: DefaultStorageManager = null
 //  var engine: CompiledStagedExecutionEngine = null
 //  var program: Program = null
 //  var toSolve: Relation[Constant] = null
@@ -53,7 +53,7 @@
 //
 //  @Setup(Level.Trial)
 //  def setup(): Unit = {
-//    engine = CompiledStagedExecutionEngine(CollectionsStorageManager())
+//    engine = CompiledStagedExecutionEngine(DefaultStorageManager())
 //    program = Program(engine)
 //    toSolve = initialize20x.pretest(program)
 //

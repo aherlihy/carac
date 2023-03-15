@@ -7,7 +7,11 @@ import datalog.storage.SimpleCasts.*
 import scala.collection.{immutable, mutable}
 import datalog.tools.Debug.debug
 
-class CollectionsStorageManager(ns: NS = new NS()) extends SimpleStorageManager(ns) {
+/**
+ * This is a storage manager that uses push-based operators that operate over Scala collections.
+ * @param ns
+ */
+class DefaultStorageManager(ns: NS = new NS()) extends SimpleStorageManager(ns) {
 
   private inline def scanFilter(k: JoinIndexes, maxIdx: Int)(get: Int => StorageTerm = x => x) = {
     val vCmp = k.varIndexes.isEmpty || k.varIndexes.forall(condition =>

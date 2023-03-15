@@ -3,7 +3,7 @@ package datalog.benchmarks
 import datalog.dsl.{Constant, Program, Relation, Term}
 import datalog.execution.ir.CompiledFn
 import datalog.execution.{ExecutionEngine, JITOptions, SemiNaiveExecutionEngine, StagedExecutionEngine, ir}
-import datalog.storage.CollectionsStorageManager
+import datalog.storage.DefaultStorageManager
 import org.openjdk.jmh.annotations.{Benchmark, BenchmarkMode, Fork, Level, Measurement, Mode, Scope, Setup, State, Warmup}
 import org.openjdk.jmh.infra.Blackhole
 
@@ -64,7 +64,7 @@ class BenchStaged8xJoin_full_compiled {
   var toSolve: Relation[Constant] = null
   @Setup(Level.Invocation)
   def setup(): Unit = {
-    engine = StagedExecutionEngine(CollectionsStorageManager())
+    engine = StagedExecutionEngine(DefaultStorageManager())
     program = Program(engine)
     toSolve = initialize_8xJoin.pretest(program)
     Thread.sleep(10000)
@@ -90,7 +90,7 @@ class BenchStaged8xJoin_compile_and_run {
   // measure cost of tree gen, compiling, running
   @Setup(Level.Invocation)
   def setup(): Unit = {
-    engine = StagedExecutionEngine(CollectionsStorageManager())
+    engine = StagedExecutionEngine(DefaultStorageManager())
     program = Program(engine)
     toSolve = initialize_8xJoin.pretest(program)
     val x1 = engine.generateProgramTree(toSolve.id)
@@ -120,7 +120,7 @@ class BenchStaged8xJoin_run_only_compiled {
   // measure cost of tree gen, compiling, running
   @Setup(Level.Invocation)
   def setup(): Unit = {
-    engine = StagedExecutionEngine(CollectionsStorageManager())
+    engine = StagedExecutionEngine(DefaultStorageManager())
     program = Program(engine)
     toSolve = initialize_8xJoin.pretest(program)
     val x1 = engine.generateProgramTree(toSolve.id)
@@ -148,7 +148,7 @@ class BenchStaged8xJoin_full_interpreted {
   var toSolve: Relation[Constant] = null
   @Setup(Level.Invocation)
   def setup(): Unit = {
-    engine = StagedExecutionEngine(CollectionsStorageManager(), JITOptions(ir.OpCode.OTHER))
+    engine = StagedExecutionEngine(DefaultStorageManager(), JITOptions(ir.OpCode.OTHER))
     program = Program(engine)
     toSolve = initialize_8xJoin.pretest(program)
   }
@@ -173,7 +173,7 @@ class BenchStaged8xJoin_run_only_interpreted {
   // measure cost of tree gen, compiling, running
   @Setup(Level.Invocation)
   def setup(): Unit = {
-    engine = StagedExecutionEngine(CollectionsStorageManager())
+    engine = StagedExecutionEngine(DefaultStorageManager())
     program = Program(engine)
     toSolve = initialize_8xJoin.pretest(program)
     val x1 = engine.generateProgramTree(toSolve.id)
@@ -192,13 +192,13 @@ class BenchStaged8xJoin_run_only_interpreted {
 @Measurement(iterations = staged_iterations, time = staged_time, timeUnit = TimeUnit.SECONDS, batchSize = staged_batchSize)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
-class BenchStaged8xJoinCollections_seminaive_collections {
+class BenchStaged8xJoinDefault_seminaive_collections {
   var engine: SemiNaiveExecutionEngine = null
   var program: Program = null
   var toSolve: Relation[Constant] = null
   @Setup(Level.Invocation)
   def setup(): Unit = {
-    engine = SemiNaiveExecutionEngine(CollectionsStorageManager())
+    engine = SemiNaiveExecutionEngine(DefaultStorageManager())
     program = Program(engine)
     toSolve = initialize_8xJoin.pretest(program)
   }
@@ -215,13 +215,13 @@ class BenchStaged8xJoinCollections_seminaive_collections {
 //@Measurement(iterations = staged_iterations, time = staged_time, timeUnit = TimeUnit.SECONDS, batchSize = staged_batchSize)
 //@State(Scope.Thread)
 //@BenchmarkMode(Array(Mode.AverageTime))
-//class BenchStaged8xJoinCollections_not_fused {
+//class BenchStaged8xJoinDefault_not_fused {
 //  var engine: SemiNaiveExecutionEngine = null
 //  var program: Program = null
 //  var toSolve: Relation[Constant] = null
 //  @Setup(Level.Invocation)
 //  def setup(): Unit = {
-//    engine = SemiNaiveExecutionEngine(CollectionsStorageManager(fuse = false))
+//    engine = SemiNaiveExecutionEngine(DefaultStorageManager(fuse = false))
 //    program = Program(engine)
 //    toSolve = initialize.pretest(program)
 //  }

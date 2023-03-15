@@ -2,7 +2,7 @@ package datalog.benchmarks
 
 import datalog.dsl.{Constant, Program, Relation}
 import datalog.execution.{StagedExecutionEngine, StagedSnippetExecutionEngine, ir}
-import datalog.storage.CollectionsStorageManager
+import datalog.storage.DefaultStorageManager
 import org.openjdk.jmh.annotations.{Benchmark, BenchmarkMode, Fork, Level, Measurement, Mode, Scope, Setup, State, TearDown, Warmup}
 import org.openjdk.jmh.infra.Blackhole
 
@@ -87,7 +87,7 @@ inline val dotty_staged_fork = 1
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class BenchStagedDotty_20x_full_cold {
-  var storage: CollectionsStorageManager = null
+  var storage: DefaultStorageManager = null
   var engine: StagedExecutionEngine = null
   var program: Program = null
   var toSolve: Relation[Constant] = null
@@ -102,7 +102,7 @@ class BenchStagedDotty_20x_full_cold {
 
   @Setup(Level.Invocation)
   def setup(): Unit = {
-    storage = CollectionsStorageManager()
+    storage = DefaultStorageManager()
     engine = StagedExecutionEngine(storage)
     program = Program(engine)
     toSolve = initialize20x.pretest(program)
@@ -206,7 +206,7 @@ class BenchStagedDotty_20x_full_cold {
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class BenchStagedDotty_20x_full_warm {
-  var storage: CollectionsStorageManager = null
+  var storage: DefaultStorageManager = null
   var engine: StagedExecutionEngine = null
   var program: Program = null
   var toSolve: Relation[Constant] = null
@@ -221,7 +221,7 @@ class BenchStagedDotty_20x_full_warm {
 
   @Setup(Level.Trial)
   def setup(): Unit = {
-    storage = CollectionsStorageManager()
+    storage = DefaultStorageManager()
     engine = StagedExecutionEngine(storage)
     program = Program(engine)
     toSolve = initialize20x.pretest(program)
@@ -324,7 +324,7 @@ class BenchStagedDotty_20x_full_warm {
 //@State(Scope.Thread)
 //@BenchmarkMode(Array(Mode.AverageTime))
 //class BenchStagedDotty_20x_snippet_cold {
-//  var storage: CollectionsStorageManager = null
+//  var storage: DefaultStorageManager = null
 //  var engine: StagedSnippetExecutionEngine = null
 //  var program: Program = null
 //  var toSolve: Relation[Constant] = null
@@ -339,7 +339,7 @@ class BenchStagedDotty_20x_full_warm {
 //
 //  @Setup(Level.Invocation)
 //  def setup(): Unit = {
-//    storage = CollectionsStorageManager()
+//    storage = DefaultStorageManager()
 //    engine = StagedSnippetExecutionEngine(storage)
 //    program = Program(engine)
 //    toSolve = initialize20x.pretest(program)
@@ -424,7 +424,7 @@ class BenchStagedDotty_20x_full_warm {
 //@State(Scope.Thread)
 //@BenchmarkMode(Array(Mode.AverageTime))
 //class BenchStagedDotty_20x_snippet_warm {
-//  var storage: CollectionsStorageManager = null
+//  var storage: DefaultStorageManager = null
 //  var engine: StagedSnippetExecutionEngine = null
 //  var program: Program = null
 //  var toSolve: Relation[Constant] = null
@@ -439,7 +439,7 @@ class BenchStagedDotty_20x_full_warm {
 //
 //  @Setup(Level.Trial)
 //  def setup(): Unit = {
-//    storage = CollectionsStorageManager()
+//    storage = DefaultStorageManager()
 //    engine = StagedSnippetExecutionEngine(storage)
 //    program = Program(engine)
 //    toSolve = initialize20x.pretest(program)

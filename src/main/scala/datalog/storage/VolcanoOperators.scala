@@ -1,6 +1,7 @@
 package datalog.storage
 
 import datalog.dsl.Constant
+import datalog.storage.SimpleCasts.asSimpleEDB
 import datalog.tools.Debug.debug
 
 import scala.collection.mutable
@@ -8,8 +9,14 @@ import scala.collection.mutable
 // Indicates the end of the stream
 final val NilTuple: Option[Nothing] = None
 
-class RelationalOperators[S <: StorageManager](val storageManager: S) {
-  trait RelOperator {
+/**
+ * These are relational operators for the pull-based Volcano engine.
+ *
+ * @param storageManager: Right now this is always going to be a SimpleStorageManager. If needed can be
+ * made more general to operate over EDBs instead of SimpleEDBs and so on.
+ */
+class VolcanoOperators[S <: StorageManager](val storageManager: S) {
+  trait VolOperator {
     def open(): Unit
 
     def next(): Option[SimpleRow]
@@ -61,13 +68,13 @@ class RelationalOperators[S <: StorageManager](val storageManager: S) {
 //        }
   }
 
-  case class EmptyScan() extends RelOperator {
+  case class EmptyScan() extends VolOperator {
     def open(): Unit = {}
     def next(): Option[SimpleRow] = NilTuple
     def close(): Unit = {}
   }
 
-  case class Scan(relation: SimpleEDB, rId: Int) extends RelOperator {
+  case class Scan(relation: SimpleEDB, rId: Int) extends VolOperator {
     private var currentId: Int = 0
     private var length: Long = relation.length
 
@@ -88,8 +95,8 @@ class RelationalOperators[S <: StorageManager](val storageManager: S) {
   }
 
   // NOTE: this isn't currently used by SPJU bc merged scan+filter
-  case class Filter(input: RelOperator)
-                   (cond: SimpleRow => Boolean) extends RelOperator {
+  case class Filter(input: VolOperator)
+                   (cond: SimpleRow => Boolean) extends VolOperator {
 
     def open(): Unit = input.open()
 
@@ -105,7 +112,7 @@ class RelationalOperators[S <: StorageManager](val storageManager: S) {
     def close(): Unit = input.close()
   }
 
-  case class Project(input: RelOperator, ixs: Seq[(String, Constant)]) extends RelOperator {
+  case class Project(input: VolOperator, ixs: Seq[(String, Constant)]) extends VolOperator {
     def open(): Unit = {
 //      debug(s"PROJ[$ixs]")
       input.open()
@@ -132,9 +139,9 @@ class RelationalOperators[S <: StorageManager](val storageManager: S) {
     def close(): Unit = input.close()
   }
 
-  case class Join(inputs: Seq[RelOperator],
-                     variables: Seq[Seq[Int]],
-                     constants: Map[Int, Constant]) extends RelOperator {
+  case class Join(inputs: Seq[VolOperator],
+                  variables: Seq[Seq[Int]],
+                  constants: Map[Int, Constant]) extends VolOperator {
 
     private var outputRelation = SimpleEDB()
     private var index = 0
@@ -174,7 +181,6 @@ class RelationalOperators[S <: StorageManager](val storageManager: S) {
           })
         })
         .filter(r => scanFilter(r.length)(r.apply))
-      println(s"outputRel=$outputRelation")
     }
     def next(): Option[SimpleRow] = {
       if (index >= outputRelation.length)
@@ -196,16 +202,13 @@ class RelationalOperators[S <: StorageManager](val storageManager: S) {
    *
    * @param ops
    */
-  case class Union(ops: Seq[RelOperator]) extends RelOperator {
-//    private var currentRel: Int = 0
-//    private var length: Long = ops.length
+  case class Union(ops: Seq[VolOperator]) extends VolOperator {
     private var outputRelation: SimpleEDB = SimpleEDB()
     private var index = 0
     def open(): Unit = {
       val opResults = ops.map(o => o.toList())
-//      outputRelation = opResults.flatten.toSet.toIndexedSeq
       import SimpleEDB.unionEDB
-      opResults.unionEDB
+      outputRelation = asSimpleEDB(opResults.unionEDB)
     }
     def next(): Option[SimpleRow] = {
       if (index >= outputRelation.length)
@@ -213,22 +216,10 @@ class RelationalOperators[S <: StorageManager](val storageManager: S) {
       else
         index += 1
         Option(outputRelation(index - 1))
-//      if (currentRel >= length) {
-//        NilTuple
-//      } else {
-//        var nextT = ops(currentRel).next()
-//        nextT match {
-//          case Some(t) =>
-//            nextT
-//          case _ =>
-//            currentRel = currentRel + 1
-//            next()
-//        }
-//      }
     }
     def close(): Unit = ops.foreach(o => o.close())
   }
-  case class Diff(ops: mutable.ArrayBuffer[RelOperator]) extends RelOperator {
+  case class Diff(ops: mutable.ArrayBuffer[VolOperator]) extends VolOperator {
     private var outputRelation: SimpleEDB = SimpleEDB()
     private var index = 0
     def open(): Unit =

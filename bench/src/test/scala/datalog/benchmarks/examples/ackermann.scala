@@ -31,7 +31,7 @@ class ackermann_benchmark() extends ExampleBenchmarkGenerator(
   def f(): Unit = finish()
 
   @Benchmark def interpreted(blackhole: Blackhole): Unit = {
-    val p = "InterpretedCollections"
+    val p = "InterpretedDefault"
     if (!programs.contains(p))
       throw new Exception(f"skip test $p for current env")
     blackhole.consume(run(programs(p), result))
@@ -55,7 +55,7 @@ class ackermann_benchmark() extends ExampleBenchmarkGenerator(
 
   // JIT
   @Benchmark def jit_evalRule(blackhole: Blackhole): Unit = {
-    val p = "JITStagedEvalRuleCollections"
+    val p = "JITStagedEvalRuleDefault"
     if (!programs.contains(p))
       throw new Exception(f"skip test $p for current env")
     blackhole.consume(run(programs(p), result))

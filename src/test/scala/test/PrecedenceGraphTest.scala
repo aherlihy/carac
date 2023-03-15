@@ -3,11 +3,11 @@ import datalog.execution.{ExecutionEngine, PrecedenceGraph, SemiNaiveExecutionEn
 
 import scala.collection.mutable
 import datalog.dsl.{Program, Constant}
-import datalog.storage.RelationalStorageManager
+import datalog.storage.VolcanoStorageManager
 
 class PrecedenceGraphTest extends munit.FunSuite {
   test("tarjan ex") {
-    given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new RelationalStorageManager())
+    given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new VolcanoStorageManager())
     val program = Program(engine)
     val t0 = program.relation[Constant]("t0")
     val t1 = program.relation[Constant]("t1")
@@ -49,7 +49,7 @@ class PrecedenceGraphTest extends munit.FunSuite {
     )
   }
   test("tc with isolated cycle, 1st") {
-    given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new RelationalStorageManager())
+    given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new VolcanoStorageManager())
 
     val program = Program(engine)
     val e = program.relation[String]("e")
@@ -87,7 +87,7 @@ class PrecedenceGraphTest extends munit.FunSuite {
   }
 
   test("tc with isolated cycle, 2nd") {
-    given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new RelationalStorageManager())
+    given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new VolcanoStorageManager())
 
     val program = Program(engine)
     val e = program.relation[String]("e")
@@ -124,7 +124,7 @@ class PrecedenceGraphTest extends munit.FunSuite {
     )
   }
   test("transitive closure") {
-    given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new RelationalStorageManager())
+    given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new VolcanoStorageManager())
     val program = Program(engine)
     val e = program.relation[String]("e")
     val p = program.relation[String]("p")
@@ -146,7 +146,7 @@ class PrecedenceGraphTest extends munit.FunSuite {
   }
 
   test("simple cycle") {
-    given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new RelationalStorageManager())
+    given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new VolcanoStorageManager())
     val program = Program(engine)
     val a = program.relation[String]("a")
     val b = program.relation[String]("b")
@@ -166,7 +166,7 @@ class PrecedenceGraphTest extends munit.FunSuite {
   }
 
   test("simple cycle with inner loop") {
-    given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new RelationalStorageManager())
+    given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new VolcanoStorageManager())
     val program = Program(engine)
     val a = program.relation[String]("a")
     val b = program.relation[String]("b")
@@ -187,7 +187,7 @@ class PrecedenceGraphTest extends munit.FunSuite {
   }
 
   test("souffle top order test") {
-    given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new RelationalStorageManager())
+    given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new VolcanoStorageManager())
     val program = Program(engine)
     val a = program.relation[String]("a")
     val b = program.relation[String]("b")
@@ -215,7 +215,7 @@ class PrecedenceGraphTest extends munit.FunSuite {
     // of nodes. Use the debug report to view the scc graph, then
     // see what order the nodes are visited in.
 
-    given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new RelationalStorageManager())
+    given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new VolcanoStorageManager())
     val program = Program(engine)
 
     val xy = program.relation[Constant]("xy")

@@ -2,78 +2,12 @@ package datalog.storage
 
 import datalog.dsl.{Atom, Constant, Term, Variable}
 import datalog.execution.{AllIndexes, JoinIndexes}
-import datalog.storage
+import SimpleCasts.*
 import datalog.tools.Debug.debug
 
 import scala.collection.{Iterator, immutable, mutable}
-import SimpleCasts.*
-
-object SimpleCasts {
-  def asSimpleEDB(to: Relation[StorageTerm]): SimpleEDB = to.asInstanceOf[SimpleEDB]
-  def asSimpleSeqEDB(to: Seq[Relation[StorageTerm]]): Seq[SimpleEDB] = to.asInstanceOf[Seq[SimpleEDB]]
-  def asSimpleRow(to: Row[StorageTerm]): SimpleRow = to.asInstanceOf[SimpleRow]
-}
-
-case class SimpleEDB(val wrapped: mutable.ArrayBuffer[SimpleRow]) extends EDB with IterableOnce[SimpleRow] {
-  export wrapped.{ length, clear, nonEmpty, toSet, apply, mkString, iterator }
-
-  def addOne(elem: SimpleRow): this.type =
-    wrapped.addOne(elem)
-    this
-  def diff(that: SimpleEDB): SimpleEDB =
-    SimpleEDB(wrapped.diff(that.wrapped))
-
-  def concat(suffix: SimpleEDB): SimpleEDB =
-    SimpleEDB(wrapped.concat(suffix.wrapped))
-
-  def getSetOfSeq: Set[Seq[StorageTerm]] =
-    wrapped.map(s => s.toSeq).toSet
-
-  def map(f: SimpleRow => SimpleRow): SimpleEDB =
-    SimpleEDB(wrapped.map(e => f(e)))
-
-  def filter(f: SimpleRow => Boolean): SimpleEDB =
-    SimpleEDB(wrapped.filter(f))
-
-  def flatMap(f: SimpleRow => IterableOnce[SimpleRow]): SimpleEDB =
-    SimpleEDB(wrapped.flatMap(e => f(e)))
-
-  def factToString: String = wrapped.map(s => s.mkString("(", ", ", ")")).mkString("[", ", ", "]")
-}
-object SimpleEDB {
-  extension (edbs: Seq[EDB])
-    def unionEDB: EDB =
-      SimpleEDB(edbs.flatten(using e => asSimpleEDB(e).wrapped).distinct.to(mutable.ArrayBuffer))
-  def apply(elems: SimpleRow*): SimpleEDB = new SimpleEDB(mutable.ArrayBuffer[SimpleRow](elems*))
-}
-case class SimpleRow(val wrapped: Seq[StorageTerm]) extends Row[StorageTerm] {
-  def toSeq = wrapped
-  def length: Int = wrapped.length
-  def concat(suffix: Row[StorageTerm]): SimpleRow =
-    SimpleRow(wrapped.concat(asSimpleRow(suffix).wrapped))
-  export wrapped.{ apply, applyOrElse, iterator, lift, mkString }
-}
-case class SimpleDatabase(val wrapped: mutable.Map[RelationId, SimpleEDB]) extends Database[SimpleEDB] {
-  export wrapped.{ apply, getOrElse, foreach, contains, update, exists, toSeq }
-}
-object SimpleDatabase {
-  def apply(elems: (RelationId, SimpleEDB)*): SimpleDatabase = new SimpleDatabase(mutable.Map[RelationId, SimpleEDB](elems *))
-}
-
 
 abstract class SimpleStorageManager(override val ns: NS) extends StorageManager(ns) {
-//  type StorageTerm = Term
-//  type StorageVariable = Variable
-//  type StorageConstant = Constant
-//  type Row[+T] = Seq[T] // IndexedSeq and staging not compatible
-//  def Row[T](c: T*) = Seq[T](c: _*)
-//  type Table[T] = mutable.ArrayBuffer[T]
-//  def Table[T](r: T*) = mutable.ArrayBuffer[T](r: _*)
-//  type Relation[T] = Table[Row[T]]
-//  def Relation[T](c: Row[T]*) = Table[Row[T]](c: _*)
-
-//  def EDB(c: Row[StorageTerm]*) = Relation[StorageTerm](c: _*)
-
   // "database", i.e. relationID => Relation
   protected val edbs: SimpleDatabase = SimpleDatabase()
   var knownDbId: KnowledgeId = -1
@@ -87,7 +21,7 @@ abstract class SimpleStorageManager(override val ns: NS) extends StorageManager(
   val allRulesAllIndexes: mutable.Map[RelationId, AllIndexes] = mutable.Map.empty
   val printer: Printer[this.type] = Printer[this.type](this)
 
-  val relOps: RelationalOperators[this.type] = RelationalOperators(this)
+  val relOps: VolcanoOperators[this.type] = VolcanoOperators(this)
 
   def initRelation(rId: RelationId, name: String): Unit = {
     ns(rId) = name
@@ -188,7 +122,7 @@ abstract class SimpleStorageManager(override val ns: NS) extends StorageManager(
     )
   }
 
-  // Relational helpers
+  // Volcano helpers
   def union(edbs: Seq[EDB]): EDB =
     import SimpleEDB.unionEDB
     edbs.unionEDB
