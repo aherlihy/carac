@@ -212,13 +212,13 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
         } else {
           given scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
 
-          op.compiledRelArray = Future {
+          op.compiledFnIndexed = Future {
             //            given staging.Compiler = dedicatedDotty; // dedicatedDotty //staging.Compiler.make(getClass.getClassLoader) // TODO: new dotty per thread, maybe concat
-            compiler.getCompiledUnionSPJ(op)
+            compiler.getCompiledIndexed(op)
           }
           //        Thread.sleep(1000)
           storageManager.union(op.children.zipWithIndex.map((c, i) =>
-            op.compiledRelArray.value match {
+            op.compiledFnIndexed.value match {
               case Some(Success(run)) =>
                 debug(s"Compilation succeeded: ${op.code}", () => "")
                 //              stragglers.remove(op.compiledFn.hashCode()) // TODO: might not work, but jsut end up waiting for completed future
@@ -229,7 +229,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
               case None =>
                 if (jitOptions.block)
                   debug(s"${op.code} compilation not ready yet, so blocking", () => "")
-                  val res = Await.result(op.compiledRelArray, Duration.Inf)(storageManager, i)
+                  val res = Await.result(op.compiledFnIndexed, Duration.Inf)(storageManager, i)
                   //                stragglers.remove(op.compiledFn.hashCode())
                   res
                 else
@@ -264,23 +264,23 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
 
         //        if (!jitOptions.aot && op.compiledFn != null && storageManager.deltaDB(storageManager.knownDbId).values.map(_.length).exists(_ > jitOptions.thresholdNum)) {
         //          op.compiledFn(storageManager)
-        //        } else if (jitOptions.aot && op.compiledRelArray != null && storageManager.deltaDB(storageManager.knownDbId).values.map(_.length).exists(_ > jitOptions.thresholdNum)) {
-        //          op.compiledRelArray(storageManager)
+        //        } else if (jitOptions.aot && op.compiledFnIndexed != null && storageManager.deltaDB(storageManager.knownDbId).values.map(_.length).exists(_ > jitOptions.thresholdNum)) {
+        //          op.compiledFnIndexed(storageManager)
         if (!jitOptions.aot && !jitOptions.block) {
           startCompileThread(op)
           checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o))))
         } else if (!jitOptions.aot && jitOptions.block) {
-          op.blockingCompiledRelFn = compiler.getCompiled(op)
-          op.blockingCompiledRelFn(storageManager)
+          op.blockingCompiledFn = compiler.getCompiled(op)
+          op.blockingCompiledFn(storageManager)
         } else {
           given scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
 
-          op.compiledRelArray = Future {
-            compiler.getCompiledEvalRule(op)
+          op.compiledFnIndexed = Future {
+            compiler.getCompiledIndexed(op)
           }
           //                Thread.sleep(1000)
           storageManager.union(op.children.zipWithIndex.map((c, i) =>
-            op.compiledRelArray.value match {
+            op.compiledFnIndexed.value match {
               case Some(Success(run)) =>
                 debug(s"Compilation succeeded: ${op.code}", () => "")
                 //              stragglers.remove(op.compiledFn.hashCode()) // TODO: might not work, but jsut end up waiting for completed future
@@ -291,7 +291,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
               case None =>
                 if (jitOptions.block)
                   debug(s"${op.code} compilation not ready yet, so blocking", () => "")
-                  val res = Await.result(op.compiledRelArray, Duration.Inf)(storageManager, i)
+                  val res = Await.result(op.compiledFnIndexed, Duration.Inf)(storageManager, i)
                   //                stragglers.remove(op.compiledFn.hashCode())
                   res
                 else

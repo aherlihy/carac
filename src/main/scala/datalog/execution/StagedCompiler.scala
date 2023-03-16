@@ -48,7 +48,100 @@ class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: J
     }
   }
 
-  def compileIR[T: Type](irTree: IROp[T])(using stagedSM: Expr[StorageManager])(using Quotes): Expr[T] = {
+  /**
+   * Compiles a relational operator into a quote that returns an EDB. Future TODO: merge with compileIR when dotty supports.
+   */
+  def compileIRRelOp(irTree: IROp[EDB])(using stagedSM: Expr[StorageManager])(using Quotes): Expr[EDB] = {
+    irTree match {
+      case ScanOp(rId, db, knowledge) =>
+        db match {
+          case DB.Derived =>
+            knowledge match {
+              case KNOWLEDGE.New =>
+                '{ $stagedSM.getNewDerivedDB(${ Expr(rId) }) }
+              case KNOWLEDGE.Known =>
+                '{ $stagedSM.getKnownDerivedDB(${ Expr(rId) }) }
+            }
+          case DB.Delta =>
+            knowledge match {
+              case KNOWLEDGE.New =>
+                '{ $stagedSM.getNewDeltaDB(${ Expr(rId) }) }
+              case KNOWLEDGE.Known =>
+                '{ $stagedSM.getKnownDeltaDB(${ Expr(rId) }) }
+            }
+        }
+
+      case ScanEDBOp(rId) =>
+        if (storageManager.edbContains(rId))
+          '{ $stagedSM.getEDB(${ Expr(rId) }) }
+        else
+          '{ $stagedSM.getEmptyEDB() }
+
+      case ProjectJoinFilterOp(rId, hash, children: _*) =>
+        val FPJOp = irTree.asInstanceOf[ProjectJoinFilterOp]
+        val (sortedChildren, newHash) = JoinIndexes.getSortAhead(
+          FPJOp.childrenSO,
+          c => c.run(storageManager).length,
+          rId,
+          hash,
+          storageManager
+        )
+        FPJOp.childrenSO = sortedChildren
+        //        FPJOp.children = sortedChildren.asInstanceOf[Array[IROp[EDB]]] // save for next run so sorting is faster
+        FPJOp.hash = newHash
+        val compiledOps = Expr.ofSeq(sortedChildren.map(compileIRRelOp))
+        '{
+          $stagedSM.joinProjectHelper_withHash(
+            $compiledOps,
+            ${ Expr(rId) },
+            ${ Expr(newHash) },
+            ${ Expr(jitOptions.sortOrder) }
+          )
+        }
+
+      case UnionSPJOp(rId, hash, children: _*) =>
+        val (sortedChildren, newHash) = JoinIndexes.getPreSortAhead(
+          children.toArray,
+          a => storageManager.getKnownDerivedDB(a.rId).length,
+          rId,
+          hash,
+          storageManager
+        )
+
+        val compiledOps = sortedChildren.map(compileIRRelOp)
+        '{ $stagedSM.union(${ Expr.ofSeq(compiledOps) }) }
+
+      case UnionOp(label, children: _*) =>
+        val compiledOps = children.map(compileIRRelOp)
+        label match
+          case OpCode.EVAL_RULE_NAIVE if children.length > heuristics.max_deps =>
+            val lambdaOps = compiledOps.map(e => '{ def eval_rule_lambda() = $e ; eval_rule_lambda() })
+            '{ $stagedSM.union(${ Expr.ofSeq(lambdaOps) }) }
+          case OpCode.EVAL_RULE_SN if children.length > heuristics.max_deps =>
+            val lambdaOps = compiledOps.map(e => '{ def eval_rule_sn_lambda() = $e ; eval_rule_sn_lambda() })
+            '{ $stagedSM.union(${ Expr.ofSeq(lambdaOps) }) }
+          case _ =>
+            '{ $stagedSM.union(${ Expr.ofSeq(compiledOps) }) }
+
+      case DiffOp(children: _*) =>
+        val clhs = compileIRRelOp(children.head)
+        val crhs = compileIRRelOp(children(1))
+        '{ $stagedSM.diff($clhs, $crhs) }
+
+      case DebugPeek(prefix, msg, children: _*) =>
+        val res = compileIRRelOp(children.head)
+        '{ debug(${ Expr(prefix) }, () => s"${${ Expr(msg()) }}") ; $res }
+
+      case _ => throw new Exception(s"Error: compileOpRelOp called with unknown operator ${irTree.code}")
+    }
+  }
+
+  /**
+   * Compiles a unit operator into a quote that returns Any, or really nothing.
+   * NOTE: due to a compiler limitation, compileIR can't be parameterized, so have 2 versions of compileIR.
+   * To avoid having also 2 versions of getCompiled, compileIR will call into compileIRRel if needed.
+   */
+  def compileIR(irTree: IROp[Any])(using stagedSM: Expr[StorageManager])(using Quotes): Expr[Any] = {
     irTree match {
       case ProgramOp(children:_*) =>
         compileIR(children.head)
@@ -87,8 +180,8 @@ class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: J
             )
 
       case InsertOp(rId, db, knowledge, children:_*) =>
-        val res = compileIR(children.head.asInstanceOf[IROp[EDB]])
-        val res2 = if (children.length > 1) compileIR(children(1).asInstanceOf[IROp[EDB]]) else '{ $stagedSM.getEmptyEDB() }
+        val res = compileIRRelOp(children.head.asInstanceOf[IROp[EDB]])
+        val res2 = if (children.length > 1) compileIRRelOp(children(1).asInstanceOf[IROp[EDB]]) else '{ $stagedSM.getEmptyEDB() }
         db match {
           case DB.Derived =>
             knowledge match {
@@ -109,139 +202,56 @@ class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: J
       case DebugNode(prefix, msg) =>
         '{ debug(${ Expr(prefix) }, () => $stagedSM.printer.toString()) }
 
-      case ScanOp(rId, db, knowledge) =>
-        db match {
-          case DB.Derived =>
-            knowledge match {
-              case KNOWLEDGE.New =>
-                '{ $stagedSM.getNewDerivedDB(${ Expr(rId) }) }
-              case KNOWLEDGE.Known =>
-                '{ $stagedSM.getKnownDerivedDB(${ Expr(rId) }) }
-            }
-          case DB.Delta =>
-            knowledge match {
-              case KNOWLEDGE.New =>
-                '{ $stagedSM.getNewDeltaDB(${ Expr(rId) }) }
-              case KNOWLEDGE.Known =>
-                '{ $stagedSM.getKnownDeltaDB(${ Expr(rId) }) }
-            }
-        }
+      case _ => compileIRRelOp(irTree.asInstanceOf[IROp[EDB]]) // unfortunate but necessary to avoid 2x methods
+    }
+  }
 
-      case ScanEDBOp(rId) =>
-        if (storageManager.edbContains(rId))
-          '{ $stagedSM.getEDB(${ Expr(rId) }) }
-        else
-          '{ $stagedSM.getEmptyEDB() }
+  def getCompiled[T](irTree: IROp[T]): CompiledFn[T] = {
+    val casted = irTree.asInstanceOf[IROp[Any]] // this will go away when compileIRIndexed exists or compileIR can take a type param
+    val result = staging.run {
+      val res: Expr[CompiledFn[Any]] =
+        '{ (stagedSm: StorageManager) => ${ compileIR(casted)(using 'stagedSm) } }
+      debug("generated code: ", () => res.show)
+      res
+    }
+    clearDottyThread()
+    result.asInstanceOf[CompiledFn[T]]
+  }
 
-      case ProjectJoinFilterOp(rId, hash, children: _*) =>
-        val FPJOp = irTree.asInstanceOf[ProjectJoinFilterOp]
-        val (sortedChildren, newHash) = JoinIndexes.getSortAhead(
-          FPJOp.childrenSO,
-          c => c.run(storageManager).length,
-          rId,
-          hash,
-          storageManager
-        )
-        FPJOp.childrenSO = sortedChildren
-        //        FPJOp.children = sortedChildren.asInstanceOf[Array[IROp[EDB]]] // save for next run so sorting is faster
-        FPJOp.hash = newHash
-        val compiledOps = Expr.ofSeq(sortedChildren.map(compileIR))
-        '{
-          $stagedSM.joinProjectHelper_withHash(
-            $compiledOps,
-            ${ Expr(rId) },
-            ${ Expr(newHash) },
-            ${ Expr(jitOptions.sortOrder) }
-          )
-        }
+  /**
+   * The following compile methods are for compiling with entry points for longer-running operations, so they return an
+   * indexed compile fn so execution can begin from the correct index. Currently only for union ops.
+   */
+  def getCompiledIndexed[T](irTree: IROp[T]): CompiledFnIndexed[T] = {
+    val casted = irTree.asInstanceOf[IROp[EDB]] // this will go away when compileIRIndexed exists or compileIR can take a type param
+    val result =
+      staging.run {
+        val res: Expr[(StorageManager, Int) => EDB] =
+          '{ (stagedSm: StorageManager, i: Int) => ${ compileIRRelOpIndexed(casted)(using 'stagedSm)(using 'i) } }
+        debug("generated code: ", () => res.show)
+        res
+      }
+    clearDottyThread()
+    result.asInstanceOf[CompiledFnIndexed[T]] // This cast will go away when compileIR can take a type param
+  }
 
-      case UnionSPJOp(rId, hash, children: _*) =>
+  def compileIRRelOpIndexed(irTree: IROp[EDB])(using stagedSM: Expr[StorageManager])(using i: Expr[Int])(using Quotes): Expr[EDB] = {
+    irTree match
+      case uOp: UnionOp =>
+        '{ ${Expr.ofSeq(uOp.children.toSeq.map(compileIRRelOp))}($i) }
+      case uSPJOp: UnionSPJOp =>
         val (sortedChildren, newHash) = JoinIndexes.getPreSortAhead(
-          children.toArray,
+          uSPJOp.children.toArray,
           a => storageManager.getKnownDerivedDB(a.rId).length,
-          rId,
-          hash,
+          uSPJOp.rId,
+          uSPJOp.hash,
           storageManager
         )
-
-        val compiledOps = sortedChildren.map(compileIR)
-        '{ $stagedSM.union(${ Expr.ofSeq(compiledOps) }) }
-
-      case UnionOp(label, children: _*) =>
-        val compiledOps = children.map(compileIR)
-        label match
-          case OpCode.EVAL_RULE_NAIVE if children.length > heuristics.max_deps =>
-            val lambdaOps = compiledOps.map(e => '{ def eval_rule_lambda() = $e ; eval_rule_lambda() })
-            '{ $stagedSM.union(${ Expr.ofSeq(lambdaOps) }) }
-          case OpCode.EVAL_RULE_SN if children.length > heuristics.max_deps =>
-            val lambdaOps = compiledOps.map(e => '{ def eval_rule_sn_lambda() = $e ; eval_rule_sn_lambda() })
-            '{ $stagedSM.union(${ Expr.ofSeq(lambdaOps) }) }
-          case _ =>
-            '{ $stagedSM.union(${ Expr.ofSeq(compiledOps) }) }
-
-      case DiffOp(children: _*) =>
-        val clhs = compileIR(children.head)
-        val crhs = compileIR(children(1))
-        '{ $stagedSM.diff($clhs, $crhs) }
-
-      case DebugPeek(prefix, msg, children: _*) =>
-        val res = compileIR(children.head)
-        '{ debug(${ Expr(prefix) }, () => s"${${ Expr(msg()) }}") ; $res }
-
-      case _ => throw new Exception(s"Error: compileOp called with unknown operator ${irTree.code}")
-    }
+        '{ ${ Expr.ofSeq(sortedChildren.toSeq.map(compileIRRelOp)) } ($i) }
+      case _ => throw new Exception(s"Indexed compilation: Unhandled IROp ${irTree.code}")
   }
 
-  def getCompiled[T: Type](irTree: IROp[T]): CompiledFn[T] = {
-    val result = staging.run {
-      val res: Expr[CompiledFn[T]] =
-        '{ (stagedSm: StorageManager) => ${ compileIR(irTree)(using 'stagedSm) } }
-      debug("generated code: ", () => res.show)
-      res
-    }
-    clearDottyThread()
-    result
-  }
-
-  /* These compile methods are for compiling with entry points for longer-running operations, so they return (sm, i) instead of i */
-
-  def getCompiledUnionSPJ(irTree: UnionSPJOp): (StorageManager, Int) => EDB = {
-    val result = staging.run {
-      val res: Expr[(StorageManager, Int) => EDB] =
-        '{ (stagedSm: StorageManager, i: Int) => ${ compileIRUnionSPJ(irTree)(using 'stagedSm)(using 'i) } }
-      debug("generated code: ", () => res.show)
-      res
-    }
-    clearDottyThread()
-    result
-  }
-
-  def getCompiledEvalRule(irTree: UnionOp): (StorageManager, Int) => EDB = {
-    val result = staging.run {
-      val res: Expr[(StorageManager, Int) => EDB] =
-        '{ (stagedSm: StorageManager, i: Int) => ${ compileIREvalRule(irTree)(using 'stagedSm)(using 'i) } }
-      debug("generated code: ", () => res.show)
-      res
-    }
-    clearDottyThread()
-    result
-  }
-
-  def compileIREvalRule(uOp: UnionOp)(using stagedSM: Expr[StorageManager])(using i: Expr[Int])(using Quotes): Expr[EDB] = {
-    '{ ${Expr.ofSeq(uOp.children.toSeq.map(compileIR))}($i) }
-  }
-
-  def compileIRUnionSPJ(uOp: UnionSPJOp)(using stagedSM: Expr[StorageManager])(using i: Expr[Int])(using Quotes): Expr[EDB] = {
-    val (sortedChildren, newHash) = JoinIndexes.getPreSortAhead(
-      uOp.children.toArray,
-      a => storageManager.getKnownDerivedDB(a.rId).length,
-      uOp.rId,
-      uOp.hash,
-      storageManager
-    )
-    '{ ${ Expr.ofSeq(sortedChildren.toSeq.map(compileIR)) } ($i) }
-  }
-
+  /* Hack to avoid triggering assert for multi-threaded use */
   def clearDottyThread() = {
     val driverField = jitOptions.dotty.getClass.getDeclaredField("driver")
     driverField.setAccessible(true)

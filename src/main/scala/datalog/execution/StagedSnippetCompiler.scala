@@ -50,10 +50,10 @@ class StagedSnippetCompiler(val storageManager: StorageManager)(using val jitOpt
     }
   }
 
-  def compileIRRelOp(irTree: IROp[EDB])(using stagedSM: Expr[StorageManager])(using stagedFns: Expr[Seq[CompiledRelFn]])(using Quotes): Expr[EDB] = { // TODO: Instead of parameterizing, use staged path dependent type: i.e. stagedSM.getEmptyEDB
+  def compileIRRelOp(irTree: IROp[EDB])(using stagedSM: Expr[StorageManager])(using stagedFns: Expr[Seq[CompiledFn[EDB]]])(using Quotes): Expr[EDB] = {
     irTree match {
       case ScanOp(rId, db, knowledge) =>
-        db match { // TODO[future]: Since edb is accessed upon first iteration, potentially optimize away getOrElse
+        db match {
           case DB.Derived =>
             knowledge match {
               case KNOWLEDGE.New =>
@@ -78,7 +78,6 @@ class StagedSnippetCompiler(val storageManager: StorageManager)(using val jitOpt
 
       case ProjectJoinFilterOp(rId, hash, children:_*) =>
         val compiledOps = '{ $stagedFns.map(s => s($stagedSM)) }
-        // TODO[future]: inspect keys and optimize join algo
         '{
           $stagedSM.joinProjectHelper(
             $compiledOps,
@@ -106,7 +105,7 @@ class StagedSnippetCompiler(val storageManager: StorageManager)(using val jitOpt
     }
   }
 
-  def compileIR(irTree: IROp[Any])(using stagedSM: Expr[StorageManager])(using stagedFns: Expr[Seq[CompiledFn]])(using Quotes): Expr[Any] = { // TODO: Instead of parameterizing, use staged path dependent type: i.e. stagedSM.getEmptyEDB
+  def compileIR(irTree: IROp[Any])(using stagedSM: Expr[StorageManager])(using stagedFns: Expr[Seq[CompiledFn[Any]]])(using Quotes): Expr[Any] = {
     irTree match {
       case ProgramOp(children) =>
         '{ $stagedFns(0)($stagedSM) }
@@ -155,25 +154,18 @@ class StagedSnippetCompiler(val storageManager: StorageManager)(using val jitOpt
         '{ debug(${ Expr(prefix) }, () => $stagedSM.printer.toString()) }
 
       case _ =>
-        throw new Exception(s"Error: unhandled node type $irTree")
+        val irStagedFns = stagedFns.asInstanceOf[Expr[Seq[CompiledFn[EDB]]]]
+        compileIRRelOp(irTree.asInstanceOf[IROp[EDB]])(using stagedSM)(using irStagedFns) // unfortunate but necessary to avoid 2x methods
     }
   }
 
-  def getCompiledSnippet(irTree: IROp[Any])(using staging.Compiler): ((StorageManager, Seq[CompiledFn]) => Any) = {
+  def getCompiledSnippet[T](irTree: IROp[T])(using staging.Compiler): ((StorageManager, Seq[CompiledFn[T]]) => T) = {
+    val casted = irTree.asInstanceOf[IROp[Any]] // this will go away when compileIRIndexed exists or compileIR can take a type param
     staging.run {
-      val res: Expr[(StorageManager, Seq[CompiledFn]) => Any] =
-        '{ (stagedSm: StorageManager, stagedFns: Seq[CompiledFn]) => ${ compileIR(irTree)(using 'stagedSm)(using 'stagedFns) } }
+      val res: Expr[(StorageManager, Seq[CompiledFn[Any]]) => Any] =
+        '{ (stagedSm: StorageManager, stagedFns: Seq[CompiledFn[Any]]) => ${ compileIR(casted)(using 'stagedSm)(using 'stagedFns) } }
       debug("generated code: ", () => res.show)
       res
-    }
-  }
-
-  def getCompiledSnippetRel(irTree: IROp[EDB])(using staging.Compiler): ((StorageManager, Seq[CompiledRelFn]) => EDB) = {
-    staging.run {
-      val res: Expr[(StorageManager, Seq[CompiledRelFn]) => EDB] =
-        '{ (stagedSm: StorageManager, stagedFns: Seq[CompiledRelFn]) => ${ compileIRRelOp(irTree)(using 'stagedSm)(using 'stagedFns) } }
-      debug("generated code: ", () => res.show)
-      res
-    }
+    }.asInstanceOf[(StorageManager, Seq[CompiledFn[T]]) => T]
   }
 }

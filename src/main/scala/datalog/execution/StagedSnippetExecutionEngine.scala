@@ -73,7 +73,7 @@ class StagedSnippetExecutionEngine(override val storageManager: StorageManager,
 
       case op: ScanOp if jitOptions.granularity == op.code =>
         if (op.compiledSnippetContinuationFn == null)
-          op.compiledSnippetContinuationFn = snippetCompiler.getCompiledSnippetRel(op)
+          op.compiledSnippetContinuationFn = snippetCompiler.getCompiledSnippet(op)
         op.compiledSnippetContinuationFn(storageManager, Seq.empty) // TODO: weird
 
       case op: ScanOp =>
@@ -84,7 +84,7 @@ class StagedSnippetExecutionEngine(override val storageManager: StorageManager,
 
       case op: ProjectJoinFilterOp if jitOptions.granularity == op.code =>
         if (op.compiledSnippetContinuationFn == null)
-          op.compiledSnippetContinuationFn = snippetCompiler.getCompiledSnippetRel(op)
+          op.compiledSnippetContinuationFn = snippetCompiler.getCompiledSnippet(op)
         op.compiledSnippetContinuationFn(storageManager, op.children.map(o => (sm: StorageManager) => jit(o)))
 
       case op: ProjectJoinFilterOp =>
@@ -98,7 +98,7 @@ class StagedSnippetExecutionEngine(override val storageManager: StorageManager,
 
       case op: DiffOp if jitOptions.granularity == op.code =>
         if (op.compiledSnippetContinuationFn == null)
-          op.compiledSnippetContinuationFn = snippetCompiler.getCompiledSnippetRel(op)
+          op.compiledSnippetContinuationFn = snippetCompiler.getCompiledSnippet(op)
         op.compiledSnippetContinuationFn(storageManager, op.children.map(o => (sm: StorageManager) => jit(o)))
 
       case op: DiffOp =>

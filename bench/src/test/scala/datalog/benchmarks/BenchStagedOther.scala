@@ -169,7 +169,7 @@ class BenchStagedOther_run_only_compiled extends OtherBench {
   var toSolveR: Relation[Constant] = null
   var tree: ir.IROp[Any] = null
   var ctx: ir.InterpreterContext = null
-  var compiled: CompiledFn = null
+  var compiled: CompiledFn[Any] = null
 
   // measure cost of tree gen, compiling, running
   @Setup(Level.Invocation)
