@@ -5,7 +5,7 @@ import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.Blackhole
 import datalog.dsl.*
 import datalog.execution.{ExecutionEngine, NaiveExecutionEngine, SemiNaiveExecutionEngine}
-import datalog.storage.{CollectionsStorageManager, NS, RelationalStorageManager}
+import datalog.storage.{DefaultStorageManager, NS, VolcanoStorageManager}
 
 import scala.collection.immutable.Map
 import scala.util.Random
@@ -21,8 +21,8 @@ class Bench_ci {
 //  val dummyStream = new java.io.PrintStream(_ => ())
   val ciBenchs: Map[String, DLBenchmark] = Map("tc" -> TransitiveClosure()) // for now just 1 for CI
   Seq("SemiNaive", "Naive", "NaiveCompiledStaged", "NaiveInterpretedStaged").foreach(execution =>
-    Seq("Relational", "Collections").foreach(storage =>
-      if (!(execution.contains("Staged") && storage == "Relational"))
+    Seq("Volcano", "Default").foreach(storage =>
+      if (!(execution.contains("Staged") && storage == "Volcano"))
         ciBenchs.values.foreach(b => b.programs(s"$execution$storage") = b.initialize(s"$execution$storage"))))
 
   def runTest(benchmark: DLBenchmark, program: Program, blackhole: Blackhole): Unit =
@@ -40,40 +40,40 @@ class Bench_ci {
 
   // relational, naive
   @Benchmark def naive_relational(blackhole: Blackhole): Unit = {
-    val p = "NaiveRelational"
+    val p = "NaiveVolcano"
     val b = ciBenchs("tc")
     runTest(b, b.programs(p), blackhole)
   }
 //   relational, seminaive
   @Benchmark def seminaive_relational(blackhole: Blackhole): Unit = {
-    val p = "SemiNaiveRelational"
+    val p = "SemiNaiveVolcano"
     val b = ciBenchs("tc")
     runTest(b, b.programs(p), blackhole)
   }
 
   // collections, naive
   @Benchmark def naive_collections(blackhole: Blackhole): Unit = {
-    val p = "NaiveCollections"
+    val p = "NaiveDefault"
     val b = ciBenchs("tc")
     runTest(b, b.programs(p), blackhole)
   }
   // relational, seminaive
   @Benchmark def seminaive_collections(blackhole: Blackhole): Unit = {
-    val p = "SemiNaiveCollections"
+    val p = "SemiNaiveDefault"
     val b = ciBenchs("tc")
     runTest(b, b.programs(p), blackhole)
   }
 
   // staged, naive
   @Benchmark def naive_staged_compiled(blackhole: Blackhole): Unit = {
-    val p = "NaiveInterpretedStagedCollections"
+    val p = "NaiveInterpretedStagedDefault"
     val b = ciBenchs("tc")
     runTest(b, b.programs(p), blackhole)
   }
 
   // staged, naive
   @Benchmark def naive_staged_interpreted(blackhole: Blackhole): Unit = {
-    val p = "NaiveCompiledStagedCollections"
+    val p = "NaiveCompiledStagedDefault"
     val b = ciBenchs("tc")
     runTest(b, b.programs(p), blackhole)
   }

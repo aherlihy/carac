@@ -2,17 +2,17 @@ package test
 
 import datalog.dsl.{Program, Relation}
 import datalog.execution.{ExecutionEngine, NaiveExecutionEngine, SemiNaiveExecutionEngine}
-import datalog.storage.{CollectionsStorageManager, RelationalStorageManager}
+import datalog.storage.{DefaultStorageManager, VolcanoStorageManager}
 import test.graphs.{Acyclic, MultiIsolatedCycle, MultiJoin, RecursivePath, SingleCycle, TopSort}
 
-class SemiNaiveRelationalTransitiveClosure extends munit.FunSuite {
+class SemiNaiveVolcanoTransitiveClosure extends munit.FunSuite {
   List(
-    Acyclic(new Program(new SemiNaiveExecutionEngine(new RelationalStorageManager()))),
-    MultiIsolatedCycle(new Program(new SemiNaiveExecutionEngine(new RelationalStorageManager()))),
-    SingleCycle(new Program(new SemiNaiveExecutionEngine(new RelationalStorageManager()))),
-    RecursivePath(new Program(new SemiNaiveExecutionEngine(new RelationalStorageManager()))),
-    TopSort(new Program(new SemiNaiveExecutionEngine(new RelationalStorageManager()))),
-    MultiJoin(new Program(new SemiNaiveExecutionEngine(new RelationalStorageManager())))
+    Acyclic(new Program(new SemiNaiveExecutionEngine(new VolcanoStorageManager()))),
+    MultiIsolatedCycle(new Program(new SemiNaiveExecutionEngine(new VolcanoStorageManager()))),
+    SingleCycle(new Program(new SemiNaiveExecutionEngine(new VolcanoStorageManager()))),
+    RecursivePath(new Program(new SemiNaiveExecutionEngine(new VolcanoStorageManager()))),
+    TopSort(new Program(new SemiNaiveExecutionEngine(new VolcanoStorageManager()))),
+    MultiJoin(new Program(new SemiNaiveExecutionEngine(new VolcanoStorageManager())))
   ).map(graph =>
     graph.queries.map((hint, query) => {
       test(graph.description + "." + query.description) {
@@ -25,14 +25,14 @@ class SemiNaiveRelationalTransitiveClosure extends munit.FunSuite {
     }))
 }
 
-class SemiNaiveCollectionTransitiveClosure extends munit.FunSuite {
+class SemiNaiveDefaultTransitiveClosure extends munit.FunSuite {
   List(
-    Acyclic(new Program(new SemiNaiveExecutionEngine(new CollectionsStorageManager()))),
-    MultiIsolatedCycle(new Program(new SemiNaiveExecutionEngine(new CollectionsStorageManager()))),
-    SingleCycle(new Program(new SemiNaiveExecutionEngine(new CollectionsStorageManager()))),
-    RecursivePath(new Program(new SemiNaiveExecutionEngine(new CollectionsStorageManager()))),
-    TopSort(new Program(new SemiNaiveExecutionEngine(new CollectionsStorageManager()))),
-    MultiJoin(new Program(new SemiNaiveExecutionEngine(new CollectionsStorageManager())))
+    Acyclic(new Program(new SemiNaiveExecutionEngine(new DefaultStorageManager()))),
+    MultiIsolatedCycle(new Program(new SemiNaiveExecutionEngine(new DefaultStorageManager()))),
+    SingleCycle(new Program(new SemiNaiveExecutionEngine(new DefaultStorageManager()))),
+    RecursivePath(new Program(new SemiNaiveExecutionEngine(new DefaultStorageManager()))),
+    TopSort(new Program(new SemiNaiveExecutionEngine(new DefaultStorageManager()))),
+    MultiJoin(new Program(new SemiNaiveExecutionEngine(new DefaultStorageManager())))
   ).map(graph =>
     graph.queries.map((hint, query) => {
       test(graph.description + "." + query.description) {

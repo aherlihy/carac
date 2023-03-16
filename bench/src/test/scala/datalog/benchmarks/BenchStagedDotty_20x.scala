@@ -2,7 +2,7 @@ package datalog.benchmarks
 
 import datalog.dsl.{Constant, Program, Relation}
 import datalog.execution.{StagedExecutionEngine, StagedSnippetExecutionEngine, ir}
-import datalog.storage.CollectionsStorageManager
+import datalog.storage.DefaultStorageManager
 import org.openjdk.jmh.annotations.{Benchmark, BenchmarkMode, Fork, Level, Measurement, Mode, Scope, Setup, State, TearDown, Warmup}
 import org.openjdk.jmh.infra.Blackhole
 
@@ -87,7 +87,7 @@ inline val dotty_staged_fork = 1
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class BenchStagedDotty_20x_full_cold {
-  var storage: CollectionsStorageManager = null
+  var storage: DefaultStorageManager = null
   var engine: StagedExecutionEngine = null
   var program: Program = null
   var toSolve: Relation[Constant] = null
@@ -102,7 +102,7 @@ class BenchStagedDotty_20x_full_cold {
 
   @Setup(Level.Invocation)
   def setup(): Unit = {
-    storage = CollectionsStorageManager()
+    storage = DefaultStorageManager()
     engine = StagedExecutionEngine(storage)
     program = Program(engine)
     toSolve = initialize20x.pretest(program)
@@ -155,7 +155,7 @@ class BenchStagedDotty_20x_full_cold {
     given staging.Compiler = engine.defaultJITOptions.dotty
 
     blackhole.consume(
-      engine.compiler.getCompiledRel(snEvalRule)
+      engine.compiler.getCompiled(snEvalRule)
     )
   }
 
@@ -163,7 +163,7 @@ class BenchStagedDotty_20x_full_cold {
     given staging.Compiler = engine.defaultJITOptions.dotty
 
     blackhole.consume(
-      engine.compiler.getCompiledEvalRule(snEvalRule)
+      engine.compiler.getCompiledIndexed(snEvalRule)
     )
   }
 
@@ -179,7 +179,7 @@ class BenchStagedDotty_20x_full_cold {
     given staging.Compiler = engine.defaultJITOptions.dotty
 
     blackhole.consume(
-      engine.compiler.getCompiledRel(projectJoinFilter)
+      engine.compiler.getCompiled(projectJoinFilter)
     )
   }
 
@@ -187,7 +187,7 @@ class BenchStagedDotty_20x_full_cold {
     given staging.Compiler = engine.defaultJITOptions.dotty
 
     blackhole.consume(
-      engine.compiler.getCompiledRel(unionSPJ)
+      engine.compiler.getCompiled(unionSPJ)
     )
   }
 
@@ -195,7 +195,7 @@ class BenchStagedDotty_20x_full_cold {
     given staging.Compiler = engine.defaultJITOptions.dotty
 
     blackhole.consume(
-      engine.compiler.getCompiledUnionSPJ(unionSPJ)
+      engine.compiler.getCompiledIndexed(unionSPJ)
     )
   }
 }
@@ -206,7 +206,7 @@ class BenchStagedDotty_20x_full_cold {
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class BenchStagedDotty_20x_full_warm {
-  var storage: CollectionsStorageManager = null
+  var storage: DefaultStorageManager = null
   var engine: StagedExecutionEngine = null
   var program: Program = null
   var toSolve: Relation[Constant] = null
@@ -221,7 +221,7 @@ class BenchStagedDotty_20x_full_warm {
 
   @Setup(Level.Trial)
   def setup(): Unit = {
-    storage = CollectionsStorageManager()
+    storage = DefaultStorageManager()
     engine = StagedExecutionEngine(storage)
     program = Program(engine)
     toSolve = initialize20x.pretest(program)
@@ -246,7 +246,7 @@ class BenchStagedDotty_20x_full_warm {
     given staging.Compiler = engine.defaultJITOptions.dotty
 
     blackhole.consume(
-      engine.compiler.getCompiledUnionSPJ(unionSPJ)
+      engine.compiler.getCompiledIndexed(unionSPJ)
     )
   }
 
@@ -254,7 +254,7 @@ class BenchStagedDotty_20x_full_warm {
     given staging.Compiler = engine.defaultJITOptions.dotty
 
     blackhole.consume(
-      engine.compiler.getCompiledEvalRule(snEvalRule)
+      engine.compiler.getCompiledIndexed(snEvalRule)
     )
   }
 
@@ -298,7 +298,7 @@ class BenchStagedDotty_20x_full_warm {
     given staging.Compiler = engine.defaultJITOptions.dotty
 
     blackhole.consume(
-      engine.compiler.getCompiledRel(snEvalRule)
+      engine.compiler.getCompiled(snEvalRule)
     )
   }
 
@@ -306,7 +306,7 @@ class BenchStagedDotty_20x_full_warm {
     given staging.Compiler = engine.defaultJITOptions.dotty
 
     blackhole.consume(
-      engine.compiler.getCompiledRel(projectJoinFilter)
+      engine.compiler.getCompiled(projectJoinFilter)
     )
   }
 
@@ -314,155 +314,55 @@ class BenchStagedDotty_20x_full_warm {
     given staging.Compiler = engine.defaultJITOptions.dotty
 
     blackhole.consume(
-      engine.compiler.getCompiledRel(unionSPJ)
+      engine.compiler.getCompiled(unionSPJ)
     )
   }
 }
-//@Fork(dotty_staged_fork) // # of jvms that it will use
-//@Warmup(iterations = dotty_staged_warmup_iterations, time = dotty_staged_warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = dotty_staged_batchSize)
-//@Measurement(iterations = dotty_staged_iterations, time = dotty_staged_time, timeUnit = TimeUnit.SECONDS, batchSize = dotty_staged_batchSize)
-//@State(Scope.Thread)
-//@BenchmarkMode(Array(Mode.AverageTime))
-//class BenchStagedDotty_20x_snippet_cold {
-//  var storage: CollectionsStorageManager = null
-//  var engine: StagedSnippetExecutionEngine = null
-//  var program: Program = null
-//  var toSolve: Relation[Constant] = null
-//  var tree: ir.ProgramOp = null
-//  var ctx: ir.InterpreterContext = null
-//  /*var doWhile: ir.DoWhileOp = null
-//  var naiveEval, snEval: ir.SequenceOp = null*/
-//  var snEvalRule: ir.UnionOp = null
-//  var loopBody: ir.SequenceOp = null
-//  var projectJoinFilter: ir.ProjectJoinFilterOp = null
-//  var unionSPJ: ir.UnionSPJOp = null
-//
-//  @Setup(Level.Invocation)
-//  def setup(): Unit = {
-//    storage = CollectionsStorageManager()
-//    engine = StagedSnippetExecutionEngine(storage)
-//    program = Program(engine)
-//    toSolve = initialize20x.pretest(program)
-//    val x1 = engine.generateProgramTree(toSolve.id)
-//    tree = x1._1.asInstanceOf[ir.ProgramOp]
-//    ctx = x1._2
-//    val programNode = tree
-//    /*naiveEval = programNode.getSubTree(ir.OpCode.EVAL_NAIVE).asInstanceOf[ir.SequenceOp]
-//    doWhile = programNode.getSubTree(ir.OpCode.DOWHILE).asInstanceOf[ir.DoWhileOp]
-//    snEval = programNode.getSubTree(ir.OpCode.EVAL_SN).asInstanceOf[ir.SequenceOp]  */
-//    snEvalRule = programNode.getSubTree(ir.OpCode.EVAL_RULE_SN).asInstanceOf[ir.UnionOp]
-//    loopBody = programNode.getSubTree(ir.OpCode.LOOP_BODY).asInstanceOf[ir.SequenceOp]
-//    projectJoinFilter = programNode.getSubTree(ir.OpCode.SPJ).asInstanceOf[ir.ProjectJoinFilterOp]
-//    unionSPJ = programNode.getSubTree(ir.OpCode.EVAL_RULE_BODY).asInstanceOf[ir.UnionSPJOp]
-//  }
-//  @TearDown(Level.Invocation)
-//  def cleanup(): Unit = storage.initEvaluation()
-//  @Benchmark def compile_tree(blackhole: Blackhole): Unit = {
-//    given staging.Compiler = engine.defaultJITOptions.dotty
-//    blackhole.consume(
-//      engine.snippetCompiler.getCompiledSnippet(tree)
-//    )
-//  }
-////  @Benchmark def compile_naiveEval(blackhole: Blackhole): Unit = {
-////    given staging.Compiler = engine.defaultJITOptions.dotty
-////    blackhole.consume(
-////      engine.snippetCompiler.getCompiledSnippet(naiveEval)
-////    )
-////  }
-////
-////  @Benchmark def compile_doWhile(blackhole: Blackhole): Unit = {
-////    given staging.Compiler = engine.defaultJITOptions.dotty
-////
-////    blackhole.consume(
-////      engine.snippetCompiler.getCompiledSnippet(doWhile)
-////    )
-////  }
-////
-////  @Benchmark def compile_snEval(blackhole: Blackhole): Unit = {
-////    given staging.Compiler = engine.defaultJITOptions.dotty
-////
-////    blackhole.consume(
-////      engine.snippetCompiler.getCompiledSnippet(snEval)
-////    )
-////  }
-//  @Benchmark def compile_loopBody(blackhole: Blackhole): Unit = {
-//    given staging.Compiler = engine.defaultJITOptions.dotty
-//
-//    blackhole.consume(
-//      engine.compiler.getCompiled(loopBody)
-//    )
-//  }
-//
-//  @Benchmark def compile_snEvalRule(blackhole: Blackhole): Unit = {
-//    given staging.Compiler = engine.defaultJITOptions.dotty
-//
-//    blackhole.consume(
-//      engine.snippetCompiler.getCompiledSnippetRel(snEvalRule)
-//    )
-//  }
-//
-//  @Benchmark def compile_projectJoinFilter(blackhole: Blackhole): Unit = {
-//    given staging.Compiler = engine.defaultJITOptions.dotty
-//
-//    blackhole.consume(
-//      engine.snippetCompiler.getCompiledSnippetRel(projectJoinFilter)
-//    )
-//  }
-//
-//  @Benchmark def compile_unionSPJ(blackhole: Blackhole): Unit = {
-//    given staging.Compiler = engine.defaultJITOptions.dotty
-//
-//    blackhole.consume(
-//      engine.snippetCompiler.getCompiledSnippetRel(unionSPJ)
-//    )
-//  }
-//}
-//
-//@Fork(dotty_staged_fork) // # of jvms that it will use
-//@Warmup(iterations = dotty_staged_warmup_iterations, time = dotty_staged_warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = dotty_staged_batchSize)
-//@Measurement(iterations = dotty_staged_iterations, time = dotty_staged_time, timeUnit = TimeUnit.SECONDS, batchSize = dotty_staged_batchSize)
-//@State(Scope.Thread)
-//@BenchmarkMode(Array(Mode.AverageTime))
-//class BenchStagedDotty_20x_snippet_warm {
-//  var storage: CollectionsStorageManager = null
-//  var engine: StagedSnippetExecutionEngine = null
-//  var program: Program = null
-//  var toSolve: Relation[Constant] = null
-//  var tree: ir.ProgramOp = null
-//  var ctx: ir.InterpreterContext = null
-//  /*var doWhile: ir.DoWhileOp = null
-//  var naiveEval, snEval: ir.SequenceOp = null*/
-//  var snEvalRule: ir.UnionOp = null
-//  var loopBody: ir.SequenceOp = null
-//  var projectJoinFilter: ir.ProjectJoinFilterOp = null
-//  var unionSPJ: ir.UnionSPJOp = null
-//
-//  @Setup(Level.Trial)
-//  def setup(): Unit = {
-//    storage = CollectionsStorageManager()
-//    engine = StagedSnippetExecutionEngine(storage)
-//    program = Program(engine)
-//    toSolve = initialize20x.pretest(program)
-//    val x1 = engine.generateProgramTree(toSolve.id)
-//    tree = x1._1.asInstanceOf[ir.ProgramOp]
-//    ctx = x1._2
-//    val programNode = tree
-//    /*naiveEval = programNode.getSubTree(ir.OpCode.EVAL_NAIVE).asInstanceOf[ir.SequenceOp]
-//    doWhile = programNode.getSubTree(ir.OpCode.DOWHILE).asInstanceOf[ir.DoWhileOp]
-//    snEval = programNode.getSubTree(ir.OpCode.EVAL_SN).asInstanceOf[ir.SequenceOp]  */
-//    snEvalRule = programNode.getSubTree(ir.OpCode.EVAL_RULE_SN).asInstanceOf[ir.UnionOp]
-//    loopBody = programNode.getSubTree(ir.OpCode.LOOP_BODY).asInstanceOf[ir.SequenceOp]
-//    projectJoinFilter = programNode.getSubTree(ir.OpCode.SPJ).asInstanceOf[ir.ProjectJoinFilterOp]
-//    unionSPJ = programNode.getSubTree(ir.OpCode.EVAL_RULE_BODY).asInstanceOf[ir.UnionSPJOp]
-//  }
-//  @TearDown(Level.Invocation)
-//  def cleanup(): Unit = storage.initEvaluation()
-//  @Benchmark def compile_tree(blackhole: Blackhole): Unit = {
-//    given staging.Compiler = engine.defaultJITOptions.dotty
-//    blackhole.consume(
-//      engine.snippetCompiler.getCompiledSnippet(tree)
-//    )
-//  }
+@Fork(dotty_staged_fork) // # of jvms that it will use
+@Warmup(iterations = dotty_staged_warmup_iterations, time = dotty_staged_warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = dotty_staged_batchSize)
+@Measurement(iterations = dotty_staged_iterations, time = dotty_staged_time, timeUnit = TimeUnit.SECONDS, batchSize = dotty_staged_batchSize)
+@State(Scope.Thread)
+@BenchmarkMode(Array(Mode.AverageTime))
+class BenchStagedDotty_20x_snippet_cold {
+  var storage: DefaultStorageManager = null
+  var engine: StagedSnippetExecutionEngine = null
+  var program: Program = null
+  var toSolve: Relation[Constant] = null
+  var tree: ir.ProgramOp = null
+  var ctx: ir.InterpreterContext = null
+  var doWhile: ir.DoWhileOp = null
+  var naiveEval, snEval: ir.SequenceOp = null
+  var snEvalRule: ir.UnionOp = null
+  var loopBody: ir.SequenceOp = null
+  var projectJoinFilter: ir.ProjectJoinFilterOp = null
+  var unionSPJ: ir.UnionSPJOp = null
+
+  @Setup(Level.Invocation)
+  def setup(): Unit = {
+    storage = DefaultStorageManager()
+    engine = StagedSnippetExecutionEngine(storage)
+    program = Program(engine)
+    toSolve = initialize20x.pretest(program)
+    val x1 = engine.generateProgramTree(toSolve.id)
+    tree = x1._1.asInstanceOf[ir.ProgramOp]
+    ctx = x1._2
+    val programNode = tree
+    naiveEval = programNode.getSubTree(ir.OpCode.EVAL_NAIVE).asInstanceOf[ir.SequenceOp]
+    doWhile = programNode.getSubTree(ir.OpCode.DOWHILE).asInstanceOf[ir.DoWhileOp]
+    snEval = programNode.getSubTree(ir.OpCode.EVAL_SN).asInstanceOf[ir.SequenceOp]
+    snEvalRule = programNode.getSubTree(ir.OpCode.EVAL_RULE_SN).asInstanceOf[ir.UnionOp]
+    loopBody = programNode.getSubTree(ir.OpCode.LOOP_BODY).asInstanceOf[ir.SequenceOp]
+    projectJoinFilter = programNode.getSubTree(ir.OpCode.SPJ).asInstanceOf[ir.ProjectJoinFilterOp]
+    unionSPJ = programNode.getSubTree(ir.OpCode.EVAL_RULE_BODY).asInstanceOf[ir.UnionSPJOp]
+  }
+  @TearDown(Level.Invocation)
+  def cleanup(): Unit = storage.initEvaluation()
+  @Benchmark def compile_tree(blackhole: Blackhole): Unit = {
+    given staging.Compiler = engine.defaultJITOptions.dotty
+    blackhole.consume(
+      engine.snippetCompiler.getCompiledSnippet(tree)
+    )
+  }
 //  @Benchmark def compile_naiveEval(blackhole: Blackhole): Unit = {
 //    given staging.Compiler = engine.defaultJITOptions.dotty
 //    blackhole.consume(
@@ -485,28 +385,128 @@ class BenchStagedDotty_20x_full_warm {
 //      engine.snippetCompiler.getCompiledSnippet(snEval)
 //    )
 //  }
-//
-//  @Benchmark def compile_snEvalRule(blackhole: Blackhole): Unit = {
-//    given staging.Compiler = engine.defaultJITOptions.dotty
-//
-//    blackhole.consume(
-//      engine.snippetCompiler.getCompiledSnippetRel(snEvalRule)
-//    )
-//  }
-//
-//  @Benchmark def compile_projectJoinFilter(blackhole: Blackhole): Unit = {
-//    given staging.Compiler = engine.defaultJITOptions.dotty
-//
-//    blackhole.consume(
-//      engine.snippetCompiler.getCompiledSnippetRel(projectJoinFilter)
-//    )
-//  }
-//
-//  @Benchmark def compile_unionSPJ(blackhole: Blackhole): Unit = {
-//    given staging.Compiler = engine.defaultJITOptions.dotty
-//
-//    blackhole.consume(
-//      engine.snippetCompiler.getCompiledSnippetRel(unionSPJ)
-//    )
-//  }
-//}
+  @Benchmark def compile_loopBody(blackhole: Blackhole): Unit = {
+    given staging.Compiler = engine.defaultJITOptions.dotty
+
+    blackhole.consume(
+      engine.compiler.getCompiled(loopBody)
+    )
+  }
+
+  @Benchmark def compile_snEvalRule(blackhole: Blackhole): Unit = {
+    given staging.Compiler = engine.defaultJITOptions.dotty
+
+    blackhole.consume(
+      engine.snippetCompiler.getCompiledSnippet(snEvalRule)
+    )
+  }
+
+  @Benchmark def compile_projectJoinFilter(blackhole: Blackhole): Unit = {
+    given staging.Compiler = engine.defaultJITOptions.dotty
+
+    blackhole.consume(
+      engine.snippetCompiler.getCompiledSnippet(projectJoinFilter)
+    )
+  }
+
+  @Benchmark def compile_unionSPJ(blackhole: Blackhole): Unit = {
+    given staging.Compiler = engine.defaultJITOptions.dotty
+
+    blackhole.consume(
+      engine.snippetCompiler.getCompiledSnippet(unionSPJ)
+    )
+  }
+}
+
+@Fork(dotty_staged_fork) // # of jvms that it will use
+@Warmup(iterations = dotty_staged_warmup_iterations, time = dotty_staged_warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = dotty_staged_batchSize)
+@Measurement(iterations = dotty_staged_iterations, time = dotty_staged_time, timeUnit = TimeUnit.SECONDS, batchSize = dotty_staged_batchSize)
+@State(Scope.Thread)
+@BenchmarkMode(Array(Mode.AverageTime))
+class BenchStagedDotty_20x_snippet_warm {
+  var storage: DefaultStorageManager = null
+  var engine: StagedSnippetExecutionEngine = null
+  var program: Program = null
+  var toSolve: Relation[Constant] = null
+  var tree: ir.ProgramOp = null
+  var ctx: ir.InterpreterContext = null
+  var doWhile: ir.DoWhileOp = null
+  var naiveEval, snEval: ir.SequenceOp = null
+  var snEvalRule: ir.UnionOp = null
+  var loopBody: ir.SequenceOp = null
+  var projectJoinFilter: ir.ProjectJoinFilterOp = null
+  var unionSPJ: ir.UnionSPJOp = null
+
+  @Setup(Level.Trial)
+  def setup(): Unit = {
+    storage = DefaultStorageManager()
+    engine = StagedSnippetExecutionEngine(storage)
+    program = Program(engine)
+    toSolve = initialize20x.pretest(program)
+    val x1 = engine.generateProgramTree(toSolve.id)
+    tree = x1._1.asInstanceOf[ir.ProgramOp]
+    ctx = x1._2
+    val programNode = tree
+    naiveEval = programNode.getSubTree(ir.OpCode.EVAL_NAIVE).asInstanceOf[ir.SequenceOp]
+    doWhile = programNode.getSubTree(ir.OpCode.DOWHILE).asInstanceOf[ir.DoWhileOp]
+    snEval = programNode.getSubTree(ir.OpCode.EVAL_SN).asInstanceOf[ir.SequenceOp]
+    snEvalRule = programNode.getSubTree(ir.OpCode.EVAL_RULE_SN).asInstanceOf[ir.UnionOp]
+    loopBody = programNode.getSubTree(ir.OpCode.LOOP_BODY).asInstanceOf[ir.SequenceOp]
+    projectJoinFilter = programNode.getSubTree(ir.OpCode.SPJ).asInstanceOf[ir.ProjectJoinFilterOp]
+    unionSPJ = programNode.getSubTree(ir.OpCode.EVAL_RULE_BODY).asInstanceOf[ir.UnionSPJOp]
+  }
+  @TearDown(Level.Invocation)
+  def cleanup(): Unit = storage.initEvaluation()
+  @Benchmark def compile_tree(blackhole: Blackhole): Unit = {
+    given staging.Compiler = engine.defaultJITOptions.dotty
+    blackhole.consume(
+      engine.snippetCompiler.getCompiledSnippet(tree)
+    )
+  }
+  @Benchmark def compile_naiveEval(blackhole: Blackhole): Unit = {
+    given staging.Compiler = engine.defaultJITOptions.dotty
+    blackhole.consume(
+      engine.snippetCompiler.getCompiledSnippet(naiveEval)
+    )
+  }
+
+  @Benchmark def compile_doWhile(blackhole: Blackhole): Unit = {
+    given staging.Compiler = engine.defaultJITOptions.dotty
+
+    blackhole.consume(
+      engine.snippetCompiler.getCompiledSnippet(doWhile)
+    )
+  }
+
+  @Benchmark def compile_snEval(blackhole: Blackhole): Unit = {
+    given staging.Compiler = engine.defaultJITOptions.dotty
+
+    blackhole.consume(
+      engine.snippetCompiler.getCompiledSnippet(snEval)
+    )
+  }
+
+  @Benchmark def compile_snEvalRule(blackhole: Blackhole): Unit = {
+    given staging.Compiler = engine.defaultJITOptions.dotty
+
+    blackhole.consume(
+      engine.snippetCompiler.getCompiledSnippet(snEvalRule)
+    )
+  }
+
+  @Benchmark def compile_projectJoinFilter(blackhole: Blackhole): Unit = {
+    given staging.Compiler = engine.defaultJITOptions.dotty
+
+    blackhole.consume(
+      engine.snippetCompiler.getCompiledSnippet(projectJoinFilter)
+    )
+  }
+
+  @Benchmark def compile_unionSPJ(blackhole: Blackhole): Unit = {
+    given staging.Compiler = engine.defaultJITOptions.dotty
+
+    blackhole.consume(
+      engine.snippetCompiler.getCompiledSnippet(unionSPJ)
+    )
+  }
+}

@@ -3,7 +3,7 @@ package datalog.benchmarks
 import datalog.benchmarks.DLBenchmark
 import datalog.dsl.{Constant, Program, Relation, Term}
 import datalog.execution.{NaiveExecutionEngine, NaiveStagedExecutionEngine, SemiNaiveExecutionEngine, StagedExecutionEngine}
-import datalog.storage.{CollectionsStorageManager, RelationalStorageManager}
+import datalog.storage.{DefaultStorageManager, VolcanoStorageManager}
 
 import java.nio.file.{Files, Path, Paths}
 import scala.collection.mutable
@@ -78,7 +78,7 @@ abstract class BenchmarkGenerator(directory: Path,
   val FPJs = Seq((0, 1), (1, 2), (1, 5), (2, 2), (5, 2), (2, 10)).map((n: Int, v: Int) => s"JITStagedFPJ_TN${n}TV${v}_")
   val rest = Seq(
 //    "SemiNaive",
-//    "Naive", "InterpretedStaged", "CompiledStaged",
+    "Naive", "InterpretedStaged", "CompiledStaged",
 //    "JITStagedSemiNaiveEvalBlocking", "JITStagedProgramBlocking", "JITStagedJoinBlocking",
 //    "JITStagedSnippetSemiNaiveEvalBlocking", "JITStagedSnippetProgramBlocking", "JITStagedSnippetJoinBlocking",
 //      "JITStagedAOTNaiveEvalBlocking",
@@ -93,7 +93,7 @@ abstract class BenchmarkGenerator(directory: Path,
     "Interpreted"
   )
   (FPJs ++ rest).foreach(execution =>
-    Seq(/*"Relational", */"Collections",
+    Seq(/*"Volcano", */"Default",
       "S3B",
       "S1B",
       "S1BS2B",
@@ -105,12 +105,12 @@ abstract class BenchmarkGenerator(directory: Path,
       "S2W",
       "S2BS3B",
       "S2WS3W"
-      //      "CollectionsFoldView", "CollectionsFoldNoView",
-//      "CollectionsReduceView", "CollectionsReduceNoView",
-//      "CollectionsBestUnsorted", "CollectionsWorstUnsorted",
+      //      "DefaultFoldView", "DefaultFoldNoView",
+//      "DefaultReduceView", "DefaultReduceNoView",
+//      "DefaultBestUnsorted", "DefaultWorstUnsorted",
     ).foreach(storage =>
       if (
-        (execution.contains("Staged") && storage == "Relational") ||
+        (execution.contains("Staged") && storage == "Volcano") ||
           skip.contains(execution) || skip.contains(storage) ||
           (tags ++ Set(execution, storage)).flatMap(t => Properties.envOrNone(t.toUpperCase())).nonEmpty
       ) {}

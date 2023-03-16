@@ -23,18 +23,18 @@ abstract class DLBenchmark {
 
   def initialize(context: String): Program = {
     val program = context match {
-      case "SemiNaiveRelational" =>               Program(SemiNaiveExecutionEngine(   RelationalStorageManager()))
-      case "NaiveRelational" =>                   Program(NaiveExecutionEngine(       RelationalStorageManager()))
-      case "SemiNaiveCollections" =>              Program(SemiNaiveExecutionEngine(   CollectionsStorageManager()))
-      case "NaiveCollections" =>                  Program(NaiveExecutionEngine(       CollectionsStorageManager()))
-      case "NaiveCompiledStagedCollections" =>    Program(NaiveStagedExecutionEngine( CollectionsStorageManager() ))
-      case "NaiveInterpretedStagedCollections" => Program(NaiveStagedExecutionEngine( CollectionsStorageManager(),  JITOptions(ir.OpCode.OTHER, dotty)))
-      case "CompiledStagedCollections" =>         Program(StagedExecutionEngine(      CollectionsStorageManager(), JITOptions(dotty = dotty)))
+      case "SemiNaiveVolcano" =>               Program(SemiNaiveExecutionEngine(   VolcanoStorageManager()))
+      case "NaiveVolcano" =>                   Program(NaiveExecutionEngine(       VolcanoStorageManager()))
+      case "SemiNaiveDefault" =>              Program(SemiNaiveExecutionEngine(   DefaultStorageManager()))
+      case "NaiveDefault" =>                  Program(NaiveExecutionEngine(       DefaultStorageManager()))
+      case "NaiveCompiledStagedDefault" =>    Program(NaiveStagedExecutionEngine( DefaultStorageManager() ))
+      case "NaiveInterpretedStagedDefault" => Program(NaiveStagedExecutionEngine( DefaultStorageManager(),  JITOptions(ir.OpCode.OTHER, dotty)))
+      case "CompiledStagedDefault" =>         Program(StagedExecutionEngine(      DefaultStorageManager(), JITOptions(dotty = dotty)))
       case _ if context.contains("Interpreted") =>
         val preSA = if (context.contains("S1B")) 1 else if (context.contains("S1W")) -1 else 0
         val sA = if (context.contains("S2B")) 1 else if (context.contains("S2W")) -1 else 0
         val sO = if (context.contains("S3B")) 1 else if (context.contains("S3W")) -1 else 0
-        Program(StagedExecutionEngine(CollectionsStorageManager(), JITOptions(ir.OpCode.OTHER, dotty, false, sortOrder = (preSA, sA, sO))))
+        Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(ir.OpCode.OTHER, dotty, false, sortOrder = (preSA, sA, sO))))
       case _ if context.contains("JIT") =>
         val preSA = if (context.contains("S1B")) 1 else if (context.contains("S1W")) -1 else 0
         val sA = if (context.contains("S2B")) 1 else if (context.contains("S2W")) -1 else 0
@@ -63,11 +63,11 @@ abstract class DLBenchmark {
         }
         if (context.contains("Snippet"))
           Program(StagedSnippetExecutionEngine(
-            CollectionsStorageManager(),
+            DefaultStorageManager(),
             JITOptions(label, dotty, aot, !nonblocking, thresholdN, thresholdV, sortOrder = (preSA, sA, sO))))
         else
           Program(StagedExecutionEngine(
-            CollectionsStorageManager(),
+            DefaultStorageManager(),
             JITOptions(label, dotty, aot, !nonblocking, thresholdN, thresholdV, sortOrder = (preSA, sA, sO))))
       case _ => // WARNING: MUnit just returns null pointers everywhere if an error or assert is triggered in beforeEach
         throw new Exception(s"Unknown engine construction ${context}") // TODO: this is reported as passing
@@ -75,8 +75,8 @@ abstract class DLBenchmark {
     inputFacts.foreach((edbName, factInput) =>
       val fact = program.relation[Constant](edbName)
         factInput.foreach(f => fact(f: _*) :- ())
-      if (factInput.size == 0) {
-        val edbs = program.ee.storageManager.edbs.asInstanceOf[mutable.Map[Int, Any]]
+      if (factInput.isEmpty) {
+        val edbs = program.ee.storageManager.getAllEDBS()
       }
     )
     pretest(program)

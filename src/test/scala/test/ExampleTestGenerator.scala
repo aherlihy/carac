@@ -2,7 +2,7 @@ package test
 
 import datalog.dsl.{Constant, Program, Relation, Term}
 import datalog.execution.{JITOptions, NaiveExecutionEngine, NaiveStagedExecutionEngine, SemiNaiveExecutionEngine, StagedExecutionEngine, ir}
-import datalog.storage.{CollectionsStorageManager, RelationalStorageManager}
+import datalog.storage.{DefaultStorageManager, VolcanoStorageManager}
 
 import java.nio.file.{Files, Path, Paths}
 import scala.collection.mutable
@@ -93,22 +93,22 @@ abstract class TestGenerator(directory: Path,
 
       override def beforeEach(context: BeforeEach): Unit = {
         program = context.test.name match {
-          case "SemiNaiveRelational" => Program(SemiNaiveExecutionEngine(RelationalStorageManager()))
-          case "NaiveRelational" => Program(NaiveExecutionEngine(RelationalStorageManager()))
-          case "SemiNaiveCollections" => Program(SemiNaiveExecutionEngine(CollectionsStorageManager()))
-          case "NaiveCollections" => Program(NaiveExecutionEngine(CollectionsStorageManager()))
-          case "NaiveCompiledStagedCollections" =>
-            Program(NaiveStagedExecutionEngine(CollectionsStorageManager())) // default is compiled
-          case "InterpretedStagedCollections" =>
-            Program(StagedExecutionEngine(CollectionsStorageManager(), JITOptions(granularity = ir.OpCode.OTHER)))
-          case "CompiledStagedCollections" =>
-            Program(StagedExecutionEngine(CollectionsStorageManager(), JITOptions(granularity = ir.OpCode.PROGRAM, dotty = dotty, aot = false, block = true, thresholdNum = 0, thresholdVal = 0))) // default is compiled
-          case "JITStagedB3Collections" =>
-            Program(StagedExecutionEngine(CollectionsStorageManager(), JITOptions(ir.OpCode.EVAL_RULE_BODY, aot = false, block = true, sortOrder = (1, 1, 1))))
-          case "JITStagedB2Collections" =>
-            Program(StagedExecutionEngine(CollectionsStorageManager(), JITOptions(ir.OpCode.EVAL_RULE_BODY, aot = true, block = true, sortOrder = (1, 1, 0))))
-          case "JITStagedB1Collections" =>
-            Program(StagedExecutionEngine(CollectionsStorageManager(), JITOptions(ir.OpCode.EVAL_RULE_BODY, aot = false, block = true, sortOrder = (0, 0, 0))))
+          case "SemiNaiveVolcano" => Program(SemiNaiveExecutionEngine(VolcanoStorageManager()))
+          case "NaiveVolcano" => Program(NaiveExecutionEngine(VolcanoStorageManager()))
+          case "SemiNaiveDefault" => Program(SemiNaiveExecutionEngine(DefaultStorageManager()))
+          case "NaiveDefault" => Program(NaiveExecutionEngine(DefaultStorageManager()))
+          case "NaiveCompiledStagedDefault" =>
+            Program(NaiveStagedExecutionEngine(DefaultStorageManager())) // default is compiled
+          case "InterpretedStagedDefault" =>
+            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(granularity = ir.OpCode.OTHER)))
+          case "CompiledStagedDefault" =>
+            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(granularity = ir.OpCode.PROGRAM, dotty = dotty, aot = false, block = true, thresholdNum = 0, thresholdVal = 0))) // default is compiled
+          case "JITStagedB3Default" =>
+            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(ir.OpCode.EVAL_RULE_BODY, aot = false, block = true, sortOrder = (1, 1, 1))))
+          case "JITStagedB2Default" =>
+            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(ir.OpCode.EVAL_RULE_BODY, aot = true, block = true, sortOrder = (1, 1, 0))))
+          case "JITStagedB1Default" =>
+            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(ir.OpCode.EVAL_RULE_BODY, aot = false, block = true, sortOrder = (0, 0, 0))))
           case _ => // WARNING: MUnit just returns null pointers everywhere if an error or assert is triggered in beforeEach
             throw new Exception(s"Unknown engine construction ${context.test.name}") // TODO: this is reported as passing
         }
@@ -116,7 +116,7 @@ abstract class TestGenerator(directory: Path,
           val fact = program.relation[Constant](edbName)
           factInput.foreach(f => fact(f: _*) :- ())
           if (factInput.isEmpty) {
-            val edbs = program.ee.storageManager.edbs.asInstanceOf[mutable.Map[Int, Any]]
+            val edbs = program.ee.storageManager.getAllEDBS()
           }
         )
         pretest(program)
@@ -126,8 +126,8 @@ abstract class TestGenerator(directory: Path,
     override def munitFixtures = List(program)
 
     Seq("SemiNaive", "Naive", "CompiledStaged", "InterpretedStaged", "JITStagedB1", "JITStagedB2", "JITStagedB3").foreach(execution => {
-      Seq("Relational", "Collections").foreach(storage => {
-        if (execution.contains("Staged") && storage == "Relational") {} // skip and don't report as skipped
+      Seq("Volcano", "Default").foreach(storage => {
+        if (execution.contains("Staged") && storage == "Volcano") {} // skip and don't report as skipped
         else if (
             skip.contains(execution) || skip.contains(storage) ||
               (tags ++ Set(execution, storage)).flatMap(t => Properties.envOrNone(t.toUpperCase())).nonEmpty// manually implement --exclude for intellij

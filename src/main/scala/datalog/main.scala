@@ -4,7 +4,7 @@ import datalog.execution.{ExecutionEngine, JITOptions, SemiNaiveExecutionEngine,
 import datalog.dsl.{Constant, Program, __}
 import datalog.execution.ast.transform.CopyEliminationPass
 import datalog.execution.ir.InterpreterContext
-import datalog.storage.{CollectionsStorageManager, NS, RelationalStorageManager}
+import datalog.storage.{DefaultStorageManager, NS, VolcanoStorageManager}
 
 import scala.util.Random
 import scala.collection.mutable
@@ -604,15 +604,48 @@ def scratch(program: Program) =
 
   println(a2.solve())
 
+def isAfter(program: Program) =
+  val edge = program.relation[Constant]("edge")
+  val isBefore = program.relation[Constant]("isBefore")
+  val isAfter = program.relation[Constant]("isAfter")
+
+  val x, y, z = program.variable()
+
+  edge("A", "B") :- ()
+  edge("A", "D") :- ()
+  edge("A", "E") :- ()
+  edge("B", "C") :- ()
+  edge("C", "D") :- ()
+  edge("C", "E") :- ()
+  edge("D", "E") :- ()
+  edge("E", "F") :- ()
+  edge("F", "G") :- ()
+  edge("F", "H") :- ()
+  edge("F", "I") :- ()
+  edge("G", "J") :- ()
+  edge("H", "K") :- ()
+  edge("I", "L") :- ()
+  edge("J", "M") :- ()
+  edge("K", "M") :- ()
+  edge("L", "M") :- ()
+
+  isBefore(x, y) :- edge(x, y)
+  isBefore(x, y) :- (isBefore(x, z), isBefore(z, y))
+
+  isAfter(x, y) :- edge(y, x)
+  isAfter(x, y) :- (isAfter(z, x), isAfter(y, z))
+
+  println(isAfter.solve().size)
+
 @main def main = {
-//  val engine = new SemiNaiveExecutionEngine(new CollectionsStorageManager())
+//  val engine = new NaiveExecutionEngine(new VolcanoStorageManager())
 //  val program = Program(engine)
 //  println("SemiNaive")
-//  acyclic(program)
+//  tc(program)
 //  println("\n\n_______________________\n\n")
 
 //  println("OLD N")
-//  given engine0: ExecutionEngine = new NaiveExecutionEngine(new CollectionsStorageManager())
+//  given engine0: ExecutionEngine = new NaiveExecutionEngine(new DefaultStorageManager())
 //  val program0 = Program(engine0)
 //  acyclic(program0)
 //  println("\n\n_______________________\n\n")
@@ -620,14 +653,14 @@ def scratch(program: Program) =
   val dotty = staging.Compiler.make(getClass.getClassLoader)
   var sort = 1
 //    println(s"OLD SN: $sort")
-//    given engine1: ExecutionEngine = new SemiNaiveExecutionEngine(new CollectionsStorageManager())
+//    given engine1: ExecutionEngine = new SemiNaiveExecutionEngine(new DefaultStorageManager())
 //    val program1 = Program(engine1)
 //    func(program1)
 //    println("\n\n_______________________\n\n")
 
 //    val jo2 = JITOptions(ir.OpCode.OTHER, dotty, aot = false, block = true)
 //    println("INTERP")
-//    given engine3a: ExecutionEngine = new StagedExecutionEngine(new CollectionsStorageManager(preSortAhead = 1, sortAhead = 1, sortOnline = 0), jo2)
+//    given engine3a: ExecutionEngine = new StagedExecutionEngine(new DefaultStorageManager(preSortAhead = 1, sortAhead = 1, sortOnline = 0), jo2)
 //
 //    val program3a = Program(engine3a)
 //    isEqual(program3a)
@@ -635,25 +668,25 @@ def scratch(program: Program) =
 //
     val jo = JITOptions(ir.OpCode.EVAL_RULE_SN, dotty, aot = false, block = true, sortOrder = (0, 0, 0))
     println("JIT")
-    given engine3: ExecutionEngine = new StagedExecutionEngine(new CollectionsStorageManager(), jo)
+    given engine3: ExecutionEngine = new StagedExecutionEngine(new DefaultStorageManager(), jo)
     val program3 = Program(engine3)
     acyclic(program3)
     println("\n\n_______________________\n\n")
 
 //  println("JIT Snippet")
-//  val engine4: ExecutionEngine = new StagedSnippetExecutionEngine(new CollectionsStorageManager(), jo)
+//  val engine4: ExecutionEngine = new StagedSnippetExecutionEngine(new DefaultStorageManager(), jo)
 //  val program4 = Program(engine4)
 //  tc(program4)
 //  println("\n\n_______________________\n\n")
 
 //  println("JIT STAGED: aot EvalSN")
-//  val engine5: ExecutionEngine = new JITStagedExecutionEngine(new CollectionsStorageManager(), ir.OpCode.EVAL_SN, true, true)
+//  val engine5: ExecutionEngine = new JITStagedExecutionEngine(new DefaultStorageManager(), ir.OpCode.EVAL_SN, true, true)
 //  val program5 = Program(engine5)
 //  manyRelations(program5)
 //  println("\n\n_______________________\n\n")
   //  println("JIT STAGED")
 //
-//  given engine3: ExecutionEngine = new CompiledStagedExecutionEngine(new CollectionsStorageManager())//, ir.OpCode.LOOP_BODY, false, false)
+//  given engine3: ExecutionEngine = new CompiledStagedExecutionEngine(new DefaultStorageManager())//, ir.OpCode.LOOP_BODY, false, false)
 //  val program3 = Program(engine3)
 //  tc(program3)
 //  println("\n\n_______________________\n\n")

@@ -2,7 +2,7 @@ package datalog.execution.ir
 
 import datalog.execution.{JITOptions, StagedCompiler}
 import datalog.execution.ast.{ASTNode, AllRulesNode, LogicAtom, ProgramNode, RuleNode}
-import datalog.storage.{CollectionsStorageManager, DB, KNOWLEDGE, RelationId}
+import datalog.storage.{StorageManager, DB, KNOWLEDGE, RelationId, EDB}
 import datalog.tools.Debug.debug
 
 import scala.collection.mutable
@@ -45,13 +45,13 @@ class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
         ):_*,
     )
 
-  def naiveEvalRule(ast: ASTNode): IROp[CollectionsStorageManager#EDB] = {
+  def naiveEvalRule(ast: ASTNode): IROp[EDB] = {
     ast match {
       case AllRulesNode(rules, rId, edb) =>
         var allRes = rules.map(naiveEvalRule).toSeq
         if (edb)
           allRes = allRes :+ ScanEDBOp(rId)
-//        if(allRes.size == 1) allRes.head else
+//        if(allRes.length == 1) allRes.head else
         UnionOp(OpCode.EVAL_RULE_NAIVE, allRes:_*)
       case RuleNode(head, _, atoms, hash) =>
         val k = ctx.storageManager.allRulesAllIndexes(atoms.head.rId)(hash)
@@ -68,13 +68,13 @@ class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
     }
   }
 
-  def semiNaiveEvalRule(ast: ASTNode): IROp[CollectionsStorageManager#EDB] = {
+  def semiNaiveEvalRule(ast: ASTNode): IROp[EDB] = {
     ast match {
       case AllRulesNode(rules, rId, edb) =>
         var allRes = rules.map(semiNaiveEvalRule).toSeq
         if (edb)
           allRes = allRes :+ ScanEDBOp(rId)
-//        if(allRes.size == 1) allRes.head else
+//        if(allRes.length == 1) allRes.head else
         UnionOp(OpCode.EVAL_RULE_SN, allRes:_*) // None bc union of unions so no point in sorting
       case RuleNode(head, body, atoms, hash) =>
         val r = head.asInstanceOf[LogicAtom].relation

@@ -2,17 +2,17 @@ package test
 
 import datalog.dsl.{Program, Relation}
 import datalog.execution.{ExecutionEngine, NaiveExecutionEngine, SemiNaiveExecutionEngine}
-import datalog.storage.{CollectionsStorageManager, RelationalStorageManager}
+import datalog.storage.{DefaultStorageManager, VolcanoStorageManager}
 import test.graphs.{Acyclic, MultiIsolatedCycle, MultiJoin, RecursivePath, SingleCycle, TopSort}
 
-class NaiveRelationalTransitiveClosure extends munit.FunSuite {
+class NaiveVolcanoTransitiveClosure extends munit.FunSuite {
   List(
-    Acyclic(new Program(new NaiveExecutionEngine(new RelationalStorageManager()))),
-    MultiIsolatedCycle(new Program(new NaiveExecutionEngine(new RelationalStorageManager()))),
-    SingleCycle(new Program(new NaiveExecutionEngine(new RelationalStorageManager()))),
-    RecursivePath(new Program(new NaiveExecutionEngine(new RelationalStorageManager()))),
-    TopSort(new Program(new NaiveExecutionEngine(new RelationalStorageManager()))),
-    MultiJoin(new Program(new NaiveExecutionEngine(new RelationalStorageManager())))
+    Acyclic(new Program(new NaiveExecutionEngine(new VolcanoStorageManager()))),
+    MultiIsolatedCycle(new Program(new NaiveExecutionEngine(new VolcanoStorageManager()))),
+    SingleCycle(new Program(new NaiveExecutionEngine(new VolcanoStorageManager()))),
+    RecursivePath(new Program(new NaiveExecutionEngine(new VolcanoStorageManager()))),
+    TopSort(new Program(new NaiveExecutionEngine(new VolcanoStorageManager()))),
+    MultiJoin(new Program(new NaiveExecutionEngine(new VolcanoStorageManager())))
   ).map(graph =>
   graph.queries.map((hint, query) => {
     test(graph.description + "." + query.description) {
@@ -24,14 +24,14 @@ class NaiveRelationalTransitiveClosure extends munit.FunSuite {
     }
   }))
 }
-class NaiveCollectionTransitiveClosure extends munit.FunSuite {
+class NaiveDefaultTransitiveClosure extends munit.FunSuite {
   List(
-    Acyclic(new Program(new NaiveExecutionEngine(new CollectionsStorageManager()))),
-    MultiIsolatedCycle(new Program(new NaiveExecutionEngine(new CollectionsStorageManager()))),
-    SingleCycle(new Program(new NaiveExecutionEngine(new CollectionsStorageManager()))),
-    RecursivePath(new Program(new NaiveExecutionEngine(new CollectionsStorageManager()))),
-    TopSort(new Program(new NaiveExecutionEngine(new CollectionsStorageManager()))),
-    MultiJoin(new Program(new NaiveExecutionEngine(new CollectionsStorageManager())))
+    Acyclic(new Program(new NaiveExecutionEngine(new DefaultStorageManager()))),
+    MultiIsolatedCycle(new Program(new NaiveExecutionEngine(new DefaultStorageManager()))),
+    SingleCycle(new Program(new NaiveExecutionEngine(new DefaultStorageManager()))),
+    RecursivePath(new Program(new NaiveExecutionEngine(new DefaultStorageManager()))),
+    TopSort(new Program(new NaiveExecutionEngine(new DefaultStorageManager()))),
+    MultiJoin(new Program(new NaiveExecutionEngine(new DefaultStorageManager())))
   ).map(graph =>
     graph.queries.map((hint, query) => {
       test(graph.description + "." + query.description) {

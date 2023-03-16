@@ -3,7 +3,7 @@ package datalog.benchmarks
 import datalog.dsl.{Constant, Program, Relation, Term}
 import datalog.execution.ir.CompiledFn
 import datalog.execution.{ExecutionEngine, JITOptions, SemiNaiveExecutionEngine, StagedExecutionEngine, ir}
-import datalog.storage.CollectionsStorageManager
+import datalog.storage.DefaultStorageManager
 import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.Blackhole
 import test.examples.andersen.andersen
@@ -83,7 +83,7 @@ trait OtherBench extends andersen {
       val fact = program.relation[Constant](edbName)
       factInput.foreach(f => fact(f: _*) :- ())
       if (factInput.isEmpty) {
-        val edbs = program.ee.storageManager.edbs.asInstanceOf[mutable.Map[Int, Any]]
+        val edbs = program.ee.storageManager.getAllEDBS()
       }
     )
     super.pretest(program)
@@ -111,7 +111,7 @@ class BenchStagedOther_full_compiled extends OtherBench {
   var toSolveR: Relation[Constant] = null
   @Setup(Level.Invocation)
   def setup(): Unit = {
-    engine = StagedExecutionEngine(CollectionsStorageManager())
+    engine = StagedExecutionEngine(DefaultStorageManager())
     program = Program(engine)
     pretest(program)
     toSolveR = program.namedRelation(toSolve)
@@ -140,7 +140,7 @@ class BenchStagedOther_compile_and_run extends OtherBench {
   // measure cost of tree gen, compiling, running
   @Setup(Level.Invocation)
   def setup(): Unit = {
-    engine = StagedExecutionEngine(CollectionsStorageManager())
+    engine = StagedExecutionEngine(DefaultStorageManager())
     program = Program(engine)
     pretest(program)
     toSolveR = program.namedRelation(toSolve)
@@ -169,12 +169,12 @@ class BenchStagedOther_run_only_compiled extends OtherBench {
   var toSolveR: Relation[Constant] = null
   var tree: ir.IROp[Any] = null
   var ctx: ir.InterpreterContext = null
-  var compiled: CompiledFn = null
+  var compiled: CompiledFn[Any] = null
 
   // measure cost of tree gen, compiling, running
   @Setup(Level.Invocation)
   def setup(): Unit = {
-    engine = StagedExecutionEngine(CollectionsStorageManager())
+    engine = StagedExecutionEngine(DefaultStorageManager())
     program = Program(engine)
     pretest(program)
     toSolveR = program.namedRelation(toSolve)
@@ -207,7 +207,7 @@ class BenchStagedOther_full_interpreted extends OtherBench {
   var toSolveR: Relation[Constant] = null
   @Setup(Level.Invocation)
   def setup(): Unit = {
-    engine = StagedExecutionEngine(CollectionsStorageManager(), JITOptions(ir.OpCode.OTHER))
+    engine = StagedExecutionEngine(DefaultStorageManager(), JITOptions(ir.OpCode.OTHER))
     program = Program(engine)
     pretest(program)
     toSolveR = program.namedRelation(toSolve)
@@ -236,7 +236,7 @@ class BenchStagedOther_run_only_interpreted extends OtherBench {
   // measure cost of tree gen, compiling, running
   @Setup(Level.Invocation)
   def setup(): Unit = {
-    engine = StagedExecutionEngine(CollectionsStorageManager())
+    engine = StagedExecutionEngine(DefaultStorageManager())
     program = Program(engine)
     pretest(program)
     toSolveR = program.namedRelation(toSolve)
@@ -265,7 +265,7 @@ class BenchStagedOther_seminaive_collections extends OtherBench {
   var toSolveR: Relation[Constant] = null
   @Setup(Level.Invocation)
   def setup(): Unit = {
-    engine = SemiNaiveExecutionEngine(CollectionsStorageManager())
+    engine = SemiNaiveExecutionEngine(DefaultStorageManager())
     program = Program(engine)
     pretest(program)
     toSolveR = program.namedRelation(toSolve)
