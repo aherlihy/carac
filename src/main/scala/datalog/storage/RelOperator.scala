@@ -9,7 +9,7 @@ import scala.collection.mutable
 final val NilTuple: Option[Nothing] = None
 
 final val dbg = true//false
-class RelationalOperators[S <: StorageManager](val storageManager: S) {
+class RelationalOperators(val storageManager: RelationalStorageManager) {
   type edbRow = storageManager.Row[storageManager.StorageTerm]
   type table[T] = storageManager.Table[T]
 

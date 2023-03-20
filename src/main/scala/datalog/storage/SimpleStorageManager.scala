@@ -1,6 +1,6 @@
 package datalog.storage
 
-import datalog.dsl.{Atom, Constant, Term, Variable}
+import datalog.dsl.{Atom, ColumnType, Constant, Term, Variable}
 import datalog.execution.JoinIndexes
 import datalog.tools.Debug.debug
 
@@ -22,6 +22,7 @@ abstract class SimpleStorageManager(override val ns: NS) extends StorageManager(
   type FactDatabase = Database[RelationId, EDB]
   def FactDatabase(e: (RelationId, EDB)*) = mutable.Map[RelationId, EDB](e: _*)
 
+  def EDB(rId: RelationId, c: Row[StorageTerm]*) = Relation[StorageTerm](c: _*)
   def EDB(c: Row[StorageTerm]*) = Relation[StorageTerm](c: _*)
 
   // "database", i.e. relationID => Relation
@@ -36,9 +37,7 @@ abstract class SimpleStorageManager(override val ns: NS) extends StorageManager(
 
   val printer: Printer[this.type] = Printer[this.type](this)
 
-  val relOps: RelationalOperators[this.type] = RelationalOperators(this)
-
-  def initRelation(rId: RelationId, name: String): Unit = {
+  def initRelation(rId: RelationId, name: String, columns: Seq[ColumnType]): Unit = {
     ns(rId) = name
   }
   /**

@@ -1,6 +1,6 @@
 package datalog.execution
 
-import datalog.dsl.{Atom, Constant, Term, Variable}
+import datalog.dsl.{Atom, Constant, Term, Variable, ColumnType}
 import datalog.storage.{RelationId, StorageManager}
 
 import scala.collection.mutable
@@ -10,7 +10,7 @@ trait ExecutionEngine {
   val precedenceGraph: PrecedenceGraph
   val storageManager: StorageManager // TODO: exposed for testing, for now
   val prebuiltOpKeys: mutable.Map[RelationId, mutable.ArrayBuffer[JoinIndexes]]
-  def initRelation(rId: RelationId, name: String): Unit
+  def initRelation(rId: RelationId, name: String, columns: Seq[ColumnType]): Unit
 
   def insertIDB(rId: RelationId, rule: Seq[Atom]): Unit
   def insertEDB(body: Atom): Unit

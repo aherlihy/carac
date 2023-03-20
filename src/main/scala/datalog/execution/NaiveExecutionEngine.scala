@@ -1,6 +1,6 @@
 package datalog.execution
 
-import datalog.dsl.{Atom, Constant, Term, Variable}
+import datalog.dsl.{Atom, ColumnType, Constant, Term, Variable}
 import datalog.storage.{RelationId, SimpleStorageManager, StorageManager}
 import datalog.tools.Debug.debug
 
@@ -16,9 +16,9 @@ class NaiveExecutionEngine(val storageManager: StorageManager) extends Execution
      good enough reason to deal with more path-dependent types */
   val idbs: mutable.Map[RelationId, mutable.ArrayBuffer[IndexedSeq[Atom]]] = mutable.Map()
 
-  def initRelation(rId: RelationId, name: String): Unit = {
+  def initRelation(rId: RelationId, name: String, columns: Seq[ColumnType]): Unit = {
     storageManager.ns(rId) = name
-    storageManager.initRelation(rId, name)
+    storageManager.initRelation(rId, name, columns)
   }
 
   def get(rId: RelationId): Set[Seq[Term]] = {
@@ -49,7 +49,7 @@ class NaiveExecutionEngine(val storageManager: StorageManager) extends Execution
   }
 
   def evalRuleNaive(rId: RelationId):  EDB = {
-    storageManager.naiveSPJU(rId, getOperatorKeys(rId).asInstanceOf[storageManager.Table[JoinIndexes]])
+    storageManager.naiveSPJU(rId, getOperatorKeys(rId).asInstanceOf[ArrayBuffer[JoinIndexes]])
   }
 
   /**
@@ -60,7 +60,7 @@ class NaiveExecutionEngine(val storageManager: StorageManager) extends Execution
     relations.foreach(r => {
       val res = evalRuleNaive(r)
       debug("result of evalRule=", () => storageManager.printer.factToString(res))
-      storageManager.resetNewDerived(r, res) // overwrite res to the new derived DB
+      storageManager.resetNewDerived(r, res, EDB(r)) // overwrite res to the new derived DB
       if (copyToDelta) {
         storageManager.resetNewDelta(r, res) // copy delta[new] = derived[new], if this is called from SN
       }

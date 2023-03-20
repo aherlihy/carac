@@ -7,6 +7,8 @@ import datalog.execution.{AllIndexes, JoinIndexes}
 import scala.collection.{immutable, mutable}
 
 class RelationalStorageManager(ns: NS = NS()) extends SimpleStorageManager(ns) {
+  val relOps: RelationalOperators = RelationalOperators(this)
+
   def joinHelper(inputs: Seq[EDB], k: JoinIndexes): EDB = throw new Exception("shouldn't be called")
   def projectHelper(input: EDB, k: JoinIndexes): EDB = throw new Exception("shouldn't be called")
   def joinProjectHelper(inputs: Seq[EDB], k: JoinIndexes): EDB = throw new Exception("shouldn't be called")

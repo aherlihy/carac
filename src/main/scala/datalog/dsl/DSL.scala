@@ -9,6 +9,10 @@ trait AbstractProgram // TODO: alternate program?
 
 type Constant = Int | String // TODO: other constant types?
 
+abstract class ColumnType
+case object StringType extends ColumnType
+case object IntType extends ColumnType
+
 val __ = Variable(-1, true)
 
 case class Variable(oid: Int, anon: Boolean = false) {
@@ -30,9 +34,10 @@ class Atom(val rId: Int, val terms: Seq[Term]) {
   val hash: String = s"$rId${terms.mkString("", "", "")}"
 }
 
-case class Relation[T <: Constant](id: Int, name: String)(using ee: ExecutionEngine) {
+// TODO why do we need the type parameter? It seems we always use T = Constant
+case class Relation[T <: Constant](id: Int, name: String, columns: Seq[ColumnType])(using ee: ExecutionEngine) {
   type RelTerm = T | Variable
-  ee.initRelation(id, name)
+  ee.initRelation(id, name, columns)
 
   case class RelAtom(override val terms: Seq[RelTerm]) extends Atom(id, terms) { // extend Atom so :- can accept atom of any Relation
     // IDB tuple

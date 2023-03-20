@@ -5,6 +5,7 @@ import datalog.execution.ast.*
 import datalog.execution.JoinIndexes
 import datalog.execution.ir.*
 
+import scala.collection.mutable.ArrayBuffer
 import scala.collection.{immutable, mutable}
 
 // Keep pretty print stuff separate bc long and ugly, mb put it in a macro
@@ -26,7 +27,7 @@ class Printer[S <: StorageManager](val s: S) {
       .map((k, v) => (s.ns(k), factToString(v)))
       .mkString("[\n  ", ",\n  ", "]")
   }
-  def naivePlanToString(keys: s.Table[JoinIndexes]): String = {
+  def naivePlanToString(keys: ArrayBuffer[JoinIndexes]): String = {
     "Union( " +
       keys.map(k =>
         if (k.edb)
@@ -44,7 +45,7 @@ class Printer[S <: StorageManager](val s: S) {
       " )"
   }
 
-  def snPlanToString(keys: s.Table[JoinIndexes]): String = {
+  def snPlanToString(keys: ArrayBuffer[JoinIndexes]): String = {
     "UNION( " +
       keys.map(k =>
         if (k.edb)

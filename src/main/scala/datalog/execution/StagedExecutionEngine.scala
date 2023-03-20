@@ -1,10 +1,10 @@
 package datalog.execution
 
-import datalog.dsl.{Atom, Constant, Term, Variable}
+import datalog.dsl.{Atom, ColumnType, Constant, Term, Variable}
 import datalog.execution.ast.*
 import datalog.execution.ast.transform.{ASTTransformerContext, CopyEliminationPass, JoinIndexPass, Transformer}
 import datalog.execution.ir.*
-import datalog.storage.{CollectionsStorageManager, DB, KNOWLEDGE, StorageManager}
+import datalog.storage.{CollectionsStorageManager, DB, KNOWLEDGE, RelationId, StorageManager}
 import datalog.tools.Debug.debug
 
 import scala.collection.mutable
@@ -36,9 +36,9 @@ class StagedExecutionEngine(val storageManager: CollectionsStorageManager, defau
 
   def createIR(ast: ASTNode)(using InterpreterContext): IROp[Any] = IRTreeGenerator().generateSemiNaive(ast)
 
-  def initRelation(rId: Int, name: String): Unit = {
+  def initRelation(rId: RelationId, name: String, columns: Seq[ColumnType]): Unit = {
     storageManager.ns(rId) = name
-    storageManager.initRelation(rId, name)
+    storageManager.initRelation(rId, name, columns)
   }
 
   def get(rId: Int): Set[Seq[Term]] = {

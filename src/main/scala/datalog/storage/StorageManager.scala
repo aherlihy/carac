@@ -1,6 +1,6 @@
 package datalog.storage
 
-import datalog.dsl.{Atom, Term, Variable}
+import datalog.dsl.{Atom, Term, Variable, ColumnType}
 import datalog.execution.{JoinIndexes, AllIndexes}
 
 import scala.collection.mutable
@@ -42,13 +42,15 @@ trait StorageManager(val ns: NS) {
   case class StorageAtom(rId: RelationId, terms: Array[StorageTerm]) {
     override def toString: String = ns(rId) + terms.mkString("(", ", ", ")")
   }
-  type Row [+T] <: Seq[T] with immutable.SeqOps[T, Row, Row[T]]
-  type Table[T] <: mutable.ArrayBuffer[T]
-  type Relation[T] <: Table[Row[T]] & mutable.ArrayBuffer[Row[T]]
+
+  type Row [+T] <: Iterable[T]
+  type Table[T] <: Iterable[T]
+  type Relation[T] <: Table[Row[T]]
 
   type StorageTerm = StorageVariable | StorageConstant
+
   type EDB = Relation[StorageTerm]
-  def EDB(c: Row[StorageTerm]*): EDB
+  def EDB(rId: RelationId, c: Row[StorageTerm]*): EDB
   type IDB = Relation[StorageAtom]
   type Database[K, V] <: mutable.Map[K, V]
   type FactDatabase <: Database[RelationId, EDB] & mutable.Map[RelationId, EDB]
@@ -61,7 +63,7 @@ trait StorageManager(val ns: NS) {
 
   val printer: Printer[this.type]
 
-  def initRelation(rId: RelationId, name: String): Unit
+  def initRelation(rId: RelationId, name: String, columns: Seq[ColumnType]): Unit
   def initEvaluation(): Unit
 
   def insertEDB(rule: Atom): Unit
@@ -76,8 +78,8 @@ trait StorageManager(val ns: NS) {
   def getNewIDBResult(rId: RelationId): Set[Seq[Term]]
   def getEDBResult(rId: RelationId): Set[Seq[Term]]
 
-  def resetKnownDerived(rId: RelationId, rules: EDB, prev: EDB = EDB()): Unit
-  def resetNewDerived(rId: RelationId, rules: EDB, prev: EDB = EDB()): Unit
+  def resetKnownDerived(rId: RelationId, rules: EDB, prev: EDB): Unit
+  def resetNewDerived(rId: RelationId, rules: EDB, prev: EDB): Unit
   def resetNewDelta(rId: RelationId, rules: EDB): Unit
   def resetKnownDelta(rId: RelationId, rules: EDB): Unit
   def clearNewDerived(): Unit
