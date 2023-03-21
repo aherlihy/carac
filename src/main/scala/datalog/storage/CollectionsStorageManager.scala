@@ -62,7 +62,7 @@ abstract class CollectionsStorageManager(override val ns: NS) extends StorageMan
       edbs(rule.rId) = CollectionsEDB()
       edbs(rule.rId).addOne(CollectionsRow(rule.terms))
   }
-  def getEmptyEDB(): CollectionsEDB = CollectionsEDB()
+  def getEmptyEDB(rId: RelationId): CollectionsEDB = CollectionsEDB()
   def getEDB(rId: RelationId): CollectionsEDB = edbs(rId)
   def edbContains(rId: RelationId): Boolean = edbs.contains(rId)
   def getAllEDBS(): mutable.Map[RelationId, Any] = edbs.wrapped.asInstanceOf[mutable.Map[RelationId, Any]]

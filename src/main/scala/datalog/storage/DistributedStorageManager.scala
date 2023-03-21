@@ -152,7 +152,7 @@ class DistributedStorageManager(override val ns: NS, spark: SparkSession) extend
 
   override val allRulesAllIndexes: Database[RelationId, AllIndexes] = mutable.Map.empty
 
-  override def getEmptyEDB(): EDB = ???
+  override def getEmptyEDB(rId: RelationId): EDB = makeEDB(rId)
 
   override def edbContains(rId: RelationId): Boolean = edbs.contains(rId)
 

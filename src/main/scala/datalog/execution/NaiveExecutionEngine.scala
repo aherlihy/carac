@@ -59,7 +59,7 @@ class NaiveExecutionEngine(val storageManager: StorageManager) extends Execution
     relations.foreach(r => {
       val res = evalRuleNaive(r)
       debug("result of evalRule=", () => storageManager.printer.factToString(res))
-      storageManager.resetNewDerived(r, res, storageManager.getEmptyEDB()) // overwrite res to the new derived DB
+      storageManager.resetNewDerived(r, res, storageManager.getEmptyEDB(r)) // overwrite res to the new derived DB
       if (copyToDelta) {
         storageManager.resetNewDelta(r, res) // copy delta[new] = derived[new], if this is called from SN
       }

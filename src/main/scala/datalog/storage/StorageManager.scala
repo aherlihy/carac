@@ -18,7 +18,7 @@ trait StorageManager(val ns: NS) {
   def initEvaluation(): Unit
 
   def insertEDB(rule: Atom): Unit
-  def getEmptyEDB(): EDB
+  def getEmptyEDB(rId: RelationId): EDB
   def edbContains(rId: RelationId): Boolean
   def getEDB(rId: RelationId): EDB
   def getAllEDBS(): mutable.Map[RelationId, Any] // if you ever just want to read the EDBs as a map, used for testing

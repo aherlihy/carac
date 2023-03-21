@@ -141,7 +141,7 @@ case class InsertOp(rId: RelationId, db: DB, knowledge: KNOWLEDGE, override val 
   val code: OpCode = OpCode.INSERT
   override def run_continuation(storageManager:  StorageManager, opFns: Seq[CompiledFn[Any]]): Any =
     val res = opFns.head.asInstanceOf[CompiledFn[EDB]](storageManager)
-    val res2 = if (opFns.length == 1) storageManager.getEmptyEDB() else opFns(1).asInstanceOf[CompiledFn[EDB]](storageManager)
+    val res2 = if (opFns.length == 1) storageManager.getEmptyEDB(rId) else opFns(1).asInstanceOf[CompiledFn[EDB]](storageManager)
     db match {
       case DB.Derived =>
         knowledge match {
@@ -160,7 +160,7 @@ case class InsertOp(rId: RelationId, db: DB, knowledge: KNOWLEDGE, override val 
     }
   override def run(storageManager: StorageManager): Any =
     val res = children.head.run(storageManager).asInstanceOf[EDB]
-    val res2 = if (children.length > 1) children(1).run(storageManager).asInstanceOf[EDB] else storageManager.getEmptyEDB()
+    val res2 = if (children.length > 1) children(1).run(storageManager).asInstanceOf[EDB] else storageManager.getEmptyEDB(rId)
     db match {
       case DB.Derived =>
         knowledge match {
@@ -209,7 +209,7 @@ case class ScanEDBOp(rId: RelationId)(using JITOptions) extends IROp[EDB] {
     if (storageManager.edbContains(rId))
       storageManager.getEDB(rId)
     else
-      storageManager.getEmptyEDB()
+      storageManager.getEmptyEDB(rId)
 
   override def run_continuation(storageManager: StorageManager, opFns: Seq[CompiledFn[EDB]]): EDB =
     run(storageManager)
