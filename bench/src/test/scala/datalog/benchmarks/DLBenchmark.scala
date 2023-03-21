@@ -6,11 +6,13 @@ import datalog.storage.*
 import datalog.tools.Debug.debug
 
 import scala.collection.mutable
+import scala.quoted.staging
 
 /**
  * Used for both hand-written benchmarks (ex: TransitiveClosure) to be run on all configs, and also auto-generated (ex: Examples)
  */
 abstract class DLBenchmark {
+  val dotty = staging.Compiler.make(getClass.getClassLoader)
   def pretest(program: Program): Unit
   val toSolve: String
   val description: String
@@ -21,24 +23,24 @@ abstract class DLBenchmark {
 
   def initialize(context: String): Program = {
     val program = context match {
-      case "SemiNaiveRelational" =>               Program(SemiNaiveExecutionEngine(   RelationalStorageManager()))
-      case "NaiveRelational" =>                   Program(NaiveExecutionEngine(       RelationalStorageManager()))
-      case "SemiNaiveCollections" =>              Program(SemiNaiveExecutionEngine(   CollectionsStorageManager()))
-      case "NaiveCollections" =>                  Program(NaiveExecutionEngine(       CollectionsStorageManager()))
-      case "NaiveCompiledStagedCollections" =>    Program(NaiveStagedExecutionEngine( CollectionsStorageManager()))
-      case "NaiveInterpretedStagedCollections" => Program(NaiveStagedExecutionEngine( CollectionsStorageManager(),  JITOptions(granularity = ir.OpCode.OTHER)))
-      case "CompiledStagedCollections" =>         Program(StagedExecutionEngine(      CollectionsStorageManager()))
+      case "SemiNaiveVolcano" =>               Program(SemiNaiveExecutionEngine(   VolcanoStorageManager()))
+      case "NaiveVolcano" =>                   Program(NaiveExecutionEngine(       VolcanoStorageManager()))
+      case "SemiNaiveDefault" =>              Program(SemiNaiveExecutionEngine(   DefaultStorageManager()))
+      case "NaiveDefault" =>                  Program(NaiveExecutionEngine(       DefaultStorageManager()))
+      case "NaiveCompiledStagedDefault" =>    Program(NaiveStagedExecutionEngine( DefaultStorageManager() ))
+      case "NaiveInterpretedStagedDefault" => Program(NaiveStagedExecutionEngine( DefaultStorageManager(),  JITOptions(ir.OpCode.OTHER, dotty)))
+      case "CompiledStagedDefault" =>         Program(StagedExecutionEngine(      DefaultStorageManager(), JITOptions(dotty = dotty)))
       case _ if context.contains("Interpreted") =>
         val preSA = if (context.contains("S1B")) 1 else if (context.contains("S1W")) -1 else 0
         val sA = if (context.contains("S2B")) 1 else if (context.contains("S2W")) -1 else 0
         val sO = if (context.contains("S3B")) 1 else if (context.contains("S3W")) -1 else 0
-        Program(StagedExecutionEngine(CollectionsStorageManager(preSortAhead = preSA, sortAhead=sA, sortOnline=sO), JITOptions(ir.OpCode.OTHER, false)))
+        Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(ir.OpCode.OTHER, dotty, false, sortOrder = (preSA, sA, sO))))
       case _ if context.contains("JIT") =>
         val preSA = if (context.contains("S1B")) 1 else if (context.contains("S1W")) -1 else 0
         val sA = if (context.contains("S2B")) 1 else if (context.contains("S2W")) -1 else 0
         val sO = if (context.contains("S3B")) 1 else if (context.contains("S3W")) -1 else 0
         val aot = context.contains("AOT")
-        val nonblocking = context.contains("async")
+        val nonblocking = context.contains("Async")
         val label =
           if (context.contains("NaiveEval")) ir.OpCode.EVAL_NAIVE
           else if (context.contains("SemiNaiveEval")) ir.OpCode.EVAL_SN
@@ -46,6 +48,7 @@ abstract class DLBenchmark {
           else if (context.contains("Loop")) ir.OpCode.DOWHILE
           else if (context.contains("Program")) ir.OpCode.PROGRAM
           else if (context.contains("FPJ")) ir.OpCode.SPJ
+          else if (context.contains("EvalRule")) ir.OpCode.EVAL_RULE_SN
           else if (context.contains("UnionSPJ")) ir.OpCode.EVAL_RULE_BODY
           else throw new Exception(s"Unknown type of JIT staged $context")
         val threshVR = "TV([0-9]*)".r
@@ -59,17 +62,21 @@ abstract class DLBenchmark {
           case _ => 0
         }
         if (context.contains("Snippet"))
-          Program(StagedSnippetExecutionEngine(CollectionsStorageManager(preSortAhead = preSA, sortAhead=sA, sortOnline=sO), JITOptions(label, aot, !nonblocking, thresholdN, thresholdV)))
+          Program(StagedSnippetExecutionEngine(
+            DefaultStorageManager(),
+            JITOptions(label, dotty, aot, !nonblocking, thresholdN, thresholdV, sortOrder = (preSA, sA, sO))))
         else
-          Program(StagedExecutionEngine(CollectionsStorageManager(preSortAhead = preSA, sortAhead=sA, sortOnline=sO), JITOptions(label, aot, !nonblocking, thresholdN, thresholdV)))
+          Program(StagedExecutionEngine(
+            DefaultStorageManager(),
+            JITOptions(label, dotty, aot, !nonblocking, thresholdN, thresholdV, sortOrder = (preSA, sA, sO))))
       case _ => // WARNING: MUnit just returns null pointers everywhere if an error or assert is triggered in beforeEach
         throw new Exception(s"Unknown engine construction ${context}") // TODO: this is reported as passing
     }
     inputFacts.foreach((edbName, factInput) =>
       val fact = program.relation[Constant](edbName)
         factInput.foreach(f => fact(f: _*) :- ())
-      if (factInput.size == 0) {
-        val edbs = program.ee.storageManager.edbs.asInstanceOf[mutable.Map[Int, Any]]
+      if (factInput.isEmpty) {
+        val edbs = program.ee.storageManager.getAllEDBS()
       }
     )
     pretest(program)

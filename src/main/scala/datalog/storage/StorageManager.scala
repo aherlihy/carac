@@ -1,65 +1,16 @@
 package datalog.storage
 
-import datalog.dsl.{Atom, Term, Variable, ColumnType}
+import datalog.dsl.{Atom, Term, Variable, Constant}
 import datalog.execution.{JoinIndexes, AllIndexes}
 
 import scala.collection.mutable
 import scala.collection.immutable
-
-/**
- * Quick BiMap
- */
-class NS() {
-  private val nameToRid = mutable.Map[String, RelationId]()
-  private val rIdToName = mutable.Map[RelationId, String]()
-  def apply(name: String): RelationId = nameToRid(name)
-  def apply(rId: RelationId): String = rIdToName(rId)
-  def update(key: String, value: RelationId): Unit = {
-    nameToRid(key) = value
-    rIdToName(value) = key
-  }
-  def update(key: RelationId, value: String): Unit = {
-    rIdToName(key) = value
-    nameToRid(value) = key
-  }
-  def contains(key: String): Boolean = nameToRid.contains(key)
-  def contains(key: RelationId): Boolean = rIdToName.contains(key)
-  def rIds(): Iterable[RelationId] = rIdToName.keys
-}
-
-type RelationId = Int
-type KnowledgeId = Int
-enum DB:
-  case Derived, Delta
-enum KNOWLEDGE:
-  case New, Known
-
 trait StorageManager(val ns: NS) {
-  /* A bit repetitive to have these types also defined in dsl but good to separate
-   * user-facing API class with internal storage */
-  type StorageVariable
-  type StorageConstant
-  case class StorageAtom(rId: RelationId, terms: Array[StorageTerm]) {
-    override def toString: String = ns(rId) + terms.mkString("(", ", ", ")")
-  }
-
-  type Row [+T] <: Iterable[T]
-  type Table[T] <: Iterable[T]
-  type Relation[T] <: Table[Row[T]]
-
-  type StorageTerm = StorageVariable | StorageConstant
-
-  type EDB = Relation[StorageTerm]
-  def EDB(rId: RelationId, c: Row[StorageTerm]*): EDB
-  type IDB = Relation[StorageAtom]
-  type Database[K, V] <: mutable.Map[K, V]
-  type FactDatabase <: Database[RelationId, EDB] & mutable.Map[RelationId, EDB]
-
-  val derivedDB: Database[KnowledgeId, FactDatabase]
-  val deltaDB: Database[KnowledgeId, FactDatabase]
-  val edbs: FactDatabase
+  var iteration = 0
   var knownDbId: KnowledgeId
   var newDbId: KnowledgeId
+
+  val allRulesAllIndexes: mutable.Map[RelationId, AllIndexes]
 
   val printer: Printer[this.type]
 
@@ -67,8 +18,10 @@ trait StorageManager(val ns: NS) {
   def initEvaluation(): Unit
 
   def insertEDB(rule: Atom): Unit
-
-  def edb(rId: RelationId): EDB
+  def getEmptyEDB(): EDB
+  def edbContains(rId: RelationId): Boolean
+  def getEDB(rId: RelationId): EDB
+  def getAllEDBS(): mutable.Map[RelationId, Any] // if you ever just want to read the EDBs as a map, used for testing
 
   def getKnownDerivedDB(rId: RelationId): EDB
   def getNewDerivedDB(rId: RelationId): EDB
@@ -92,7 +45,8 @@ trait StorageManager(val ns: NS) {
 
   def joinHelper(inputs: Seq[EDB], k: JoinIndexes): EDB
   def projectHelper(input: EDB, k: JoinIndexes): EDB
-  def joinProjectHelper(inputs: Seq[EDB], k: JoinIndexes): EDB
+  def joinProjectHelper(inputs: Seq[EDB], k: JoinIndexes, sortOrder: (Int, Int, Int)): EDB
+  def joinProjectHelper_withHash(inputs: Seq[EDB], rId: Int, hash: String, sortOrder: (Int, Int, Int)): EDB
   def diff(lhs: EDB, rhs: EDB): EDB
   def union(edbs: Seq[EDB]): EDB
 

@@ -4,11 +4,75 @@ import datalog.execution.{ExecutionEngine, JITOptions, SemiNaiveExecutionEngine,
 import datalog.dsl.{Constant, Program, __}
 import datalog.execution.ast.transform.CopyEliminationPass
 import datalog.execution.ir.InterpreterContext
-import datalog.storage.{CollectionsStorageManager, NS, RelationalStorageManager}
+import datalog.storage.{DefaultStorageManager, NS, VolcanoStorageManager}
 
 import scala.util.Random
 import scala.collection.mutable
 import scala.quoted.*
+
+def ackermann(program: Program) = {
+  val succ = program.relation[Constant]("succ")
+  val greaterThanZ = program.relation[Constant]("greaterThanZ")
+  val ack = program.relation[Constant]("ack")
+  val N, M, X, Y, Ans, Ans2 = program.variable()
+
+  succ("0", "1") :- ()
+  succ("1", "2") :- ()
+  succ("2", "3") :- ()
+  succ("3", "4") :- ()
+  succ("4", "5") :- ()
+  succ("5", "6") :- ()
+  succ("6", "7") :- ()
+  succ("7", "8") :- ()
+  succ("8", "9") :- ()
+  succ("9", "10") :- ()
+  succ("10", "11") :- ()
+  succ("11", "12") :- ()
+  succ("12", "13") :- ()
+  succ("13", "14") :- ()
+  succ("14", "15") :- ()
+  succ("15", "16") :- ()
+  succ("16", "17") :- ()
+  succ("17", "18") :- ()
+  succ("18", "19") :- ()
+  succ("19", "20") :- ()
+  succ("20", "21") :- ()
+
+  greaterThanZ("1") :- ()
+  greaterThanZ("2") :- ()
+  greaterThanZ("3") :- ()
+  greaterThanZ("4") :- ()
+  greaterThanZ("5") :- ()
+  greaterThanZ("6") :- ()
+  greaterThanZ("7") :- ()
+  greaterThanZ("8") :- ()
+  greaterThanZ("9") :- ()
+  greaterThanZ("10") :- ()
+  greaterThanZ("11") :- ()
+  greaterThanZ("12") :- ()
+  greaterThanZ("13") :- ()
+  greaterThanZ("14") :- ()
+  greaterThanZ("15") :- ()
+  greaterThanZ("16") :- ()
+  greaterThanZ("17") :- ()
+  greaterThanZ("18") :- ()
+  greaterThanZ("19") :- ()
+  greaterThanZ("20") :- ()
+
+  ack("0", N, Ans) :- succ(N, Ans)
+
+  ack(M, "0", Ans) :- (greaterThanZ(M), succ(X, M), ack(X, "1", Ans))
+
+  ack(M, N, Ans) :- (
+    greaterThanZ(M),
+    greaterThanZ(N),
+    succ(X, M),
+    succ(Y, N),
+    ack(M, Y, Ans2),
+    ack(X, Ans2, Ans))
+
+  println("RES=" + ack.solve().size)
+}
 
 def tc(program: Program): Unit = {
   val edge = program.relation[Constant]("edge")
@@ -116,9 +180,9 @@ def isEqual(program: Program): Unit = {
 
 
   equal("0", "0", "1") :- ()
-  equal(m, n, r) :- ( succ(pm, m) , succ(pn, n), equal(pm, pn, r) )
+  equal(m, n, r) :- (succ(pm, m), succ(pn, n), equal(pm, pn, r))
 
-  isEqual(r) :- equal("5", "5", r)
+  isEqual(r) :- equal("5", "7", r)
 
   succ("0", "1") :- ()
   succ("1", "2") :- ()
@@ -140,6 +204,7 @@ def isEqual(program: Program): Unit = {
   succ("17", "18") :- ()
   succ("18", "19") :- ()
   succ("19", "20") :- ()
+
   val res = isEqual.solve()
 
   println(s"RES LEN=${res.size}; res=$res")
@@ -156,7 +221,7 @@ def multiJoin(program: Program): Unit = {
   val hops6_join = program.relation[Constant]("hops6_join")
   val hops7_join = program.relation[Constant]("hops7_join")
   val hops8_join = program.relation[Constant]("hops8_join")
-//  val hops9_join = program.relation[Constant]("hops9_join")
+  val hops9_join = program.relation[Constant]("hops9_join")
 //  val hops10_join = program.relation[Constant]("hops10_join")
 
   val x, y, z, w, q = program.variable()
@@ -173,7 +238,7 @@ def multiJoin(program: Program): Unit = {
   hops6_join(a1, a7) :-   (hops1(a1, a2), hops1(a2, a3), hops1(a3, a4), hops1(a4, a5), hops1(a5, a6), hops1(a6, a7))
   hops7_join(a1, a8) :-   (hops1(a1, a2), hops1(a2, a3), hops1(a3, a4), hops1(a4, a5), hops1(a5, a6), hops1(a6, a7), hops1(a7, a8))
   hops8_join(a1, a9) :-   (hops1(a1, a2), hops1(a2, a3), hops1(a3, a4), hops1(a4, a5), hops1(a5, a6), hops1(a6, a7), hops1(a7, a8), hops1(a8, a9))
-//  hops9_join(a1, a10) :-  (hops1(a1, a2), hops1(a2, a3), hops1(a3, a4), hops1(a4, a5), hops1(a5, a6), hops1(a6, a7), hops1(a7, a8), hops1(a8, a9), hops1(a9, a10))
+  hops9_join(a1, a10) :-  (hops1(a1, a2), hops8_join(a2, a3), hops7_join(a3, a4), hops1(a4, a5), hops5_join(a5, a6), hops1(a6, a7), hops8_join(a7, a8), hops1(a8, a9), hops1(a9, a10))
 //  hops10_join(a1, a11) :- (hops1(a1, a2), hops1(a2, a3), hops1(a3, a4), hops1(a4, a5), hops1(a5, a6), hops1(a6, a7), hops1(a7, a8), hops1(a8, a9), hops1(a9, a10), hops1(a10, a11))
 
 
@@ -182,7 +247,7 @@ def multiJoin(program: Program): Unit = {
       Random.alphanumeric.dropWhile(_.isDigit).dropWhile(_.isUpper).head.toString,
       Random.alphanumeric.dropWhile(_.isDigit).dropWhile(_.isUpper).head.toString
     ) :- ()
-  println("RES=" + hops3_join.solve().size)
+  println("RES=" + hops5_join.solve().size)
 }
 
 def cliquer(program: Program): Unit = {
@@ -209,7 +274,7 @@ def cliquer(program: Program): Unit = {
 
   reachable("e", "f") :- ()
 
-  println("reachable=" + reachable.solve())
+  println("reachable=" + same_clique.solve().size)
 }
 
 def input_output(program: Program): Unit = {
@@ -392,6 +457,32 @@ def anon_var(program: Program) = {
   val In = program.relation[Constant]("In")
   val A1 = program.relation[Constant]("A1")
 
+
+  In(7, 10, 9, 8, 7, 8, 4) :- ()
+  In(3, 5, 2, 4, 6, 9, 8) :- ()
+  In(1, 10, 8, 8, 9, 1, 9) :- ()
+  In(8, 7, 6, 5, 3, 6, 3) :- ()
+  In(7, 6, 9, 4, 9, 9, 4) :- ()
+  In(2, 3, 1, 10, 5, 8, 7) :- ()
+  In(8, 8, 10, 10, 7, 6, 4) :- ()
+  In(2, 3, 5, 5, 6, 10, 4) :- ()
+  In(3, 6, 6, 8, 9, 3, 3) :- ()
+  In(6, 9, 7, 7, 5, 3, 3) :- ()
+  In(2, 1, 4, 6, 8, 2, 6) :- ()
+  In(4, 5, 2, 5, 2, 7, 6) :- ()
+
+
+  Check(4, 8, 10, 6, 10, 10) :- ()
+  Check(8, 5, 8, 2, 1, 3) :- ()
+  Check(1, 10, 10, 10, 10, 10) :- ()
+  Check(5, 2, 4, 8, 3, 9) :- ()
+  Check(9, 5, 6, 6, 3, 8) :- ()
+  Check(6, 3, 7, 9, 9, 9) :- ()
+  Check(1, 9, 8, 1, 5, 10) :- ()
+  Check(9, 4, 5, 7, 5, 8) :- ()
+  Check(9, 7, 5, 9, 4, 3) :- ()
+  Check(6, 8, 7, 9, 6, 6) :- ()
+
   val a, b, c, d, e, f, i = program.variable()
 
   A1(1, i) :- (Check(__, b, c, d, e, f), In(__, b, c, d, e, f, i))
@@ -487,7 +578,7 @@ def anon_var(program: Program) = {
   A5(14, i) :- (Check(a, b, c, d, __, f), In(a, b, c, d, __, f, i))
   A5(15, i) :- (Check(a, __, c, d, __, __), In(a, __, c, d, __, __, i))
 
-  val res = A5.solve()
+  val res = A1.solve()
   println(s"RES=${res.size}")
 }
 
@@ -513,47 +604,89 @@ def scratch(program: Program) =
 
   println(a2.solve())
 
+def isAfter(program: Program) =
+  val edge = program.relation[Constant]("edge")
+  val isBefore = program.relation[Constant]("isBefore")
+  val isAfter = program.relation[Constant]("isAfter")
+
+  val x, y, z = program.variable()
+
+  edge("A", "B") :- ()
+  edge("A", "D") :- ()
+  edge("A", "E") :- ()
+  edge("B", "C") :- ()
+  edge("C", "D") :- ()
+  edge("C", "E") :- ()
+  edge("D", "E") :- ()
+  edge("E", "F") :- ()
+  edge("F", "G") :- ()
+  edge("F", "H") :- ()
+  edge("F", "I") :- ()
+  edge("G", "J") :- ()
+  edge("H", "K") :- ()
+  edge("I", "L") :- ()
+  edge("J", "M") :- ()
+  edge("K", "M") :- ()
+  edge("L", "M") :- ()
+
+  isBefore(x, y) :- edge(x, y)
+  isBefore(x, y) :- (isBefore(x, z), isBefore(z, y))
+
+  isAfter(x, y) :- edge(y, x)
+  isAfter(x, y) :- (isAfter(z, x), isAfter(y, z))
+
+  println(isAfter.solve().size)
+
 @main def main = {
-  //  val engine = new SemiNaiveStagedExecutionEngine(new CollectionsStorageManager())
-  //  val program = Program(engine)
-  //  println("staged")
-  //  run(program)
-  //  reversible(program, engine)
-  //  val run = multiJoin
-//  println("OLD N")
-//  given engine0: ExecutionEngine = new NaiveExecutionEngine(new CollectionsStorageManager())
-//  val program0 = Program(engine0)
-//  func(program0)
+//  val engine = new NaiveExecutionEngine(new VolcanoStorageManager())
+//  val program = Program(engine)
+//  println("SemiNaive")
+//  tc(program)
 //  println("\n\n_______________________\n\n")
 
-    var sort = 1
-    println(s"OLD SN: $sort")
-    given engine1: ExecutionEngine = new SemiNaiveExecutionEngine(new CollectionsStorageManager())
-    val program1 = Program(engine1)
-    func(program1)
-    println("\n\n_______________________\n\n")
+//  println("OLD N")
+//  given engine0: ExecutionEngine = new NaiveExecutionEngine(new DefaultStorageManager())
+//  val program0 = Program(engine0)
+//  acyclic(program0)
+//  println("\n\n_______________________\n\n")
 
-    val jo = JITOptions(ir.OpCode.SPJ, aot = false, block = true)
-    println("COMPILED")
-    given engine3: ExecutionEngine = new StagedExecutionEngine(new CollectionsStorageManager(sortAhead = 1), jo)
+  val dotty = staging.Compiler.make(getClass.getClassLoader)
+  var sort = 1
+//    println(s"OLD SN: $sort")
+//    given engine1: ExecutionEngine = new SemiNaiveExecutionEngine(new DefaultStorageManager())
+//    val program1 = Program(engine1)
+//    func(program1)
+//    println("\n\n_______________________\n\n")
+
+//    val jo2 = JITOptions(ir.OpCode.OTHER, dotty, aot = false, block = true)
+//    println("INTERP")
+//    given engine3a: ExecutionEngine = new StagedExecutionEngine(new DefaultStorageManager(preSortAhead = 1, sortAhead = 1, sortOnline = 0), jo2)
+//
+//    val program3a = Program(engine3a)
+//    isEqual(program3a)
+//    println("\n\n_______________________\n\n")
+//
+    val jo = JITOptions(ir.OpCode.EVAL_RULE_SN, dotty, aot = false, block = true, sortOrder = (0, 0, 0))
+    println("JIT")
+    given engine3: ExecutionEngine = new StagedExecutionEngine(new DefaultStorageManager(), jo)
     val program3 = Program(engine3)
-    func(program3)
+    acyclic(program3)
     println("\n\n_______________________\n\n")
 
 //  println("JIT Snippet")
-//  val engine4: ExecutionEngine = new StagedSnippetExecutionEngine(new CollectionsStorageManager(), jo)
+//  val engine4: ExecutionEngine = new StagedSnippetExecutionEngine(new DefaultStorageManager(), jo)
 //  val program4 = Program(engine4)
 //  tc(program4)
 //  println("\n\n_______________________\n\n")
 
 //  println("JIT STAGED: aot EvalSN")
-//  val engine5: ExecutionEngine = new JITStagedExecutionEngine(new CollectionsStorageManager(), ir.OpCode.EVAL_SN, true, true)
+//  val engine5: ExecutionEngine = new JITStagedExecutionEngine(new DefaultStorageManager(), ir.OpCode.EVAL_SN, true, true)
 //  val program5 = Program(engine5)
 //  manyRelations(program5)
 //  println("\n\n_______________________\n\n")
   //  println("JIT STAGED")
 //
-//  given engine3: ExecutionEngine = new CompiledStagedExecutionEngine(new CollectionsStorageManager())//, ir.OpCode.LOOP_BODY, false, false)
+//  given engine3: ExecutionEngine = new CompiledStagedExecutionEngine(new DefaultStorageManager())//, ir.OpCode.LOOP_BODY, false, false)
 //  val program3 = Program(engine3)
 //  tc(program3)
 //  println("\n\n_______________________\n\n")

@@ -1,14 +1,18 @@
 package datalog.execution
 
 import datalog.dsl.{Atom, Constant, Term, Variable}
-import datalog.storage.{RelationId, SimpleStorageManager, StorageManager}
+import datalog.storage.{RelationId, StorageManager, EDB}
 import datalog.tools.Debug.debug
 
 import scala.collection.mutable
 
+/**
+ * Shallow embedding version of the execution engine, i.e. no AST. Used mostly to compare results and step through
+ * since much easier to debug than the staged versions.
+ *
+ * @param storageManager
+ */
 class SemiNaiveExecutionEngine(override val storageManager: StorageManager) extends NaiveExecutionEngine(storageManager) {
-  import storageManager.{EDB, Table}
-
   def evalRuleSN(rId: RelationId): EDB = {
     storageManager.SPJU(rId, getOperatorKeys(rId))
   }
@@ -16,7 +20,6 @@ class SemiNaiveExecutionEngine(override val storageManager: StorageManager) exte
   def evalSN(rId: RelationId, relations: Seq[RelationId]): Unit = {
     debug("evalSN for ", () => storageManager.ns(rId))
     relations.foreach(r => {
-      if (!storageManager.derivedDB(storageManager.knownDbId).contains(r)) throw new Exception(s"Relation ${storageManager.ns(r)}, id=${r} is not in derived.known")
       val prev = storageManager.getKnownDerivedDB(r)
       debug(s"\tderived[known][${storageManager.ns(r)}] =", () => storageManager.printer.factToString(prev))
       val res = evalRuleSN(r)
@@ -35,7 +38,7 @@ class SemiNaiveExecutionEngine(override val storageManager: StorageManager) exte
 //      System.gc()
 //      val mb = 1024 * 1024
 //      val runtime = Runtime.getRuntime
-//      println(s"after SPJU for relation ${storageManager.ns(r)}, query=${storageManager.printer.snPlanToString(getOperatorKeys(rId).asInstanceOf[this.storageManager.Table[JoinIndexes]])} results in MB")
+//      println(s"after SPJU for relation ${storageManager.ns(r)}, query=${storageManager.printer.snPlanToString(getOperatorKeys(rId)JoinIndexes])} results in MB")
 //      println("** Used Memory:  " + (runtime.totalMemory - runtime.freeMemory) / mb)
 //      println("** Free Memory:  " + runtime.freeMemory / mb)
 //      println("** Total Memory: " + runtime.totalMemory / mb)
@@ -43,9 +46,9 @@ class SemiNaiveExecutionEngine(override val storageManager: StorageManager) exte
     })
   }
 
-  override def solve(rId: RelationId, JITOptions: JITOptions = JITOptions()): Set[Seq[Term]] = {
+  override def solve(rId: RelationId): Set[Seq[Term]] = {
     storageManager.verifyEDBs(idbs.keys.to(mutable.Set))
-    if (storageManager.edbs.contains(rId) && !idbs.contains(rId)) { // if just an edb predicate then return
+    if (storageManager.edbContains(rId) && !idbs.contains(rId)) { // if just an edb predicate then return
       return storageManager.getEDBResult(rId)
     }
     if (!idbs.contains(rId)) {
@@ -60,7 +63,7 @@ class SemiNaiveExecutionEngine(override val storageManager: StorageManager) exte
     storageManager.initEvaluation()
     var count = 0
 
-    debug("initial state @ -1", storageManager.printer.toString)
+    debug("initial state @ -1", storageManager.toString)
     evalNaive(relations, true) // this fills derived[new] and and delta[new]
 
     var setDiff = true

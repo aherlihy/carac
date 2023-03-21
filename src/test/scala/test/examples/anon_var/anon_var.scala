@@ -6,12 +6,12 @@ import test.{ExampleTestGenerator, Tags}
 import java.nio.file.Paths
 class anon_var_test extends ExampleTestGenerator(
   "anon_var",
-  Set(Tags.Naive, Tags.Relational),
+  Set(Tags.Naive, Tags.Volcano),
   Set(Tags.Slow, Tags.CI)
 ) with anon_var
 
 trait anon_var {
-  val toSolve = "A1"
+  val toSolve = "_"
   def pretest(program: Program): Unit = {
     val Check = program.namedRelation[Constant]("Check")
 

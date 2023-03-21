@@ -1,14 +1,13 @@
 package datalog.execution
 
-import datalog.dsl.{Atom, ColumnType, Constant, Term, Variable}
-import datalog.storage.{RelationId, SimpleStorageManager, StorageManager}
+import datalog.dsl.{Atom, Constant, Term, Variable}
+import datalog.storage.{RelationId, CollectionsStorageManager, StorageManager, EDB}
 import datalog.tools.Debug.debug
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
 class NaiveExecutionEngine(val storageManager: StorageManager) extends ExecutionEngine {
-  import storageManager.EDB
   val precedenceGraph = new PrecedenceGraph(using storageManager.ns)
   val prebuiltOpKeys: mutable.Map[RelationId, ArrayBuffer[JoinIndexes]] = mutable.Map[RelationId, mutable.ArrayBuffer[JoinIndexes]]()
 
@@ -43,13 +42,13 @@ class NaiveExecutionEngine(val storageManager: StorageManager) extends Execution
   }
 
   def insertEDB(rule: Atom): Unit = {
-    if (!storageManager.edbs.contains(rule.rId))
+    if (!storageManager.edbContains(rule.rId))
       prebuiltOpKeys.getOrElseUpdate(rule.rId, mutable.ArrayBuffer[JoinIndexes]()).addOne(JoinIndexes(IndexedSeq(), Map(), IndexedSeq(), Seq(rule.rId), Array(rule), true))
     storageManager.insertEDB(rule)
   }
 
   def evalRuleNaive(rId: RelationId):  EDB = {
-    storageManager.naiveSPJU(rId, getOperatorKeys(rId).asInstanceOf[ArrayBuffer[JoinIndexes]])
+    storageManager.naiveSPJU(rId, getOperatorKeys(rId))
   }
 
   /**
@@ -60,16 +59,16 @@ class NaiveExecutionEngine(val storageManager: StorageManager) extends Execution
     relations.foreach(r => {
       val res = evalRuleNaive(r)
       debug("result of evalRule=", () => storageManager.printer.factToString(res))
-      storageManager.resetNewDerived(r, res, EDB(r)) // overwrite res to the new derived DB
+      storageManager.resetNewDerived(r, res, storageManager.getEmptyEDB()) // overwrite res to the new derived DB
       if (copyToDelta) {
         storageManager.resetNewDelta(r, res) // copy delta[new] = derived[new], if this is called from SN
       }
     })
   }
 
-  def solve(toSolve: RelationId, JITOptions: JITOptions = JITOptions()): Set[Seq[Term]] = {
+  def solve(toSolve: RelationId): Set[Seq[Term]] = {
     storageManager.verifyEDBs(idbs.keys.to(mutable.Set))
-    if (storageManager.edbs.contains(toSolve) && !idbs.contains(toSolve)) { // if just an edb predicate then return
+    if (storageManager.edbContains(toSolve) && !idbs.contains(toSolve)) { // if just an edb predicate then return
       return storageManager.getEDBResult(toSolve)
     }
     if (!idbs.contains(toSolve)) {
@@ -85,12 +84,11 @@ class NaiveExecutionEngine(val storageManager: StorageManager) extends Execution
       storageManager.swapKnowledge()
       storageManager.clearNewDerived()
 
-      debug(s"initial state @ $count", storageManager.printer.toString)
+      debug(s"initial state @ $count", storageManager.toString)
       count += 1
       evalNaive(relations)
 
       setDiff = !storageManager.compareDerivedDBs()
-
     }
     storageManager.getKnownIDBResult(toSolve)
   }

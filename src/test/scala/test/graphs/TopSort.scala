@@ -6,7 +6,7 @@ import datalog.execution.{ExecutionEngine, NaiveExecutionEngine}
 import scala.collection.mutable
 
 case class TopSort(program: Program) extends TestGraph {
-  val description = "TopOrder"
+  val description = "TopSort"
   val queries: mutable.Map[String, Query] = mutable.Map[String, Query]()
 
   private val edge = program.relation[Constant]("edge")

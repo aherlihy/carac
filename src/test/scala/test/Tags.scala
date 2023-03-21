@@ -5,7 +5,7 @@ object Tags {
   val CI = "CI"
   val Naive = "Naive"
   val SemiNaive = "SemiNaive"
-  val Relational = "Relational"
+  val Volcano = "Volcano"
   val IndexedColl = "IndexedColl"
   val SNStaged = "SemiNaiveStaged"
   val NStaged = "NaiveStaged"

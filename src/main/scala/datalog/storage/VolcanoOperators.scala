@@ -1,6 +1,7 @@
 package datalog.storage
 
 import datalog.dsl.Constant
+import datalog.storage.CollectionsCasts.asCollectionsEDB
 import datalog.tools.Debug.debug
 
 import scala.collection.mutable
@@ -8,38 +9,40 @@ import scala.collection.mutable
 // Indicates the end of the stream
 final val NilTuple: Option[Nothing] = None
 
-final val dbg = true//false
-class RelationalOperators(val storageManager: RelationalStorageManager) {
-  type edbRow = storageManager.Row[storageManager.StorageTerm]
-  type table[T] = storageManager.Table[T]
-
-  trait RelOperator {
+/**
+ * These are relational operators for the pull-based Volcano engine.
+ *
+ * @param storageManager: Right now this is always going to be a CollectionsStorageManager. If needed can be
+ * made more general to operate over EDBs instead of CollectionsEDBs and so on.
+ */
+class VolcanoOperators[S <: StorageManager](val storageManager: S) {
+  trait VolOperator {
     def open(): Unit
 
-    def next(): Option[edbRow]
+    def next(): Option[CollectionsRow]
 
     def close(): Unit
 
-    def toList(): mutable.ArrayBuffer[edbRow] = { // TODO: fix this to use iterator override
-      val list = mutable.ArrayBuffer[edbRow]()
+    def toList(): CollectionsEDB = { // TODO: fix this to use iterator override
+      val list = CollectionsEDB()
       this.open()
       while (
         this.next() match {
-          case Some(r) => {
-            list.addOne(r); true
-          }
+          case Some(r) =>
+            list.addOne(r)
+            true
           case _ => false
         }) {}
       this.close()
       list
     }
-//      final override def iterator: Iterator[edbRow] =
-//        new Iterator[edbRow] with AutoCloseable {
+//      final override def iterator: Iterator[CollectionsRow] =
+//        new Iterator[CollectionsRow] with AutoCloseable {
 //          private val op =
 //            RelOperator.this.clone().asInstanceOf[RelOperator]
 //          op.open()
 //
-//          var n: Option[Option[edbRow]] = Option.empty
+//          var n: Option[Option[CollectionsRow]] = Option.empty
 //
 //          def prepareNext(): Unit = {
 //            if (n.nonEmpty) return
@@ -51,7 +54,7 @@ class RelationalOperators(val storageManager: RelationalStorageManager) {
 //            n.get.nonEmpty
 //          }
 //
-//          override def next(): edbRow = {
+//          override def next(): CollectionsRow = {
 //            prepareNext()
 //            val ret = n.get
 //            assert(ret.nonEmpty)
@@ -65,27 +68,25 @@ class RelationalOperators(val storageManager: RelationalStorageManager) {
 //        }
   }
 
-  // def scan(rId: Int): RelOperator = Scan(rId)
-
-  case class EmptyScan() extends RelOperator {
+  case class EmptyScan() extends VolOperator {
     def open(): Unit = {}
-    def next(): Option[edbRow] = NilTuple
+    def next(): Option[CollectionsRow] = NilTuple
     def close(): Unit = {}
   }
 
-  case class Scan(relation: storageManager.Relation[storageManager.StorageTerm], rId: Int) extends RelOperator {
+  case class Scan(relation: CollectionsEDB, rId: Int) extends VolOperator {
     private var currentId: Int = 0
-    private var length: Long = relation.size
+    private var length: Long = relation.length
 
     def open(): Unit = {
 //      debug(s"SCAN[$rId]")
     }
 
-    def next(): Option[edbRow] = {
+    def next(): Option[CollectionsRow] = {
       if (currentId >= length) {
         NilTuple
       } else {
-        currentId = currentId + 1
+        currentId += 1
         Option(relation(currentId - 1))
       }
     }
@@ -93,13 +94,13 @@ class RelationalOperators(val storageManager: RelationalStorageManager) {
     def close(): Unit = {}
   }
 
-  // TODO: most likely will combine Scan+Filter, or split out Join+Filter
-  case class Filter(input: RelOperator)
-                   (cond: edbRow => Boolean) extends RelOperator {
+  // NOTE: this isn't currently used by SPJU bc merged scan+filter
+  case class Filter(input: VolOperator)
+                   (cond: CollectionsRow => Boolean) extends VolOperator {
 
     def open(): Unit = input.open()
 
-    override def next(): Option[edbRow] = {
+    override def next(): Option[CollectionsRow] = {
       var nextTuple = input.next()
       while (nextTuple match {
         case Some(n) => !cond(n)
@@ -111,25 +112,25 @@ class RelationalOperators(val storageManager: RelationalStorageManager) {
     def close(): Unit = input.close()
   }
 
-  case class Project(input: RelOperator, ixs: Seq[(String, Constant)]) extends RelOperator {
+  case class Project(input: VolOperator, ixs: Seq[(String, Constant)]) extends VolOperator {
     def open(): Unit = {
 //      debug(s"PROJ[$ixs]")
       input.open()
     }
 
-    override def next(): Option[edbRow] = {
+    override def next(): Option[CollectionsRow] = {
       if (ixs.isEmpty) {
         return input.next()
       }
       input.next() match {
         case Some(t) =>
           Some(
-            ixs.flatMap((typ, idx) =>
+            CollectionsRow(ixs.flatMap((typ, idx) =>
               typ match {
                 case "v" => t.lift(idx.asInstanceOf[Int])
                 case "c" => Some(idx)
                 case _ => throw new Exception("Internal error: projecting something that is not a constant nor a variable")
-              }).asInstanceOf[edbRow]
+              }))
           )
         case _ => NilTuple
       }
@@ -138,14 +139,14 @@ class RelationalOperators(val storageManager: RelationalStorageManager) {
     def close(): Unit = input.close()
   }
 
-  case class Join(inputs: Seq[RelOperator],
-                     variables: Seq[Seq[Int]],
-                     constants: Map[Int, Constant]) extends RelOperator {
+  case class Join(inputs: Seq[VolOperator],
+                  variables: Seq[Seq[Int]],
+                  constants: Map[Int, Constant]) extends VolOperator {
 
-    private var outputRelation= mutable.ArrayBuffer[edbRow]()
+    private var outputRelation = CollectionsEDB()
     private var index = 0
 
-    def scanFilter(maxIdx: Int)(get: Int => storageManager.StorageTerm = x => x.asInstanceOf[storageManager.StorageTerm]) = {
+    def scanFilter(maxIdx: Int)(get: Int => StorageTerm = x => x.asInstanceOf[StorageTerm]) = {
       val vCmp = variables.isEmpty || variables.forall(condition =>
         if (condition.head >= maxIdx)
           true
@@ -163,26 +164,26 @@ class RelationalOperators(val storageManager: RelationalStorageManager) {
 
     override def open(): Unit = {
       index = 0
-      val inputList: Seq[mutable.ArrayBuffer[edbRow]] = inputs.map(i => i.toList())
+      val inputList: Seq[CollectionsEDB] = inputs.map(i => i.toList())
 
       outputRelation = inputList
         .reduceLeft((outer, inner) => {
           outer.flatMap(outerTuple => {
             inner.flatMap(innerTuple => {
               val get = (i: Int) => {
-                outerTuple.applyOrElse(i, j => innerTuple(j - outerTuple.size))
+                outerTuple.applyOrElse(i, j => innerTuple(j - outerTuple.length))
               }
-              if(scanFilter(innerTuple.size + outerTuple.size)(get))
-                Some((outerTuple ++ innerTuple).asInstanceOf[edbRow])
+              if(scanFilter(innerTuple.length + outerTuple.length)(get))
+                Some(outerTuple.concat(innerTuple))
               else
                 None
             })
           })
         })
-        .filter(r => scanFilter(r.size)(r))
+        .filter(r => scanFilter(r.length)(r.apply))
     }
-    def next(): Option[edbRow] = {
-      if (index >= outputRelation.size)
+    def next(): Option[CollectionsRow] = {
+      if (index >= outputRelation.length)
         NilTuple
       else {
         index += 1
@@ -201,43 +202,30 @@ class RelationalOperators(val storageManager: RelationalStorageManager) {
    *
    * @param ops
    */
-  case class Union(ops: Seq[RelOperator]) extends RelOperator {
-//    private var currentRel: Int = 0
-//    private var length: Long = ops.length
-    private var outputRelation: IndexedSeq[edbRow] = IndexedSeq()
+  case class Union(ops: Seq[VolOperator]) extends VolOperator {
+    private var outputRelation: CollectionsEDB = CollectionsEDB()
     private var index = 0
     def open(): Unit = {
       val opResults = ops.map(o => o.toList())
-      outputRelation = opResults.flatten.toSet.toIndexedSeq
+      import CollectionsEDB.unionEDB
+      outputRelation = asCollectionsEDB(opResults.unionEDB)
     }
-    def next(): Option[edbRow] = {
-      if (index >= outputRelation.size)
+    def next(): Option[CollectionsRow] = {
+      if (index >= outputRelation.length)
         NilTuple
       else
         index += 1
         Option(outputRelation(index - 1))
-//      if (currentRel >= length) {
-//        NilTuple
-//      } else {
-//        var nextT = ops(currentRel).next()
-//        nextT match {
-//          case Some(t) =>
-//            nextT
-//          case _ =>
-//            currentRel = currentRel + 1
-//            next()
-//        }
-//      }
     }
     def close(): Unit = ops.foreach(o => o.close())
   }
-  case class Diff(ops: mutable.ArrayBuffer[RelOperator]) extends RelOperator {
-    private var outputRelation: IndexedSeq[edbRow] = IndexedSeq()
+  case class Diff(ops: mutable.ArrayBuffer[VolOperator]) extends VolOperator {
+    private var outputRelation: CollectionsEDB = CollectionsEDB()
     private var index = 0
     def open(): Unit =
-      outputRelation = ops.map(o => o.toList()).toSet.reduce((l, r) => l diff r).toIndexedSeq
-    def next(): Option[edbRow] = {
-      if (index >= outputRelation.size)
+      outputRelation = ops.map(o => o.toList()).toSet.reduce((l, r) => l diff r)
+    def next(): Option[CollectionsRow] = {
+      if (index >= outputRelation.length)
         NilTuple
       else
         index += 1
