@@ -1,7 +1,7 @@
 package datalog.execution
 
-import datalog.dsl.{Atom, Constant, Term, Variable}
-import datalog.storage.{RelationId, CollectionsStorageManager, StorageManager, EDB}
+import datalog.dsl.{Atom, ColumnType, Constant, Term, Variable}
+import datalog.storage.{CollectionsStorageManager, EDB, RelationId, StorageManager}
 import datalog.tools.Debug.debug
 
 import scala.collection.mutable

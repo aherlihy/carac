@@ -1,45 +1,35 @@
 package datalog.storage
 import datalog.dsl.{Atom, ColumnType, Constant, IntType, StringType, Term, Variable}
-import datalog.execution.JoinIndexes
+import datalog.execution.{AllIndexes, JoinIndexes}
 import datalog.tools.Debug.debug
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.types.{DataType, DataTypes, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Dataset, SparkSession}
+import DistributedCasts.*
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
-class DistributedStorageManager(ns: NS, spark: SparkSession) extends StorageManager(ns) {
-  type StorageTerm = Term
-  type StorageVariable = Variable
-  type StorageConstant = Constant
-  type Row[+T] = Seq[T]
-  type Table[T] = Iterable[T]
+class DistributedStorageManager(override val ns: NS, spark: SparkSession) extends StorageManager(ns) {
 
   // keep track of columns so that we can create dataframes
   val headers: mutable.Map[RelationId, Seq[ColumnType]] = mutable.Map.empty
 
-  class DistributedRelation[T](val df: DataFrame) extends Iterable[Seq[T]] {
-    override def iterator: Iterator[Seq[T]] = df.collect().iterator.map(r => r.toSeq.asInstanceOf[Seq[T]])
-  }
-
-  type Relation[T] = DistributedRelation[T]
-
-  def columnType(col: ColumnType): DataType = col match {
+  private def columnType(col: ColumnType): DataType = col match {
     case IntType => DataTypes.IntegerType
     case StringType => DataTypes.StringType
   }
 
-  def schema(relationId: RelationId): StructType =
+  private def schema(relationId: RelationId): StructType =
     StructType(headers(relationId).zipWithIndex.map((t, i) => StructField(i.toString, columnType(t), false)))
 
-  def EDB(rId: RelationId, c: Row[StorageTerm]*): EDB =
+  private def makeEDB(rId: RelationId, c: Seq[Term]*): DistributedEDB =
     val sparkRows = c.map(org.apache.spark.sql.Row(_))
     val df = spark.createDataFrame(spark.sparkContext.parallelize(sparkRows), schema(rId))
-    DistributedRelation(df)
+    DistributedEDB(df)
 
-  type Database[K, V] = mutable.Map[K, V]
-  type FactDatabase = Database[RelationId, EDB]
+  private type Database[K, V] = mutable.Map[K, V]
+  private type FactDatabase = Database[RelationId, DistributedEDB]
 
   val derivedDB: Database[KnowledgeId, FactDatabase] = mutable.Map.empty
   val deltaDB: Database[KnowledgeId, FactDatabase] = mutable.Map.empty
@@ -62,7 +52,7 @@ class DistributedStorageManager(ns: NS, spark: SparkSession) extends StorageMana
     deltaDB.addOne(dbId, mutable.Map.empty)
 
     edbs.foreach((k, relation) => {
-      deltaDB(dbId)(k) = EDB(k)
+      deltaDB(dbId)(k) = makeEDB(k)
     }) // Delta-EDB is just empty sets
     dbId += 1
 
@@ -71,56 +61,54 @@ class DistributedStorageManager(ns: NS, spark: SparkSession) extends StorageMana
     deltaDB.addOne(dbId, mutable.Map.empty)
 
     edbs.foreach((k, relation) => {
-      deltaDB(dbId)(k) = EDB(k)
+      deltaDB(dbId)(k) = makeEDB(k)
     }) // Delta-EDB is just empty sets
     dbId += 1
   }
 
   override def insertEDB(rule: Atom): Unit =
-    val initial = edbs.getOrElse(rule.rId, EDB(rule.rId))
-    val newRow = EDB(rule.rId, rule.terms)
-    edbs(rule.rId) = DistributedRelation(initial.df.union(newRow.df))
+    val initial = edbs.getOrElse(rule.rId, makeEDB(rule.rId))
+    val newRow = makeEDB(rule.rId, rule.terms)
+    edbs(rule.rId) = DistributedEDB(initial.df.union(newRow.df))
 
-  override def edb(rId: RelationId): EDB = edbs(rId)
+  override def getKnownDerivedDB(rId: RelationId): DistributedEDB =
+    derivedDB(knownDbId).getOrElse(rId, edbs.getOrElse(rId, makeEDB(rId)))
 
-  override def getKnownDerivedDB(rId: RelationId): EDB =
-    derivedDB(knownDbId).getOrElse(rId, edbs.getOrElse(rId, EDB(rId)))
+  override def getNewDerivedDB(rId: RelationId): DistributedEDB =
+    derivedDB(newDbId).getOrElse(rId, edbs.getOrElse(rId, makeEDB(rId)))
 
-  override def getNewDerivedDB(rId: RelationId): EDB =
-    derivedDB(newDbId).getOrElse(rId, edbs.getOrElse(rId, EDB(rId)))
+  override def getKnownDeltaDB(rId: RelationId): DistributedEDB =
+    deltaDB(knownDbId).getOrElse(rId, edbs.getOrElse(rId, makeEDB(rId)))
 
-  override def getKnownDeltaDB(rId: RelationId): EDB =
-    deltaDB(knownDbId).getOrElse(rId, edbs.getOrElse(rId, EDB(rId)))
-
-  override def getNewDeltaDB(rId: RelationId): EDB =
-    deltaDB(newDbId).getOrElse(rId, edbs.getOrElse(rId, EDB(rId)))
+  override def getNewDeltaDB(rId: RelationId): DistributedEDB =
+    deltaDB(newDbId).getOrElse(rId, edbs.getOrElse(rId, makeEDB(rId)))
 
   override def getKnownIDBResult(rId: RelationId): Set[Seq[Term]] =
     debug("Final IDB Result[known]: ", () => s"@$knownDbId")
-    getKnownDerivedDB(rId).map(s => s.toSeq).toSet
+    getKnownDerivedDB(rId).iterator.map(c => c.toSeq.asInstanceOf[Seq[Term]]).toSet
 
   override def getNewIDBResult(rId: RelationId): Set[Seq[Term]] =
     debug("Final IDB Result[new]: ", () => s"@$newDbId")
-    getNewDerivedDB(rId).map(s => s.toSeq).toSet
+    getNewDerivedDB(rId).iterator.map(c => c.toSeq.asInstanceOf[Seq[Term]]).toSet
 
   override def getEDBResult(rId: RelationId): Set[Seq[Term]] =
-    edbs.getOrElse(rId, EDB(rId)).map(s => s.toSeq).toSet
+    edbs.getOrElse(rId, makeEDB(rId)).iterator.map(c => c.toSeq.asInstanceOf[Seq[Term]]).toSet
 
   override def resetKnownDerived(rId: RelationId, rules: EDB, prev: EDB): Unit =
-    derivedDB(knownDbId)(rId) = DistributedRelation(rules.df.union(prev.df))
+    derivedDB(knownDbId)(rId) = DistributedEDB(asDistributedEDB(rules).df.union(asDistributedEDB(prev).df))
 
   override def resetNewDerived(rId: RelationId, rules: EDB, prev: EDB): Unit =
-    derivedDB(newDbId)(rId) = DistributedRelation(rules.df.union(prev.df))
+    derivedDB(newDbId)(rId) = DistributedEDB(asDistributedEDB(rules).df.union(asDistributedEDB(prev).df))
 
   override def resetNewDelta(rId: RelationId, rules: EDB): Unit =
-    deltaDB(newDbId)(rId) = rules
+    deltaDB(newDbId)(rId) = asDistributedEDB(rules)
 
   override def resetKnownDelta(rId: RelationId, rules: EDB): Unit =
-    deltaDB(knownDbId)(rId) = rules
+    deltaDB(knownDbId)(rId) = asDistributedEDB(rules)
 
   override def clearNewDerived(): Unit =
     derivedDB(newDbId).keys.foreach(r => {
-      derivedDB(newDbId)(r) = EDB(r)
+      derivedDB(newDbId)(r) = makeEDB(r)
     })
 
   override def swapKnowledge(): Unit = {
@@ -142,7 +130,7 @@ class DistributedStorageManager(ns: NS, spark: SparkSession) extends StorageMana
   override def verifyEDBs(idbList: mutable.Set[RelationId]): Unit = {
     ns.rIds().foreach(rId =>
       if (!edbs.contains(rId) && !idbList.contains(rId)) // treat undefined relations as empty edbs
-        edbs(rId) = EDB(rId)
+        edbs(rId) = makeEDB(rId)
     )
   }
 
@@ -150,15 +138,27 @@ class DistributedStorageManager(ns: NS, spark: SparkSession) extends StorageMana
 
   override def projectHelper(input: EDB, k: JoinIndexes): EDB = ???
 
-  override def joinProjectHelper(inputs: Seq[EDB], k: JoinIndexes): EDB = ???
+  override def joinProjectHelper(inputs: Seq[EDB], k: JoinIndexes, sortOrder: (Int, Int, Int)) = ???
 
   override def diff(lhs: EDB, rhs: EDB): EDB =
-    DistributedRelation(lhs.df.except(rhs.df))
+    DistributedEDB(asDistributedEDB(lhs).df.union(asDistributedEDB(rhs).df))
 
-  override def union(edbs: Seq[EDB]): EDB =
-    edbs.reduceLeft((acc, e) => DistributedRelation(acc.df.union(e.df)))
+  override def union(edbs: Seq[EDB]): DistributedEDB =
+    edbs.map(asDistributedEDB).reduceLeft((acc, e) => DistributedEDB(acc.df.union(e.df)))
 
   override def SPJU(rId: RelationId, keys: ArrayBuffer[JoinIndexes]): EDB = ???
 
   override def naiveSPJU(rId: RelationId, keys: ArrayBuffer[JoinIndexes]): EDB = ???
+
+  override val allRulesAllIndexes: Database[RelationId, AllIndexes] = mutable.Map.empty
+
+  override def getEmptyEDB(): EDB = ???
+
+  override def edbContains(rId: RelationId): Boolean = edbs.contains(rId)
+
+  override def getEDB(rId: RelationId): EDB = edbs(rId)
+
+  override def getAllEDBS(): Database[RelationId, Any] = edbs.asInstanceOf[mutable.Map[RelationId, Any]]
+
+  override def joinProjectHelper_withHash(inputs: Seq[EDB], rId: Int, hash: String, sortOrder: (Int, Int, Int)): EDB = ???
 }

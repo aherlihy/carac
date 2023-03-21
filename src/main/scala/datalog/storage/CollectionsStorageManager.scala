@@ -1,6 +1,6 @@
 package datalog.storage
 
-import datalog.dsl.{Atom, Constant, Term, Variable}
+import datalog.dsl.{Atom, ColumnType, Constant, Term, Variable}
 import datalog.execution.{AllIndexes, JoinIndexes}
 import CollectionsCasts.*
 import datalog.tools.Debug.debug
@@ -23,7 +23,7 @@ abstract class CollectionsStorageManager(override val ns: NS) extends StorageMan
 
   val relOps: VolcanoOperators[this.type] = VolcanoOperators(this)
 
-  def initRelation(rId: RelationId, name: String): Unit = {
+  def initRelation(rId: RelationId, name: String, columns: Seq[ColumnType]): Unit = {
     ns(rId) = name
   }
   /**

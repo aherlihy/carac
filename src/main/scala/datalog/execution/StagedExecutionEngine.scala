@@ -41,7 +41,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
 
   def createIR(ast: ASTNode)(using InterpreterContext): IROp[Any] = IRTreeGenerator().generateSemiNaive(ast)
 
-  def initRelation(rId: RelationId, name: String, columns: Seq[ColumnType]): Unit = {
+  def initRelation(rId: Int, name: String, columns: Seq[ColumnType]): Unit = {
     storageManager.ns(rId) = name
     storageManager.initRelation(rId, name, columns)
   }
