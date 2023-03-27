@@ -14,20 +14,6 @@ import scala.concurrent.{Await, Future, blocking}
 import scala.util.{Failure, Success}
 import scala.quoted.*
 
-case class JITOptions(
-                       granularity: OpCode = OpCode.PROGRAM,
-                       dotty: staging.Compiler = staging.Compiler.make(getClass.getClassLoader),
-                       aot: Boolean = true,
-                       block: Boolean = true,
-                       thresholdNum: Int = 0,
-                       thresholdVal: Float = 2,
-                       sortOrder: (Int, Int, Int) = (0, 0, 0)
-                     ) {
-  private val unique = Seq(OpCode.DOWHILE, OpCode.EVAL_NAIVE, OpCode.LOOP_BODY)
-  if (!aot && !block && unique.contains(granularity))
-    throw new Exception(s"Cannot online, async compile singleton IR nodes: $granularity (theres no point)")
-}
-
 class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOptions: JITOptions = JITOptions()) extends ExecutionEngine {
   val precedenceGraph = new PrecedenceGraph(using storageManager.ns)
   val prebuiltOpKeys: mutable.Map[Int, mutable.ArrayBuffer[JoinIndexes]] = mutable.Map[Int, mutable.ArrayBuffer[JoinIndexes]]() // TODO: currently unused, mb remove from EE
@@ -339,7 +325,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
 
   override def solve(rId: Int): Set[Seq[Term]] = {
     given JITOptions = defaultJITOptions
-//    println(s"sort opts=${storageManager.preSortAhead}, ${storageManager.sortAhead}, ${storageManager.sortOnline} & gran=${defaultJITOptions.granularity}")
+//    println(s"jit opts==${defaultJITOptions}")
     debug("", () => s"solve $rId with options $defaultJITOptions")
     // verify setup
     storageManager.verifyEDBs(precedenceGraph.idbs)

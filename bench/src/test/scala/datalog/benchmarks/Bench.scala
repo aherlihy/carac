@@ -13,17 +13,17 @@ import scala.util.Random
  * Benchmarks that are run on all modes
  */
 @Fork(1) // # of jvms that it will use
-@Warmup(iterations = 10, time = 10, timeUnit = TimeUnit.SECONDS, batchSize = 1000)
-@Measurement(iterations = 10, time = 10, timeUnit = TimeUnit.SECONDS, batchSize = 1000)
+@Warmup(iterations = 10, time = 10, timeUnit = TimeUnit.SECONDS, batchSize = 100)
+@Measurement(iterations = 10, time = 10, timeUnit = TimeUnit.SECONDS, batchSize = 100)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class Bench_ci {
-//  val dummyStream = new java.io.PrintStream(_ => ())
+  //  val dummyStream = new java.io.PrintStream(_ => ())
   val ciBenchs: Map[String, DLBenchmark] = Map("tc" -> TransitiveClosure()) // for now just 1 for CI
-  Seq("SemiNaive", "Naive", "NaiveCompiledStaged", "NaiveInterpretedStaged").foreach(execution =>
-    Seq("Volcano", "Default").foreach(storage =>
-      if (!(execution.contains("Staged") && storage == "Volcano"))
-        ciBenchs.values.foreach(b => b.programs(s"$execution$storage") = b.initialize(s"$execution$storage"))))
+  ciBenchs.values.foreach(b =>
+    b.initAllEngines()
+    b.programs.values.foreach(p => b.loadData(p))
+  )
 
   def runTest(benchmark: DLBenchmark, program: Program, blackhole: Blackhole): Unit =
     blackhole.consume(
@@ -39,41 +39,63 @@ class Bench_ci {
   // TODO: find way to enumerate methods? macro annot?
 
   // relational, naive
-  @Benchmark def naive_relational(blackhole: Blackhole): Unit = {
-    val p = "NaiveVolcano"
+  @Benchmark def naive_volcano(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
     val b = ciBenchs("tc")
     runTest(b, b.programs(p), blackhole)
   }
-//   relational, seminaive
-  @Benchmark def seminaive_relational(blackhole: Blackhole): Unit = {
-    val p = "SemiNaiveVolcano"
+
+  //   relational, seminaive
+  @Benchmark def seminaive_volcano__ci(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
     val b = ciBenchs("tc")
     runTest(b, b.programs(p), blackhole)
   }
 
   // collections, naive
-  @Benchmark def naive_collections(blackhole: Blackhole): Unit = {
-    val p = "NaiveDefault"
+  @Benchmark def naive_default__(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
     val b = ciBenchs("tc")
     runTest(b, b.programs(p), blackhole)
   }
+
   // relational, seminaive
-  @Benchmark def seminaive_collections(blackhole: Blackhole): Unit = {
-    val p = "SemiNaiveDefault"
+  @Benchmark def seminaive_default__ci(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
     val b = ciBenchs("tc")
     runTest(b, b.programs(p), blackhole)
   }
 
   // staged, naive
-  @Benchmark def naive_staged_compiled(blackhole: Blackhole): Unit = {
-    val p = "NaiveInterpretedStagedDefault"
+  @Benchmark def compiled_unordered__(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
     val b = ciBenchs("tc")
     runTest(b, b.programs(p), blackhole)
   }
 
   // staged, naive
-  @Benchmark def naive_staged_interpreted(blackhole: Blackhole): Unit = {
-    val p = "NaiveCompiledStagedDefault"
+  @Benchmark def interpreted_unordered__ci(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
+    val b = ciBenchs("tc")
+    runTest(b, b.programs(p), blackhole)
+  }
+
+  // jit
+  @Benchmark def jit_EVALRULEBODY_blocking_unordered__ci(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
+    val b = ciBenchs("tc")
+    runTest(b, b.programs(p), blackhole)
+  }
+
+  @Benchmark def jit_EVALRULEBODY_async_unordered__(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
+    val b = ciBenchs("tc")
+    runTest(b, b.programs(p), blackhole)
+  }
+
+  // jit
+  @Benchmark def jit_EVALRULEBODY_aot_async_unordered__(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
     val b = ciBenchs("tc")
     runTest(b, b.programs(p), blackhole)
   }
