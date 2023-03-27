@@ -39,7 +39,7 @@ class Bench_ci {
   // TODO: find way to enumerate methods? macro annot?
 
   // relational, naive
-  @Benchmark def naive_volcano(blackhole: Blackhole): Unit = {
+  @Benchmark def naive_volcano__(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
     val b = ciBenchs("tc")
     runTest(b, b.programs(p), blackhole)
