@@ -75,7 +75,7 @@ class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: J
         if (storageManager.edbContains(rId))
           '{ $stagedSM.getEDB(${ Expr(rId) }) }
         else
-          '{ $stagedSM.getEmptyEDB() }
+          '{ $stagedSM.getEmptyEDB(${ Expr(rId) }) }
 
       case ProjectJoinFilterOp(rId, hash, children: _*) =>
         val FPJOp = irTree.asInstanceOf[ProjectJoinFilterOp]
@@ -181,7 +181,7 @@ class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: J
 
       case InsertOp(rId, db, knowledge, children:_*) =>
         val res = compileIRRelOp(children.head.asInstanceOf[IROp[EDB]])
-        val res2 = if (children.length > 1) compileIRRelOp(children(1).asInstanceOf[IROp[EDB]]) else '{ $stagedSM.getEmptyEDB() }
+        val res2 = if (children.length > 1) compileIRRelOp(children(1).asInstanceOf[IROp[EDB]]) else '{ $stagedSM.getEmptyEDB(${ Expr(rId) }) }
         db match {
           case DB.Derived =>
             knowledge match {
