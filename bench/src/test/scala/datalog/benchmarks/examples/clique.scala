@@ -1,7 +1,7 @@
 package datalog.benchmarks.examples
 
 import datalog.benchmarks.ExampleBenchmarkGenerator
-import test.examples.clique.clique
+import test.examples.clique.{clique => clique_test}
 import datalog.dsl.{Constant, Program}
 
 import java.util.concurrent.TimeUnit
@@ -15,7 +15,7 @@ import java.nio.file.Paths
 @Measurement(iterations = examples_iterations, time = examples_time, timeUnit = TimeUnit.SECONDS, batchSize = examples_batchsize)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
-class clique_benchmark() extends ExampleBenchmarkGenerator("clique") with clique {
+class clique() extends ExampleBenchmarkGenerator("clique") with clique_test {
 
   @Setup
   def s(): Unit = setup() // can't add annotations to super, so just call
@@ -54,7 +54,7 @@ class clique_benchmark() extends ExampleBenchmarkGenerator("clique") with clique
   }
 
   // interpreted
-  @Benchmark def interpreted_unordered__ci(blackhole: Blackhole): Unit = {
+  @Benchmark def interpreted_default_unordered__ci(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
@@ -62,7 +62,7 @@ class clique_benchmark() extends ExampleBenchmarkGenerator("clique") with clique
   }
 
   // compiled
-  @Benchmark def compiled_unordered__(blackhole: Blackhole): Unit = {
+  @Benchmark def compiled_default_unordered__(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
@@ -70,14 +70,14 @@ class clique_benchmark() extends ExampleBenchmarkGenerator("clique") with clique
   }
 
   // jit
-  @Benchmark def jit_EVALRULEBODY_blocking_unordered__ci(blackhole: Blackhole): Unit = {
+  @Benchmark def jit_default_unordered_blocking_EVALRULEBODY__ci(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
     blackhole.consume(run(programs(p), result))
   }
 
-  @Benchmark def jit_EVALRULEBODY_async_unordered__(blackhole: Blackhole): Unit = {
+  @Benchmark def jit_default_unordered_async_EVALRULEBODY__(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
@@ -85,7 +85,7 @@ class clique_benchmark() extends ExampleBenchmarkGenerator("clique") with clique
   }
 
   // jit
-  @Benchmark def jit_EVALRULEBODY_aot_async_unordered__(blackhole: Blackhole): Unit = {
+  @Benchmark def jit_default_unordered_async_EVALRULEBODY_aot__(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")

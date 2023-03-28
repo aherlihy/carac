@@ -1,11 +1,11 @@
-package test.examples.input_output
+package test.examples.inputoutput
 
 import datalog.dsl.{Constant, Program}
 import test.{ExampleTestGenerator, Tags}
 
 import java.nio.file.Paths
-class input_output_test extends ExampleTestGenerator("input_output") with input_output
-trait input_output {
+class inputoutput_test extends ExampleTestGenerator("inputoutput") with inputoutput
+trait inputoutput {
   val toSolve = "_"
   def pretest(program: Program): Unit = {
     // input, i.e. defined in facts+here, i.e. named

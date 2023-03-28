@@ -1,12 +1,12 @@
-package test.examples.is_after
+package test.examples.isafter
 
 import datalog.dsl.{Constant, Program}
 import test.ExampleTestGenerator
 
 import java.nio.file.Paths
 
-class is_after_test extends ExampleTestGenerator("is_after") with is_after
-trait is_after {
+class isafter_test extends ExampleTestGenerator("isafter") with isafter
+trait isafter {
   val toSolve = "is_after"
   def pretest(program: Program): Unit = {
     val edge = program.namedRelation("edge")

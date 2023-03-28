@@ -7,14 +7,14 @@ import java.nio.file.Paths
 import java.util.concurrent.TimeUnit
 import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.Blackhole
-import test.examples.trains.trains
+import test.examples.trains.{trains => trains_test}
 
 @Fork(examples_fork) // # of jvms that it will use
 @Warmup(iterations = examples_warmup_iterations, time = examples_warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = examples_xl_batchsize)
 @Measurement(iterations = examples_iterations, time = examples_xl_time, timeUnit = TimeUnit.SECONDS, batchSize = examples_xl_batchsize)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
-class trains_benchmark() extends ExampleBenchmarkGenerator("trains")  with trains {
+class trains() extends ExampleBenchmarkGenerator("trains")  with trains_test {
 
   @Setup
   def s(): Unit = setup() // can't add annotations to super, so just call
@@ -53,7 +53,7 @@ class trains_benchmark() extends ExampleBenchmarkGenerator("trains")  with train
   }
 
   // interpreted
-  @Benchmark def interpreted_unordered__ci(blackhole: Blackhole): Unit = {
+  @Benchmark def interpreted_default_unordered__ci(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
@@ -61,7 +61,7 @@ class trains_benchmark() extends ExampleBenchmarkGenerator("trains")  with train
   }
 
   // compiled
-  @Benchmark def compiled_unordered__(blackhole: Blackhole): Unit = {
+  @Benchmark def compiled_default_unordered__(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
@@ -69,14 +69,14 @@ class trains_benchmark() extends ExampleBenchmarkGenerator("trains")  with train
   }
 
   // jit
-  @Benchmark def jit_EVALRULEBODY_blocking_unordered__ci(blackhole: Blackhole): Unit = {
+  @Benchmark def jit_default_unordered_blocking_EVALRULEBODY__ci(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
     blackhole.consume(run(programs(p), result))
   }
 
-  @Benchmark def jit_EVALRULEBODY_async_unordered__(blackhole: Blackhole): Unit = {
+  @Benchmark def jit_default_unordered_async_EVALRULEBODY__(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
@@ -84,7 +84,7 @@ class trains_benchmark() extends ExampleBenchmarkGenerator("trains")  with train
   }
 
   // jit
-  @Benchmark def jit_EVALRULEBODY_aot_async_unordered__(blackhole: Blackhole): Unit = {
+  @Benchmark def jit_default_unordered_async_EVALRULEBODY_aot__(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")

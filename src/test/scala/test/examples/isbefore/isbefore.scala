@@ -1,12 +1,12 @@
-package test.examples.is_before
+package test.examples.isbefore
 
 import datalog.dsl.{Constant, Program}
 import test.ExampleTestGenerator
 
 import java.nio.file.Paths
 
-class is_before_test extends ExampleTestGenerator("is_before") with is_before
-trait is_before {
+class isbefore_test extends ExampleTestGenerator("isbefore") with isbefore
+trait isbefore {
   val toSolve = "is_before"
   def pretest(program: Program): Unit = {
     val edge = program.namedRelation("edge")

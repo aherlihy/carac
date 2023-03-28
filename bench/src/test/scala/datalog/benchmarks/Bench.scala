@@ -67,34 +67,34 @@ class Bench_ci {
   }
 
   // staged, naive
-  @Benchmark def compiled_unordered__(blackhole: Blackhole): Unit = {
+  @Benchmark def compiled_default_unordered__(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
     val b = ciBenchs("tc")
     runTest(b, b.programs(p), blackhole)
   }
 
   // staged, naive
-  @Benchmark def interpreted_unordered__ci(blackhole: Blackhole): Unit = {
+  @Benchmark def interpreted_default_unordered__ci(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
     val b = ciBenchs("tc")
     runTest(b, b.programs(p), blackhole)
   }
 
   // jit
-  @Benchmark def jit_EVALRULEBODY_blocking_unordered__ci(blackhole: Blackhole): Unit = {
+  @Benchmark def jit_default_unordered_blocking_EVALRULEBODY__ci(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
     val b = ciBenchs("tc")
     runTest(b, b.programs(p), blackhole)
   }
 
-  @Benchmark def jit_EVALRULEBODY_async_unordered__(blackhole: Blackhole): Unit = {
+  @Benchmark def jit_default_unordered_async_EVALRULEBODY__(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
     val b = ciBenchs("tc")
     runTest(b, b.programs(p), blackhole)
   }
 
   // jit
-  @Benchmark def jit_EVALRULEBODY_aot_async_unordered__(blackhole: Blackhole): Unit = {
+  @Benchmark def jit_default_unordered_async_EVALRULEBODY_aot__(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
     val b = ciBenchs("tc")
     runTest(b, b.programs(p), blackhole)

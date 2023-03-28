@@ -41,17 +41,17 @@ abstract class DLBenchmark {
       )
     )
 
-    programs("compiled_unordered") = Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(ir.OpCode.PROGRAM, dotty)))
+    programs("compiled_default_unordered") = Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(ir.OpCode.PROGRAM, dotty)))
     // Optimization modes
     def toS(s: Int*): String = s"${if (s.forall(_ == 0)) "unordered" else if (s.forall(_ >= 0)) "best" else "worst"}${s.zipWithIndex.map((o, i) => if (o == 0) "" else s"${i.abs+1}").mkString("", "", "")}"
     val sortCombos = Seq(0, 1).flatMap(i1 => Seq(0, 1).flatMap(i2 => Seq(0, 1).map(i3 => (i1, i2, i3))))
 
     sortCombos.foreach(s =>
-      programs(s"interpreted_${toS(s._1, s._2, s._3)}") = Program(StagedExecutionEngine(
+      programs(s"interpreted_default_${toS(s._1, s._2, s._3)}") = Program(StagedExecutionEngine(
         DefaultStorageManager(),
         JITOptions(ir.OpCode.OTHER, dotty, false, sortOrder = s)
       ))
-      programs(s"interpreted_${toS(-s._1, -s._2, -s._3)}") = Program(StagedExecutionEngine(
+      programs(s"interpreted_default_${toS(-s._1, -s._2, -s._3)}") = Program(StagedExecutionEngine(
         DefaultStorageManager(),
         JITOptions(ir.OpCode.OTHER, dotty, false, sortOrder = (-s._1, -s._2, -s._3))
       ))
@@ -69,7 +69,7 @@ abstract class DLBenchmark {
       sortCombos.foreach(s =>
         blocking.foreach(sync =>
           val jo = JITOptions(gran, dotty, false, sync, sortOrder = s)
-          programs(s"jit_${gran.toString.replace("_", "")}_${if (sync) "async" else "blocking"}_${toS(s._1, s._2, s._3)}") = Program(
+          programs(s"jit_default_${toS(s._1, s._2, s._3)}_${if (sync) "async" else "blocking"}_${gran.toString.replace("_", "")}") = Program(
             StagedExecutionEngine(DefaultStorageManager(), jo)
           )
         )
@@ -79,7 +79,7 @@ abstract class DLBenchmark {
     sortCombos.foreach(s =>
       blocking.foreach(sync =>
         val jo = JITOptions(ir.OpCode.EVAL_RULE_BODY, dotty, true, sync, sortOrder = s)
-        programs(s"jit_EVALRULEBODY_aot_${if (sync) "async" else "blocking"}_${toS(s._1, s._2, s._3)}") = Program(
+        programs(s"jit_default_${toS(s._1, s._2, s._3)}_${if (sync) "async" else "blocking"}_EVALRULEBODY_aot") = Program(
           StagedExecutionEngine(DefaultStorageManager(), jo)
         )
       )

@@ -1,11 +1,11 @@
-package test.examples.cba_expr_value
+package test.examples.cbaexprvalue
 
 import datalog.dsl.{Constant, Program}
 import test.ExampleTestGenerator
 
 import java.nio.file.Paths
-class cba_expr_value_test extends ExampleTestGenerator("cba_expr_value") with cba_expr_value
-trait cba_expr_value {
+class cbaexprvalue_test extends ExampleTestGenerator("cbaexprvalue") with cbaexprvalue
+trait cbaexprvalue {
   val toSolve = "data_term"
   def pretest(program: Program): Unit = {
     val kind = program.relation[Constant]("kind")

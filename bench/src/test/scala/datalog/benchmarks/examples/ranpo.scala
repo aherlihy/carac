@@ -6,7 +6,7 @@ import datalog.dsl.{Constant, Program, __}
 import java.util.concurrent.TimeUnit
 import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.Blackhole
-import test.examples.ranpo.ranpo
+import test.examples.ranpo.{ranpo => ranpo_test}
 
 import java.nio.file.Paths
 @Fork(examples_fork) // # of jvms that it will use
@@ -14,11 +14,11 @@ import java.nio.file.Paths
 @Measurement(iterations = examples_iterations, time = examples_xl_time, timeUnit = TimeUnit.SECONDS, batchSize = examples_xl_batchsize)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
-class ranpo_benchmark() extends ExampleBenchmarkGenerator (
+class ranpo() extends ExampleBenchmarkGenerator (
   "ranpo",
   Set(),
   Set("CI")
-) with ranpo {
+) with ranpo_test {
 
   @Setup
   def s(): Unit = setup() // can't add annotations to super, so just call
@@ -57,7 +57,7 @@ class ranpo_benchmark() extends ExampleBenchmarkGenerator (
   }
 
   // interpreted
-  @Benchmark def interpreted_unordered__ci(blackhole: Blackhole): Unit = {
+  @Benchmark def interpreted_default_unordered__ci(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
@@ -65,7 +65,7 @@ class ranpo_benchmark() extends ExampleBenchmarkGenerator (
   }
 
   // compiled
-  @Benchmark def compiled_unordered__(blackhole: Blackhole): Unit = {
+  @Benchmark def compiled_default_unordered__(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
@@ -73,14 +73,14 @@ class ranpo_benchmark() extends ExampleBenchmarkGenerator (
   }
 
   // jit
-  @Benchmark def jit_EVALRULEBODY_blocking_unordered__ci(blackhole: Blackhole): Unit = {
+  @Benchmark def jit_default_unordered_blocking_EVALRULEBODY__ci(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
     blackhole.consume(run(programs(p), result))
   }
 
-  @Benchmark def jit_EVALRULEBODY_async_unordered__(blackhole: Blackhole): Unit = {
+  @Benchmark def jit_default_unordered_async_EVALRULEBODY__(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
@@ -88,7 +88,7 @@ class ranpo_benchmark() extends ExampleBenchmarkGenerator (
   }
 
   // jit
-  @Benchmark def jit_EVALRULEBODY_aot_async_unordered__(blackhole: Blackhole): Unit = {
+  @Benchmark def jit_default_unordered_async_EVALRULEBODY_aot__(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")

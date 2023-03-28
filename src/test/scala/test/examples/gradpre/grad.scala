@@ -1,4 +1,4 @@
-package test.examples.grad_pre
+package test.examples.gradpre
 
 import datalog.dsl.{Constant, Program}
 import test.ExampleTestGenerator

@@ -8,22 +8,24 @@ import scala.util.Properties
 import java.util.concurrent.TimeUnit
 import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.Blackhole
-import test.examples.ackermann.ackermann
+import test.examples.ackermann.{ackermann => ackermann_test} // rename so generated results are easier to parse
 
 @Fork(examples_fork) // # of jvms that it will use
 @Warmup(iterations = examples_warmup_iterations, time = examples_warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = examples_xl_batchsize)
 @Measurement(iterations = examples_iterations, time = examples_xl_time, timeUnit = TimeUnit.SECONDS, batchSize = examples_xl_batchsize)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
-class ackermann_benchmark() extends ExampleBenchmarkGenerator(
+class ackermann() extends ExampleBenchmarkGenerator(
   "ackermann"
-) with ackermann {
+) with ackermann_test {
 
   @Setup
   def s(): Unit = setup() // can't add annotations to super, so just call
 
   @TearDown(Level.Invocation)
   def f(): Unit = finish()
+
+  // all tests are written as execution-mode_storage_sort?_sync?_granularity?_aot?__<other options>?
 
   // volcano, naive
   @Benchmark def naive_volcano__(blackhole: Blackhole): Unit = {
@@ -56,7 +58,7 @@ class ackermann_benchmark() extends ExampleBenchmarkGenerator(
   }
 
   // interpreted
-  @Benchmark def interpreted_unordered__ci(blackhole: Blackhole): Unit = {
+  @Benchmark def interpreted_default_unordered__ci(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
@@ -64,7 +66,7 @@ class ackermann_benchmark() extends ExampleBenchmarkGenerator(
   }
 
   // compiled
-  @Benchmark def compiled_unordered__(blackhole: Blackhole): Unit = {
+  @Benchmark def compiled_default_unordered__(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
@@ -72,14 +74,14 @@ class ackermann_benchmark() extends ExampleBenchmarkGenerator(
   }
 
   // jit
-  @Benchmark def jit_EVALRULEBODY_blocking_unordered__ci(blackhole: Blackhole): Unit = {
+  @Benchmark def jit_default_unordered_blocking_EVALRULEBODY__ci(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
     blackhole.consume(run(programs(p), result))
   }
 
-  @Benchmark def jit_EVALRULEBODY_async_unordered__(blackhole: Blackhole): Unit = {
+  @Benchmark def jit_default_unordered_async_EVALRULEBODY__(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
@@ -87,7 +89,7 @@ class ackermann_benchmark() extends ExampleBenchmarkGenerator(
   }
 
   // jit
-  @Benchmark def jit_EVALRULEBODY_aot_async_unordered__(blackhole: Blackhole): Unit = {
+  @Benchmark def jit_default_unordered_async_EVALRULEBODY_aot__(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")

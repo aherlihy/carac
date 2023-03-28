@@ -1,20 +1,24 @@
 package datalog.benchmarks.examples
 
 import datalog.benchmarks.ExampleBenchmarkGenerator
-import datalog.dsl.{Constant, Program}
+import datalog.dsl.{Constant, Program, __}
+
+import java.util.concurrent.TimeUnit
 import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.Blackhole
-import test.examples.is_after.is_after
+import test.examples.anonvar.{anonvar => anonvar_test}
 
 import java.nio.file.Paths
-import java.util.concurrent.TimeUnit
-
 @Fork(examples_fork) // # of jvms that it will use
-@Warmup(iterations = examples_warmup_iterations, time = examples_warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = examples_batchsize)
-@Measurement(iterations = examples_iterations, time = examples_time, timeUnit = TimeUnit.SECONDS, batchSize = examples_batchsize)
+@Warmup(iterations = examples_warmup_iterations, time = examples_warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = 10)
+@Measurement(iterations = examples_iterations, time = examples_xxl_time, timeUnit = TimeUnit.SECONDS, batchSize = 10)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
-class is_after_benchmark() extends ExampleBenchmarkGenerator("is_after")  with is_after {
+class anonvar extends ExampleBenchmarkGenerator(
+  "anonvar"
+) with anonvar_test {
+  override val toSolve: String = "A1"
+
   @Setup
   def s(): Unit = setup() // can't add annotations to super, so just call
 
@@ -52,7 +56,7 @@ class is_after_benchmark() extends ExampleBenchmarkGenerator("is_after")  with i
   }
 
   // interpreted
-  @Benchmark def interpreted_unordered__ci(blackhole: Blackhole): Unit = {
+  @Benchmark def interpreted_default_unordered__ci(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
@@ -60,7 +64,7 @@ class is_after_benchmark() extends ExampleBenchmarkGenerator("is_after")  with i
   }
 
   // compiled
-  @Benchmark def compiled_unordered__(blackhole: Blackhole): Unit = {
+  @Benchmark def compiled_default_unordered__(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
@@ -68,14 +72,14 @@ class is_after_benchmark() extends ExampleBenchmarkGenerator("is_after")  with i
   }
 
   // jit
-  @Benchmark def jit_EVALRULEBODY_blocking_unordered__ci(blackhole: Blackhole): Unit = {
+  @Benchmark def jit_default_unordered_blocking_EVALRULEBODY__ci(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
     blackhole.consume(run(programs(p), result))
   }
 
-  @Benchmark def jit_EVALRULEBODY_async_unordered__(blackhole: Blackhole): Unit = {
+  @Benchmark def jit_default_unordered_async_EVALRULEBODY__(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
@@ -83,7 +87,7 @@ class is_after_benchmark() extends ExampleBenchmarkGenerator("is_after")  with i
   }
 
   // jit
-  @Benchmark def jit_EVALRULEBODY_aot_async_unordered__(blackhole: Blackhole): Unit = {
+  @Benchmark def jit_default_unordered_async_EVALRULEBODY_aot__(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")

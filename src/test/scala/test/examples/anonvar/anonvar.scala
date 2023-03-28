@@ -1,16 +1,16 @@
-package test.examples.anon_var
+package test.examples.anonvar
 
 import datalog.dsl.{Constant, Program, __}
 import test.{ExampleTestGenerator, Tags}
 
 import java.nio.file.Paths
-class anon_var_test extends ExampleTestGenerator(
-  "anon_var",
+class anonvar_test extends ExampleTestGenerator(
+  "anonvar",
   Set(Tags.Naive, Tags.Volcano),
   Set(Tags.Slow, Tags.CI)
-) with anon_var
+) with anonvar
 
-trait anon_var {
+trait anonvar {
   val toSolve = "_"
   def pretest(program: Program): Unit = {
     val Check = program.namedRelation[Constant]("Check")
