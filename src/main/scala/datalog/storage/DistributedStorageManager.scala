@@ -26,10 +26,13 @@ class DistributedStorageManager(override val ns: NS, spark: SparkSession) extend
     StructType(headers(relationId).zipWithIndex.map((t, i) => StructField(i.toString, columnType(t), false)))
 
   private def makeEDB(rId: RelationId, c: Seq[Term]*): DistributedEDB =
-    val sparkRows = c.map(org.apache.spark.sql.Row(_:_*))
-    val df = spark.createDataFrame(java.util.List.of(sparkRows:_*), schema(rId))
-    
-    DistributedEDB(df)
+    if c.nonEmpty then {
+      val sparkRows = c.map(org.apache.spark.sql.Row(_:_*))
+      val df = spark.createDataFrame(java.util.List.of(sparkRows:_*), schema(rId))
+      DistributedEDB(Some(df))
+    } else {
+      DistributedEDB(None)
+    }
 
   private type Database[K, V] = mutable.Map[K, V]
   private type FactDatabase = Database[RelationId, DistributedEDB]
@@ -108,16 +111,16 @@ class DistributedStorageManager(override val ns: NS, spark: SparkSession) extend
     edbs.getOrElse(rId, makeEDB(rId)).iterator.map(c => c.row).toSet
 
   override def resetKnownDerived(rId: RelationId, rules: EDB, prev: EDB): Unit =
-    derivedDB(knownDbId)(rId) = DistributedEDB(asDistributedEDB(rules).df.union(asDistributedEDB(prev).df).persist())
+    derivedDB(knownDbId)(rId) = DistributedEDB(asDistributedEDB(rules).union(asDistributedEDB(prev)).df.map(_.persist()))
 
   override def resetNewDerived(rId: RelationId, rules: EDB, prev: EDB): Unit =
-    derivedDB(newDbId)(rId) = DistributedEDB(asDistributedEDB(rules).df.union(asDistributedEDB(prev).df).persist())
+    derivedDB(newDbId)(rId) = DistributedEDB(asDistributedEDB(rules).union(asDistributedEDB(prev)).df.map(_.persist()))
 
   override def resetNewDelta(rId: RelationId, rules: EDB): Unit =
-    deltaDB(newDbId)(rId) = DistributedEDB(asDistributedEDB(rules).df)
+    deltaDB(newDbId)(rId) = asDistributedEDB(rules)
 
   override def resetKnownDelta(rId: RelationId, rules: EDB): Unit =
-    deltaDB(knownDbId)(rId) = DistributedEDB(asDistributedEDB(rules).df)
+    deltaDB(knownDbId)(rId) = asDistributedEDB(rules)
 
   override def clearNewDerived(): Unit =
     derivedDB(newDbId).keys.foreach(r => {
@@ -137,7 +140,11 @@ class DistributedStorageManager(override val ns: NS, spark: SparkSession) extend
     (derivedDB(knownDbId).keys == derivedDB(newDbId).keys) && derivedDB(knownDbId).forall((k, t1) => {
       val t2 = derivedDB(newDbId)(k)
 
-      t1.df.except(t2.df).isEmpty && t2.df.except(t1.df).isEmpty
+      (t1.df, t2.df) match {
+        case (Some(df1), Some(df2)) => df1.except(df2).isEmpty && df2.except(df1).isEmpty
+        case (None, None) => true
+        case _ => false
+      }
     })
 
   override def verifyEDBs(idbList: mutable.Set[RelationId]): Unit = {
@@ -157,31 +164,39 @@ class DistributedStorageManager(override val ns: NS, spark: SparkSession) extend
     else Some(right.col(right.columns(i-left.columns.length)))
 
   override def joinHelper(inputs: Seq[EDB], k: JoinIndexes): DistributedEDB =
-    val joined0 = inputs.map(asDistributedEDB(_).df).reduceLeft(_ join _)
-    val joined1 = joined0.toDF(joined0.columns.indices.map(_.toString):_*)
-    val filter = k.constIndexes.map((col, v) => joined1.col(col.toString) === v)
-    val join = k.varIndexes.flatMap(vars => vars.tail.map(v => joined1.col(vars.head.toString) === joined1.col(v.toString)))
-    val condition = (filter ++ join).toSeq
-    val res = condition.reduceOption(_ && _).map(joined1.filter(_)).getOrElse(joined1)
-    DistributedEDB(res)
+    val inputsDedb = inputs.map(asDistributedEDB)
+    if inputsDedb.exists(_.df.isEmpty) then DistributedEDB(None)
+    else {
+      val joined0 = inputsDedb.map(_.df.get).reduceLeft(_ join _)
+      val joined1 = joined0.toDF(joined0.columns.indices.map(_.toString): _*)
+      val filter = k.constIndexes.map((col, v) => joined1.col(col.toString) === v)
+      val join = k.varIndexes.flatMap(vars => vars.tail.map(v => joined1.col(vars.head.toString) === joined1.col(v.toString)))
+      val condition = (filter ++ join).toSeq
+      val res = condition.reduceOption(_ && _).map(joined1.filter(_)).getOrElse(joined1)
+      DistributedEDB(Some(res))
+    }
 
   override def projectHelper(input: EDB, k: JoinIndexes): DistributedEDB =
     val dedb = asDistributedEDB(input)
-    val columns = k.projIndexes.map {
-      case ("c", v) => lit(v)
-      case ("v", i: Int) => dedb.df.col(dedb.df.columns(i))
-      case _ => throw new Exception("Internal error: projecting something that is not a constant nor a variable")
+    if dedb.df.isEmpty then DistributedEDB(None)
+    else {
+      val df = dedb.df.get
+      val columns = k.projIndexes.map {
+        case ("c", v) => lit(v)
+        case ("v", i: Int) => df.col(df.columns(i))
+        case _ => throw new Exception("Internal error: projecting something that is not a constant nor a variable")
+      }
+      val res = df.select(columns:_*)
+      DistributedEDB(Some(res.toDF(columns.indices.map(_.toString):_*)))
     }
-    val res = DistributedEDB(dedb.df.select(columns:_*))
-    DistributedEDB(res.df.toDF(res.df.columns.indices.map(_.toString):_*))
 
   override def joinProjectHelper(inputs: Seq[EDB], k: JoinIndexes, sortOrder: (Int, Int, Int)) = ???
 
   override def diff(lhs: EDB, rhs: EDB): EDB =
-    DistributedEDB(asDistributedEDB(lhs).df.except(asDistributedEDB(rhs).df))
+    asDistributedEDB(lhs).except(asDistributedEDB(rhs))
 
   override def union(edbs: Seq[EDB]): DistributedEDB =
-    DistributedEDB(edbs.map(asDistributedEDB(_).df).reduceLeft((acc, e) => acc.union(e)))
+    edbs.map(asDistributedEDB).reduceLeft((acc, e) => acc.union(e))
 
   override def SPJU(rId: RelationId, keys: ArrayBuffer[JoinIndexes]): EDB = naiveSPJU(rId, keys)
 
@@ -189,14 +204,14 @@ class DistributedStorageManager(override val ns: NS, spark: SparkSession) extend
     DistributedEDB(
       keys.map(k => { // for each idb rule
         if (k.edb)
-          edbs.getOrElse(rId, makeEDB(rId)).df
+          edbs.getOrElse(rId, makeEDB(rId))
         else
           projectHelper(
             joinHelper(
               k.deps.map(r => derivedDB(knownDbId).getOrElse(r, edbs.getOrElse(r, makeEDB(rId)))), k // TODO: warn if EDB is empty? Right now can't tell the difference between undeclared and empty EDB)
             ), k
-          ).df.distinct()
-      }).reduce(_ union _).localCheckpoint()
+          ).distinct
+      }).reduce(_.union(_)).df.map(_.localCheckpoint())
     )
 
   override val allRulesAllIndexes: Database[RelationId, AllIndexes] = mutable.Map.empty
