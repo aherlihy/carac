@@ -36,6 +36,7 @@ class DistributedStorageManager(override val ns: NS, spark: SparkSession) extend
 
   val derivedDB: Database[KnowledgeId, FactDatabase] = mutable.Map.empty
   val deltaDB: Database[KnowledgeId, FactDatabase] = mutable.Map.empty
+  val edbsStaging: Database[RelationId, Seq[Seq[StorageTerm]]] = mutable.Map.empty
   val edbs: FactDatabase = mutable.Map.empty
   var knownDbId: KnowledgeId = -1
   var newDbId: KnowledgeId = -1
@@ -54,6 +55,10 @@ class DistributedStorageManager(override val ns: NS, spark: SparkSession) extend
     knownDbId = dbId
     derivedDB.addOne(dbId, mutable.Map.empty)
     deltaDB.addOne(dbId, mutable.Map.empty)
+
+    edbsStaging.foreach((k, relation) => {
+      edbs(k) = makeEDB(k, relation:_*)
+    })
 
     edbs.foreach((k, relation) => {
       deltaDB(dbId)(k) = makeEDB(k)
@@ -77,9 +82,7 @@ class DistributedStorageManager(override val ns: NS, spark: SparkSession) extend
         case t: String => StringType
       }
     }
-    val initial = edbs.get(rule.rId)
-    val newRow = makeEDB(rule.rId, rule.terms).df
-    edbs(rule.rId) = DistributedEDB(initial.map(i => i.df.union(newRow)).getOrElse(newRow).persist())
+    edbsStaging.updateWith(rule.rId)(c => Some(c.getOrElse(Seq.empty).appended(rule.terms)))
 
   override def getKnownDerivedDB(rId: RelationId): DistributedEDB =
     derivedDB(knownDbId).getOrElse(rId, edbs.getOrElse(rId, makeEDB(rId)))
