@@ -117,10 +117,10 @@ class DistributedStorageManager(override val ns: NS, spark: SparkSession) extend
     derivedDB(newDbId)(rId) = DistributedEDB(asDistributedEDB(rules).union(asDistributedEDB(prev)).df.map(_.persist()))
 
   override def resetNewDelta(rId: RelationId, rules: EDB): Unit =
-    deltaDB(newDbId)(rId) = asDistributedEDB(rules)
+    deltaDB(newDbId)(rId) = DistributedEDB(asDistributedEDB(rules).df.map(_.persist().localCheckpoint()))
 
   override def resetKnownDelta(rId: RelationId, rules: EDB): Unit =
-    deltaDB(knownDbId)(rId) = asDistributedEDB(rules)
+    deltaDB(knownDbId)(rId) = DistributedEDB(asDistributedEDB(rules).df.map(_.persist().localCheckpoint()))
 
   override def clearNewDerived(): Unit =
     derivedDB(newDbId).keys.foreach(r => {
@@ -134,7 +134,7 @@ class DistributedStorageManager(override val ns: NS, spark: SparkSession) extend
   }
 
   override def compareNewDeltaDBs(): Boolean =
-    deltaDB(newDbId).exists((k, v) => !v.df.isEmpty)
+    deltaDB(newDbId).exists((k, v) => v.df.exists(!_.isEmpty))
 
   override def compareDerivedDBs(): Boolean =
     (derivedDB(knownDbId).keys == derivedDB(newDbId).keys) && derivedDB(knownDbId).forall((k, t1) => {
@@ -190,7 +190,8 @@ class DistributedStorageManager(override val ns: NS, spark: SparkSession) extend
       DistributedEDB(Some(res.toDF(columns.indices.map(_.toString):_*)))
     }
 
-  override def joinProjectHelper(inputs: Seq[EDB], k: JoinIndexes, sortOrder: (Int, Int, Int)) = ???
+  override def joinProjectHelper(inputs: Seq[EDB], k: JoinIndexes, sortOrder: (Int, Int, Int)): DistributedEDB =
+    projectHelper(joinHelper(inputs, k), k)
 
   override def diff(lhs: EDB, rhs: EDB): EDB =
     asDistributedEDB(lhs).except(asDistributedEDB(rhs))
@@ -198,7 +199,27 @@ class DistributedStorageManager(override val ns: NS, spark: SparkSession) extend
   override def union(edbs: Seq[EDB]): DistributedEDB =
     edbs.map(asDistributedEDB).reduceLeft((acc, e) => acc.union(e))
 
-  override def SPJU(rId: RelationId, keys: ArrayBuffer[JoinIndexes]): EDB = naiveSPJU(rId, keys)
+  override def SPJU(rId: RelationId, keys: ArrayBuffer[JoinIndexes]): EDB =
+    DistributedEDB(keys.map(k => // union of each definition of rId
+      if (k.edb)
+        edbs.getOrElse(rId, makeEDB(rId))
+      else
+        var idx = -1 // if dep is featured more than once, only us delta once, but at a different pos each time
+        k.deps.map(d => {
+          var found = false
+          joinProjectHelper(
+            k.deps.zipWithIndex.map((r, i) =>
+              if (r == d && !found && i > idx) {
+                found = true
+                idx = i
+                deltaDB(knownDbId)(r)
+              }
+              else {
+                derivedDB(knownDbId).getOrElse(r, edbs.getOrElse(r, makeEDB(rId)))
+              }
+            ), k, (0, 0, 0)) // don't sort when not staging
+        }).reduce(_ union _)
+    ).reduce(_ union _).df.map(_.localCheckpoint()))
 
   override def naiveSPJU(rId: RelationId, keys: ArrayBuffer[JoinIndexes]): EDB =
     DistributedEDB(
@@ -208,7 +229,7 @@ class DistributedStorageManager(override val ns: NS, spark: SparkSession) extend
         else
           projectHelper(
             joinHelper(
-              k.deps.map(r => derivedDB(knownDbId).getOrElse(r, edbs.getOrElse(r, makeEDB(rId)))), k // TODO: warn if EDB is empty? Right now can't tell the difference between undeclared and empty EDB)
+              k.deps.map(r => derivedDB(knownDbId).getOrElse(r, edbs.getOrElse(r, makeEDB(rId)))), k
             ), k
           ).distinct
       }).reduce(_.union(_)).df.map(_.localCheckpoint())
