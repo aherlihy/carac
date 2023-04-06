@@ -24,13 +24,18 @@ private class Node(r: Int)(using ns: NS) {
 
 class PrecedenceGraph(using ns: NS /* for debugging */) {
   private val adjacencyList = mutable.Map[Int, mutable.Set[Int]]()
+  private val aliases = mutable.Map[Int, Int]()
 
   private def nodes = {
+    // Compute a new graph from the adjacency list, respecting alias definitions
     val nodes = mutable.Map[Int, Node]()
     for (from, list) <- adjacencyList do
       for to <- list do
-        val f = nodes.getOrElseUpdate(from, Node(from))
-        val t = nodes.getOrElseUpdate(to, Node(to))
+        val fAlias = aliases.getOrElse(from, from)
+        val tAlias = aliases.getOrElse(to, to)
+
+        val f = nodes.getOrElseUpdate(fAlias, Node(fAlias))
+        val t = nodes.getOrElseUpdate(tAlias, Node(tAlias))
         f.edges.addOne(t)
     nodes.toMap
   }
@@ -53,10 +58,7 @@ class PrecedenceGraph(using ns: NS /* for debugging */) {
   // TODO : Store the aliases in another data structure, and use them to compute
   //        the graph nodes from the adjacency list
   def updateNodeAlias(rId: Int, aliases: mutable.Map[Int, Int]): Unit = {
-    val node = nodes(rId)
-    node.edges = node.edges.map(edgeNode =>
-      nodes(aliases.getOrElse(edgeNode.rId, edgeNode.rId))
-    )
+    this.aliases.addAll(aliases)
   }
 
   def addNode(rId: Int, deps: Seq[Int]): Unit = {
