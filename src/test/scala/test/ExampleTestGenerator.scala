@@ -10,6 +10,10 @@ import scala.io.Source
 import scala.jdk.StreamConverters.*
 import scala.quoted.staging
 import scala.util.Properties
+import datalog.storage.DistributedStorageManager
+import org.apache.spark.SparkConf
+import org.apache.spark.sql.SparkSession
+import datalog.storage.NS
 //import scala.quoted.*
 //import scala.quoted.staging.*
 
@@ -96,7 +100,9 @@ abstract class TestGenerator(directory: Path,
           case "SemiNaiveVolcano" => Program(SemiNaiveExecutionEngine(VolcanoStorageManager()))
           case "NaiveVolcano" => Program(NaiveExecutionEngine(VolcanoStorageManager()))
           case "SemiNaiveDefault" => Program(SemiNaiveExecutionEngine(DefaultStorageManager()))
+          case "SemiNaiveDistributed" => Program(SemiNaiveExecutionEngine(DistributedStorageManager(NS(), SparkSession.builder().appName("test").config(new SparkConf().setAppName("yolo").setMaster("local[4]")).getOrCreate())))
           case "NaiveDefault" => Program(NaiveExecutionEngine(DefaultStorageManager()))
+          case "NaiveDistributed" => Program(NaiveExecutionEngine(DistributedStorageManager(NS(), SparkSession.builder().appName("test").config(new SparkConf().setAppName("yolo").setMaster("local[4]")).getOrCreate())))
           case "NaiveCompiledStagedDefault" =>
             Program(NaiveStagedExecutionEngine(DefaultStorageManager())) // default is compiled
           case "InterpretedStagedDefault" =>
@@ -126,7 +132,7 @@ abstract class TestGenerator(directory: Path,
     override def munitFixtures = List(program)
 
     Seq("SemiNaive", "Naive", "CompiledStaged", "InterpretedStaged", "JITStagedB1", "JITStagedB2", "JITStagedB3").foreach(execution => {
-      Seq("Volcano", "Default").foreach(storage => {
+      Seq("Volcano", "Default", "Distributed").foreach(storage => {
         if (execution.contains("Staged") && storage == "Volcano") {} // skip and don't report as skipped
         else if (
             skip.contains(execution) || skip.contains(storage) ||
