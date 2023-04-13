@@ -1,8 +1,8 @@
 package datalog.execution.ir
 
+import datalog.execution.ast.*
 import datalog.execution.{JITOptions, StagedCompiler}
-import datalog.execution.ast.{ASTNode, AllRulesNode, LogicAtom, ProgramNode, RuleNode}
-import datalog.storage.{StorageManager, DB, KNOWLEDGE, RelationId, EDB}
+import datalog.storage.*
 import datalog.tools.Debug.debug
 
 import scala.collection.mutable
@@ -22,7 +22,17 @@ class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
             )
           else
             Seq(InsertOp(r, DB.Derived, KNOWLEDGE.New, naiveEvalRule(ruleMap(r)).asInstanceOf[IROp[Any]]))
-        ):_*
+        ): _*
+    )
+
+  private def naiveEval2(rules: mutable.Map[RelationId, ASTNode]): IROp[Any] =
+    println("naiveEval2")
+    println(rules.mkString(",\n"))
+    SequenceOp(
+      OpCode.EVAL_NAIVE,
+      rules.map((rId, rule) =>
+        InsertOp(rId, DB.Derived, KNOWLEDGE.New, naiveEvalRule(rule).asInstanceOf[IROp[Any]])
+      ).toSeq: _*
     )
 
   def semiNaiveEval(rId: RelationId, ruleMap: mutable.Map[RelationId, ASTNode]): IROp[Any] =
@@ -30,7 +40,6 @@ class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
       OpCode.EVAL_SN,
       ctx.sortedRelations
         .filter(ruleMap.contains)
-//        .flatMap(r =>
         .map(r =>
           val prev = ScanOp(r, DB.Derived, KNOWLEDGE.Known)
           val res = semiNaiveEvalRule(ruleMap(r))
@@ -38,11 +47,10 @@ class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
 
           SequenceOp( // TODO: could flatten, but then potentially can't generate loop if needed
             OpCode.SEQ,
-//          Seq(
             InsertOp(r, DB.Delta, KNOWLEDGE.New, diff.asInstanceOf[IROp[Any]]),
             InsertOp(r, DB.Derived, KNOWLEDGE.New, prev.asInstanceOf[IROp[Any]], ScanOp(r, DB.Delta, KNOWLEDGE.New).asInstanceOf[IROp[Any]]),
           )
-        ):_*,
+        ): _*,
     )
 
   def naiveEvalRule(ast: ASTNode): IROp[EDB] = {
@@ -83,7 +91,7 @@ class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
           ScanEDBOp(r)
         else
           var idx = -1 // if dep is featured more than once, only use delta once, but at a different pos each time
-          UnionSPJOp(// a single rule body
+          UnionSPJOp( // a single rule body
             atoms.head.rId,
             hash,
             k.deps.map(d => {
@@ -98,7 +106,7 @@ class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
                     ScanOp(r, DB.Derived, KNOWLEDGE.Known)
                 }): _*
               )
-            }):_*
+            }): _*
           )
       case _ =>
         debug("AST node passed to semiNaiveEval:", () => ctx.storageManager.printer.printAST(ast))
@@ -109,12 +117,37 @@ class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
   def generateNaive(ast: ASTNode): IROp[Any] = {
     ast match {
       case ProgramNode(ruleMap) =>
-        DoWhileOp(
-          DB.Derived,
-          SequenceOp(OpCode.LOOP_BODY,
-            SwapAndClearOp(),
-            naiveEval(ruleMap)
+        val components = ctx.precedenceGraph.scc(ctx.toSolve)
+        // The relations to compute in this strata.
+        val toDerive = components.map(ids =>
+          ruleMap.filter((r, _) => ids.contains(r))
+        )
+        // The relations that were computed in previous strata.
+        val toPreserve = components.scanLeft(Set[Int]())(_ ++ _)
+        val steps = toDerive.zip(toPreserve).map((filtered, preserved) =>
+          // Preserve the previous strata's results.
+          val keep =
+            SequenceOp(OpCode.OTHER,
+              preserved.toSeq.map(r =>
+                InsertOp(r, DB.Derived, KNOWLEDGE.New,
+                  ScanOp(r, DB.Derived, KNOWLEDGE.Known)
+                    .asInstanceOf[IROp[Any]])
+              ): _*
           )
+          val insertions = naiveEval2(filtered)
+          DoWhileOp(
+            DB.Derived,
+            SequenceOp(OpCode.LOOP_BODY,
+              SwapAndClearOp(),
+              keep,
+              insertions
+            )
+          )
+        )
+
+        SequenceOp(
+          OpCode.OTHER,
+          steps: _*,
         )
       case _ => throw new Exception("Non-root passed to IR Program")
     }

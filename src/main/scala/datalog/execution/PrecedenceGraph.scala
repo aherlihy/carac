@@ -129,6 +129,15 @@ class PrecedenceGraph(using ns: NS /* for debugging */) {
     tarjan(target = None).map(_.toSet)
   }
 
+  def scc(target: Int): Seq[Set[Int]] = {
+    val sorted = tarjan(target = Some(target))
+    sorted
+      .dropRight(sorted.size - 1 - sorted.indexWhere(g => g.contains(target)))
+      .map(_.toSet)
+      .map(_.filter(r => idbs.contains(r))) // sort and remove edbs
+      .filter(_.nonEmpty)
+  }
+
   def removeAliases(aliases: mutable.Map[Int, Int]): Unit = {
 
   }
