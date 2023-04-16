@@ -8,24 +8,15 @@ import datalog.tools.Debug.debug
 import scala.collection.mutable
 
 class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
-  def naiveEval(ruleMap: mutable.Map[RelationId, ASTNode], copyToDelta: Boolean = false): IROp[Any] =
-    SequenceOp(
-      OpCode.EVAL_NAIVE,
-      //      DebugNode("in eval:", () => s"rId=${ctx.storageManager.ns(rId)} relations=${ctx.relations.map(r => ctx.storageManager.ns(r)).mkString("[", ", ", "]")}  incr=${ctx.newDbId} src=${ctx.knownDbId}") +:
-      ctx.sortedRelations
-        .filter(ruleMap.contains)
-        .flatMap(r =>
-          if (copyToDelta)
-            Seq( // TODO: un-flatten to generate for loops if better
-              InsertOp(r, DB.Derived, KNOWLEDGE.New, naiveEvalRule(ruleMap(r)).asInstanceOf[IROp[Any]]),
-              InsertOp(r, DB.Delta, KNOWLEDGE.New, ScanOp(r, DB.Derived, KNOWLEDGE.New).asInstanceOf[IROp[Any]])
-            )
-          else
-            Seq(InsertOp(r, DB.Derived, KNOWLEDGE.New, naiveEvalRule(ruleMap(r)).asInstanceOf[IROp[Any]]))
-        ): _*
-    )
 
-  def semiNaiveEval1(rules: mutable.Map[RelationId, ASTNode]): IROp[Any] = {
+  /**
+   * Generates the IR for the semi-naive evaluation strategy for one iteration
+   * withing a strata.
+   *
+   * @param rules The rules to derive in this strata.
+   * @return The IR for the semi-naive evaluation strategy.
+   */
+  private def semiNaiveEval(rules: mutable.Map[RelationId, ASTNode]): IROp[Any] = {
     val mapped = rules.toSeq.map((r, rule) => {
       val prev = ScanOp(r, DB.Derived, KNOWLEDGE.Known)
       val res = semiNaiveEvalRule(rule)
@@ -40,25 +31,13 @@ class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
     SequenceOp(OpCode.EVAL_SN, mapped: _*).asInstanceOf[IROp[Any]]
   }
 
-  def semiNaiveEval(rId: RelationId, ruleMap: mutable.Map[RelationId, ASTNode]): IROp[Any] =
-    SequenceOp(
-      OpCode.EVAL_SN,
-      ctx.sortedRelations
-        .filter(ruleMap.contains)
-        .map(r =>
-          val prev = ScanOp(r, DB.Derived, KNOWLEDGE.Known)
-          val res = semiNaiveEvalRule(ruleMap(r))
-          val diff = DiffOp(res, prev)
-
-          SequenceOp( // TODO: could flatten, but then potentially can't generate loop if needed
-            OpCode.SEQ,
-            InsertOp(r, DB.Delta, KNOWLEDGE.New, diff.asInstanceOf[IROp[Any]]),
-            InsertOp(r, DB.Derived, KNOWLEDGE.New, prev.asInstanceOf[IROp[Any]], ScanOp(r, DB.Delta, KNOWLEDGE.New).asInstanceOf[IROp[Any]]),
-          )
-        ): _*,
-    )
-
-  def naiveEvalRule(ast: ASTNode): IROp[EDB] = {
+  /**
+   * Evaluates one rule in the naive evaluation strategy.
+   *
+   * @param ast the rule to evaluate.
+   * @return the IR for the rule evaluation.
+   */
+  private def naiveEvalRule(ast: ASTNode): IROp[EDB] = {
     ast match {
       case AllRulesNode(rules, rId, edb) =>
         var allRes = rules.map(naiveEvalRule).toSeq
@@ -82,7 +61,13 @@ class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
     }
   }
 
-  def semiNaiveEvalRule(ast: ASTNode): IROp[EDB] = {
+  /**
+   * Evaluates one rule in the semi-naive evaluation strategy.
+   *
+   * @param ast the rule to evaluate.
+   * @return the IR for the rule evaluation.
+   */
+  private def semiNaiveEvalRule(ast: ASTNode): IROp[EDB] = {
     ast match {
       case AllRulesNode(rules, rId, edb) =>
         var allRes = rules.map(semiNaiveEvalRule).toSeq
@@ -189,6 +174,12 @@ class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
     )
   }
 
+  /**
+   * Generates the IR for the semi-naive evaluation strategy.
+   *
+   * @param ast The root of the program.
+   * @return The IR for the semi-naive evaluation strategy.
+   */
   def generateSemiNaive(ast: ASTNode): IROp[Any] = {
     val steps = stratify(ast).map(step =>
       val keep = SequenceOp(OpCode.OTHER,
@@ -215,7 +206,7 @@ class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
           SequenceOp(OpCode.LOOP_BODY,
             SwapAndClearOp(),
             keep,
-            semiNaiveEval1(step.rules)
+            semiNaiveEval(step.rules)
           )
         )
       )
