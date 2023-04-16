@@ -200,7 +200,6 @@ class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
 
       SequenceOp(OpCode.SEQ,
         insertions,
-        keep,
         DoWhileOp(
           DB.Delta,
           SequenceOp(OpCode.LOOP_BODY,
