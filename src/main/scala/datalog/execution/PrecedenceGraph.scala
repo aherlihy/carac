@@ -27,8 +27,10 @@ class PrecedenceGraph(using ns: NS /* for debugging */) {
   private val adjacencyList = mutable.Map[Int, mutable.Set[Int]]()
   private val aliases = mutable.Map[Int, Int]()
 
-  private def nodes = {
-    // Compute a new graph from the adjacency list, respecting alias definitions
+  /**
+   * Compute a new graph from the adjacency list, respecting alias definitions.
+   */
+  private def buildGraph = {
     val nodes = mutable.Map[Int, Node]()
     for (from, list) <- adjacencyList do
       for to <- list do
@@ -43,7 +45,7 @@ class PrecedenceGraph(using ns: NS /* for debugging */) {
 
   val idbs: mutable.Set[Int] = mutable.Set[Int]()
 
-  override def toString: String = nodes.map((r, n) => ns(r) + " -> " + n.edges.map(e => ns(e.rId)).mkString("[", ", ", "]")).mkString("{", ", ", "}")
+  override def toString: String = buildGraph.map((r, n) => ns(r) + " -> " + n.edges.map(e => ns(e.rId)).mkString("[", ", ", "]")).mkString("{", ", ", "}")
 
   def sortedString(): String =
     scc()
@@ -100,7 +102,7 @@ class PrecedenceGraph(using ns: NS /* for debugging */) {
     }
 
     // give tarjan a hint
-    val graph = nodes
+    val graph = buildGraph
     val order = target.map(t => {
       graph.values.filter(_.rId == t) ++ graph.values.filter(_.rId != t)
     }).getOrElse(graph.values)
