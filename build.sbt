@@ -6,6 +6,7 @@ inThisBuild(Seq(
 ))
 
 lazy val root = project.in(file("."))
+  .enablePlugins(PackPlugin)
   .settings(
     name := "datalog",
 

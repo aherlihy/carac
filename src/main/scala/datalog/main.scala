@@ -670,7 +670,7 @@ def isAfter(program: Program) =
     println("JIT")
     given engine3: ExecutionEngine = new StagedExecutionEngine(new DefaultStorageManager(), jo)
     val program3 = Program(engine3)
-    acyclic(program3)
+    ackermann(program3)
     println("\n\n_______________________\n\n")
 
 //  println("JIT Snippet")

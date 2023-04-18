@@ -10,7 +10,7 @@ import scala.collection.mutable
 import scala.quoted.*
 import scala.util.Random
 
-@main def main2 = {
+/*@main*/ def main2 = {
   //  val engine = new SemiNaiveStagedExecutionEngine(new DefaultStorageManager())
   //  val program = Program(engine)
   //  println("staged")
