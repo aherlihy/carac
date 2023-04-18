@@ -13,6 +13,7 @@ private class Node(r: Int)(using ns: NS) {
   var edges: mutable.Set[Node] = mutable.Set[Node]()
   var onStack: Boolean = false
 
+  // self-recursion, i.e. the head predicate appears in the body at least once. Does not indicate if there is any multi-hop/mutual recursion.
   def recursive: Boolean = edges.contains(this)
 
   override def toString(): String =
@@ -40,7 +41,6 @@ class PrecedenceGraph(using ns: NS /* for debugging */) {
     nodes.toMap
   }
 
-  // private val nodes: mutable.Map[Int, Node] = mutable.Map[Int, Node]()
   val idbs: mutable.Set[Int] = mutable.Set[Int]()
 
   override def toString: String = nodes.map((r, n) => ns(r) + " -> " + n.edges.map(e => ns(e.rId)).mkString("[", ", ", "]")).mkString("{", ", ", "}")
@@ -51,7 +51,7 @@ class PrecedenceGraph(using ns: NS /* for debugging */) {
       .map(_.mkString("(", ", ", ")"))
       .mkString("{", ", ", "}")
 
-  def addNode(rule: Seq[Atom]): Unit = { // TODO: sort incrementally?
+  def addNode(rule: Seq[Atom]): Unit = {
     addNode(rule.head.rId, rule.tail.map(_.rId))
   }
 
@@ -70,7 +70,6 @@ class PrecedenceGraph(using ns: NS /* for debugging */) {
     val stack = mutable.Stack[Node]()
     val sorted = mutable.Queue[mutable.Set[Int]]()
 
-    // TODO: need to indicate recursive anywhere?
     def strongConnect(v: Node): Unit = {
       v.idx = index
       v.lowLink = index
