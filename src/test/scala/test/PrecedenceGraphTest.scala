@@ -34,7 +34,7 @@ class PrecedenceGraphTest extends munit.FunSuite {
 
     assertEquals(
       engine.precedenceGraph.scc(),
-      Seq(Set(8), Set(2,3,4,5,6,7), Set(1), Set(0), Set(10))
+      Seq(Set(t8.id), Set(t2.id, t3.id, t4.id, t5.id, t6.id, t7.id), Set(t1.id), Set(t0.id), Set(t10.id))
     )
     assertEquals(
       engine.precedenceGraph.topSort(t10.id),
@@ -43,7 +43,7 @@ class PrecedenceGraphTest extends munit.FunSuite {
     // There's a single component with the 6 nodes
     assertEquals(
       engine.precedenceGraph.topSort(t4.id).toSet,
-      Set(2,3,4,5,6,7)
+      Set(t2.id, t3.id, t4.id, t5.id, t6.id, t7.id)
     )
     assertEquals(
       engine.precedenceGraph.topSort(t8.id),
@@ -78,7 +78,7 @@ class PrecedenceGraphTest extends munit.FunSuite {
 
     assertEquals(
       engine.precedenceGraph.scc().toSet,
-      Set(Set(0), Set(1), Set(2), Set(3), Set(4), Set(5))
+      Set(Set(e.id), Set(p.id), Set(other.id), Set(e2.id), Set(p2.id), Set(other2.id))
     )
     assertEquals(
       engine.precedenceGraph.topSort(other.id),
@@ -108,7 +108,7 @@ class PrecedenceGraphTest extends munit.FunSuite {
     engine.precedenceGraph.topSort(other.id) // test against sorted to keep groups
     assertEquals(
       engine.precedenceGraph.scc(),
-      Seq(Set(0), Set(1), Set(2))
+      Seq(Set(e.id), Set(p.id), Set(other.id))
     )
   }
 
@@ -128,7 +128,7 @@ class PrecedenceGraphTest extends munit.FunSuite {
     engine.precedenceGraph.topSort(a.id)
     assertEquals(
       engine.precedenceGraph.scc(),
-      Seq(Set(3), Set(0, 1, 2))
+      Seq(Set(other.id), Set(a.id, b.id, c.id))
     )
   }
 
@@ -149,7 +149,7 @@ class PrecedenceGraphTest extends munit.FunSuite {
     engine.precedenceGraph.topSort(a.id)
     assertEquals(
       engine.precedenceGraph.scc(),
-      Seq(Set(3), Set(0, 1, 2))
+      Seq(Set(other.id), Set(a.id, b.id, c.id))
     )
   }
 
@@ -170,7 +170,7 @@ class PrecedenceGraphTest extends munit.FunSuite {
     engine.precedenceGraph.topSort(a.id)
     assertEquals(
       engine.precedenceGraph.scc(),
-      Seq(Set(3), Set(0, 1, 2))
+      Seq(Set(other.id), Set(a.id, b.id, c.id))
     )
   }
 
