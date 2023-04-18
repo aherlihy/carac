@@ -1,8 +1,8 @@
 package datalog.execution
 
 import datalog.dsl.Atom
-import datalog.storage.NS
 import datalog.tools.Debug.debug
+import datalog.storage.NS
 
 import scala.collection.mutable
 
