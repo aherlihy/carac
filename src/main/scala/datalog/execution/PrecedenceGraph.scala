@@ -55,8 +55,6 @@ class PrecedenceGraph(using ns: NS /* for debugging */) {
     addNode(rule.head.rId, rule.tail.map(_.rId))
   }
 
-  // TODO : Store the aliases in another data structure, and use them to compute
-  //        the graph nodes from the adjacency list
   def updateNodeAlias(rId: Int, aliases: mutable.Map[Int, Int]): Unit = {
     this.aliases.addAll(aliases)
   }
