@@ -3,7 +3,7 @@ import datalog.execution.{ExecutionEngine, PrecedenceGraph, SemiNaiveExecutionEn
 
 import scala.collection.mutable
 import datalog.dsl.{Program, Constant}
-import datalog.storage.VolcanoStorageManager
+import datalog.storage.{NS, VolcanoStorageManager}
 
 class PrecedenceGraphTest extends munit.FunSuite {
   test("tarjan ex") {
@@ -856,5 +856,29 @@ class PrecedenceGraphTest extends munit.FunSuite {
     y2343(z) :- y234(z)
     y2344(z) :- y234(z)
     y2345(z) :- y234(z)
+  }
+
+  test("simple alias removal") {
+    val adjacency = Map(
+      0 -> Seq(),
+      1 -> Seq(0),
+      2 -> Seq(1),
+    )
+
+    val graph = new PrecedenceGraph(using new NS())
+    for ((node, deps) <- adjacency) {
+      graph.addNode(node, deps)
+      graph.idbs.add(node)
+    }
+
+    assertEquals(
+      graph.topSort(2),
+      Seq(0, 1, 2),
+    )
+    graph.updateNodeAlias(2, mutable.Map(1 -> 0))
+    assertEquals(
+      graph.topSort(2),
+      Seq(0, 2),
+    )
   }
 }
