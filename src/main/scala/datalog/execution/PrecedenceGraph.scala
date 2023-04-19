@@ -28,14 +28,27 @@ class PrecedenceGraph(using ns: NS /* for debugging */) {
   private val aliases = mutable.Map[Int, Int]()
 
   /**
+   * Get the rule id that corresponds to the given rule id, following alias
+   * definitions.
+   * @param rId the rule id to resolve
+   * @return the rule id that corresponds to the given rule id
+   */
+  private def getAliasedId(rId: Int): Int = {
+    var current = rId
+    while aliases.contains(current) do
+      current = aliases(current)
+    current
+  }
+
+  /**
    * Compute a new graph from the adjacency list, respecting alias definitions.
    */
   private def buildGraph = {
     val nodes = mutable.Map[Int, Node]()
     for (from, list) <- adjacencyList do
       for to <- list do
-        val fAlias = aliases.getOrElse(from, from)
-        val tAlias = aliases.getOrElse(to, to)
+        val fAlias = getAliasedId(from)
+        val tAlias = getAliasedId(to)
 
         val f = nodes.getOrElseUpdate(fAlias, Node(fAlias))
         val t = nodes.getOrElseUpdate(tAlias, Node(tAlias))

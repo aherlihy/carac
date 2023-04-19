@@ -881,4 +881,29 @@ class PrecedenceGraphTest extends munit.FunSuite {
       Seq(0, 2),
     )
   }
+
+  test("consecutive aliases removal") {
+    val adjacencyList = Map(
+      0 -> Seq(),
+      1 -> Seq(0),
+      2 -> Seq(1),
+      3 -> Seq(2),
+    )
+
+    val graph = new PrecedenceGraph(using new NS())
+    for ((node, deps) <- adjacencyList) {
+      graph.addNode(node, deps)
+      graph.idbs.add(node)
+    }
+
+    assertEquals(
+      graph.topSort(3),
+      Seq(0, 1, 2, 3),
+    )
+    graph.updateNodeAlias(3, mutable.Map(2 -> 1, 1 -> 0))
+    assertEquals(
+      graph.topSort(3),
+      Seq(0, 3),
+    )
+  }
 }
