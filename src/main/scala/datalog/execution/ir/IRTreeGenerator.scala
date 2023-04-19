@@ -168,9 +168,12 @@ class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
         )
       )
     )
-    SequenceOp(
-      OpCode.OTHER,
-      steps: _*,
+
+    ProgramOp(
+      SequenceOp(
+        OpCode.OTHER,
+        steps: _*,
+      )
     )
   }
 
@@ -211,9 +214,11 @@ class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
       )
     )
 
-    SequenceOp(
-      OpCode.OTHER,
-      steps: _*,
+    ProgramOp(
+      SequenceOp(
+        OpCode.OTHER,
+        steps: _*,
+      )
     )
   }
 }
