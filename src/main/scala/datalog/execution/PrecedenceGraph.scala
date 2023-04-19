@@ -1,8 +1,8 @@
 package datalog.execution
 
 import datalog.dsl.Atom
-import datalog.storage.NS
 import datalog.tools.Debug.debug
+import datalog.storage.NS
 
 import scala.collection.mutable
 
@@ -13,6 +13,7 @@ private class Node(r: Int)(using ns: NS) {
   var edges: mutable.Set[Node] = mutable.Set[Node]()
   var onStack: Boolean = false
 
+  // self-recursion, i.e. the head predicate appears in the body at least once. Does not indicate if there is any multi-hop/mutual recursion.
   def recursive: Boolean = edges.contains(this)
 
   override def toString(): String =
@@ -26,13 +27,28 @@ class PrecedenceGraph(using ns: NS /* for debugging */) {
   private val adjacencyList = mutable.Map[Int, mutable.Set[Int]]()
   private val aliases = mutable.Map[Int, Int]()
 
-  private def nodes = {
-    // Compute a new graph from the adjacency list, respecting alias definitions
+  /**
+   * Get the rule id that corresponds to the given rule id, following alias
+   * definitions.
+   * @param rId the rule id to resolve
+   * @return the rule id that corresponds to the given rule id
+   */
+  private def getAliasedId(rId: Int): Int = {
+    var current = rId
+    while aliases.contains(current) do
+      current = aliases(current)
+    current
+  }
+
+  /**
+   * Compute a new graph from the adjacency list, respecting alias definitions.
+   */
+  private def buildGraph = {
     val nodes = mutable.Map[Int, Node]()
     for (from, list) <- adjacencyList do
       for to <- list do
-        val fAlias = aliases.getOrElse(from, from)
-        val tAlias = aliases.getOrElse(to, to)
+        val fAlias = getAliasedId(from)
+        val tAlias = getAliasedId(to)
 
         val f = nodes.getOrElseUpdate(fAlias, Node(fAlias))
         val t = nodes.getOrElseUpdate(tAlias, Node(tAlias))
@@ -40,10 +56,9 @@ class PrecedenceGraph(using ns: NS /* for debugging */) {
     nodes.toMap
   }
 
-  // private val nodes: mutable.Map[Int, Node] = mutable.Map[Int, Node]()
   val idbs: mutable.Set[Int] = mutable.Set[Int]()
 
-  override def toString: String = nodes.map((r, n) => ns(r) + " -> " + n.edges.map(e => ns(e.rId)).mkString("[", ", ", "]")).mkString("{", ", ", "}")
+  override def toString: String = buildGraph.map((r, n) => ns(r) + " -> " + n.edges.map(e => ns(e.rId)).mkString("[", ", ", "]")).mkString("{", ", ", "}")
 
   def sortedString(): String =
     scc()
@@ -51,12 +66,10 @@ class PrecedenceGraph(using ns: NS /* for debugging */) {
       .map(_.mkString("(", ", ", ")"))
       .mkString("{", ", ", "}")
 
-  def addNode(rule: Seq[Atom]): Unit = { // TODO: sort incrementally?
+  def addNode(rule: Seq[Atom]): Unit = {
     addNode(rule.head.rId, rule.tail.map(_.rId))
   }
 
-  // TODO : Store the aliases in another data structure, and use them to compute
-  //        the graph nodes from the adjacency list
   def updateNodeAlias(rId: Int, aliases: mutable.Map[Int, Int]): Unit = {
     this.aliases.addAll(aliases)
   }
@@ -70,7 +83,6 @@ class PrecedenceGraph(using ns: NS /* for debugging */) {
     val stack = mutable.Stack[Node]()
     val sorted = mutable.Queue[mutable.Set[Int]]()
 
-    // TODO: need to indicate recursive anywhere?
     def strongConnect(v: Node): Unit = {
       v.idx = index
       v.lowLink = index
@@ -103,7 +115,7 @@ class PrecedenceGraph(using ns: NS /* for debugging */) {
     }
 
     // give tarjan a hint
-    val graph = nodes
+    val graph = buildGraph
     val order = target.map(t => {
       graph.values.filter(_.rId == t) ++ graph.values.filter(_.rId != t)
     }).getOrElse(graph.values)

@@ -3,7 +3,7 @@ import datalog.execution.{ExecutionEngine, PrecedenceGraph, SemiNaiveExecutionEn
 
 import scala.collection.mutable
 import datalog.dsl.{Program, Constant}
-import datalog.storage.VolcanoStorageManager
+import datalog.storage.{NS, VolcanoStorageManager}
 
 class PrecedenceGraphTest extends munit.FunSuite {
   test("tarjan ex") {
@@ -34,7 +34,7 @@ class PrecedenceGraphTest extends munit.FunSuite {
 
     assertEquals(
       engine.precedenceGraph.scc(),
-      Seq(Set(8), Set(2,3,4,5,6,7), Set(1), Set(0), Set(10))
+      Seq(Set(t8.id), Set(t2.id, t3.id, t4.id, t5.id, t6.id, t7.id), Set(t1.id), Set(t0.id), Set(t10.id))
     )
     assertEquals(
       engine.precedenceGraph.topSort(t10.id),
@@ -43,7 +43,7 @@ class PrecedenceGraphTest extends munit.FunSuite {
     // There's a single component with the 6 nodes
     assertEquals(
       engine.precedenceGraph.topSort(t4.id).toSet,
-      Set(2,3,4,5,6,7)
+      Set(t2.id, t3.id, t4.id, t5.id, t6.id, t7.id)
     )
     assertEquals(
       engine.precedenceGraph.topSort(t8.id),
@@ -78,7 +78,7 @@ class PrecedenceGraphTest extends munit.FunSuite {
 
     assertEquals(
       engine.precedenceGraph.scc().toSet,
-      Set(Set(0), Set(1), Set(2), Set(3), Set(4), Set(5))
+      Set(Set(e.id), Set(p.id), Set(other.id), Set(e2.id), Set(p2.id), Set(other2.id))
     )
     assertEquals(
       engine.precedenceGraph.topSort(other.id),
@@ -108,7 +108,7 @@ class PrecedenceGraphTest extends munit.FunSuite {
     engine.precedenceGraph.topSort(other.id) // test against sorted to keep groups
     assertEquals(
       engine.precedenceGraph.scc(),
-      Seq(Set(0), Set(1), Set(2))
+      Seq(Set(e.id), Set(p.id), Set(other.id))
     )
   }
 
@@ -128,7 +128,7 @@ class PrecedenceGraphTest extends munit.FunSuite {
     engine.precedenceGraph.topSort(a.id)
     assertEquals(
       engine.precedenceGraph.scc(),
-      Seq(Set(3), Set(0, 1, 2))
+      Seq(Set(other.id), Set(a.id, b.id, c.id))
     )
   }
 
@@ -149,7 +149,7 @@ class PrecedenceGraphTest extends munit.FunSuite {
     engine.precedenceGraph.topSort(a.id)
     assertEquals(
       engine.precedenceGraph.scc(),
-      Seq(Set(3), Set(0, 1, 2))
+      Seq(Set(other.id), Set(a.id, b.id, c.id))
     )
   }
 
@@ -170,7 +170,7 @@ class PrecedenceGraphTest extends munit.FunSuite {
     engine.precedenceGraph.topSort(a.id)
     assertEquals(
       engine.precedenceGraph.scc(),
-      Seq(Set(3), Set(0, 1, 2))
+      Seq(Set(other.id), Set(a.id, b.id, c.id))
     )
   }
 
@@ -856,5 +856,54 @@ class PrecedenceGraphTest extends munit.FunSuite {
     y2343(z) :- y234(z)
     y2344(z) :- y234(z)
     y2345(z) :- y234(z)
+  }
+
+  test("simple alias removal") {
+    val adjacency = Map(
+      0 -> Seq(),
+      1 -> Seq(0),
+      2 -> Seq(1),
+    )
+
+    val graph = new PrecedenceGraph(using new NS())
+    for ((node, deps) <- adjacency) {
+      graph.addNode(node, deps)
+      graph.idbs.add(node)
+    }
+
+    assertEquals(
+      graph.topSort(2),
+      Seq(0, 1, 2),
+    )
+    graph.updateNodeAlias(2, mutable.Map(1 -> 0))
+    assertEquals(
+      graph.topSort(2),
+      Seq(0, 2),
+    )
+  }
+
+  test("consecutive aliases removal") {
+    val adjacencyList = Map(
+      0 -> Seq(),
+      1 -> Seq(0),
+      2 -> Seq(1),
+      3 -> Seq(2),
+    )
+
+    val graph = new PrecedenceGraph(using new NS())
+    for ((node, deps) <- adjacencyList) {
+      graph.addNode(node, deps)
+      graph.idbs.add(node)
+    }
+
+    assertEquals(
+      graph.topSort(3),
+      Seq(0, 1, 2, 3),
+    )
+    graph.updateNodeAlias(3, mutable.Map(2 -> 1, 1 -> 0))
+    assertEquals(
+      graph.topSort(3),
+      Seq(0, 3),
+    )
   }
 }
