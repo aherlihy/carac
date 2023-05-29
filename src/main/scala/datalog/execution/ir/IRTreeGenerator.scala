@@ -1,14 +1,14 @@
 package datalog.execution.ir
 
-import datalog.execution.{JITOptions, StagedCompiler}
+import datalog.execution.{JITOptions, StagedCompiler, ir}
 import datalog.execution.ast.{ASTNode, AllRulesNode, LogicAtom, ProgramNode, RuleNode}
-import datalog.storage.{StorageManager, DB, KNOWLEDGE, RelationId, EDB}
+import datalog.storage.{DB, EDB, KNOWLEDGE, RelationId, StorageManager}
 import datalog.tools.Debug.debug
 
 import scala.collection.mutable
 
 class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
-  def naiveEval(ruleMap: mutable.Map[RelationId, ASTNode], copyToDelta: Boolean = false): IROp[Any] =
+  def naiveEval(ruleMap: mutable.Map[RelationId, ASTNode], copyToDelta: Boolean = false): IROp[Any] = {
     SequenceOp(
       OpCode.EVAL_NAIVE,
       //      DebugNode("in eval:", () => s"rId=${ctx.storageManager.ns(rId)} relations=${ctx.relations.map(r => ctx.storageManager.ns(r)).mkString("[", ", ", "]")}  incr=${ctx.newDbId} src=${ctx.knownDbId}") +:
@@ -24,8 +24,9 @@ class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
             Seq(InsertOp(r, DB.Derived, KNOWLEDGE.New, naiveEvalRule(ruleMap(r)).asInstanceOf[IROp[Any]]))
         ):_*
     )
+  }
 
-  def semiNaiveEval(rId: RelationId, ruleMap: mutable.Map[RelationId, ASTNode]): IROp[Any] =
+  def semiNaiveEval(rId: RelationId, ruleMap: mutable.Map[RelationId, ASTNode]): IROp[Any] = {
     SequenceOp(
       OpCode.EVAL_SN,
       ctx.sortedRelations
@@ -44,6 +45,23 @@ class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
           )
         ):_*,
     )
+  }
+
+  /**
+   * Returns the [[IROp[EDB]]] after applying negation, if the rule is
+   * actually negated.
+   *
+   * @param negated true iff the complement of the rule should be taken.
+   * @param arity   the arity of the relation.
+   * @param edb     the [[IROp[EDB]]] to be negated.
+   * @return the [[IROp[EDB]]] after applying negation.
+   */
+  private def withNegation(negated: Boolean)(arity: Int, edb: IROp[EDB]): IROp[EDB] = {
+    if (!negated)
+      edb
+    else
+      NegateOp(arity, edb)
+  }
 
   def naiveEvalRule(ast: ASTNode): IROp[EDB] = {
     ast match {
@@ -60,7 +78,14 @@ class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
           ScanEDBOp(r)
         else
           ProjectJoinFilterOp(atoms.head.rId, hash,
-            k.deps.map(r => ScanOp(r, DB.Derived, KNOWLEDGE.Known)):_*
+            k.deps.zipWithIndex.map((r, i) =>
+              withNegation(k.negated(i))(k.sizes(i),
+                UnionOp(OpCode.UNION,
+                  ScanOp(r, DB.Derived, KNOWLEDGE.Known),
+                  ScanDiscoveredOp(r),
+                )
+              )
+            ):_*
           )
       case _ =>
         debug("AST node passed to naiveEval:", () => ctx.storageManager.printer.printAST(ast))
@@ -93,9 +118,19 @@ class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
                   if (r == d && !found && i > idx)
                     found = true
                     idx = i
-                    ScanOp(r, DB.Delta, KNOWLEDGE.Known)
+                    withNegation(k.negated(i))(k.sizes(i),
+                      UnionOp(OpCode.UNION,
+                        ScanOp(r, DB.Delta, KNOWLEDGE.Known),
+                        ScanDiscoveredOp(r),
+                      )
+                    )
                   else
-                    ScanOp(r, DB.Derived, KNOWLEDGE.Known)
+                    withNegation(k.negated(i))(k.sizes(i),
+                      UnionOp(OpCode.UNION,
+                        ScanOp(r, DB.Derived, KNOWLEDGE.Known),
+                        ScanDiscoveredOp(r),
+                      )
+                    )
                 }): _*
               )
             }):_*
@@ -107,26 +142,26 @@ class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
   }
 
   def generateNaive(ruleMap: mutable.Map[Int, ASTNode]): IROp[Any] = {
-        DoWhileOp(
-          DB.Derived,
-          SequenceOp(OpCode.LOOP_BODY,
-            SwapAndClearOp(),
-            naiveEval(ruleMap)
-          )
-        )
+    DoWhileOp(
+      DB.Derived,
+      SequenceOp(OpCode.LOOP_BODY,
+        SwapAndClearOp(),
+        naiveEval(ruleMap)
+      )
+    )
   }
 
   def generateSemiNaive(ruleMap: mutable.Map[Int, ASTNode]): IROp[Any] = {
-        SequenceOp(OpCode.SEQ,
-          naiveEval(ruleMap, true),
-          DoWhileOp(
-            DB.Delta,
-            SequenceOp(OpCode.LOOP_BODY,
-              SwapAndClearOp(),
-              semiNaiveEval(ctx.toSolve, ruleMap)
-            )
-          )
+    SequenceOp(OpCode.SEQ,
+      naiveEval(ruleMap, true),
+      DoWhileOp(
+        DB.Delta,
+        SequenceOp(OpCode.LOOP_BODY,
+          SwapAndClearOp(),
+          semiNaiveEval(ctx.toSolve, ruleMap)
         )
+      )
+    )
   }
 
   def generateStratified(strata: Seq[mutable.Map[Int, ASTNode]], naive: Boolean): IROp[Any] = {
@@ -149,6 +184,8 @@ class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
     ast match {
       case ProgramNode(ruleMap) =>
         val scc = ctx.precedenceGraph.scc(ctx.toSolve)
+        if (ctx.precedenceGraph.hasNegativeCycle(ctx.storageManager.allRulesAllIndexes))
+          throw new Exception("Negative cycle detected")
         val innerProgram =
           if (scc.length <= 1 || !stratified)
             if (naive)

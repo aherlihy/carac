@@ -11,9 +11,7 @@ case class AllRulesNode(rules: ArrayBuffer[ASTNode], rId: Int, var edb: Boolean 
 
 abstract class AtomNode() extends ASTNode {}
 
-case class NegAtom(expr: ASTNode) extends AtomNode {}
-
-case class LogicAtom(relation: Int, terms: Seq[ASTNode]) extends AtomNode {}
+case class LogicAtom(relation: Int, terms: Seq[ASTNode], negated: Boolean) extends AtomNode {}
 
 // case class aggregator / constraint / arithmetic op
 case class ProgramNode(rules: Map[Int, ASTNode] = Map.empty) extends ASTNode {}

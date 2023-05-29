@@ -16,6 +16,26 @@ class VolcanoStorageManager(ns: NS = NS()) extends CollectionsStorageManager(ns)
   def projectHelper(input: EDB, k: JoinIndexes): EDB = ???
   def joinProjectHelper(inputs: Seq[EDB], k: JoinIndexes, sortOrder: (Int, Int, Int)): EDB = ???
   def joinProjectHelper_withHash(inputs: Seq[EDB], rId: Int, hash: String, sortOrder: (Int, Int, Int)): EDB = ???
+
+
+  /**
+   * Returns the [[relOps.VolOperator]] after applying negation, if the rule is
+   * actually negated.
+   *
+   * @param negated true iff the complement of the rule should be taken.
+   * @param arity the arity of the relation.
+   * @param rId the [[datalog.dsl.RelationId]] of the relation.
+   * @param edb the [[relOps.VolOperator]] representing the EDB.
+   * @return the [[relOps.VolOperator]] after applying negation.
+   */
+  private def withNegation(negated: Boolean)
+                          (rId: RelationId, arity: Int, edb: relOps.VolOperator): relOps.VolOperator =
+    import relOps.*
+    if !negated then edb
+    else
+      val complement = Scan(getAllPossibleEDBs(arity), rId)
+      Diff(mutable.ArrayBuffer(complement, edb))
+
   /**
    * Use relational operators to evaluate an IDB rule using Naive algo
    *
@@ -33,10 +53,13 @@ class VolcanoStorageManager(ns: NS = NS()) extends CollectionsStorageManager(ns)
             Scan(edbs.getOrElse(rId, CollectionsEDB()), rId)
           else
             Project(
-              Join(k.deps.map(r =>
-                Scan(
-                  getKnownDerivedDB(r), r
-                ) // TODO: warn if EDB is empty? Right now can't tell the difference between undeclared and empty EDB
+              Join(k.deps.zipWithIndex.map((r, i) =>
+                // TODO: warn if EDB is empty? Right now can't tell the difference between undeclared and empty EDB
+                val scan = Union(Seq(
+                  Scan(getKnownDerivedDB(r), r),
+                  Scan(getDiscoveredEDBs(r), r),
+                ))
+                withNegation(k.negated(i))(r, k.sizes(i), scan)
               ), k.varIndexes, k.constIndexes),
               k.projIndexes
             )
@@ -70,9 +93,19 @@ class VolcanoStorageManager(ns: NS = NS()) extends CollectionsStorageManager(ns)
                     if (r == d && !found && i > idx)
                       found = true
                       idx = i
-                      Scan(getKnownDeltaDB(r), r)
+                      withNegation(k.negated(i))(r, k.sizes(i),
+                        Union(Seq(
+                          Scan(getKnownDeltaDB(r), r),
+                          Scan(getDiscoveredEDBs(r), r),
+                        ))
+                      )
                     else
-                      Scan(getKnownDerivedDB(r), r)
+                      withNegation(k.negated(i))(r, k.sizes(i),
+                        Union(Seq(
+                          Scan(getKnownDerivedDB(r), r),
+                          Scan(getDiscoveredEDBs(r), r),
+                        ))
+                      )
                   }),
                   k.varIndexes,
                   k.constIndexes

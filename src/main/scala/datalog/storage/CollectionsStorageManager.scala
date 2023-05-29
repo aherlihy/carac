@@ -69,6 +69,47 @@ abstract class CollectionsStorageManager(override val ns: NS) extends StorageMan
   def edbContains(rId: RelationId): Boolean = edbs.contains(rId)
   def getAllEDBS(): mutable.Map[RelationId, Any] = edbs.wrapped.asInstanceOf[mutable.Map[RelationId, Any]]
 
+  override def getAllPossibleEDBs(arity: Int): CollectionsEDB =
+    val constants = mutable.Set.empty[Constant]
+    // 1. Add all constants from the original EDB.
+    edbs.foreach((_, rel) =>
+      rel.iterator.foreach(row =>
+        row.iterator.foreach {
+          case c: Constant => constants.add(c)
+          case _ => ()
+        }
+      )
+    )
+    // 2. Add all constants from the IDB.
+    allRulesAllIndexes.foreach((_, indexes) =>
+      indexes.foreach((_, index) =>
+        index.atoms.foreach(atom =>
+          atom.terms.foreach {
+            case c: Constant => constants.add(c)
+            case _ => ()
+          }
+        )
+      )
+    )
+    // 3. Return a combination from all the constants.
+    val list = constants.toList
+    val length = arity
+    val buffer = mutable.ArrayBuffer.empty[CollectionsRow]
+
+    // Populate all the combinations.
+    def combinations(): Unit =
+      def loop(i: Int, acc: List[Constant]): Unit =
+        if i == length then
+          buffer.addOne(CollectionsRow(acc))
+        else list.foreach(c => loop(i + 1, c :: acc))
+      loop(0, Nil)
+
+    combinations()
+    CollectionsEDB(buffer)
+
+  override def getDiscoveredEDBs(rId: RelationId): CollectionsEDB =
+    discoveredFacts.getOrElse(rId, CollectionsEDB())
+
   // Read intermediate results
   def getKnownDerivedDB(rId: RelationId): CollectionsEDB =
     derivedDB(knownDbId).getOrElse(rId, discoveredFacts.getOrElse(rId, CollectionsEDB()))

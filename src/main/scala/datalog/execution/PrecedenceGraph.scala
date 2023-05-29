@@ -149,4 +149,35 @@ class PrecedenceGraph(using ns: NS /* for debugging */) {
       .map(_.intersect(idbs)) // sort and remove edbs
       .filter(_.nonEmpty)
   }
+
+  /**
+   * Returns true if the [[PrecedenceGraph]] contains a negative cycle,
+   * i.e. a cycle where a rule with a negative body literal depends on the
+   * same or a later stratum.
+   *
+   * @param rules the rules to use the check for.
+   * @return true iff there is a negative cycle.
+   */
+  def hasNegativeCycle(rules: mutable.Map[Int, AllIndexes]): Boolean = {
+    val computed = mutable.Set.empty[Int]
+    val components = scc()
+
+    def hasNegativeCycleHelper(rule: Int): Boolean = {
+      rules.view
+        .getOrElse(rule, mutable.Map.empty)
+        .values
+        .filter(_.atoms.head.rId == rule)
+        .flatMap(r => r.deps.zip(r.negated))
+        .filter((_, neg) => neg)
+        .map((dep, _) => dep)
+        .exists(dep => !computed.contains(getAliasedId(dep)))
+    }
+
+    var hasNegative = false
+    for (component <- components)
+      for (rule <- component)
+        hasNegative |= hasNegativeCycleHelper(rule)
+      computed.addAll(component)
+    hasNegative
+  }
 }
