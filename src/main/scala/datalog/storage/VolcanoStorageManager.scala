@@ -33,8 +33,10 @@ class VolcanoStorageManager(ns: NS = NS()) extends CollectionsStorageManager(ns)
             Scan(edbs.getOrElse(rId, CollectionsEDB()), rId)
           else
             Project(
-              Join(k.deps.map(r => Scan(
-                derivedDB(knownDbId).getOrElse(r, edbs.getOrElse(r, CollectionsEDB())), r) // TODO: warn if EDB is empty? Right now can't tell the difference between undeclared and empty EDB
+              Join(k.deps.map(r =>
+                Scan(
+                  getKnownDerivedDB(r), r
+                ) // TODO: warn if EDB is empty? Right now can't tell the difference between undeclared and empty EDB
               ), k.varIndexes, k.constIndexes),
               k.projIndexes
             )
@@ -68,9 +70,9 @@ class VolcanoStorageManager(ns: NS = NS()) extends CollectionsStorageManager(ns)
                     if (r == d && !found && i > idx)
                       found = true
                       idx = i
-                      Scan(deltaDB(knownDbId).getOrElse(r, CollectionsEDB()), r)
+                      Scan(getKnownDeltaDB(r), r)
                     else
-                      Scan(derivedDB(knownDbId).getOrElse(r, edbs.getOrElse(r, CollectionsEDB())), r)
+                      Scan(getKnownDerivedDB(r), r)
                   }),
                   k.varIndexes,
                   k.constIndexes

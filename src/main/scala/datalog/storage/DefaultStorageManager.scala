@@ -229,10 +229,10 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
                 if (r == d && !found && i > idx) {
                   found = true
                   idx = i
-                  deltaDB(knownDbId)(r)
+                  getKnownDeltaDB(r)
                 }
                 else {
-                  derivedDB(knownDbId).getOrElse(r, edbs.getOrElse(r, CollectionsEDB())) // TODO: warn if EDB is empty? Right now can't tell the difference between undeclared and empty EDB
+                  getKnownDerivedDB(r) // TODO: warn if EDB is empty? Right now can't tell the difference between undeclared and empty EDB
                 }
               ), k, (0, 0, 0)).wrapped // don't sort when not staging
           }).distinct
@@ -248,7 +248,7 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
         else
           projectHelper(
             joinHelper(
-              k.deps.map(r => derivedDB(knownDbId).getOrElse(r, edbs.getOrElse(r, CollectionsEDB()))), k // TODO: warn if EDB is empty? Right now can't tell the difference between undeclared and empty EDB)
+              k.deps.map(r => getKnownDerivedDB(r)), k // TODO: warn if EDB is empty? Right now can't tell the difference between undeclared and empty EDB)
             ), k
           ).wrapped.distinct
       })

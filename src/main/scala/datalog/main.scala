@@ -77,10 +77,12 @@ def ackermann(program: Program) = {
 def tc(program: Program): Unit = {
   val edge = program.relation[Constant]("edge")
   val path = program.relation[Constant]("path")
+  val path2a = program.relation[Constant]("path2a")
   val x, y, z = program.variable()
 
   path(x, y) :- edge(x, y)
-  path(x, z) :- (edge(x, y), path(y, z), edge(y, "a"))
+  path(x, z) :- (edge(x, y), path(y, z))
+  path2a(x, y) :- (path(x, y), edge(y, "a"))
 
   edge("a", "a", "red") :- ()
   edge("a", "b", "blue") :- ()
