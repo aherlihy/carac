@@ -26,7 +26,7 @@ class CopyEliminationPass()(using ASTTransformerContext) extends Transformer {
         if (body.size == 1) // for now just subst simple equality
           (head, body(0)) match {
             case (h: LogicAtom, b: LogicAtom) =>
-              if (h.terms == b.terms && h.terms.forall(p => p.isInstanceOf[VarTerm]))
+              if (h.terms == b.terms && h.terms.forall(p => p.isInstanceOf[VarTerm]) && h.negated == b.negated)
                 ctx.aliases(h.relation) = ctx.aliases.getOrElse(b.relation, b.relation)
             case _ =>
           }
@@ -50,7 +50,7 @@ class CopyEliminationPass()(using ASTTransformerContext) extends Transformer {
           val transformedAtoms = atoms.head +: atoms.drop(1).map(a =>
             if (ctx.aliases.contains(a.rId))
               aliased = true
-              Atom(ctx.aliases.getOrElse(a.rId, a.rId), a.terms)
+              Atom(ctx.aliases.getOrElse(a.rId, a.rId), a.terms, a.negated)
             else
               a
           )
@@ -63,10 +63,8 @@ class CopyEliminationPass()(using ASTTransformerContext) extends Transformer {
 
           RuleNode(transform(head), body.map(transform), transformedAtoms, hash)
         case n: AtomNode => n match {
-          case NegAtom(expr) =>
-            NegAtom(transform(expr))
-          case LogicAtom(relation, terms) =>
-            LogicAtom(ctx.aliases.getOrElse(relation, relation), terms)
+          case LogicAtom(relation, terms, neg) =>
+            LogicAtom(ctx.aliases.getOrElse(relation, relation), terms, neg)
         }
         case n: TermNode => n
       }

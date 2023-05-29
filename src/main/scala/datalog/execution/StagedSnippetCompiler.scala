@@ -46,7 +46,17 @@ class StagedSnippetCompiler(val storageManager: StorageManager)(using val jitOpt
 
   given ToExpr[JoinIndexes] with {
     def apply(x: JoinIndexes)(using Quotes) = {
-      '{ JoinIndexes(${ Expr(x.varIndexes) }, ${ Expr(x.constIndexes) }, ${ Expr(x.projIndexes) }, ${ Expr(x.deps) }, ${Expr (x.atoms) }, ${ Expr(x.edb) }) }
+      '{
+        JoinIndexes(
+          ${ Expr(x.varIndexes) },
+          ${ Expr(x.constIndexes) },
+          ${ Expr(x.projIndexes) },
+          ${ Expr(x.deps) },
+          ${ Expr(x.negated) },
+          ${ Expr(x.sizes) },
+          ${ Expr(x.atoms) },
+          ${ Expr(x.edb) },
+        ) }
     }
   }
 
@@ -69,6 +79,14 @@ class StagedSnippetCompiler(val storageManager: StorageManager)(using val jitOpt
                 '{ $stagedSM.getKnownDeltaDB(${ Expr(rId) }) }
             }
         }
+
+      case NegateOp(arity: Int, children:_*) =>
+        val all = '{ $stagedSM.getAllPossibleEDBs(${ Expr(arity )})}
+        val compiledOps = '{ $stagedFns.map(s => s($stagedSM)) }
+        '{ $stagedSM.diff($all, $compiledOps(0)) }
+
+      case ScanDiscoveredOp(rId) =>
+        '{ $stagedSM.getDiscoveredEDBs(${ Expr(rId) }) }
 
       case ScanEDBOp(rId) =>
         if (storageManager.edbContains(rId))

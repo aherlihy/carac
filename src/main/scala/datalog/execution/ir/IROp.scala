@@ -14,7 +14,9 @@ import scala.quoted.*
 import scala.util.{Failure, Success}
 
 enum OpCode:
-  case PROGRAM, SWAP_CLEAR, SEQ, SCAN, SCANEDB, SPJ, INSERT, UNION, DIFF, 
+  case PROGRAM, SWAP_CLEAR, SEQ,
+  SCAN, SCANEDB, SCAN_DISCOVERED, NEGATE,
+  SPJ, INSERT, UNION, DIFF,
   DEBUG, DEBUGP, DOWHILE, UPDATE_DISCOVERED,
   EVAL_STRATUM, EVAL_RULE_NAIVE, EVAL_RULE_SN, EVAL_RULE_BODY, EVAL_NAIVE, EVAL_SN, LOOP_BODY, OTHER // convenience labels for generating functions
 object OpCode {
@@ -189,6 +191,27 @@ case class InsertOp(rId: RelationId, db: DB, knowledge: KNOWLEDGE, override val 
     }
 }
 
+case class ScanDiscoveredOp(rId: RelationId)(using JITOptions) extends IROp[EDB] {
+  val code: OpCode = OpCode.SCAN_DISCOVERED
+  override def run(storageManager: StorageManager): EDB =
+    storageManager.getDiscoveredEDBs(rId)
+  override def run_continuation(storageManager: StorageManager, opFns: Seq[CompiledFn[EDB]]): EDB =
+    run(storageManager) // leaf node, so no difference for continuation or run
+}
+
+case class NegateOp(arity: Int, override val children:IROp[EDB]*)(using JITOptions) extends IROp[EDB] {
+  val code: OpCode = OpCode.NEGATE
+  override def run(storageManager: StorageManager): EDB =
+    val all = storageManager.getAllPossibleEDBs(arity)
+    val child = children.head.run(storageManager)
+    storageManager.diff(all, child)
+
+  override def run_continuation(storageManager: StorageManager, opFns: Seq[CompiledFn[EDB]]): EDB =
+    val all = storageManager.getAllPossibleEDBs(arity)
+    val child = opFns.head(storageManager)
+    storageManager.diff(all, child)
+}
+
 case class ScanOp(rId: RelationId, db: DB, knowledge: KNOWLEDGE)(using JITOptions) extends IROp[EDB] {
   val code: OpCode = OpCode.SCAN
 
@@ -228,9 +251,9 @@ case class ScanEDBOp(rId: RelationId)(using JITOptions) extends IROp[EDB] {
  * @param joinIdx
  * @param children: [Scan*deps]
  */
-case class ProjectJoinFilterOp(rId: RelationId, var hash: String, override val children:ScanOp*)(using jitOptions: JITOptions) extends IROp[EDB](children:_*) {
+case class ProjectJoinFilterOp(rId: RelationId, var hash: String, override val children:IROp[EDB]*)(using jitOptions: JITOptions) extends IROp[EDB](children:_*) {
   val code: OpCode = OpCode.SPJ
-  var childrenSO: Array[ScanOp] = children.toArray
+  var childrenSO: Array[IROp[EDB]] = children.toArray
 
   override def run_continuation(storageManager: StorageManager, opFns: Seq[CompiledFn[EDB]]): EDB =
     val inputs = opFns.map(s => s(storageManager))

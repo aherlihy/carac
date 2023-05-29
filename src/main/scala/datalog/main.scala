@@ -1,7 +1,7 @@
 package datalog
 
-import datalog.execution.{ExecutionEngine, JITOptions, SemiNaiveExecutionEngine, StagedExecutionEngine, StagedSnippetExecutionEngine, ir, NaiveExecutionEngine}
-import datalog.dsl.{Constant, Program, __}
+import datalog.execution.{ExecutionEngine, JITOptions, NaiveExecutionEngine, SemiNaiveExecutionEngine, StagedExecutionEngine, StagedSnippetExecutionEngine, ir}
+import datalog.dsl.{Constant, Program, __, not}
 import datalog.execution.ast.transform.CopyEliminationPass
 import datalog.execution.ir.InterpreterContext
 import datalog.storage.{DefaultStorageManager, NS, VolcanoStorageManager}
@@ -90,6 +90,109 @@ def tc(program: Program): Unit = {
   edge("c", "d", "blue") :- ()
 
   println("RES=" + path.solve())
+}
+
+def liveVariables(program: Program): Unit = {
+  val v = program.relation[Constant]("v")
+  val o = program.relation[Constant]("o")
+  val i = program.relation[Constant]("i")
+  val gen = program.relation[Constant]("gen")
+  val kill = program.relation[Constant]("kill")
+  val s = program.relation[Constant]("dependency")
+
+  val x, n, y = program.variable()
+
+  // Possible variables.
+  v("x") :- ()
+  v("y") :- ()
+  v("z") :- ()
+
+  // Instruction dependencies.
+  s("1", "2") :- ()
+  s("2", "3") :- ()
+  s("3", "4") :- ()
+  s("3", "5") :- ()
+  s("4", "6") :- ()
+  s("5", "6") :- ()
+
+  // Gen and kill sets.
+  gen("3", "x") :- ()
+  gen("3", "y") :- ()
+  gen("4", "x") :- ()
+  gen("5", "y") :- ()
+  gen("6", "z") :- ()
+
+  kill("1", "x") :- ()
+  kill("2", "y") :- ()
+  kill("4", "z") :- ()
+  kill("5", "z") :- ()
+
+  // Out and in sets.
+  i(x, n) :- gen(x, n)
+  i(x, n) :- (o(x, n), not(kill(x, n)))
+  o(x, n) :- (s(x, y), i(y, n))
+
+  // Solve the sets for each instruction.
+  println("RES=" + i.solve())
+}
+
+def reachingDefinitions(program: Program): Unit = {
+  val o = program.relation[Constant]("o")
+  val i = program.relation[Constant]("i")
+  val gen = program.relation[Constant]("gen")
+  val kill = program.relation[Constant]("kill")
+  val s = program.relation[Constant]("dependency")
+
+  val n, m, v, idx = program.variable()
+
+  s("1", "2") :- ()
+  s("2", "3") :- ()
+  s("3", "4") :- ()
+  s("4", "5") :- ()
+  s("5", "6") :- ()
+  s("6", "4") :- ()
+  s("6", "7") :- ()
+
+  gen("1", "x") :- ()
+  gen("2", "y") :- ()
+  gen("3", "z") :- ()
+  gen("4", "x") :- ()
+  gen("5", "z") :- ()
+
+  kill(n, v) :- gen(n, v)
+
+  i(n, v, idx) :- (o(m, v, idx), s(m, n))
+  o(n, v, n) :- gen(n, v)
+  o(n, v, idx) :- (i(n, v, idx), not(kill(n, v)))
+
+  val result = o.solve().toList
+    .groupBy(_.head)
+    .map((k, v) => (k, v.map(_.tail).map(_.mkString("(", ", ", ")"))))
+    .toList
+    .sortBy(_._1.asInstanceOf[String])
+    .map((k, v) => s"$k -> ${v.mkString(", ")}")
+    .mkString("\n")
+  println("RES=\n" + result)
+}
+
+def neg(program: Program): Unit = {
+  val a = program.relation[Constant]("a")
+  val b = program.relation[Constant]("b")
+  val c = program.relation[Constant]("c")
+  val x, y = program.variable()
+
+  a("a") :- ()
+  a("b") :- ()
+  a("c") :- ()
+  a("d") :- ()
+
+  b("a") :- ()
+  b("b") :- ()
+
+  // Should contain all values pairs in a but not in b (aka "c" and "d")
+  c(x, y) :- (not(b(x)), not(b(y)), a(x), a(y))
+
+  println("RES=" + c.solve())
 }
 
 def acyclic(program: Program) = {
