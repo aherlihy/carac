@@ -40,6 +40,7 @@ trait StorageManager(val ns: NS) {
   def swapKnowledge(): Unit
   def compareNewDeltaDBs(): Boolean
   def compareDerivedDBs(): Boolean
+  def updateDiscovered(): Unit
 
   def verifyEDBs(idbList: mutable.Set[RelationId]): Unit
 

@@ -74,22 +74,32 @@ class NaiveExecutionEngine(val storageManager: StorageManager) extends Execution
     if (!idbs.contains(toSolve)) {
       throw new Exception("Solving for rule without body")
     }
-    val relations = precedenceGraph.topSort(toSolve)
+    val strata = precedenceGraph.scc()
     storageManager.initEvaluation() // facts discovered in the previous iteration
-    var count = 0
 
-    debug(s"solving relation: ${storageManager.ns(toSolve)} order of relations=", relations.toString)
-    var setDiff = true
-    while (setDiff) {
-      storageManager.swapKnowledge()
-      storageManager.clearNewDerived()
+    debug(s"solving relation: ${storageManager.ns(toSolve)} order of relations=", strata.toString)
 
-      debug(s"initial state @ $count", storageManager.toString)
-      count += 1
-      evalNaive(relations)
+    var scount = 0
+    // for each strata
+    strata.foreach(relations =>
+      var count = 0
+      println(s"\n\n*****STRATA $scount with relations $relations")
+      scount += 1
+      var setDiff = true
+      while (setDiff) {
+        storageManager.swapKnowledge()
+        storageManager.clearNewDerived()
 
-      setDiff = !storageManager.compareDerivedDBs()
-    }
+        debug(s"initial state @ $count", storageManager.toString)
+        count += 1
+        evalNaive(relations.toSeq)
+
+        setDiff = !storageManager.compareDerivedDBs()
+      }
+//      debug(s"final state @ ${count-1}", storageManager.toString)
+      // add all known to edbs, which will become the next strata's known. All relations in known or all relations in the strata?
+      storageManager.updateDiscovered()
+    )
     storageManager.getKnownIDBResult(toSolve)
   }
 }

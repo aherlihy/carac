@@ -77,10 +77,12 @@ def ackermann(program: Program) = {
 def tc(program: Program): Unit = {
   val edge = program.relation[Constant]("edge")
   val path = program.relation[Constant]("path")
+  val path2a = program.relation[Constant]("path2a")
   val x, y, z = program.variable()
 
   path(x, y) :- edge(x, y)
-  path(x, z) :- (edge(x, y), path(y, z), edge(y, "a"))
+  path(x, z) :- (edge(x, y), path(y, z))
+  path2a(x, y) :- (path(x, y), edge(y, "a"))
 
   edge("a", "a", "red") :- ()
   edge("a", "b", "blue") :- ()
@@ -650,13 +652,13 @@ def isAfter(program: Program) =
 //  acyclic(program0)
 //  println("\n\n_______________________\n\n")
 
-  val dotty = staging.Compiler.make(getClass.getClassLoader)
-  var sort = 1
-//    println(s"OLD SN: $sort")
-//    given engine1: ExecutionEngine = new SemiNaiveExecutionEngine(new DefaultStorageManager())
-//    val program1 = Program(engine1)
-//    func(program1)
-//    println("\n\n_______________________\n\n")
+//  val dotty = staging.Compiler.make(getClass.getClassLoader)
+//  var sort = 1
+//  println(s"OLD SN: $sort")
+  given engine1: ExecutionEngine = new NaiveExecutionEngine(new DefaultStorageManager())
+  val program1 = Program(engine1)
+  tc(program1)
+  println("\n\n_______________________\n\n")
 
 //    val jo2 = JITOptions(ir.OpCode.OTHER, dotty, aot = false, block = true)
 //    println("INTERP")
@@ -666,12 +668,12 @@ def isAfter(program: Program) =
 //    isEqual(program3a)
 //    println("\n\n_______________________\n\n")
 //
-    val jo = JITOptions(ir.OpCode.EVAL_RULE_SN, dotty, aot = false, block = true, sortOrder = (0, 0, 0))
-    println("JIT")
-    given engine3: ExecutionEngine = new StagedExecutionEngine(new DefaultStorageManager(), jo)
-    val program3 = Program(engine3)
-    ackermann(program3)
-    println("\n\n_______________________\n\n")
+//    val jo = JITOptions(ir.OpCode.EVAL_RULE_SN, dotty, aot = false, block = true, sortOrder = (0, 0, 0))
+//    println("JIT")
+//    given engine3: ExecutionEngine = new StagedExecutionEngine(new DefaultStorageManager(), jo)
+//    val program3 = Program(engine3)
+//    ackermann(program3)
+//    println("\n\n_______________________\n\n")
 
 //  println("JIT Snippet")
 //  val engine4: ExecutionEngine = new StagedSnippetExecutionEngine(new DefaultStorageManager(), jo)

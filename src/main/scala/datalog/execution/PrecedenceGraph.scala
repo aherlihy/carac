@@ -138,10 +138,6 @@ class PrecedenceGraph(using ns: NS /* for debugging */) {
 
   def scc(): Seq[Set[Int]] = {
     debug("precedencegraph:", () => toString())
-    tarjan(target = None).map(_.toSet)
-  }
-
-  def removeAliases(aliases: mutable.Map[Int, Int]): Unit = {
-
+    tarjan(target = None)
   }
 }
