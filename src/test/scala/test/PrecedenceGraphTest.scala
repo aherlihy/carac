@@ -3,7 +3,7 @@ import datalog.execution.{ExecutionEngine, PrecedenceGraph, SemiNaiveExecutionEn
 
 import scala.collection.mutable
 import datalog.dsl.{Program, Constant}
-import datalog.storage.VolcanoStorageManager
+import datalog.storage.{NS, VolcanoStorageManager}
 
 class PrecedenceGraphTest extends munit.FunSuite {
   test("tarjan ex") {
@@ -32,23 +32,25 @@ class PrecedenceGraphTest extends munit.FunSuite {
     t7(x) :- (t5(x), t8(x))
     t10(x) :- t10(x)
 
-
-    val res = engine.precedenceGraph.topSort(t4.id) // test against sorted to keep groups
-    println(res)
     assertEquals(
-      engine.precedenceGraph.sorted,
-      mutable.Queue[mutable.Set[Int]](mutable.Set(8), mutable.Set(2,3,4,5,6,7), mutable.Set(1), mutable.Set(0), mutable.Set(10))
+      engine.precedenceGraph.scc(),
+      Seq(Set(t8.id), Set(t2.id, t3.id, t4.id, t5.id, t6.id, t7.id), Set(t1.id), Set(t0.id), Set(t10.id))
     )
     assertEquals(
-      res,
-      Seq(2,3,4,5,6,7)
+      engine.precedenceGraph.topSort(t10.id),
+      Seq(t10.id),
+    )
+    // There's a single component with the 6 nodes
+    assertEquals(
+      engine.precedenceGraph.topSort(t4.id).toSet,
+      Set(t2.id, t3.id, t4.id, t5.id, t6.id, t7.id)
     )
     assertEquals(
       engine.precedenceGraph.topSort(t8.id),
       Seq() // TODO: empty
     )
   }
-  test("tc with isolated cycle, 1st") {
+  test("tc with isolated cycles") {
     given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new VolcanoStorageManager())
 
     val program = Program(engine)
@@ -74,55 +76,20 @@ class PrecedenceGraphTest extends munit.FunSuite {
     p2(x, z) :- (e2(x, y), p2(y, z))
     other2(x) :- p2("a", x)
 
-    val res = engine.precedenceGraph.topSort(other.id) // test against sorted to keep groups
-
     assertEquals(
-      engine.precedenceGraph.sorted,
-      mutable.Queue[mutable.Set[Int]](mutable.Set(0), mutable.Set(1), mutable.Set(2), mutable.Set(3), mutable.Set(4), mutable.Set(5))
+      engine.precedenceGraph.scc().toSet,
+      Set(Set(e.id), Set(p.id), Set(other.id), Set(e2.id), Set(p2.id), Set(other2.id))
     )
     assertEquals(
-      res,
-      Seq(1, 2)
-    )
-  }
-
-  test("tc with isolated cycle, 2nd") {
-    given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new VolcanoStorageManager())
-
-    val program = Program(engine)
-    val e = program.relation[String]("e")
-    val p = program.relation[String]("p")
-    val other = program.relation[String]("other")
-    val e2 = program.relation[String]("e2")
-    val p2 = program.relation[String]("p2")
-    val other2 = program.relation[String]("other2")
-    val x, y, z = program.variable()
-
-    e("a", "b") :- ()
-    e("b", "c") :- ()
-    e("c", "d") :- ()
-    p(x, y) :- e(x, y)
-    p(x, z) :- (e(x, y), p(y, z))
-    other(x) :- p("a", x)
-
-    e2("a", "b") :- ()
-    e2("b", "c") :- ()
-    e2("c", "d") :- ()
-    p2(x, y) :- e2(x, y)
-    p2(x, z) :- (e2(x, y), p2(y, z))
-    other2(x) :- p2("a", x)
-
-    val res2 = engine.precedenceGraph.topSort(other2.id) // test against sorted to keep groups
-
-    assertEquals(
-      engine.precedenceGraph.sorted,
-      mutable.Queue[mutable.Set[Int]](mutable.Set(3), mutable.Set(4), mutable.Set(5), mutable.Set(0), mutable.Set(1), mutable.Set(2))
+      engine.precedenceGraph.topSort(other.id),
+      Seq(p.id, other.id)
     )
     assertEquals(
-      res2,
-      Seq(4, 5)
+      engine.precedenceGraph.topSort(other2.id),
+      Seq(p2.id, other2.id)
     )
   }
+
   test("transitive closure") {
     given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new VolcanoStorageManager())
     val program = Program(engine)
@@ -140,8 +107,8 @@ class PrecedenceGraphTest extends munit.FunSuite {
 
     engine.precedenceGraph.topSort(other.id) // test against sorted to keep groups
     assertEquals(
-      engine.precedenceGraph.sorted,
-      mutable.Queue[mutable.Set[Int]](mutable.Set(0), mutable.Set(1), mutable.Set(2))
+      engine.precedenceGraph.scc(),
+      Seq(Set(e.id), Set(p.id), Set(other.id))
     )
   }
 
@@ -160,8 +127,8 @@ class PrecedenceGraphTest extends munit.FunSuite {
 
     engine.precedenceGraph.topSort(a.id)
     assertEquals(
-      engine.precedenceGraph.sorted,
-      mutable.Queue(mutable.Set(3), mutable.Set(0, 1, 2))
+      engine.precedenceGraph.scc(),
+      Seq(Set(other.id), Set(a.id, b.id, c.id))
     )
   }
 
@@ -181,8 +148,8 @@ class PrecedenceGraphTest extends munit.FunSuite {
 
     engine.precedenceGraph.topSort(a.id)
     assertEquals(
-      engine.precedenceGraph.sorted,
-      mutable.Queue(mutable.Set(3), mutable.Set(0, 1, 2))
+      engine.precedenceGraph.scc(),
+      Seq(Set(other.id), Set(a.id, b.id, c.id))
     )
   }
 
@@ -202,8 +169,8 @@ class PrecedenceGraphTest extends munit.FunSuite {
 
     engine.precedenceGraph.topSort(a.id)
     assertEquals(
-      engine.precedenceGraph.sorted,
-      mutable.Queue(mutable.Set(3), mutable.Set(0, 1, 2))
+      engine.precedenceGraph.scc(),
+      Seq(Set(other.id), Set(a.id, b.id, c.id))
     )
   }
 
@@ -889,5 +856,54 @@ class PrecedenceGraphTest extends munit.FunSuite {
     y2343(z) :- y234(z)
     y2344(z) :- y234(z)
     y2345(z) :- y234(z)
+  }
+
+  test("simple alias removal") {
+    val adjacency = Map(
+      0 -> Seq(),
+      1 -> Seq(0),
+      2 -> Seq(1),
+    )
+
+    val graph = new PrecedenceGraph(using new NS())
+    for ((node, deps) <- adjacency) {
+      graph.addNode(node, deps)
+      graph.idbs.add(node)
+    }
+
+    assertEquals(
+      graph.topSort(2),
+      Seq(0, 1, 2),
+    )
+    graph.updateNodeAlias(2, mutable.Map(1 -> 0))
+    assertEquals(
+      graph.topSort(2),
+      Seq(0, 2),
+    )
+  }
+
+  test("consecutive aliases removal") {
+    val adjacencyList = Map(
+      0 -> Seq(),
+      1 -> Seq(0),
+      2 -> Seq(1),
+      3 -> Seq(2),
+    )
+
+    val graph = new PrecedenceGraph(using new NS())
+    for ((node, deps) <- adjacencyList) {
+      graph.addNode(node, deps)
+      graph.idbs.add(node)
+    }
+
+    assertEquals(
+      graph.topSort(3),
+      Seq(0, 1, 2, 3),
+    )
+    graph.updateNodeAlias(3, mutable.Map(2 -> 1, 1 -> 0))
+    assertEquals(
+      graph.topSort(3),
+      Seq(0, 3),
+    )
   }
 }

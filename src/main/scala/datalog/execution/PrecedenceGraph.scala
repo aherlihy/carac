@@ -6,104 +6,139 @@ import datalog.storage.NS
 
 import scala.collection.mutable
 
-class Node(r: Int) (using ns: NS) {
-  var recursive = false
+private class Node(r: Int)(using ns: NS) {
   val rId: Int = r
   var idx: Int = -1
   var lowLink: Int = -1
   var edges: mutable.Set[Node] = mutable.Set[Node]()
   var onStack: Boolean = false
-  override def toString() =
+
+  // self-recursion, i.e. the head predicate appears in the body at least once. Does not indicate if there is any multi-hop/mutual recursion.
+  def recursive: Boolean = edges.contains(this)
+
+  override def toString(): String =
     "{" + ns(rId) + ": " + "recursive=" + recursive
-//      " idx=" + idx + " lowLink=" + lowLink + " onstack=" + onStack +
-//      " edges=" + edges.map(e => ns(e.rId)).mkString("[", ", ", "]")
+      //      " idx=" + idx + " lowLink=" + lowLink + " onstack=" + onStack +
+      //      " edges=" + edges.map(e => ns(e.rId)).mkString("[", ", ", "]")
       + "}"
 }
 
 class PrecedenceGraph(using ns: NS /* for debugging */) {
-  val nodes: mutable.Map[Int, Node] = mutable.Map[Int, Node]()
-  val sorted: mutable.Queue[mutable.Set[Int]] = mutable.Queue[mutable.Set[Int]]()
+  private val adjacencyList = mutable.Map[Int, mutable.Set[Int]]()
+  private val aliases = mutable.Map[Int, Int]()
+
+  /**
+   * Get the rule id that corresponds to the given rule id, following alias
+   * definitions.
+   * @param rId the rule id to resolve
+   * @return the rule id that corresponds to the given rule id
+   */
+  private def getAliasedId(rId: Int): Int = {
+    var current = rId
+    while aliases.contains(current) do
+      current = aliases(current)
+    current
+  }
+
+  /**
+   * Compute a new graph from the adjacency list, respecting alias definitions.
+   */
+  private def buildGraph = {
+    val nodes = mutable.Map[Int, Node]()
+    for (from, list) <- adjacencyList do
+      for to <- list do
+        val fAlias = getAliasedId(from)
+        val tAlias = getAliasedId(to)
+
+        val f = nodes.getOrElseUpdate(fAlias, Node(fAlias))
+        val t = nodes.getOrElseUpdate(tAlias, Node(tAlias))
+        f.edges.addOne(t)
+    nodes.toMap
+  }
+
   val idbs: mutable.Set[Int] = mutable.Set[Int]()
 
-  var index = 0
-  val stack: mutable.Stack[Node] = mutable.Stack[Node]()
+  override def toString: String = buildGraph.map((r, n) => ns(r) + " -> " + n.edges.map(e => ns(e.rId)).mkString("[", ", ", "]")).mkString("{", ", ", "}")
 
-  override def toString: String = nodes.map((r, n) => ns(r) + " -> " + n.edges.map(e => ns(e.rId)).mkString("[", ", ", "]")).mkString("{", ", ", "}")
-  def sortedString(): String = sorted.map(cc => cc.map(ns.apply).mkString("(", ", ", ")")).mkString("{", ", ", "}")
+  def sortedString(): String =
+    scc()
+      .map(n => n.map(ns.apply))
+      .map(_.mkString("(", ", ", ")"))
+      .mkString("{", ", ", "}")
 
-  def addNode(rule: Seq[Atom]): Unit = { // TODO: sort incrementally?
-    val node = nodes.getOrElseUpdate(rule.head.rId, Node(rule.head.rId))
-    rule.drop(1).foreach(n => {
-      val neighbor = nodes.getOrElseUpdate(n.rId, Node(n.rId))
-      node.edges.addOne(neighbor)
-      if (n.rId == node.rId) {
-        node.recursive = true
-      }
-    })
+  def addNode(rule: Seq[Atom]): Unit = {
+    addNode(rule.head.rId, rule.tail.map(_.rId))
   }
 
   def updateNodeAlias(rId: Int, aliases: mutable.Map[Int, Int]): Unit = {
-    val node = nodes(rId)
-    node.edges = node.edges.map(edgeNode =>
-      nodes(aliases.getOrElse(edgeNode.rId, edgeNode.rId))
-    )
+    this.aliases.addAll(aliases)
   }
 
   def addNode(rId: Int, deps: Seq[Int]): Unit = {
-    val node = nodes.getOrElseUpdate(rId, Node(rId))
-    deps.foreach(n => {
-      val neighbor = nodes.getOrElseUpdate(n, Node(n))
-      node.edges.addOne(neighbor)
-      if (n == rId) {
-        node.recursive = true
-      }
-    })
+    adjacencyList.getOrElseUpdate(rId, mutable.Set[Int]()).addAll(deps)
   }
 
-  def strongConnect(v: Node): Unit = {
-    v.idx = index
-    v.lowLink = index
-    index = index + 1
-    stack.push(v)
-    v.onStack = true
+  private def tarjan(target: Option[Int]): Seq[Set[Int]] = {
+    var index = 0
+    val stack = mutable.Stack[Node]()
+    val sorted = mutable.Queue[mutable.Set[Int]]()
 
-    v.edges.foreach(w => {
-      if (w.idx == -1) { // recur
-        strongConnect(w)
-        v.lowLink = v.lowLink.min(w.lowLink)
-      } else if (w.onStack) {
-        // w is in current scc
-        v.lowLink = v.lowLink.min(w.idx)
+    def strongConnect(v: Node): Unit = {
+      v.idx = index
+      v.lowLink = index
+      index = index + 1
+      stack.push(v)
+      v.onStack = true
+
+      v.edges.foreach(w => {
+        if (w.idx == -1) { // recur
+          strongConnect(w)
+          v.lowLink = v.lowLink.min(w.lowLink)
+        } else if (w.onStack) {
+          // w is in current scc
+          v.lowLink = v.lowLink.min(w.idx)
+        }
+      })
+
+      if (v.lowLink == v.idx) {
+        val res = mutable.Set[Int]()
+        res.addOne(v.rId)
+        while
+          // add to component
+          val w = stack.pop()
+          w.onStack = false
+          res.addOne(w.rId)
+          w.rId != v.rId
+        do {} // TODO: weird?
+        sorted.addOne(res)
       }
-    })
-
-    if (v.lowLink == v.idx) {
-      val res = mutable.Set[Int]()
-      res.addOne(v.rId)
-      while
-        // add to component
-        val w = stack.pop()
-        w.onStack = false
-        res.addOne(w.rId)
-        w.rId != v.rId
-      do {} // TODO: weird?
-      sorted.addOne(res)
     }
-  }
 
-  def topSort(target: Int): Seq[Int] = { // TODO: need to indicate recursive anywhere?
-    debug("precedencegraph:", () => toString())
-    val targetNode = nodes(target)
-//    val targetPlusEdges = (target, targetNode) +: targetNode.edges.toSeq.map(e => (e.rId, e))
-//    val order = targetPlusEdges ++ nodes.filter((i, n) => i != target && !targetNode.edges.contains(n)).toSeq
-    val order = targetNode +: nodes.filter((i, _) => i != target).values.toSeq // Give tarjan a hint
+    // give tarjan a hint
+    val graph = buildGraph
+    val order = target.map(t => {
+      graph.values.filter(_.rId == t) ++ graph.values.filter(_.rId != t)
+    }).getOrElse(graph.values)
+
     order.foreach(node => {
       if (node.idx == -1) {
         strongConnect(node)
       }
     })
-    val res = sorted.dropRight(sorted.size - 1 - sorted.indexWhere(g => g.contains(target)))
-    res.toSeq.flatMap(s => s.toSeq).filter(r => idbs.contains(r)) // sort and remove edbs
+
+    sorted.map(_.toSet).toSeq
+  }
+
+  def topSort(target: Int): Seq[Int] = {
+    val sorted = tarjan(target = Some(target))
+    sorted
+      .dropRight(sorted.size - 1 - sorted.indexWhere(g => g.contains(target)))
+      .flatMap(s => s.toSeq).filter(r => idbs.contains(r)) // sort and remove edbs
+  }
+
+  def scc(): Seq[Set[Int]] = {
+    debug("precedencegraph:", () => toString())
+    tarjan(target = None).map(_.toSet)
   }
 
   def removeAliases(aliases: mutable.Map[Int, Int]): Unit = {
