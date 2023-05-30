@@ -46,46 +46,43 @@ class SemiNaiveExecutionEngine(override val storageManager: StorageManager) exte
     })
   }
 
-  override def solve(rId: RelationId): Set[Seq[Term]] = {
+  override def solve(toSolve: RelationId): Set[Seq[Term]] = {
     storageManager.verifyEDBs(idbs.keys.to(mutable.Set))
-    if (storageManager.edbContains(rId) && !idbs.contains(rId)) { // if just an edb predicate then return
-      return storageManager.getEDBResult(rId)
+    if (storageManager.edbContains(toSolve) && !idbs.contains(toSolve)) { // if just an edb predicate then return
+      return storageManager.getEDBResult(toSolve)
     }
-    if (!idbs.contains(rId)) {
+    if (!idbs.contains(toSolve)) {
       throw new Exception("Solving for rule without body")
     }
     // TODO: if a IDB predicate without vars, then solve all and test contains result?
     //    if (relations.isEmpty)
     //      return Set()
-    val relations = precedenceGraph.topSort(rId)
-    debug(s"precedence graph=", precedenceGraph.sortedString)
-    debug(s"solving relation: ${storageManager.ns(rId)} order of relations=", relations.toString)
-    storageManager.initEvaluation()
-    var count = 0
+    val strata = precedenceGraph.scc()
+    storageManager.initEvaluation() // facts previously derived
 
-    debug("initial state @ -1", storageManager.toString)
-    evalNaive(relations, true) // this fills derived[new] and and delta[new]
+    debug(s"solving relation: ${storageManager.ns(toSolve)} order of relations=", strata.toString)
 
-    var setDiff = true
-    while(setDiff) {
-      storageManager.swapKnowledge()
-      storageManager.clearNewDerived()
+    var scount = 0
+    // for each stratum
+    strata.foreach(relations =>
+      var count = 0
+      println(s"\n\n*****STRATA $scount with relations $relations")
+      scount += 1
 
-      debug(s"initial state @ $count", storageManager.printer.toString)
-      count += 1
-      evalSN(rId, relations)
-      setDiff = storageManager.compareNewDeltaDBs()
-//      System.gc()
-//      System.gc()
-//      val mb = 1024*1024
-//      val runtime = Runtime.getRuntime
-//      println(s"END ITERATION iteration $count, results in MB")
-//      println("** Used Memory:  " + (runtime.totalMemory - runtime.freeMemory) / mb)
-//      println("** Free Memory:  " + runtime.freeMemory / mb)
-//      println("** Total Memory: " + runtime.totalMemory / mb)
-//      println("** Max Memory:   " + runtime.maxMemory / mb)
-    }
-    debug(s"final state @$count", storageManager.printer.toString)
-    storageManager.getNewIDBResult(rId)
+      evalNaive(relations.toSeq, true) // this fills derived[new] and delta[new]
+      var setDiff = true
+      while (setDiff) {
+        storageManager.swapKnowledge()
+        storageManager.clearNewDerived()
+
+        debug(s"initial state @ $count", storageManager.printer.toString)
+        count += 1
+        evalSN(toSolve, relations.toSeq)
+        setDiff = storageManager.compareNewDeltaDBs()
+      }
+      debug(s"final state @$count", storageManager.printer.toString)
+      storageManager.updateDiscovered()
+    )
+    storageManager.getNewIDBResult(toSolve)
   }
 }
