@@ -46,12 +46,12 @@ class SemiNaiveExecutionEngine(override val storageManager: StorageManager) exte
     })
   }
 
-  override def solve(toSolve: RelationId): Set[Seq[Term]] = {
+  override def solve(rId: RelationId): Set[Seq[Term]] = {
     storageManager.verifyEDBs(idbs.keys.to(mutable.Set))
-    if (storageManager.edbContains(toSolve) && !idbs.contains(toSolve)) { // if just an edb predicate then return
-      return storageManager.getEDBResult(toSolve)
+    if (storageManager.edbContains(rId) && !idbs.contains(rId)) { // if just an edb predicate then return
+      return storageManager.getEDBResult(rId)
     }
-    if (!idbs.contains(toSolve)) {
+    if (!idbs.contains(rId)) {
       throw new Exception("Solving for rule without body")
     }
     // TODO: if a IDB predicate without vars, then solve all and test contains result?
@@ -60,7 +60,7 @@ class SemiNaiveExecutionEngine(override val storageManager: StorageManager) exte
     val strata = precedenceGraph.scc()
     storageManager.initEvaluation() // facts previously derived
 
-    debug(s"solving relation: ${storageManager.ns(toSolve)} order of relations=", strata.toString)
+    debug(s"solving relation: ${storageManager.ns(rId)} order of relations=", strata.toString)
 
     var scount = 0
     // for each stratum
@@ -77,12 +77,12 @@ class SemiNaiveExecutionEngine(override val storageManager: StorageManager) exte
 
         debug(s"initial state @ $count", storageManager.printer.toString)
         count += 1
-        evalSN(toSolve, relations.toSeq)
+        evalSN(rId, relations.toSeq)
         setDiff = storageManager.compareNewDeltaDBs()
       }
       debug(s"final state @$count", storageManager.printer.toString)
       storageManager.updateDiscovered()
     )
-    storageManager.getNewIDBResult(toSolve)
+    storageManager.getNewIDBResult(rId)
   }
 }
