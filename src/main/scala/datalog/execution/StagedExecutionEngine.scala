@@ -181,6 +181,8 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
       case op: SequenceOp =>
         op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o)))
 
+      case op: UpdateDiscoveredOp =>
+        op.run(storageManager)
 
       case op: SwapAndClearOp =>
         op.run(storageManager)

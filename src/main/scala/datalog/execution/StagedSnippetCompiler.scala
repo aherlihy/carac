@@ -124,6 +124,9 @@ class StagedSnippetCompiler(val storageManager: StorageManager)(using val jitOpt
           }) ()
         }
 
+      case UpdateDiscoveredOp() =>
+        '{ $stagedSM.updateDiscovered() }
+
       case SwapAndClearOp() =>
         '{ $stagedSM.swapKnowledge() ; $stagedSM.clearNewDerived() }
 

@@ -57,7 +57,7 @@ class SemiNaiveExecutionEngine(override val storageManager: StorageManager) exte
     // TODO: if a IDB predicate without vars, then solve all and test contains result?
     //    if (relations.isEmpty)
     //      return Set()
-    val strata = precedenceGraph.scc()
+    val strata = precedenceGraph.scc(rId)
     storageManager.initEvaluation() // facts previously derived
 
     debug(s"solving relation: ${storageManager.ns(rId)} order of strata=", strata.toString)
@@ -65,9 +65,9 @@ class SemiNaiveExecutionEngine(override val storageManager: StorageManager) exte
     var scount = 0
     // for each stratum
     strata.foreach(r =>
-      val relations = r.toSeq             
+      val relations = r.toSeq
       var count = 0
-      debug("", () => s"\n\n*****STRATA $scount with relations $relations")
+      println(s"\n\n*****STRATA $scount with relations $relations")
       scount += 1
 
       evalNaive(relations, true) // this fills derived[new] and delta[new]

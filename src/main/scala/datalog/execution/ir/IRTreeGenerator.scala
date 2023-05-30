@@ -1,14 +1,14 @@
 package datalog.execution.ir
 
-import datalog.execution.{JITOptions, StagedCompiler}
+import datalog.execution.{JITOptions, StagedCompiler, ir}
 import datalog.execution.ast.{ASTNode, AllRulesNode, LogicAtom, ProgramNode, RuleNode}
-import datalog.storage.{StorageManager, DB, KNOWLEDGE, RelationId, EDB}
+import datalog.storage.{DB, EDB, KNOWLEDGE, RelationId, StorageManager}
 import datalog.tools.Debug.debug
 
-import scala.collection.mutable
+import scala.collection.{MapView, mutable}
 
 class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
-  def naiveEval(ruleMap: mutable.Map[RelationId, ASTNode], copyToDelta: Boolean = false): IROp[Any] =
+  def naiveEval(ruleMap: MapView[RelationId, ASTNode], copyToDelta: Boolean = false): IROp[Any] =
     SequenceOp(
       OpCode.EVAL_NAIVE,
       //      DebugNode("in eval:", () => s"rId=${ctx.storageManager.ns(rId)} relations=${ctx.relations.map(r => ctx.storageManager.ns(r)).mkString("[", ", ", "]")}  incr=${ctx.newDbId} src=${ctx.knownDbId}") +:
@@ -25,7 +25,7 @@ class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
         ):_*
     )
 
-  def semiNaiveEval(rId: RelationId, ruleMap: mutable.Map[RelationId, ASTNode]): IROp[Any] =
+  def semiNaiveEval(rId: RelationId, ruleMap: MapView[RelationId, ASTNode]): IROp[Any] =
     SequenceOp(
       OpCode.EVAL_SN,
       ctx.sortedRelations
@@ -109,12 +109,23 @@ class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
   def generateNaive(ast: ASTNode): IROp[Any] = {
     ast match {
       case ProgramNode(ruleMap) =>
-        DoWhileOp(
-          DB.Derived,
-          SequenceOp(OpCode.LOOP_BODY,
-            SwapAndClearOp(),
-            naiveEval(ruleMap)
-          )
+        val scc = ctx.precedenceGraph.scc(ctx.toSolve)
+        val stratum = scc.map(rels => ruleMap.view.filterKeys(rels.contains))
+        ProgramOp(
+          SequenceOp(OpCode.EVAL_STRATA,
+             stratum.map(rules =>
+               SequenceOp(OpCode.EVAL_STRATUM,
+                 DoWhileOp(
+                   DB.Derived,
+                   SequenceOp(OpCode.LOOP_BODY,
+                     SwapAndClearOp(),
+                     naiveEval(rules)
+                   ),
+                 ),
+                 UpdateDiscoveredOp(),
+               )
+            ): _*
+          ),
         )
       case _ => throw new Exception("Non-root passed to IR Program")
     }
@@ -123,16 +134,25 @@ class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
   def generateSemiNaive(ast: ASTNode): IROp[Any] = {
     ast match {
       case ProgramNode(ruleMap) =>
-        ProgramOp(SequenceOp(OpCode.SEQ,
-          naiveEval(ruleMap, true),
-          DoWhileOp(
-            DB.Delta,
-            SequenceOp(OpCode.LOOP_BODY,
-              SwapAndClearOp(),
-              semiNaiveEval(ctx.toSolve, ruleMap)
-            )
-          )
-        ))
+        val scc = ctx.precedenceGraph.scc(ctx.toSolve)
+        val stratum = scc.map(rels => ruleMap.view.filterKeys(rels.contains))
+        ProgramOp(
+          SequenceOp(OpCode.EVAL_STRATA,
+            stratum.map(rules =>
+              SequenceOp(OpCode.EVAL_STRATUM,
+                naiveEval(rules, true),
+                DoWhileOp(
+                  DB.Delta,
+                  SequenceOp(OpCode.LOOP_BODY,
+                    SwapAndClearOp(),
+                    semiNaiveEval(ctx.toSolve, rules.view)
+                  )
+                ),
+                UpdateDiscoveredOp(),
+              ),
+            ): _*,
+          ),
+        )
       case _ => throw new Exception("Non-root passed to IR Program")
     }
   }

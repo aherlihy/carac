@@ -74,7 +74,7 @@ class NaiveExecutionEngine(val storageManager: StorageManager) extends Execution
     if (!idbs.contains(toSolve)) {
       throw new Exception("Solving for rule without body")
     }
-    val strata = precedenceGraph.scc()
+    val strata = precedenceGraph.scc(toSolve)
     storageManager.initEvaluation() // facts discovered in the previous iteration
 
     debug(s"solving relation: ${storageManager.ns(toSolve)} order of relations=", strata.toString)

@@ -14,8 +14,9 @@ import scala.quoted.*
 import scala.util.{Failure, Success}
 
 enum OpCode:
-  case PROGRAM, SWAP_CLEAR, SEQ, SCAN, SCANEDB, SPJ, INSERT, UNION, DIFF, DEBUG, DEBUGP, DOWHILE,
-  EVAL_RULE_NAIVE, EVAL_RULE_SN, EVAL_RULE_BODY, EVAL_NAIVE, EVAL_SN, LOOP_BODY, OTHER // convenience labels for generating functions
+  case PROGRAM, SWAP_CLEAR, SEQ, SCAN, SCANEDB, SPJ, INSERT, UNION, DIFF, 
+  DEBUG, DEBUGP, DOWHILE, UPDATE_DISCOVERED,
+  EVAL_STRATA, EVAL_STRATUM, EVAL_RULE_NAIVE, EVAL_RULE_SN, EVAL_RULE_BODY, EVAL_NAIVE, EVAL_SN, LOOP_BODY, OTHER // convenience labels for generating functions
 object OpCode {
   def relational(opCode: OpCode): Boolean =
     Seq(SCAN, OpCode.SCANEDB, OpCode.SPJ, OpCode.UNION, OpCode.DIFF, OpCode.EVAL_RULE_BODY, OpCode.EVAL_RULE_NAIVE, OpCode.EVAL_RULE_SN).contains(opCode)
@@ -119,6 +120,16 @@ case class SequenceOp(override val code: OpCode, override val children:IROp[Any]
     opFns.map(o => o(storageManager))
   override def run(storageManager: StorageManager): Any =
     children.map(o => o.run(storageManager))
+}
+
+case class UpdateDiscoveredOp()(using JITOptions) extends IROp[Any] {
+  val code: OpCode = OpCode.UPDATE_DISCOVERED
+  override def run(storageManager: StorageManager): Any =
+    storageManager.updateDiscovered()
+
+  override def run_continuation(storageManager: StorageManager, 
+                                opFns: Seq[CompiledFn[Any]]): Any =
+    run(storageManager)
 }
 
 case class SwapAndClearOp()(using JITOptions) extends IROp[Any] {
