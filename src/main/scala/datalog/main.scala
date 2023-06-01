@@ -655,7 +655,7 @@ def isAfter(program: Program) =
 //  val dotty = staging.Compiler.make(getClass.getClassLoader)
 //  var sort = 1
 //  println(s"OLD SN: $sort")
-  given engine1: ExecutionEngine = new NaiveExecutionEngine(new DefaultStorageManager())
+  given engine1: ExecutionEngine = new SemiNaiveExecutionEngine(new DefaultStorageManager())
   val program1 = Program(engine1)
   tc(program1)
   println("\n\n_______________________\n\n")

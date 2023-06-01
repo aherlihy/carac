@@ -83,7 +83,7 @@ class NaiveExecutionEngine(val storageManager: StorageManager) extends Execution
     // for each strata
     strata.foreach(relations =>
       var count = 0
-      println(s"\n\n*****STRATA $scount with relations $relations")
+      debug("", () => s"\n\n*****STRATA $scount with relations $relations")
       scount += 1
       var setDiff = true
       while (setDiff) {
