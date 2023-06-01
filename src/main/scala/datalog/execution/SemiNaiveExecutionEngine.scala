@@ -57,35 +57,41 @@ class SemiNaiveExecutionEngine(override val storageManager: StorageManager) exte
     // TODO: if a IDB predicate without vars, then solve all and test contains result?
     //    if (relations.isEmpty)
     //      return Set()
-    val relations = precedenceGraph.topSort(rId)
-    debug(s"precedence graph=", precedenceGraph.sortedString)
-    debug(s"solving relation: ${storageManager.ns(rId)} order of relations=", relations.toString)
+    val strata = precedenceGraph.scc()
+    debug(s"solving relation: ${storageManager.ns(rId)} order of strata=", strata.toString)
     storageManager.initEvaluation()
-    var count = 0
+    var scount = 0
+    strata.foreach(r =>
+      val relations = r.toSeq
+      debug("", () => s"\n\n*****STRATA $scount with relations $relations")
+      var count = 0
+      scount += 1
 
-    debug("initial state @ -1", storageManager.toString)
-    evalNaive(relations, true) // this fills derived[new] and and delta[new]
+      debug("initial state @ -1", storageManager.toString)
+      evalNaive(relations, true) // this fills derived[new] and and delta[new]
 
-    var setDiff = true
-    while(setDiff) {
-      storageManager.swapKnowledge()
-      storageManager.clearNewDerived()
+      var setDiff = true
+      while(setDiff) {
+        storageManager.swapKnowledge()
+        storageManager.clearNewDerived()
 
-      debug(s"initial state @ $count", storageManager.printer.toString)
-      count += 1
-      evalSN(rId, relations)
-      setDiff = storageManager.compareNewDeltaDBs()
-//      System.gc()
-//      System.gc()
-//      val mb = 1024*1024
-//      val runtime = Runtime.getRuntime
-//      println(s"END ITERATION iteration $count, results in MB")
-//      println("** Used Memory:  " + (runtime.totalMemory - runtime.freeMemory) / mb)
-//      println("** Free Memory:  " + runtime.freeMemory / mb)
-//      println("** Total Memory: " + runtime.totalMemory / mb)
-//      println("** Max Memory:   " + runtime.maxMemory / mb)
-    }
-    debug(s"final state @$count", storageManager.printer.toString)
+        debug(s"initial state @ $count", storageManager.printer.toString)
+        count += 1
+        evalSN(rId, relations)
+        setDiff = storageManager.compareNewDeltaDBs()
+  //      System.gc()
+  //      System.gc()
+  //      val mb = 1024*1024
+  //      val runtime = Runtime.getRuntime
+  //      println(s"END ITERATION iteration $count, results in MB")
+  //      println("** Used Memory:  " + (runtime.totalMemory - runtime.freeMemory) / mb)
+  //      println("** Free Memory:  " + runtime.freeMemory / mb)
+  //      println("** Total Memory: " + runtime.totalMemory / mb)
+  //      println("** Max Memory:   " + runtime.maxMemory / mb)
+      }
+      storageManager.updateDiscovered()
+      debug(s"final state @$count", storageManager.printer.toString)
+    )
     storageManager.getNewIDBResult(rId)
   }
 }
