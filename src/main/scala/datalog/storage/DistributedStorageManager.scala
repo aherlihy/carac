@@ -111,19 +111,20 @@ class DistributedStorageManager(override val ns: NS, spark: SparkSession) extend
     edbs.getOrElse(rId, makeEDB(rId)).iterator.map(c => c.row).toSet
 
   override def resetKnownDerived(rId: RelationId, rules: EDB, prev: EDB): Unit =
-    derivedDB(knownDbId)(rId) = DistributedEDB(asDistributedEDB(rules).union(asDistributedEDB(prev)).df.map(_.persist()))
+    derivedDB(knownDbId)(rId) = DistributedEDB(asDistributedEDB(rules).union(asDistributedEDB(prev)).df.map(_.localCheckpoint()))
 
   override def resetNewDerived(rId: RelationId, rules: EDB, prev: EDB): Unit =
-    derivedDB(newDbId)(rId) = DistributedEDB(asDistributedEDB(rules).union(asDistributedEDB(prev)).df.map(_.persist()))
+    derivedDB(newDbId)(rId) = DistributedEDB(asDistributedEDB(rules).union(asDistributedEDB(prev)).df.map(_.localCheckpoint()))
 
   override def resetNewDelta(rId: RelationId, rules: EDB): Unit =
-    deltaDB(newDbId)(rId) = DistributedEDB(asDistributedEDB(rules).df.map(_.persist().localCheckpoint()))
+    deltaDB(newDbId)(rId) = DistributedEDB(asDistributedEDB(rules).df.map(_.localCheckpoint()))
 
   override def resetKnownDelta(rId: RelationId, rules: EDB): Unit =
-    deltaDB(knownDbId)(rId) = DistributedEDB(asDistributedEDB(rules).df.map(_.persist().localCheckpoint()))
+    deltaDB(knownDbId)(rId) = DistributedEDB(asDistributedEDB(rules).df.map(_.localCheckpoint()))
 
   override def clearNewDerived(): Unit =
     derivedDB(newDbId).keys.foreach(r => {
+      derivedDB(newDbId)(r).df.foreach(_.unpersist())
       derivedDB(newDbId)(r) = makeEDB(r)
     })
 
@@ -141,7 +142,7 @@ class DistributedStorageManager(override val ns: NS, spark: SparkSession) extend
       val t2 = derivedDB(newDbId)(k)
 
       (t1.df, t2.df) match {
-        case (Some(df1), Some(df2)) => df1.except(df2).isEmpty && df2.except(df1).isEmpty
+        case (Some(df1), Some(df2)) => df1.count() == df2.count()
         case (None, None) => true
         case _ => false
       }

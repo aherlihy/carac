@@ -20,7 +20,7 @@ case class DistributedEDB(df: Option[DataFrame]) extends EDB {
     df.map(_.count().toInt).getOrElse(0)
 
   def union(other: DistributedEDB): DistributedEDB =
-    DistributedEDB(df.map(l => other.df.map(r => l union r).getOrElse(l)).orElse(other.df))
+    DistributedEDB(df.map(l => other.df.map(r => l.union(r).localCheckpoint()).getOrElse(l)).orElse(other.df))
 
   def except(other: DistributedEDB): DistributedEDB =
     DistributedEDB(df.map(l => other.df.map(r => l except r).getOrElse(l)))
