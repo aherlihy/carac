@@ -1,6 +1,6 @@
 package test.examples.trains
 
-import datalog.dsl.{Constant, Program, __}
+import datalog.dsl.{Constant, Program, StringType, __}
 import test.ExampleTestGenerator
 
 import java.nio.file.Paths
@@ -8,9 +8,9 @@ class trains_test extends ExampleTestGenerator("trains") with trains
 trait trains {
   val toSolve = "ReachableStops"
   def pretest(program: Program): Unit = {
-    val ReachableStops = program.relation[Constant]("ReachableStops")
+    val ReachableStops = program.relation[Constant]("ReachableStops", Seq(StringType, StringType))
     val AdjacentStops = program.relation[Constant]("AdjacentStops")
-    val Connected = program.relation[Constant]("Connected")
+    val Connected = program.relation[Constant]("Connected", Seq(StringType, StringType))
 
     AdjacentStops("Berowra","Mount Kuring-gai","T1 North Shore, Northern & Western") :- ()
     AdjacentStops("Mount Kuring-gai","Mount Colah","T1 North Shore, Northern & Western") :- ()

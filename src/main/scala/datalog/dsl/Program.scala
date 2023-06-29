@@ -13,17 +13,17 @@ class Program(engine: ExecutionEngine) extends AbstractProgram {
     Variable(varCounter - 1)
   }
   var relCounter = 0
-  def relation[T <: Constant](userName: String = relCounter.toString): Relation[T] = {
+  def relation[T <: Constant](userName: String = relCounter.toString, columns: Seq[ColumnType] = Seq.empty): Relation[T] = {
     relCounter += 1
-    Relation[T](relCounter - 1, userName)
+    Relation[T](relCounter - 1, userName, columns)
   }
 
-  def namedRelation[T <: Constant](userName: String): Relation[T] = {
+  def namedRelation[T <: Constant](userName: String, columns: Seq[ColumnType] = Seq.empty): Relation[T] = {
     if (!ee.storageManager.ns.contains(userName)) {
       throw new Exception("Named relation '" + userName + "' does not exist")
     }
     val rId = ee.storageManager.ns(userName)
-    Relation[T](rId, userName)
+    Relation[T](rId, userName, columns)
   }
 
   // TODO: also provide solve for multiple/all predicates, or return table so users can query over the derived DB

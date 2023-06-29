@@ -74,7 +74,7 @@ class StagedSnippetCompiler(val storageManager: StorageManager)(using val jitOpt
         if (storageManager.edbContains(rId))
           '{ $stagedSM.getEDB(${ Expr(rId) }) }
         else
-          '{ $stagedSM.getEmptyEDB() }
+          '{ $stagedSM.getEmptyEDB(${ Expr(rId) }) }
 
       case ProjectJoinFilterOp(rId, hash, children:_*) =>
         val compiledOps = '{ $stagedFns.map(s => s($stagedSM)) }
@@ -132,7 +132,7 @@ class StagedSnippetCompiler(val storageManager: StorageManager)(using val jitOpt
 
       case InsertOp(rId, db, knowledge, children:_*) =>
         val res = '{ $stagedFns(0)($stagedSM).asInstanceOf[EDB] }
-        val res2 = if (children.length > 1) '{ $stagedFns(1)($stagedSM).asInstanceOf[EDB] } else '{ $stagedSM.getEmptyEDB() }
+        val res2 = if (children.length > 1) '{ $stagedFns(1)($stagedSM).asInstanceOf[EDB] } else '{ $stagedSM.getEmptyEDB(${ Expr(rId) }) }
         db match {
           case DB.Derived =>
             knowledge match {

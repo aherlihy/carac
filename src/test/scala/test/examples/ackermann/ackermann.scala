@@ -5,14 +5,15 @@ import test.{ExampleTestGenerator, Tags}
 
 import java.nio.file.{Path, Paths}
 import scala.util.Properties
+import datalog.dsl.StringType
 
 trait ackermann {
 
   val toSolve = "ack"
   def pretest(program: Program): Unit = {
-    val succ = program.namedRelation("succ")
-    val greaterThanZ = program.namedRelation("greaterThanZ")
-    val ack = program.relation[Constant]("ack")
+    val succ = program.namedRelation("succ", Seq(StringType, StringType))
+    val greaterThanZ = program.namedRelation("greaterThanZ", Seq(StringType))
+    val ack = program.relation[Constant]("ack", Seq(StringType, StringType, StringType))
     val N, M, X, Y, Ans, Ans2 = program.variable()
 
     ack("0", N, Ans) :- succ(N, Ans)

@@ -1,7 +1,7 @@
 package datalog.storage
 
-import datalog.dsl.{Atom, Term, Variable, Constant}
-import datalog.execution.{JoinIndexes, AllIndexes}
+import datalog.dsl.{Atom, ColumnType, Constant, Term, Variable}
+import datalog.execution.{AllIndexes, JoinIndexes}
 
 import scala.collection.mutable
 import scala.collection.immutable
@@ -14,11 +14,11 @@ trait StorageManager(val ns: NS) {
 
   val printer: Printer[this.type]
 
-  def initRelation(rId: RelationId, name: String): Unit
+  def initRelation(rId: RelationId, name: String, columns: Seq[ColumnType]): Unit
   def initEvaluation(): Unit
 
   def insertEDB(rule: Atom): Unit
-  def getEmptyEDB(): EDB
+  def getEmptyEDB(rId: RelationId): EDB
   def edbContains(rId: RelationId): Boolean
   def getEDB(rId: RelationId): EDB
   def getAllEDBS(): mutable.Map[RelationId, Any] // if you ever just want to read the EDBs as a map, used for testing

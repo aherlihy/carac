@@ -5,6 +5,7 @@ import datalog.execution.ast.*
 import datalog.execution.JoinIndexes
 import datalog.execution.ir.*
 
+import scala.collection.mutable.ArrayBuffer
 import scala.collection.{immutable, mutable}
 
 // Keep pretty print stuff separate bc long and ugly, mb put it in a macro
