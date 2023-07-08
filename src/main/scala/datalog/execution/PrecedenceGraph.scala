@@ -2,12 +2,12 @@ package datalog.execution
 
 import datalog.dsl.Atom
 import datalog.tools.Debug.debug
-import datalog.storage.NS
+import datalog.storage.{NS, RelationId}
 
 import scala.collection.mutable
 
-private class Node(r: Int)(using ns: NS) {
-  val rId: Int = r
+private class Node(r: RelationId)(using ns: NS) {
+  val rId: RelationId = r
   var idx: Int = -1
   var lowLink: Int = -1
   var edges: mutable.Set[Node] = mutable.Set[Node]()
@@ -24,8 +24,8 @@ private class Node(r: Int)(using ns: NS) {
 }
 
 class PrecedenceGraph(using ns: NS /* for debugging */) {
-  private val adjacencyList = mutable.Map[Int, mutable.Set[Int]]()
-  private val aliases = mutable.Map[Int, Int]()
+  private val adjacencyList = mutable.Map[RelationId, mutable.Set[RelationId]]()
+  private val aliases = mutable.Map[RelationId, RelationId]()
 
   /**
    * Get the rule id that corresponds to the given rule id, following alias
@@ -33,7 +33,7 @@ class PrecedenceGraph(using ns: NS /* for debugging */) {
    * @param rId the rule id to resolve
    * @return the rule id that corresponds to the given rule id
    */
-  private def getAliasedId(rId: Int): Int = {
+  private def getAliasedId(rId: RelationId): RelationId = {
     var current = rId
     while aliases.contains(current) do
       current = aliases(current)
@@ -44,7 +44,7 @@ class PrecedenceGraph(using ns: NS /* for debugging */) {
    * Compute a new graph from the adjacency list, respecting alias definitions.
    */
   private def buildGraph = {
-    val nodes = mutable.Map[Int, Node]()
+    val nodes = mutable.Map[RelationId, Node]()
     for (from, list) <- adjacencyList do
       for to <- list do
         val fAlias = getAliasedId(from)
@@ -56,7 +56,7 @@ class PrecedenceGraph(using ns: NS /* for debugging */) {
     nodes.toMap
   }
 
-  val idbs: mutable.Set[Int] = mutable.Set[Int]()
+  val idbs: mutable.Set[RelationId] = mutable.Set[RelationId]()
 
   override def toString: String = buildGraph.map((r, n) => ns(r) + " -> " + n.edges.map(e => ns(e.rId)).mkString("[", ", ", "]")).mkString("{", ", ", "}")
 
@@ -70,12 +70,12 @@ class PrecedenceGraph(using ns: NS /* for debugging */) {
     addNode(rule.head.rId, rule.tail.map(_.rId))
   }
 
-  def updateNodeAlias(rId: Int, aliases: mutable.Map[Int, Int]): Unit = {
+  def updateNodeAlias(rId: RelationId, aliases: mutable.Map[RelationId, RelationId]): Unit = {
     this.aliases.addAll(aliases)
   }
 
-  def addNode(rId: Int, deps: Seq[Int]): Unit = {
-    adjacencyList.getOrElseUpdate(rId, mutable.Set[Int]()).addAll(deps)
+  def addNode(rId: RelationId, deps: Seq[RelationId]): Unit = {
+    adjacencyList.getOrElseUpdate(rId, mutable.Set[RelationId]()).addAll(deps)
   }
 
   private def tarjan(target: Option[Int]): Seq[Set[Int]] = {
@@ -129,14 +129,14 @@ class PrecedenceGraph(using ns: NS /* for debugging */) {
     sorted.map(_.toSet).toSeq
   }
 
-  def topSort(target: Int): Seq[Int] = {
+  def topSort(target: RelationId): Seq[RelationId] = {
     val sorted = tarjan(target = Some(target))
     sorted
       .dropRight(sorted.size - 1 - sorted.indexWhere(g => g.contains(target)))
       .flatMap(s => s.toSeq).filter(r => idbs.contains(r)) // sort and remove edbs
   }
 
-  def scc(): Seq[Set[Int]] = {
+  def scc(): Seq[Set[RelationId]] = {
     debug("precedencegraph:", () => toString())
     tarjan(target = None)
   }

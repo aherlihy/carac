@@ -60,16 +60,17 @@ class SemiNaiveExecutionEngine(override val storageManager: StorageManager) exte
     val strata = precedenceGraph.scc()
     storageManager.initEvaluation() // facts previously derived
 
-    debug(s"solving relation: ${storageManager.ns(rId)} order of relations=", strata.toString)
+    debug(s"solving relation: ${storageManager.ns(rId)} order of strata=", strata.toString)
 
     var scount = 0
     // for each stratum
-    strata.foreach(relations =>
+    strata.foreach(r =>
+      val relations = r.toSeq             
       var count = 0
       println(s"\n\n*****STRATA $scount with relations $relations")
       scount += 1
 
-      evalNaive(relations.toSeq, true) // this fills derived[new] and delta[new]
+      evalNaive(relations, true) // this fills derived[new] and delta[new]
       var setDiff = true
       while (setDiff) {
         storageManager.swapKnowledge()
@@ -77,7 +78,7 @@ class SemiNaiveExecutionEngine(override val storageManager: StorageManager) exte
 
         debug(s"initial state @ $count", storageManager.printer.toString)
         count += 1
-        evalSN(rId, relations.toSeq)
+        evalSN(rId, relations)
         setDiff = storageManager.compareNewDeltaDBs()
       }
       debug(s"final state @$count", storageManager.printer.toString)
