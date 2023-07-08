@@ -67,7 +67,7 @@ class SemiNaiveExecutionEngine(override val storageManager: StorageManager) exte
     strata.foreach(r =>
       val relations = r.toSeq
       var count = 0
-      println(s"\n\n*****STRATA $scount with relations $relations")
+      debug("", () => s"\n\n*****STRATA $scount with relations $relations")
       scount += 1
 
       evalNaive(relations, true) // this fills derived[new] and delta[new]

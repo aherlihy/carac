@@ -178,8 +178,9 @@ class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: J
               '{ $acc ; def eval_sn_lambda() = $next; eval_sn_lambda() }
             )
           case _ =>
-            // TODO[future]: make a block w reflection instead of reduceLeft for efficiency
-            cOps.foldRight('{ () })((next, acc) => '{ $next ; $acc })
+            cOps.reduceLeft((acc, next) =>
+                 '{ $acc ; $next }
+             )
 
       case InsertOp(rId, db, knowledge, children:_*) =>
         val res = compileIRRelOp(children.head.asInstanceOf[IROp[EDB]])
