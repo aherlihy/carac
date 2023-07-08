@@ -27,7 +27,7 @@ class StagedSnippetExecutionEngine(override val storageManager: StorageManager,
   given staging.Compiler = defaultJITOptions.dotty
 
   override def jit[T](irTree: IROp[T])(using jitOptions: JITOptions): T = {
-    debug("", () => s"IN SNIPPET IR, code=${irTree.code}")
+//    debug("", () => s"IN SNIPPET IR, code=${irTree.code}")
     irTree match {
       case op: ProgramOp if jitOptions.granularity == op.code =>
         if (op.compiledSnippetContinuationFn == null)

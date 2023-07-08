@@ -7,7 +7,7 @@ import datalog.tools.Debug.debug
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
-class NaiveExecutionEngine(val storageManager: StorageManager) extends ExecutionEngine {
+class NaiveExecutionEngine(val storageManager: StorageManager, stratified: Boolean = false /* Temp add for benchmarking */) extends ExecutionEngine {
   val precedenceGraph = new PrecedenceGraph(using storageManager.ns)
   val prebuiltOpKeys: mutable.Map[RelationId, ArrayBuffer[JoinIndexes]] = mutable.Map[RelationId, mutable.ArrayBuffer[JoinIndexes]]()
 
@@ -66,7 +66,7 @@ class NaiveExecutionEngine(val storageManager: StorageManager) extends Execution
     })
   }
 
-  def solve(toSolve: RelationId): Set[Seq[Term]] = {
+  def solveStratified(toSolve: RelationId): Set[Seq[Term]] = {
     storageManager.verifyEDBs(idbs.keys.to(mutable.Set))
     if (storageManager.edbContains(toSolve) && !idbs.contains(toSolve)) { // if just an edb predicate then return
       return storageManager.getEDBResult(toSolve)
@@ -102,4 +102,39 @@ class NaiveExecutionEngine(val storageManager: StorageManager) extends Execution
     )
     storageManager.getKnownIDBResult(toSolve)
   }
+
+  def solveOld(toSolve: RelationId): Set[Seq[Term]] = { // TODO: Remove after benchmarking
+    storageManager.verifyEDBs(idbs.keys.to(mutable.Set))
+    if (storageManager.edbContains(toSolve) && !idbs.contains(toSolve)) { // if just an edb predicate then return
+      return storageManager.getEDBResult(toSolve)
+    }
+    if (!idbs.contains(toSolve)) {
+      throw new Exception("Solving for rule without body")
+    }
+    val relations = precedenceGraph.topSort(toSolve)
+    storageManager.initEvaluation() // facts discovered in the previous iteration
+    var count = 0
+
+    debug(s"solving relation: ${storageManager.ns(toSolve)} order of relations=", relations.toString)
+    var setDiff = true
+    while (setDiff) {
+      storageManager.swapKnowledge()
+      storageManager.clearNewDerived()
+
+      debug(s"initial state @ $count", storageManager.toString)
+      count += 1
+      evalNaive(relations)
+
+      setDiff = !storageManager.compareDerivedDBs()
+    }
+    storageManager.getKnownIDBResult(toSolve)
+  }
+
+  def solve(toSolve: RelationId): Set[Seq[Term]] =
+    if (stratified)
+      solveStratified(toSolve)
+    else
+      solveOld(toSolve)
 }
+
+

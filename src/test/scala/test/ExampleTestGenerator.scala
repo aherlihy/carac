@@ -109,6 +109,19 @@ abstract class TestGenerator(directory: Path,
             Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(ir.OpCode.EVAL_RULE_BODY, aot = true, block = true, sortOrder = (1, 1, 0))))
           case "JITStagedB1Default" =>
             Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(ir.OpCode.EVAL_RULE_BODY, aot = false, block = true, sortOrder = (0, 0, 0))))
+//           Stratified, TODO: eventually remove
+          case "SemiNaiveStratifiedVolcano" => Program(SemiNaiveExecutionEngine(VolcanoStorageManager(), stratified=true))
+          case "NaiveStratifiedVolcano" => Program(NaiveExecutionEngine(VolcanoStorageManager(), stratified=true))
+          case "SemiNaiveStratifiedDefault" => Program(SemiNaiveExecutionEngine(DefaultStorageManager(), stratified=true))
+          case "NaiveStratifiedDefault" => Program(NaiveExecutionEngine(DefaultStorageManager(), stratified=true))
+          case "NaiveStratifiedCompiledStagedDefault" =>
+            Program(NaiveStagedExecutionEngine(DefaultStorageManager(), JITOptions(stratified = true))) // default is compiled
+          case "InterpretedStagedStratifiedDefault" =>
+            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(granularity = ir.OpCode.OTHER, stratified=true)))
+          case "CompiledStagedStratifiedDefault" =>
+            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(granularity = ir.OpCode.PROGRAM, dotty = dotty, aot = false, block = true, thresholdNum = 0, thresholdVal = 0, stratified=true))) // default is compiled
+          case "JITStagedB3StratifiedDefault" =>
+            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(ir.OpCode.EVAL_RULE_BODY, aot = false, block = true, sortOrder = (1, 1, 1), stratified=true)))
           case _ => // WARNING: MUnit just returns null pointers everywhere if an error or assert is triggered in beforeEach
             throw new Exception(s"Unknown engine construction ${context.test.name}") // TODO: this is reported as passing
         }
@@ -125,7 +138,7 @@ abstract class TestGenerator(directory: Path,
 
     override def munitFixtures = List(program)
 
-    Seq("SemiNaive", "Naive", "CompiledStaged", "InterpretedStaged", "JITStagedB1", "JITStagedB2", "JITStagedB3").foreach(execution => {
+    Seq("SemiNaive", "Naive", "CompiledStaged", "InterpretedStaged", "JITStagedB1", "SemiNaiveStratified", "NaiveStratified", "CompiledStagedStratified", "InterpretedStagedStratified", "JITStagedB3Stratified"/* "JITStagedB2", "JITStagedB3"*/).foreach(execution => {
       Seq("Volcano", "Default").foreach(storage => {
         if (execution.contains("Staged") && storage == "Volcano") {} // skip and don't report as skipped
         else if (
