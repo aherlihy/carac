@@ -106,9 +106,7 @@ class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
     }
   }
 
-  def generateNaive(ast: ASTNode): IROp[Any] = {
-    ast match {
-      case ProgramNode(ruleMap) =>
+  def generateNaive(ruleMap: mutable.Map[Int, ASTNode]): IROp[Any] = {
         DoWhileOp(
           DB.Derived,
           SequenceOp(OpCode.LOOP_BODY,
@@ -116,14 +114,10 @@ class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
             naiveEval(ruleMap)
           )
         )
-      case _ => throw new Exception("Non-root passed to IR Program")
-    }
   }
 
-  def generateSemiNaive(ast: ASTNode): IROp[Any] = {
-    ast match {
-      case ProgramNode(ruleMap) =>
-        ProgramOp(SequenceOp(OpCode.SEQ,
+  def generateSemiNaive(ruleMap: mutable.Map[Int, ASTNode]): IROp[Any] = {
+        SequenceOp(OpCode.SEQ,
           naiveEval(ruleMap, true),
           DoWhileOp(
             DB.Delta,
@@ -132,8 +126,18 @@ class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
               semiNaiveEval(ctx.toSolve, ruleMap)
             )
           )
-        ))
-      case _ => throw new Exception("Non-root passed to IR Program")
+        )
+  }
+
+  def generateTopLevelProgram(ast: ASTNode, naive: Boolean = true, stratified: Boolean = false): IROp[Any] = {
+    ast match {
+      case ProgramNode(ruleMap) =>
+        val inner = if (naive)
+          generateNaive(ruleMap)
+        else
+          generateSemiNaive(ruleMap)
+        ProgramOp(inner)
+      case _ => throw new Exception("Non-root AST passed to IR Generator")
     }
   }
 }
