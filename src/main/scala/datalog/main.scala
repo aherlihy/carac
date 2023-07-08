@@ -639,6 +639,33 @@ def isAfter(program: Program) =
 
   println(isAfter.solve().size)
 
+def stratified(program: Program) = {
+  val b = program.relation[Constant]("e")
+  val p1 = program.relation[Constant]("p1")
+  val p2 = program.relation[Constant]("p2")
+  val p3 = program.relation[Constant]("p3")
+  val q = program.relation[Constant]("q")
+  val r = program.relation[Constant]("r")
+  val x, y, z = program.variable()
+
+  // p1, p2 and p3 are in the same stratum
+  p1(x, y, z) :- b(x, y, z)
+  p1(x, y, z) :- p2(y, z, x)
+  p2(x, y, z) :- b(x, y, z)
+  p2(x, y, z) :- p3(y, z, x)
+  p3(x, y, z) :- b(x, y, z)
+  p3(x, y, z) :- p1(y, z, x)
+
+  q(x, y, z) :- (p1(x, y, z), p2(x, y, z), p3(x, y, z))
+
+  r(x, y, z) :- (q(x, y, z), p1(x, y, z), p2(x, y, z), p3(x, y, z))
+
+
+  b("a", "b", "c") :- ()
+  b("x", "y", "z") :- ()
+
+  println(r.solve())
+}
 @main def main = {
 //  val engine = new NaiveExecutionEngine(new VolcanoStorageManager())
 //  val program = Program(engine)
@@ -652,34 +679,34 @@ def isAfter(program: Program) =
 //  acyclic(program0)
 //  println("\n\n_______________________\n\n")
 
-//  val dotty = staging.Compiler.make(getClass.getClassLoader)
+  val dotty = staging.Compiler.make(getClass.getClassLoader)
 //  var sort = 1
 //  println(s"OLD SN: $sort")
-  given engine1: ExecutionEngine = new SemiNaiveExecutionEngine(new DefaultStorageManager())
-  val program1 = Program(engine1)
-  tc(program1)
-  println("\n\n_______________________\n\n")
+//  given engine1: ExecutionEngine = new SemiNaiveExecutionEngine(new DefaultStorageManager())
+//  val program1 = Program(engine1)
+//  stratified(program1)
+//  println("\n\n_______________________\n\n")
 
 //    val jo2 = JITOptions(ir.OpCode.OTHER, dotty, aot = false, block = true)
 //    println("INTERP")
-//    given engine3a: ExecutionEngine = new StagedExecutionEngine(new DefaultStorageManager(preSortAhead = 1, sortAhead = 1, sortOnline = 0), jo2)
-//
+//    given engine3a: ExecutionEngine = new StagedExecutionEngine(new DefaultStorageManager(), jo2)
+
 //    val program3a = Program(engine3a)
-//    isEqual(program3a)
+//    stratified(program3a)
 //    println("\n\n_______________________\n\n")
 //
-//    val jo = JITOptions(ir.OpCode.EVAL_RULE_SN, dotty, aot = false, block = true, sortOrder = (0, 0, 0))
+    val jo3 = JITOptions(ir.OpCode.EVAL_RULE_SN, dotty, aot = false, block = true, sortOrder = (0, 0, 0))
 //    println("JIT")
-//    given engine3: ExecutionEngine = new StagedExecutionEngine(new DefaultStorageManager(), jo)
+//    given engine3: ExecutionEngine = new StagedExecutionEngine(new DefaultStorageManager(), jo3)
 //    val program3 = Program(engine3)
-//    ackermann(program3)
+//    stratified(program3)
 //    println("\n\n_______________________\n\n")
 
-//  println("JIT Snippet")
-//  val engine4: ExecutionEngine = new StagedSnippetExecutionEngine(new DefaultStorageManager(), jo)
-//  val program4 = Program(engine4)
-//  tc(program4)
-//  println("\n\n_______________________\n\n")
+  println("JIT Snippet")
+  val engine4: ExecutionEngine = new StagedSnippetExecutionEngine(new DefaultStorageManager(), jo3)
+  val program4 = Program(engine4)
+  stratified(program4)
+  println("\n\n_______________________\n\n")
 
 //  println("JIT STAGED: aot EvalSN")
 //  val engine5: ExecutionEngine = new JITStagedExecutionEngine(new DefaultStorageManager(), ir.OpCode.EVAL_SN, true, true)
@@ -687,9 +714,12 @@ def isAfter(program: Program) =
 //  manyRelations(program5)
 //  println("\n\n_______________________\n\n")
   //  println("JIT STAGED")
+//  val jo6 = JITOptions(ir.OpCode.PROGRAM, dotty, aot = false, block = true, sortOrder = (0, 0, 0))
+//  println("COMPILE")
 //
-//  given engine3: ExecutionEngine = new CompiledStagedExecutionEngine(new DefaultStorageManager())//, ir.OpCode.LOOP_BODY, false, false)
-//  val program3 = Program(engine3)
-//  tc(program3)
+//  given engine6: ExecutionEngine = new StagedExecutionEngine(new DefaultStorageManager(), jo6)
+//
+//  val program6 = Program(engine6)
+//  stratified(program6)
 //  println("\n\n_______________________\n\n")
 }

@@ -127,8 +127,7 @@ case class UpdateDiscoveredOp()(using JITOptions) extends IROp[Any] {
   override def run(storageManager: StorageManager): Any =
     storageManager.updateDiscovered()
 
-  override def run_continuation(storageManager: StorageManager, 
-                                opFns: Seq[CompiledFn[Any]]): Any =
+  override def run_continuation(storageManager: StorageManager, opFns: Seq[CompiledFn[Any]]): Any =
     run(storageManager)
 }
 

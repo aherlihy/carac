@@ -179,8 +179,8 @@ class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: J
             )
           case _ =>
             cOps.reduceLeft((acc, next) =>
-                 '{ $acc ; $next }
-             )
+              '{ $acc ; $next }
+            )
 
       case InsertOp(rId, db, knowledge, children:_*) =>
         val res = compileIRRelOp(children.head.asInstanceOf[IROp[EDB]])
