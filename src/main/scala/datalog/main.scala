@@ -1040,25 +1040,19 @@ def stratified(program: Program) = {
   println(r.solve())
 }
 @main def main = {
-//  val engine = new NaiveExecutionEngine(new VolcanoStorageManager())
-//  val program = Program(engine)
-//  println("SemiNaive")
-//  tc(program)
-//  println("\n\n_______________________\n\n")
-
-//  println("OLD N")
-//  given engine0: ExecutionEngine = new NaiveExecutionEngine(new DefaultStorageManager())
-//  val program0 = Program(engine0)
-//  acyclic(program0)
-//  println("\n\n_______________________\n\n")
+  val stratifiedA = false
+  println("NAIVE")
+  given engine0: ExecutionEngine = new NaiveExecutionEngine(new DefaultStorageManager(), stratified = stratifiedA)
+  val program0 = Program(engine0)
+  stratified(program0)
+  println("\n\n_______________________\n\n")
 
   val dotty = staging.Compiler.make(getClass.getClassLoader)
-//  var sort = 1
-//  println(s"OLD SN: $sort")
-//  given engine1: ExecutionEngine = new SemiNaiveExecutionEngine(new DefaultStorageManager())
-//  val program1 = Program(engine1)
-//  stratified(program1)
-//  println("\n\n_______________________\n\n")
+  println("SEMINAIVE:")
+  given engine1: ExecutionEngine = new SemiNaiveExecutionEngine(new DefaultStorageManager(), stratified = stratifiedA)
+  val program1 = Program(engine1)
+  stratified(program1)
+  println("\n\n_______________________\n\n")
 
 //    val jo2 = JITOptions(ir.OpCode.OTHER, dotty, aot = false, block = true)
 //    println("INTERP")
@@ -1068,12 +1062,12 @@ def stratified(program: Program) = {
 //    stratified(program3a)
 //    println("\n\n_______________________\n\n")
 //
-    val jo3 = JITOptions(ir.OpCode.EVAL_RULE_SN, dotty, aot = false, block = true, sortOrder = (0, 0, 0))
-//    println("JIT")
-//    given engine3: ExecutionEngine = new StagedExecutionEngine(new DefaultStorageManager(), jo3)
-//    val program3 = Program(engine3)
-//    stratified(program3)
-//    println("\n\n_______________________\n\n")
+  val jo3 = JITOptions(ir.OpCode.EVAL_RULE_SN, dotty, aot = false, block = true, sortOrder = (0, 0, 0), stratified = stratifiedA)
+  println("JIT")
+  given engine3: ExecutionEngine = new StagedExecutionEngine(new DefaultStorageManager(), jo3)
+  val program3 = Program(engine3)
+  stratified(program3)
+  println("\n\n_______________________\n\n")
 
   println("JIT Snippet")
   val engine4: ExecutionEngine = new StagedSnippetExecutionEngine(new DefaultStorageManager(), jo3)
@@ -1086,12 +1080,10 @@ def stratified(program: Program) = {
 //  val program5 = Program(engine5)
 //  manyRelations(program5)
 //  println("\n\n_______________________\n\n")
-  //  println("JIT STAGED")
+
 //  val jo6 = JITOptions(ir.OpCode.PROGRAM, dotty, aot = false, block = true, sortOrder = (0, 0, 0))
 //  println("COMPILE")
-//
 //  given engine6: ExecutionEngine = new StagedExecutionEngine(new DefaultStorageManager(), jo6)
-//
 //  val program6 = Program(engine6)
 //  stratified(program6)
 //  println("\n\n_______________________\n\n")
