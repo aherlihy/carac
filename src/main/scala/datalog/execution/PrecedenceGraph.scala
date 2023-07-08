@@ -140,4 +140,13 @@ class PrecedenceGraph(using ns: NS /* for debugging */) {
     debug("precedencegraph:", () => toString())
     tarjan(target = None)
   }
+
+  def scc(target: Int): Seq[Set[Int]] = {
+    val sorted = tarjan(target = Some(target))
+    sorted
+      .dropRight(sorted.size - 1 - sorted.indexWhere(g => g.contains(target)))
+      .map(_.toSet)
+      .map(_.intersect(idbs)) // sort and remove edbs
+      .filter(_.nonEmpty)
+  }
 }
