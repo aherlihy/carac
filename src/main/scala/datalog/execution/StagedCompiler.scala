@@ -160,6 +160,9 @@ class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: J
           }) ()
         }
 
+      case UpdateDiscoveredOp() =>
+        '{ $stagedSM.updateDiscovered() }
+
       case SwapAndClearOp() =>
         '{ $stagedSM.swapKnowledge() ; $stagedSM.clearNewDerived() }
 
@@ -175,9 +178,9 @@ class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: J
               '{ $acc ; def eval_sn_lambda() = $next; eval_sn_lambda() }
             )
           case _ =>
-            cOps.reduceLeft((acc, next) => // TODO[future]: make a block w reflection instead of reduceLeft for efficiency
-              '{ $acc ; $next }
-            )
+            cOps.reduceLeft((acc, next) =>
+                 '{ $acc ; $next }
+             )
 
       case InsertOp(rId, db, knowledge, children:_*) =>
         val res = compileIRRelOp(children.head.asInstanceOf[IROp[EDB]])
