@@ -12,7 +12,7 @@ import scala.collection.mutable
  *
  * @param storageManager
  */
-class SemiNaiveExecutionEngine(override val storageManager: StorageManager, stratified: Boolean = true /* TODO: temp remove */) extends NaiveExecutionEngine(storageManager) {
+class SemiNaiveExecutionEngine(override val storageManager: StorageManager, stratified: Boolean = false /* TODO: temp remove */) extends NaiveExecutionEngine(storageManager) {
 //  println(s"stratified=$stratified")
   def evalRuleSN(rId: RelationId): EDB = {
     storageManager.SPJU(rId, getOperatorKeys(rId))
