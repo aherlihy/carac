@@ -7,7 +7,7 @@ import datalog.tools.Debug.debug
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
-class NaiveExecutionEngine(val storageManager: StorageManager, stratified: Boolean = false /* Temp add for benchmarking */) extends ExecutionEngine {
+class NaiveExecutionEngine(val storageManager: StorageManager, stratified: Boolean = true /* Temp add for benchmarking */) extends ExecutionEngine {
 //  println(s"stratified=$stratified")
   val precedenceGraph = new PrecedenceGraph(using storageManager.ns)
   val prebuiltOpKeys: mutable.Map[RelationId, ArrayBuffer[JoinIndexes]] = mutable.Map[RelationId, mutable.ArrayBuffer[JoinIndexes]]()
