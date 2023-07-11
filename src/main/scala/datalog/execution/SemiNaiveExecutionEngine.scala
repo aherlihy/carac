@@ -79,13 +79,14 @@ class SemiNaiveExecutionEngine(override val storageManager: StorageManager, stra
     val strata = precedenceGraph.scc(toSolve)
     storageManager.initEvaluation() // facts previously derived
 
-    debug(s"solving relation: ${storageManager.ns(toSolve)} order of strata=", () => strata.map(r => r.map(storageManager.ns.apply).mkString("(", ", ", ")")).mkString("{", ", ", "}"))
+    debug(s"solving relation: ${storageManager.ns(toSolve)} sCount=${strata.length} order of strata=", () => strata.map(r => r.map(storageManager.ns.apply).mkString("(", ", ", ")")).mkString("{", ", ", "}"))
 
-    if(strata.length == 1 || !stratified)
+    if(strata.length <= 1 || !stratified)
       innerSolve(toSolve, strata.flatten)
     else
       // for each stratum
       strata.zipWithIndex.foreach((relations, idx) =>
+        debug(s"**STRATA@$idx, rels=", () => relations.map(storageManager.ns.apply).mkString("(", ", ", ")"))
         innerSolve(toSolve, relations.toSeq)
         if (idx < strata.length - 1)
           storageManager.updateDiscovered()
