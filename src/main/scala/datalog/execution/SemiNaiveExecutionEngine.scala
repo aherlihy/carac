@@ -47,6 +47,24 @@ class SemiNaiveExecutionEngine(override val storageManager: StorageManager, stra
     })
   }
 
+  override def innerSolve(rId: RelationId, relations: Seq[Int]): Unit = {
+    var count = 0
+    debug("initial state @ -1", storageManager.toString)
+    evalNaive(relations, true) // this fills derived[new] and and delta[new]
+
+    var setDiff = true
+    while (setDiff) {
+      storageManager.swapKnowledge()
+      storageManager.clearNewDerived()
+
+      debug(s"initial state @ $count", storageManager.printer.toString)
+      count += 1
+      evalSN(rId, relations)
+      setDiff = storageManager.compareNewDeltaDBs()
+    }
+    debug(s"final state @$count", storageManager.printer.toString)
+  }
+
   override def solveStratified(rId: RelationId): Set[Seq[Term]] = {
     storageManager.verifyEDBs(idbs.keys.to(mutable.Set))
     if (storageManager.edbContains(rId) && !idbs.contains(rId)) { // if just an edb predicate then return
@@ -63,28 +81,14 @@ class SemiNaiveExecutionEngine(override val storageManager: StorageManager, stra
 
     debug(s"solving relation: ${storageManager.ns(rId)} order of strata=", strata.toString)
 
-    var scount = 0
-    // for each stratum
-    strata.foreach(r =>
-      val relations = r.toSeq
-      var count = 0
-      debug("", () => s"\n\n*****STRATA $scount with relations $relations")
-      scount += 1
-
-      evalNaive(relations, true) // this fills derived[new] and delta[new]
-      var setDiff = true
-      while (setDiff) {
-        storageManager.swapKnowledge()
-        storageManager.clearNewDerived()
-
-        debug(s"initial state @ $count", storageManager.printer.toString)
-        count += 1
-        evalSN(rId, relations)
-        setDiff = storageManager.compareNewDeltaDBs()
-      }
-      debug(s"final state @$count", storageManager.printer.toString)
-      storageManager.updateDiscovered()
-    )
+    if(strata.length == 1)
+      innerSolve(rId, strata.head.toSeq)
+    else
+      // for each stratum
+      strata.foreach(r =>
+        innerSolve(rId, r.toSeq)
+        storageManager.updateDiscovered()
+      )
     storageManager.getNewIDBResult(rId)
   }
 
@@ -103,31 +107,7 @@ class SemiNaiveExecutionEngine(override val storageManager: StorageManager, stra
     debug(s"precedence graph=", precedenceGraph.sortedString)
     debug(s"solving relation: ${storageManager.ns(rId)} order of relations=", relations.toString)
     storageManager.initEvaluation()
-    var count = 0
-
-    debug("initial state @ -1", storageManager.toString)
-    evalNaive(relations, true) // this fills derived[new] and and delta[new]
-
-    var setDiff = true
-    while (setDiff) {
-      storageManager.swapKnowledge()
-      storageManager.clearNewDerived()
-
-      debug(s"initial state @ $count", storageManager.printer.toString)
-      count += 1
-      evalSN(rId, relations)
-      setDiff = storageManager.compareNewDeltaDBs()
-      //      System.gc()
-      //      System.gc()
-      //      val mb = 1024*1024
-      //      val runtime = Runtime.getRuntime
-      //      println(s"END ITERATION iteration $count, results in MB")
-      //      println("** Used Memory:  " + (runtime.totalMemory - runtime.freeMemory) / mb)
-      //      println("** Free Memory:  " + runtime.freeMemory / mb)
-      //      println("** Total Memory: " + runtime.totalMemory / mb)
-      //      println("** Max Memory:   " + runtime.maxMemory / mb)
-    }
-    debug(s"final state @$count", storageManager.printer.toString)
+    innerSolve(rId, relations)
     storageManager.getNewIDBResult(rId)
   }
 
