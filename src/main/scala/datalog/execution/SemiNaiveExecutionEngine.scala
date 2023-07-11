@@ -65,55 +65,30 @@ class SemiNaiveExecutionEngine(override val storageManager: StorageManager, stra
     debug(s"final state @$count", storageManager.printer.toString)
   }
 
-  override def solveStratified(rId: RelationId): Set[Seq[Term]] = {
+  override def solve(toSolve: RelationId): Set[Seq[Term]] = {
     storageManager.verifyEDBs(idbs.keys.to(mutable.Set))
-    if (storageManager.edbContains(rId) && !idbs.contains(rId)) { // if just an edb predicate then return
-      return storageManager.getEDBResult(rId)
+    if (storageManager.edbContains(toSolve) && !idbs.contains(toSolve)) { // if just an edb predicate then return
+      return storageManager.getEDBResult(toSolve)
     }
-    if (!idbs.contains(rId)) {
+    if (!idbs.contains(toSolve)) {
       throw new Exception("Solving for rule without body")
     }
     // TODO: if a IDB predicate without vars, then solve all and test contains result?
     //    if (relations.isEmpty)
     //      return Set()
-    val strata = precedenceGraph.scc(rId)
+    val strata = precedenceGraph.scc(toSolve)
     storageManager.initEvaluation() // facts previously derived
 
-    debug(s"solving relation: ${storageManager.ns(rId)} order of strata=", strata.toString)
+    debug(s"solving relation: ${storageManager.ns(toSolve)} order of strata=", strata.toString)
 
-    if(strata.length == 1)
-      innerSolve(rId, strata.head.toSeq)
+    if(strata.length == 1 || !stratified)
+      innerSolve(toSolve, strata.flatten)
     else
       // for each stratum
       strata.foreach(r =>
-        innerSolve(rId, r.toSeq)
+        innerSolve(toSolve, r.toSeq)
         storageManager.updateDiscovered()
       )
-    storageManager.getNewIDBResult(rId)
+    storageManager.getNewIDBResult(toSolve)
   }
-
-  override def solveOld(rId: RelationId): Set[Seq[Term]] = {
-    storageManager.verifyEDBs(idbs.keys.to(mutable.Set))
-    if (storageManager.edbContains(rId) && !idbs.contains(rId)) { // if just an edb predicate then return
-      return storageManager.getEDBResult(rId)
-    }
-    if (!idbs.contains(rId)) {
-      throw new Exception("Solving for rule without body")
-    }
-    // TODO: if a IDB predicate without vars, then solve all and test contains result?
-    //    if (relations.isEmpty)
-    //      return Set()
-    val relations = precedenceGraph.topSort(rId)
-    debug(s"precedence graph=", precedenceGraph.sortedString)
-    debug(s"solving relation: ${storageManager.ns(rId)} order of relations=", relations.toString)
-    storageManager.initEvaluation()
-    innerSolve(rId, relations)
-    storageManager.getNewIDBResult(rId)
-  }
-
-  override def solve(toSolve: RelationId): Set[Seq[Term]] =
-    if (stratified)
-      solveStratified(toSolve)
-    else
-      solveOld(toSolve)
 }
