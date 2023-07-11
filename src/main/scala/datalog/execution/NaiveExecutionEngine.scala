@@ -82,7 +82,7 @@ class NaiveExecutionEngine(val storageManager: StorageManager, stratified: Boole
     }
   }
 
-  def solveStratified(toSolve: RelationId): Set[Seq[Term]] = {
+  def solve(toSolve: RelationId): Set[Seq[Term]] = {
     storageManager.verifyEDBs(idbs.keys.to(mutable.Set))
     if (storageManager.edbContains(toSolve) && !idbs.contains(toSolve)) { // if just an edb predicate then return
       return storageManager.getEDBResult(toSolve)
@@ -96,8 +96,8 @@ class NaiveExecutionEngine(val storageManager: StorageManager, stratified: Boole
     debug(s"solving relation: ${storageManager.ns(toSolve)} order of relations=", strata.toString)
 
     var scount = 0
-    if (strata.size == 1)
-      innerSolve(toSolve, strata.head.toSeq)
+    if (strata.size == 1 || !stratified)
+      innerSolve(toSolve, strata.flatten)
     else
       // for each strata
       strata.foreach(relations =>
@@ -107,26 +107,6 @@ class NaiveExecutionEngine(val storageManager: StorageManager, stratified: Boole
       )
     storageManager.getKnownIDBResult(toSolve)
   }
-
-  def solveOld(toSolve: RelationId): Set[Seq[Term]] = { // TODO: Remove after benchmarking
-    storageManager.verifyEDBs(idbs.keys.to(mutable.Set))
-    if (storageManager.edbContains(toSolve) && !idbs.contains(toSolve)) { // if just an edb predicate then return
-      return storageManager.getEDBResult(toSolve)
-    }
-    if (!idbs.contains(toSolve)) {
-      throw new Exception("Solving for rule without body")
-    }
-    val relations = precedenceGraph.topSort(toSolve)
-    storageManager.initEvaluation() // facts discovered in the previous iteration
-    innerSolve(toSolve, relations)
-    storageManager.getKnownIDBResult(toSolve)
-  }
-
-  def solve(toSolve: RelationId): Set[Seq[Term]] =
-    if (stratified)
-      solveStratified(toSolve)
-    else
-      solveOld(toSolve)
 }
 
 
