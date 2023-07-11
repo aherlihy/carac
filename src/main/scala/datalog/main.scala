@@ -667,18 +667,18 @@ def stratified(program: Program) = {
   println(r.solve())
 }
 @main def main = {
-  val stratifiedA = false
-  println("NAIVE")
-  given engine0: ExecutionEngine = new NaiveExecutionEngine(new DefaultStorageManager(), stratified = stratifiedA)
-  val program0 = Program(engine0)
-  stratified(program0)
-  println("\n\n_______________________\n\n")
+//  val stratifiedA = false
+//  println("NAIVE")
+//  given engine0: ExecutionEngine = new NaiveExecutionEngine(new DefaultStorageManager(), stratified = stratifiedA)
+//  val program0 = Program(engine0)
+//  stratified(program0)
+//  println("\n\n_______________________\n\n")
 
   val dotty = staging.Compiler.make(getClass.getClassLoader)
   println("SEMINAIVE:")
-  given engine1: ExecutionEngine = new SemiNaiveExecutionEngine(new DefaultStorageManager(), stratified = stratifiedA)
+  given engine1: ExecutionEngine = new SemiNaiveExecutionEngine(new DefaultStorageManager(), stratified = false)
   val program1 = Program(engine1)
-  stratified(program1)
+  isAfter(program1)
   println("\n\n_______________________\n\n")
 
 //    val jo2 = JITOptions(ir.OpCode.OTHER, dotty, aot = false, block = true)
@@ -689,18 +689,18 @@ def stratified(program: Program) = {
 //    stratified(program3a)
 //    println("\n\n_______________________\n\n")
 //
-  val jo3 = JITOptions(ir.OpCode.EVAL_RULE_SN, dotty, aot = false, block = true, sortOrder = (0, 0, 0), stratified = stratifiedA)
-  println("JIT")
-  given engine3: ExecutionEngine = new StagedExecutionEngine(new DefaultStorageManager(), jo3)
-  val program3 = Program(engine3)
-  stratified(program3)
-  println("\n\n_______________________\n\n")
-
-  println("JIT Snippet")
-  val engine4: ExecutionEngine = new StagedSnippetExecutionEngine(new DefaultStorageManager(), jo3)
-  val program4 = Program(engine4)
-  stratified(program4)
-  println("\n\n_______________________\n\n")
+//  val jo3 = JITOptions(ir.OpCode.EVAL_RULE_SN, dotty, aot = false, block = true, sortOrder = (0, 0, 0), stratified = stratifiedA)
+//  println("JIT")
+//  given engine3: ExecutionEngine = new StagedExecutionEngine(new DefaultStorageManager(), jo3)
+//  val program3 = Program(engine3)
+//  stratified(program3)
+//  println("\n\n_______________________\n\n")
+//
+//  println("JIT Snippet")
+//  val engine4: ExecutionEngine = new StagedSnippetExecutionEngine(new DefaultStorageManager(), jo3)
+//  val program4 = Program(engine4)
+//  stratified(program4)
+//  println("\n\n_______________________\n\n")
 
 //  println("JIT STAGED: aot EvalSN")
 //  val engine5: ExecutionEngine = new JITStagedExecutionEngine(new DefaultStorageManager(), ir.OpCode.EVAL_SN, true, true)
