@@ -93,17 +93,18 @@ class NaiveExecutionEngine(val storageManager: StorageManager, stratified: Boole
     val strata = precedenceGraph.scc(toSolve)
     storageManager.initEvaluation() // facts discovered in the previous iteration
 
-    debug(s"solving relation: ${storageManager.ns(toSolve)} order of relations=", strata.toString)
+    debug(s"solving relation: ${storageManager.ns(toSolve)} order of strata=", () => strata.map(r => r.map(storageManager.ns.apply).mkString("(", ", ", ")")).mkString("{", ", ", "}"))
 
     var scount = 0
     if (strata.size == 1 || !stratified)
       innerSolve(toSolve, strata.flatten)
     else
       // for each strata
-      strata.foreach(relations =>
+      strata.zipWithIndex.foreach((relations, idx) =>
         scount += 1
         innerSolve(toSolve, relations.toSeq)
-        storageManager.updateDiscovered()
+        if (idx < strata.length - 1)
+          storageManager.updateDiscovered()
       )
     storageManager.getKnownIDBResult(toSolve)
   }
