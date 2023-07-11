@@ -279,6 +279,31 @@ def cliquer(program: Program): Unit = {
   println("reachable=" + same_clique.solve().size)
 }
 
+def clique(program: Program): Unit = {
+  val edge = program.relation("edge")
+  val reachable = program.relation[Constant]("reachable")
+  val same_clique = program.relation[Constant]("same_clique")
+  val x, y, z = program.variable()
+
+  edge(0,	1) :- ()
+  edge(1,	2) :- ()
+  edge(2,	3) :- ()
+  edge(3,	4) :- ()
+  edge(4,	5) :- ()
+  edge(5,	0) :- ()
+  edge(5,	6) :- ()
+  edge(6,	7) :- ()
+  edge(7,	8) :- ()
+  edge(8,	9) :- ()
+  edge(9,	10) :- ()
+  edge(10,	7) :- ()
+  reachable(x, y) :- edge(x, y)
+  reachable(x, y) :- (edge(x, z), reachable(z, y))
+  same_clique(x, y) :- (reachable(x, y), reachable(y, x))
+
+  println("result=" + same_clique.solve().size)
+}
+
 def input_output(program: Program): Unit = {
   // input, i.e. defined in facts+here, i.e. named
   val InputOutputNumberSymbol = program.relation[Constant]("InputOutputNumberSymbol")
@@ -678,7 +703,7 @@ def stratified(program: Program) = {
   println("SEMINAIVE:")
   given engine1: ExecutionEngine = new SemiNaiveExecutionEngine(new DefaultStorageManager(), stratified = false)
   val program1 = Program(engine1)
-  isAfter(program1)
+  clique(program1)
   println("\n\n_______________________\n\n")
 
 //    val jo2 = JITOptions(ir.OpCode.OTHER, dotty, aot = false, block = true)

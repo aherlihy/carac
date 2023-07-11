@@ -57,12 +57,12 @@ class SemiNaiveExecutionEngine(override val storageManager: StorageManager, stra
       storageManager.swapKnowledge()
       storageManager.clearNewDerived()
 
-      debug(s"initial state @ $count", storageManager.printer.toString)
+      debug(s"initial state @ $count", storageManager.toString)
       count += 1
       evalSN(rId, relations)
       setDiff = storageManager.compareNewDeltaDBs()
     }
-    debug(s"final state @$count", storageManager.printer.toString)
+    debug(s"final state @$count", storageManager.toString)
   }
 
   override def solve(toSolve: RelationId): Set[Seq[Term]] = {
@@ -79,15 +79,16 @@ class SemiNaiveExecutionEngine(override val storageManager: StorageManager, stra
     val strata = precedenceGraph.scc(toSolve)
     storageManager.initEvaluation() // facts previously derived
 
-    debug(s"solving relation: ${storageManager.ns(toSolve)} order of strata=", strata.toString)
+    debug(s"solving relation: ${storageManager.ns(toSolve)} order of strata=", () => strata.map(r => r.map(storageManager.ns.apply).mkString("(", ", ", ")")).mkString("{", ", ", "}"))
 
     if(strata.length == 1 || !stratified)
       innerSolve(toSolve, strata.flatten)
     else
       // for each stratum
-      strata.foreach(r =>
-        innerSolve(toSolve, r.toSeq)
-        storageManager.updateDiscovered()
+      strata.zipWithIndex.foreach((relations, idx) =>
+        innerSolve(toSolve, relations.toSeq)
+        if (idx < strata.length - 1)
+          storageManager.updateDiscovered()
       )
     storageManager.getNewIDBResult(toSolve)
   }
