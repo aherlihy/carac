@@ -37,7 +37,6 @@ class NaiveExecutionEngine(val storageManager: StorageManager, stratified: Boole
   def insertIDB(rId: RelationId, ruleSeq: Seq[Atom]): Unit = {
     val rule = ruleSeq.toArray
     precedenceGraph.addNode(rule)
-    precedenceGraph.idbs.addOne(rId)
     idbs.getOrElseUpdate(rId, mutable.ArrayBuffer[IndexedSeq[Atom]]()).addOne(rule.toIndexedSeq)
     prebuiltOpKeys.getOrElseUpdate(rId, mutable.ArrayBuffer[JoinIndexes]()).addOne(getOperatorKey(rule))
   }
@@ -48,9 +47,7 @@ class NaiveExecutionEngine(val storageManager: StorageManager, stratified: Boole
         varIndexes = IndexedSeq(),
         constIndexes = Map(),
         projIndexes = IndexedSeq(),
-        deps = Seq(rule.rId),
-        negated = Array(false),
-        sizes = Array(rule.terms.size),
+        deps = Seq.empty,
         atoms = Array(rule),
         edb = true,
       )
@@ -103,8 +100,6 @@ class NaiveExecutionEngine(val storageManager: StorageManager, stratified: Boole
       throw new Exception("Solving for rule without body")
     }
     val strata = precedenceGraph.scc(toSolve)
-    if (precedenceGraph.hasNegativeCycle(storageManager.allRulesAllIndexes))
-      throw new Exception("Negative cycle detected")
     storageManager.initEvaluation() // facts discovered in the previous iteration
 
     debug(s"solving relation: ${storageManager.ns(toSolve)} order of strata=", () => strata.map(r => r.map(storageManager.ns.apply).mkString("(", ", ", ")")).mkString("{", ", ", "}"))

@@ -31,14 +31,14 @@ class Printer[S <: StorageManager](val sm: S) {
     "Union( " +
       keys.map(k =>
         if (k.edb)
-          "SCAN(" + k.deps.map(n => sm.ns(n)).mkString("[", ", ", "]") + ")"
+          "SCAN(" + k.deps.map((typ, n) => s"$typ${sm.ns(n)}").mkString("[", ", ", "]") + ")"
         else
           "Project" + k.projIndexes.map((typ, v) => f"$typ$v").mkString("[", " ", "]") + "( " +
             "JOIN" +
             k.varIndexes.map(v => v.mkString("$", "==$", "")).mkString("[", ",", "]") +
             k.constIndexes.map((k, v) => "$" + k + "==" + (if (v.isInstanceOf[String]) s"\"$v\"" else "v")).mkString("{", "&&", "}") +
-            k.deps.map(n =>
-              if(k.edb) "edbs-" + sm.ns(n)  else sm.ns(n)
+            k.deps.map((typ, n) =>
+              if(k.edb) typ + "edbs-" + sm.ns(n) else typ + sm.ns(n)
             ).mkString("(", "*", ")") +
             " )"
       ).mkString("", ", ", "") +
@@ -49,26 +49,28 @@ class Printer[S <: StorageManager](val sm: S) {
     "UNION( " +
       keys.map(k =>
         if (k.edb)
-          "SCAN(" + k.deps.map(n => sm.ns(n)).mkString("[", ", ", "]") + ")"
+          "SCAN(" + k.deps.map((typ, n) => s"$typ${sm.ns(n)}").mkString("[", ", ", "]") + ")"
         else
           var idx = -1
           "UNION(" +
-            k.deps.map(d => {
+            k.deps.map((typ, d) => {
               var found = false
-              "PROJECT" + k.projIndexes.map((typ, v) => f"$typ$v").mkString("[", " ", "]") + "( " +
+              typ + "PROJECT" + k.projIndexes.map((typ, v) => f"$typ$v").mkString("[", " ", "]") + "( " +
                 "JOIN" +
                 k.varIndexes.map(v => v.mkString("$", "==$", "")).mkString("[", ",", "]") +
                 k.constIndexes.map((k, v) => k + "==" + v).mkString("{", "&&", "}") +
-                k.deps.zipWithIndex.map((n, i) => {
+                k.deps.zipWithIndex.map((tn, i) => {
+                  val typ = tn._1
+                  val n = tn._2
                   if (n == d && !found && i > idx)
                     found = true
                     idx = i
-                    "delta[known][" + sm.ns(n) + s"($n)" + "]"
+                    typ + "delta[known][" + sm.ns(n) + s"($n)" + "]"
                   else
                     if(k.edb)
-                      "edbs[" + sm.ns(n) + s"($n)" + "]"
+                      typ + "edbs[" + sm.ns(n) + s"($n)" + "]"
                     else
-                      "derived[known][" + sm.ns(n) + s"($n)" + "]"
+                      typ + "derived[known][" + sm.ns(n) + s"($n)" + "]"
                 }).mkString("(", "*", ")") +
                 " )"
             }).mkString("[ ", ", ", " ]") + " )"

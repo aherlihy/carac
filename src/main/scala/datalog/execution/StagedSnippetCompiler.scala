@@ -40,7 +40,7 @@ class StagedSnippetCompiler(val storageManager: StorageManager)(using val jitOpt
 
   given ToExpr[Atom] with {
     def apply(x: Atom)(using Quotes) = {
-      '{ Atom( ${ Expr(x.rId) }, ${ Expr.ofSeq(x.terms.map(y => Expr(y))) } ) }
+      '{ Atom( ${ Expr(x.rId) }, ${ Expr.ofSeq(x.terms.map(y => Expr(y))) }, ${ Expr(x.negated) } ) }
     }
   }
 
@@ -52,8 +52,6 @@ class StagedSnippetCompiler(val storageManager: StorageManager)(using val jitOpt
           ${ Expr(x.constIndexes) },
           ${ Expr(x.projIndexes) },
           ${ Expr(x.deps) },
-          ${ Expr(x.negated) },
-          ${ Expr(x.sizes) },
           ${ Expr(x.atoms) },
           ${ Expr(x.edb) },
         ) }

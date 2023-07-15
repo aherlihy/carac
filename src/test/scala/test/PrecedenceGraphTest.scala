@@ -37,16 +37,16 @@ class PrecedenceGraphTest extends munit.FunSuite {
       Seq(Set(t8.id), Set(t2.id, t3.id, t4.id, t5.id, t6.id, t7.id), Set(t1.id), Set(t0.id), Set(t10.id))
     )
     assertEquals(
-      engine.precedenceGraph.topSort(t10.id),
+      engine.precedenceGraph.scc(t10.id).flatten,
       Seq(t10.id),
     )
     // There's a single component with the 6 nodes
     assertEquals(
-      engine.precedenceGraph.topSort(t4.id).toSet,
+      engine.precedenceGraph.scc(t4.id).flatten.toSet,
       Set(t2.id, t3.id, t4.id, t5.id, t6.id, t7.id)
     )
     assertEquals(
-      engine.precedenceGraph.topSort(t8.id),
+      engine.precedenceGraph.scc(t8.id).flatten,
       Seq() // TODO: empty
     )
   }
@@ -81,11 +81,11 @@ class PrecedenceGraphTest extends munit.FunSuite {
       Set(Set(e.id), Set(p.id), Set(other.id), Set(e2.id), Set(p2.id), Set(other2.id))
     )
     assertEquals(
-      engine.precedenceGraph.topSort(other.id),
+      engine.precedenceGraph.scc(other.id).flatten,
       Seq(p.id, other.id)
     )
     assertEquals(
-      engine.precedenceGraph.topSort(other2.id),
+      engine.precedenceGraph.scc(other2.id).flatten,
       Seq(p2.id, other2.id)
     )
   }
@@ -105,7 +105,7 @@ class PrecedenceGraphTest extends munit.FunSuite {
     p(x, z) :- ( e(x, y), p(y, z) )
     other(x) :- p("a", x)
 
-    engine.precedenceGraph.topSort(other.id) // test against sorted to keep groups
+    engine.precedenceGraph.scc(other.id).flatten // test against sorted to keep groups
     assertEquals(
       engine.precedenceGraph.scc(),
       Seq(Set(e.id), Set(p.id), Set(other.id))
@@ -125,7 +125,7 @@ class PrecedenceGraphTest extends munit.FunSuite {
     c() :- a()
     a() :- other()
 
-    engine.precedenceGraph.topSort(a.id)
+    engine.precedenceGraph.scc(a.id).flatten
     assertEquals(
       engine.precedenceGraph.scc(),
       Seq(Set(other.id), Set(a.id, b.id, c.id))
@@ -146,7 +146,7 @@ class PrecedenceGraphTest extends munit.FunSuite {
     c() :- a()
     a() :- other()
 
-    engine.precedenceGraph.topSort(a.id)
+    engine.precedenceGraph.scc(a.id).flatten
     assertEquals(
       engine.precedenceGraph.scc(),
       Seq(Set(other.id), Set(a.id, b.id, c.id))
@@ -167,7 +167,7 @@ class PrecedenceGraphTest extends munit.FunSuite {
     c() :- a()
     a() :- other()
 
-    engine.precedenceGraph.topSort(a.id)
+    engine.precedenceGraph.scc(a.id).flatten
     assertEquals(
       engine.precedenceGraph.scc(),
       Seq(Set(other.id), Set(a.id, b.id, c.id))
@@ -867,17 +867,16 @@ class PrecedenceGraphTest extends munit.FunSuite {
 
     val graph = new PrecedenceGraph(using new NS())
     for ((node, deps) <- adjacency) {
-      graph.addNode(node, deps)
-      graph.idbs.add(node)
+//      graph.addNode(node, deps)
     }
 
     assertEquals(
-      graph.topSort(2),
+      graph.scc(2).flatten,
       Seq(0, 1, 2),
     )
-    graph.updateNodeAlias(2, mutable.Map(1 -> 0))
+    graph.updateNodeAlias(mutable.Map(1 -> 0))
     assertEquals(
-      graph.topSort(2),
+      graph.scc(2).flatten,
       Seq(0, 2),
     )
   }
@@ -892,17 +891,16 @@ class PrecedenceGraphTest extends munit.FunSuite {
 
     val graph = new PrecedenceGraph(using new NS())
     for ((node, deps) <- adjacencyList) {
-      graph.addNode(node, deps)
-      graph.idbs.add(node)
+//      graph.addNode(node, deps)
     }
 
     assertEquals(
-      graph.topSort(3),
+      graph.scc(3).flatten,
       Seq(0, 1, 2, 3),
     )
-    graph.updateNodeAlias(3, mutable.Map(2 -> 1, 1 -> 0))
+    graph.updateNodeAlias(mutable.Map(2 -> 1, 1 -> 0))
     assertEquals(
-      graph.topSort(3),
+      graph.scc(3).flatten,
       Seq(0, 3),
     )
   }

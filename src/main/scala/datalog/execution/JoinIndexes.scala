@@ -2,7 +2,7 @@ package datalog.execution
 
 import datalog.dsl.{Atom, Constant, Variable}
 import datalog.execution.ir.ProjectJoinFilterOp
-import datalog.storage.{StorageManager, NS}
+import datalog.storage.{NS, RelationId, StorageManager}
 import datalog.tools.Debug.debug
 
 import scala.collection.mutable
@@ -17,17 +17,13 @@ type AllIndexes = mutable.Map[String, JoinIndexes]
  * @param varIndexes - indexes of repeated variables within the body
  * @param constIndexes - indexes of constants within the body
  * @param projIndexes - for each term in the head, either ("c", the constant value) or ("v", the first index of the variable within the body)
- * @param deps - set of relations directly depended upon by this rule
- * @param negated - for each atom in the body, whether it is negated
- * @param sizes - for each atom in the body, the number of terms it has
+ * @param deps - set of relations directly depended upon by this rule and the type of operation. Current either ("+", relationId) for positive edges or ("-", relationId) for negative edges, TODO: expand for aggregations
  * @param edb - for rules that have EDBs defined on the same predicate, just read
  */
 case class JoinIndexes(varIndexes: Seq[Seq[Int]],
                        constIndexes: Map[Int, Constant],
                        projIndexes: Seq[(String, Constant)],
-                       deps: Seq[Int],
-                       negated: Array[Boolean],
-                       sizes: Array[Int],
+                       deps: Seq[(String, RelationId)],
                        atoms: Array[Atom],
                        edb: Boolean = false
                       ) {
@@ -42,8 +38,8 @@ case class JoinIndexes(varIndexes: Seq[Seq[Int]],
 
   def varToString(): String = varIndexes.map(v => v.mkString("$", "==$", "")).mkString("[", ",", "]")
   def constToString(): String = constIndexes.map((k, v) => k + "==" + v).mkString("{", "&&", "}")
-  def projToString(): String = projIndexes.map((typ, v) => f"$typ$v").mkString("[", " ", "]")
-  def depsToString(ns: NS): String = deps.map(d => if (ns != null) ns(d) else d).mkString("[", ", ", "]")
+  def projToString(): String = projIndexes.map((typ, v) => s"$typ$v").mkString("[", " ", "]")
+  def depsToString(ns: NS): String = deps.map((typ, rId) => s"$typ${ns(rId)}").mkString("[", ", ", "]")
   val hash: String = atoms.map(a => a.hash).mkString("", "", "")
 }
 
@@ -54,15 +50,13 @@ object JoinIndexes {
 
     val body = rule.drop(1)
 
-    val deps = body.map(a => a.rId) // TODO: should this be a set?
-    val sizes = body.map(a => a.terms.size)
-    val negated = body.map(a => a.negated)
+    val deps = body.map(a => (if (a.negated) "-" else "+", a.rId))
 
     val bodyVars = body
-      .flatMap(a => a.terms)
-      .zipWithIndex // terms, position
-      .groupBy(z => z._1)
-      .filter((term, matches) => // matches = Seq[(var, pos1), (var, pos2), ...]
+      .flatMap(a => a.terms)      // all terms in one seq
+      .zipWithIndex               // term, position
+      .groupBy(z => z._1)         // group by term
+      .filter((term, matches) =>  // matches = Seq[(var, pos1), (var, pos2), ...]
         term match {
           case v: Variable =>
             variables(v) = matches.head._2 // first idx for a variable
@@ -72,42 +66,23 @@ object JoinIndexes {
             false
         }
       )
-      .map((term, matches) => // get rid of groupBy elem in result tuple
+      .map((term, matches) =>     // get rid of groupBy elem in result tuple
         matches.map(_._2).toIndexedSeq
       )
       .toIndexedSeq
 
     // variable ids in the head atom
-    val projects = rule(0).terms.map {
+    val projects = rule.head.terms.map {
       case v: Variable =>
-        if (!variables.contains(v)) throw new Exception(f"Free variable in rule head with varId $v.oid")
-        if (v.anon) throw new Exception("Anonymous variable ('__') not allowed in head of rule")
+        if (!variables.contains(v))
+          throw new Exception(s"Free variable in rule head with varId ${v.oid}")
+        if (v.anon)
+          throw new Exception("Anonymous variable ('__') not allowed in head of rule")
         ("v", variables(v))
       case c: Constant => ("c", c)
     }
 
-    // The head atom may not be negated.
-    if (rule(0).negated) throw new Exception("Head atom cannot be negated")
-
-    // All variables in the head atom must be limited.
-    val variablesInPositiveAtoms =
-      rule.drop(1)
-        .filter(!_.negated)
-        .flatMap(_.terms)
-        .flatMap {
-          case v: Variable => Some(v)
-          case _ => None
-        }
-    val variablesLimited = rule.flatMap(_.terms)
-      .flatMap {
-        case v: Variable => Some(v)
-        case _ => None
-      }
-      .forall(v => variablesInPositiveAtoms.contains(v))
-
-    if !variablesLimited then throw new Exception("Some variables in the head atom are not limited")
-
-    new JoinIndexes(bodyVars, constants.toMap, projects, deps, negated, sizes, rule)
+    new JoinIndexes(bodyVars, constants.toMap, projects, deps, rule)
   }
 
   def getSortAhead[T: ClassTag](input: Array[T], sortBy: T => Int, rId: Int, oldHash: String, sm: StorageManager)(using jitOptions: JITOptions): (Array[T], String) = {

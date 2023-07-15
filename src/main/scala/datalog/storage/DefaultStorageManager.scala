@@ -236,21 +236,22 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
           edbs.getOrElse(rId, CollectionsEDB()).wrapped
         else
           var idx = -1 // if dep is featured more than once, only us delta once, but at a different pos each time
-          k.deps.flatMap(d => {
+          k.deps.flatMap((typ, d) => {
             var found = false // TODO: perhaps need entry in derived/delta for each atom instead of each relation?
             joinProjectHelper(
-              k.deps.zipWithIndex.map((r, i) =>
+              k.deps.zipWithIndex.map((tr, i) =>
+                val r = tr._2
                 if (r == d && !found && i > idx) {
                   found = true
                   idx = i
-                  withNegation(k.negated(i))(k.sizes(i),
+//                  withNegation(k.negated(i))(k.sizes(i),
                     union(Seq(getKnownDeltaDB(r), getDiscoveredEDBs(r)))
-                  )
+//                  )
                 }
                 else {
-                  withNegation(k.negated(i))(k.sizes(i),
+//                  withNegation(k.negated(i))(k.sizes(i),
                     union(Seq(getKnownDerivedDB(r), getDiscoveredEDBs(r)))
-                  ) // TODO: warn if EDB is empty? Right now can't tell the difference between undeclared and empty EDB
+//                  ) // TODO: warn if EDB is empty? Right now can't tell the difference between undeclared and empty EDB
                 }
               ), k, (0, 0, 0)).wrapped // don't sort when not staging
           }).distinct
@@ -266,10 +267,11 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
         else
           projectHelper(
             joinHelper(
-              k.deps.zipWithIndex.map((r, i) =>
-                withNegation(k.negated(i))(k.sizes(i),
+              k.deps.zipWithIndex.map((tr, i) =>
+                val r = tr._2
+//                withNegation(k.negated(i))(k.sizes(i),
                   union(Seq(getKnownDerivedDB(r), getDiscoveredEDBs(r)))
-                )
+//                )
               ), k // TODO: warn if EDB is empty? Right now can't tell the difference between undeclared and empty EDB)
             ), k
           ).wrapped.distinct

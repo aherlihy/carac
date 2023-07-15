@@ -53,13 +53,14 @@ class VolcanoStorageManager(ns: NS = NS()) extends CollectionsStorageManager(ns)
             Scan(edbs.getOrElse(rId, CollectionsEDB()), rId)
           else
             Project(
-              Join(k.deps.zipWithIndex.map((r, i) =>
+              Join(k.deps.zipWithIndex.map((tr, i) =>
+                val r = tr._2
                 // TODO: warn if EDB is empty? Right now can't tell the difference between undeclared and empty EDB
-                val scan = Union(Seq(
+                Union(Seq(
                   Scan(getKnownDerivedDB(r), r),
                   Scan(getDiscoveredEDBs(r), r),
                 ))
-                withNegation(k.negated(i))(r, k.sizes(i), scan)
+//                withNegation(k.negated(i))(r, k.sizes(i), scan)
               ), k.varIndexes, k.constIndexes),
               k.projIndexes
             )
@@ -85,27 +86,28 @@ class VolcanoStorageManager(ns: NS = NS()) extends CollectionsStorageManager(ns)
         else
           var idx = -1 // if dep is featured more than once, only us delta once, but at a different pos each time
           Union(
-            k.deps.map(d => {
+            k.deps.map((typ, d) => {
               var found = false
               Project(
                 Join(
-                  k.deps.zipWithIndex.map((r, i) => {
+                  k.deps.zipWithIndex.map((tr, i) => {
+                    val r = tr._2
                     if (r == d && !found && i > idx)
                       found = true
                       idx = i
-                      withNegation(k.negated(i))(r, k.sizes(i),
+//                      withNegation(k.negated(i))(r, k.sizes(i),
                         Union(Seq(
                           Scan(getKnownDeltaDB(r), r),
                           Scan(getDiscoveredEDBs(r), r),
                         ))
-                      )
+//                      )
                     else
-                      withNegation(k.negated(i))(r, k.sizes(i),
+//                      withNegation(k.negated(i))(r, k.sizes(i),
                         Union(Seq(
                           Scan(getKnownDerivedDB(r), r),
                           Scan(getDiscoveredEDBs(r), r),
                         ))
-                      )
+//                      )
                   }),
                   k.varIndexes,
                   k.constIndexes

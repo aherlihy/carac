@@ -77,8 +77,6 @@ class SemiNaiveExecutionEngine(override val storageManager: StorageManager, stra
     //    if (relations.isEmpty)
     //      return Set()
     val strata = precedenceGraph.scc(toSolve)
-    if (precedenceGraph.hasNegativeCycle(storageManager.allRulesAllIndexes))
-      throw new Exception("Negative cycle detected")
     storageManager.initEvaluation() // facts previously derived
 
     debug(s"solving relation: ${storageManager.ns(toSolve)} sCount=${strata.length} order of strata=", () => strata.map(r => r.map(storageManager.ns.apply).mkString("(", ", ", ")")).mkString("{", ", ", "}"))

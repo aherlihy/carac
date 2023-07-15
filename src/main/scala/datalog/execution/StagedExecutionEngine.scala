@@ -48,13 +48,12 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
 
   def insertIDB(rId: Int, ruleSeq: Seq[Atom]): Unit = {
     val rule = ruleSeq.toArray
-    precedenceGraph.idbs.addOne(rId)
     val allRules = ast.rules.getOrElseUpdate(rId, AllRulesNode(mutable.ArrayBuffer.empty, rId)).asInstanceOf[AllRulesNode]
     // TODO: sort here in case EDBs/etc are already defined?
     val allK = JoinIndexes.allOrders(rule)
     storageManager.allRulesAllIndexes.getOrElseUpdate(rId, mutable.Map[String, JoinIndexes]()) ++= allK
     val hash = JoinIndexes.getRuleHash(rule)
-    precedenceGraph.addNode(rId, allK(hash).deps)
+    precedenceGraph.addNode(ruleSeq)
 
     allRules.rules.append(
       RuleNode(
@@ -364,7 +363,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
     given irCtx: InterpreterContext = InterpreterContext(storageManager, precedenceGraph, toSolve)
     debug("AST: ", () => storageManager.printer.printAST(ast))
     debug("TRANSFORMED: ", () => storageManager.printer.printAST(transformedAST))
-    debug("PG: ", () => irCtx.sortedRelations.toString())
+    debug("PG: ", () => precedenceGraph.toString())
 
     val irTree = createIR(transformedAST)
 

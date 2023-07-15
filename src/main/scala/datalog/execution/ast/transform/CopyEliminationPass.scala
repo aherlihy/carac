@@ -58,8 +58,8 @@ class CopyEliminationPass()(using ASTTransformerContext) extends Transformer {
             val allK = JoinIndexes.allOrders(transformedAtoms)
             ctx.sm.allRulesAllIndexes.getOrElseUpdate(transformedAtoms.head.rId, mutable.Map[String, JoinIndexes]()) ++= allK
             hash = JoinIndexes.getRuleHash(transformedAtoms)
-            ctx.precedenceGraph.addNode(transformedAtoms.head.rId, allK(hash).deps)
-            ctx.precedenceGraph.updateNodeAlias(transformedAtoms.head.rId, ctx.aliases)
+            ctx.precedenceGraph.addNode(transformedAtoms)
+            ctx.precedenceGraph.updateNodeAlias(ctx.aliases)
 
           RuleNode(transform(head), body.map(transform), transformedAtoms, hash)
         case n: AtomNode => n match {
