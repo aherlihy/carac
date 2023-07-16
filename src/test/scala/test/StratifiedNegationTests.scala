@@ -18,7 +18,7 @@ class StratifiedNegationTests extends munit.FunSuite {
     t(x, y) :- e(x, y)
     t(x, z) :- (t(x, y), e(y, z))
 
-    intercept[java.lang.Exception] {
+    interceptMessage[java.lang.Exception]("Free variable in rule head with varId 0") {
       tc(x, y) :- not(t(x, y)) // x and y are not limited.
     }
   }
@@ -31,7 +31,7 @@ class StratifiedNegationTests extends munit.FunSuite {
     e(1, 2) :- ()
     e(x, y) :- (e(x, y), not(e(y, x)))
 
-    intercept[java.lang.Exception] {
+    interceptMessage[java.lang.Exception]("Negative cycle detected in input program") {
       p.solve(e.id)
     }
   }

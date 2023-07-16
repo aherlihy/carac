@@ -52,6 +52,8 @@ object JoinIndexes {
 
     val deps = body.map(a => (if (a.negated) "-" else "+", a.rId))
 
+    val typeHelper = body.flatMap(a => a.terms.map(* => !a.negated))
+
     val bodyVars = body
       .flatMap(a => a.terms)      // all terms in one seq
       .zipWithIndex               // term, position
@@ -59,8 +61,10 @@ object JoinIndexes {
       .filter((term, matches) =>  // matches = Seq[(var, pos1), (var, pos2), ...]
         term match {
           case v: Variable =>
-            variables(v) = matches.head._2 // first idx for a variable
-            !v.anon && matches.size >= 2
+            matches.map(_._2).find(typeHelper).foreach(pos => // store first non-negated idx for a variable 
+              variables(v) = pos
+            )
+            !v.anon && matches.length >= 2
           case c: Constant =>
             matches.foreach((_, idx) => constants(idx) = c)
             false
