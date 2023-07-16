@@ -41,8 +41,10 @@ trait Database[T <: EDB] {
 class NS() {
   private val nameToRid = mutable.Map[String, RelationId]()
   private val rIdToName = mutable.Map[RelationId, String]()
-  def apply(name: String): RelationId = nameToRid(name)
-  def apply(rId: RelationId): String = rIdToName(rId)
+  def apply(name: String): RelationId =
+    nameToRid.getOrElse(name, -1)
+  def apply(rId: RelationId): String =
+    rIdToName.getOrElse(rId, s"<$rId>")
   def update(key: String, value: RelationId): Unit = {
     nameToRid(key) = value
     rIdToName(value) = key

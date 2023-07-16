@@ -80,7 +80,8 @@ class PrecedenceGraph(using ns: NS /* ns used for pretty printing */) {
     nodes
   }
 
-  private def tarjan(target: Option[Int]): Seq[Set[Int]] = {
+  // TODO: Any vertex that is not on a directed cycle forms a strongly connected component all by itself, so potentially collapse single-node strata into preceding strata
+  def tarjan(target: Option[Int] = None): Seq[Set[Int]] = {
     var index = 0
     val stack = mutable.Stack[Node]()
     val sorted = mutable.Queue[mutable.Set[Int]]()
@@ -128,16 +129,31 @@ class PrecedenceGraph(using ns: NS /* ns used for pretty printing */) {
       }
     })
 
-    sorted.map(_.toSet).toSeq
+    val result = sorted.map(_.toSet).toSeq
+
+    // check for negative cycle
+    result.foreach(strata =>
+      strata.foreach(p =>
+        if (graph(p).negEdges.map(n => n.rId).intersect(strata).nonEmpty)
+          throw new Exception("Negative cycle detected in input program")
+      )
+    )
+
+    result
   }
 
-  private def ullman(): Seq[Set[RelationId]] = {
+  def ullman(target: Option[Int] = None): Seq[Set[RelationId]] = {
+    // give ullman the same hint
     val graph = buildGraph()
-    val stratum = graph.map((k, v) => (k, 0))
-    var prevStratum = graph.map((k, v) => (k, 0))
+    val order = target.map(t => {
+      graph.values.filter(_.rId == t) ++ graph.values.filter(_.rId != t)
+    }).getOrElse(graph.values)
+
+    val stratum = graph.map((k, *) => (k, 0))
+    var prevStratum = graph.map((k, *) => (k, 0))
     var setDiff = true
     while (setDiff) {
-      graph.values.foreach(node =>
+      order.foreach(node =>
         val p = node.rId
         node.negEdges.foreach(q =>
           stratum(p) = stratum(p).max(1 + stratum(q.rId))
@@ -146,7 +162,7 @@ class PrecedenceGraph(using ns: NS /* ns used for pretty printing */) {
           stratum(p) = stratum(p).max(stratum(q.rId))
         )
       )
-      if (stratum.values.groupBy(identity).map(_.size).max > stratum.keys.size)
+      if (stratum.nonEmpty && stratum.values.max > stratum.keys.size)
         throw new Exception("Negative cycle detected in input program")
       setDiff = prevStratum != stratum
       prevStratum = stratum.clone
@@ -154,20 +170,17 @@ class PrecedenceGraph(using ns: NS /* ns used for pretty printing */) {
     stratum.toSeq.groupBy(_._2).toSeq.sortBy(_._1).map(_._2).map(v => v.map(_._1).toSet)
   }
 
-  def scc(): Seq[Set[RelationId]] = {
-    debug("precedence graph:", () => toString())
-//    tarjan(target = None)
-    ullman()
-  }
-
-  def scc(target: Int): Seq[Set[Int]] = {
-    debug("precedence graph:", () => toString())
-//    val sorted = tarjan(target = Some(target))
-    val sorted = ullman()
+  def dropIrrelevant(sorted: Seq[Set[Int]], target: Option[Int] = None): Seq[Set[Int]] = {
+    val drop = target.map(t => sorted.size - 1 - sorted.indexWhere(g => g.contains(t)))
     sorted
-      .dropRight(sorted.size - 1 - sorted.indexWhere(g => g.contains(target)))
+      .dropRight(drop.get)
       .map(_.toSet)
       .map(_.intersect(idbs)) // sort and remove edbs
       .filter(_.nonEmpty)
+  }
+
+  def scc(target: Int): Seq[Set[Int]] = {
+    val sorted2 = ullman(Some(target))
+    dropIrrelevant(sorted2, Some(target))
   }
 }
