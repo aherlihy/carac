@@ -120,7 +120,6 @@ class Printer[S <: StorageManager](val sm: S) {
       case UpdateDiscoveredOp() => "UPDATE_DISCOVERED()"
       case ScanEDBOp(srcRel) => s"SCANEDB(edbs[${ctx.storageManager.ns(srcRel)}])"
       case ScanDiscoveredOp(srcRel) => s"SCANDISCOVERED(${ctx.storageManager.ns(srcRel)})"
-      case NegateOp(arity, children: _*) => s"NEGATE($arity)${children.map(s => printIR(s, ident+1)).mkString("(\n", ",\n", ")")}"
       case ScanOp(srcRel, db, knowledge) =>
         s"SCAN[$db.$knowledge](${ctx.storageManager.ns(srcRel)})"
       case ProjectJoinFilterOp(rId, hash, children:_*) =>
@@ -131,7 +130,6 @@ class Printer[S <: StorageManager](val sm: S) {
       case UnionOp(fnCode, children:_*) => s"UNION${if (fnCode != OpCode.UNION) "::" + fnCode else "_"}${children.map(o => printIR(o, ident+1)).mkString("(\n", ",\n", ")")}"
       case UnionSPJOp(rId, hash, children:_*) => s"UNION_SPJ::${ctx.storageManager.ns(rId)}::${sm.allRulesAllIndexes(rId)(hash)}::${children.map(o => printIR(o, ident+1)).mkString("(\n", ",\n", ")")}"
       case DiffOp(children:_*) => s"DIFF\n${printIR(children.head, ident+1)}\n-${printIR(children(1), ident+1)}"
-      case UpdateDiscoveredOp() => s"DISCOVERED"
       case DebugNode(prefix, dbg) => s"DEBUG: $prefix"
       case DebugPeek(prefix, dbg, children:_*) => s"DEBUG PEEK: $prefix into: ${printIR(children.head)}"
     })

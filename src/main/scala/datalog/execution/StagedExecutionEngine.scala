@@ -301,9 +301,6 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
       case op: ScanDiscoveredOp =>
         op.run(storageManager)
 
-      case op: NegateOp =>
-        op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o)))
-
       case op: ProjectJoinFilterOp =>
         op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o)))
 

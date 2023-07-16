@@ -47,22 +47,6 @@ class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
     )
   }
 
-  /**
-   * Returns the [[IROp[EDB]]] after applying negation, if the rule is
-   * actually negated.
-   *
-   * @param negated true iff the complement of the rule should be taken.
-   * @param arity   the arity of the relation.
-   * @param edb     the [[IROp[EDB]]] to be negated.
-   * @return the [[IROp[EDB]]] after applying negation.
-   */
-  private def withNegation(negated: Boolean)(arity: Int, edb: IROp[EDB]): IROp[EDB] = {
-    if (!negated)
-      edb
-    else
-      NegateOp(arity, edb)
-  }
-
   def naiveEvalRule(ast: ASTNode): IROp[EDB] = {
     ast match {
       case AllRulesNode(rules, rId, edb) =>

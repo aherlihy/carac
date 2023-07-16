@@ -15,7 +15,7 @@ import scala.util.{Failure, Success}
 
 enum OpCode:
   case PROGRAM, SWAP_CLEAR, SEQ,
-  SCAN, SCANEDB, SCAN_DISCOVERED, NEGATE,
+  SCAN, SCANEDB, SCAN_DISCOVERED,
   SPJ, INSERT, UNION, DIFF,
   DEBUG, DEBUGP, DOWHILE, UPDATE_DISCOVERED,
   EVAL_STRATUM, EVAL_RULE_NAIVE, EVAL_RULE_SN, EVAL_RULE_BODY, EVAL_NAIVE, EVAL_SN, LOOP_BODY, OTHER // convenience labels for generating functions
@@ -197,19 +197,6 @@ case class ScanDiscoveredOp(rId: RelationId)(using JITOptions) extends IROp[EDB]
     storageManager.getDiscoveredEDBs(rId)
   override def run_continuation(storageManager: StorageManager, opFns: Seq[CompiledFn[EDB]]): EDB =
     run(storageManager) // leaf node, so no difference for continuation or run
-}
-
-case class NegateOp(arity: Int, override val children:IROp[EDB]*)(using JITOptions) extends IROp[EDB] {
-  val code: OpCode = OpCode.NEGATE
-  override def run(storageManager: StorageManager): EDB =
-    val all = storageManager.getAllPossibleEDBs(arity)
-    val child = children.head.run(storageManager)
-    storageManager.diff(all, child)
-
-  override def run_continuation(storageManager: StorageManager, opFns: Seq[CompiledFn[EDB]]): EDB =
-    val all = storageManager.getAllPossibleEDBs(arity)
-    val child = opFns.head(storageManager)
-    storageManager.diff(all, child)
 }
 
 case class ScanOp(rId: RelationId, db: DB, knowledge: KNOWLEDGE)(using JITOptions) extends IROp[EDB] {

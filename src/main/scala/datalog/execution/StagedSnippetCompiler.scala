@@ -78,11 +78,6 @@ class StagedSnippetCompiler(val storageManager: StorageManager)(using val jitOpt
             }
         }
 
-      case NegateOp(arity: Int, children:_*) =>
-        val all = '{ $stagedSM.getAllPossibleEDBs(${ Expr(arity )})}
-        val compiledOps = '{ $stagedFns.map(s => s($stagedSM)) }
-        '{ $stagedSM.diff($all, $compiledOps(0)) }
-
       case ScanDiscoveredOp(rId) =>
         '{ $stagedSM.getDiscoveredEDBs(${ Expr(rId) }) }
 

@@ -80,11 +80,6 @@ class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: J
             }
         }
 
-      case NegateOp(arity, children: _*) =>
-        val all = '{ $stagedSM.getAllPossibleEDBs(${ Expr(arity) }) }
-        val compiledOps = Expr.ofSeq(children.map(compileIRRelOp))
-        '{ $stagedSM.diff($all, $compiledOps(0)) }
-
       case ScanDiscoveredOp(rId) =>
         '{ $stagedSM.getDiscoveredEDBs(${ Expr(rId) }) }
 
