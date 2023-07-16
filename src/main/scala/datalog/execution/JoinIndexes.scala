@@ -61,9 +61,11 @@ object JoinIndexes {
       .filter((term, matches) =>  // matches = Seq[(var, pos1), (var, pos2), ...]
         term match {
           case v: Variable =>
-            matches.map(_._2).find(typeHelper).foreach(pos => // store first non-negated idx for a variable 
-              variables(v) = pos
-            )
+            matches.map(_._2).find(typeHelper) match
+              case Some(pos) =>
+                variables(v) = pos
+              case None =>
+                throw new Exception(s"Variable with varId ${v.oid} appears only in negated rules")
             !v.anon && matches.length >= 2
           case c: Constant =>
             matches.foreach((_, idx) => constants(idx) = c)
