@@ -38,7 +38,9 @@ class NaiveExecutionEngine(val storageManager: StorageManager, stratified: Boole
     val rule = ruleSeq.toArray
     precedenceGraph.addNode(rule)
     idbs.getOrElseUpdate(rId, mutable.ArrayBuffer[IndexedSeq[Atom]]()).addOne(rule.toIndexedSeq)
-    prebuiltOpKeys.getOrElseUpdate(rId, mutable.ArrayBuffer[JoinIndexes]()).addOne(getOperatorKey(rule))
+    val jIdx = getOperatorKey(rule)
+    prebuiltOpKeys.getOrElseUpdate(rId, mutable.ArrayBuffer[JoinIndexes]()).addOne(jIdx)
+    storageManager.addConstantsToDomain(jIdx.constIndexes.values.toSeq)
   }
 
   def insertEDB(rule: Atom): Unit = {

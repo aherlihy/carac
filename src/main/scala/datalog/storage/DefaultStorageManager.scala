@@ -209,20 +209,6 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
   }
 
   /**
-   * Returns the [[CollectionsEDB]] after applying negation, if the rule is
-   * actually negated.
-   *
-   * @param negated true iff the complement of the rule should be taken.
-   * @param arity the arity of the relation.
-   * @param edb the [[CollectionsEDB]] to be negated.
-   * @return the [[CollectionsEDB]] after applying negation.
-   */
-  private def withNegation(negated: Boolean)
-                          (arity: Int, edb: EDB): EDB =
-    if !negated then edb
-    else diff(getAllPossibleEDBs(arity), edb)
-
-  /**
    * Use iterative collection operators to evaluate an IDB rule using Semi-Naive algo
    *
    * @param rId - The id of the relations
@@ -267,11 +253,19 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
         else
           projectHelper(
             joinHelper(
-              k.deps.zipWithIndex.map((tr, i) =>
-                val r = tr._2
-//                withNegation(k.negated(i))(k.sizes(i),
-                  union(Seq(getKnownDerivedDB(r), getDiscoveredEDBs(r)))
-//                )
+              k.deps.zipWithIndex.map((md, idx) =>
+                val (typ, r) = md
+                val derivedR = union(Seq(getKnownDerivedDB(r), getDiscoveredEDBs(r)))
+                typ match
+                  case "+" =>
+                    derivedR
+                  case "-" =>
+                    val arity = k.atoms(idx + 1).terms.length
+                    val compl = getComplement(arity)
+                    val res = diff(compl, derivedR)
+                    println(s"found negated relation, rule=${printer.ruleToString(k.atoms)}\n\tarity=$arity, compl=${printer.factToString(compl)}, Q=${printer.factToString(derivedR)}, final res=${printer.factToString(res)}")
+                    res
+
               ), k // TODO: warn if EDB is empty? Right now can't tell the difference between undeclared and empty EDB)
             ), k
           ).wrapped.distinct

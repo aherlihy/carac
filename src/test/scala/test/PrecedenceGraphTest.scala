@@ -2,7 +2,7 @@ package test
 import datalog.execution.{ExecutionEngine, PrecedenceGraph, SemiNaiveExecutionEngine}
 
 import scala.collection.mutable
-import datalog.dsl.{Program, Constant, Atom}
+import datalog.dsl.{Program, Constant, Atom, __}
 import datalog.storage.{NS, VolcanoStorageManager}
 
 class PrecedenceGraphTest extends munit.FunSuite {
@@ -80,7 +80,7 @@ class PrecedenceGraphTest extends munit.FunSuite {
     val t10 = program.relation[Constant]("t10")
     val x = program.variable()
 
-    t0(x) :- !t1(x)
+    t0("x") :- !t1(__)
     t1(x) :- (!t4(x), t6(x), t7(x))
     t2(x) :- (t4(x), t6(x), t7(x))
     t3(x) :- (t4(x), t6(x), t7(x))
@@ -88,9 +88,9 @@ class PrecedenceGraphTest extends munit.FunSuite {
     t5(x) :- (t2(x), t3(x))
     t6(x) :- (t5(x), !t8(x))
     t7(x) :- (t5(x), t8(x))
-    t10(x) :- !t1(x)
+    t10("x") :- !t1(__)
     t10(x) :- t10(x)
-    t10(x) :- !t0(x)
+    t10("x") :- !t0(__)
 
     // ullman
     assertEquals(
@@ -202,16 +202,16 @@ class PrecedenceGraphTest extends munit.FunSuite {
     e("a", "b") :- ()
     e("b", "c") :- ()
     e("c", "d") :- ()
-    p(x, y) :- !e(x, y)
+    p("a", "b") :- !e(__, __)
     p(x, z) :- (e(x, y), p(y, z))
-    other(x) :- !p("a", x)
+    other("x") :- !p("a", "x")
 
     e2("a", "b") :- ()
     e2("b", "c") :- ()
     e2("c", "d") :- ()
-    p2(x, y) :- !e2(x, y)
+    p2("x", "y") :- !e2("x", "y")
     p2(x, z) :- (e2(x, y), p2(y, z))
-    other2(x) :- !p2("a", x)
+    other2("x") :- !p2("a", "x")
 
     // ullman
     assertEquals(

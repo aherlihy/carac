@@ -14,31 +14,41 @@ class Printer[S <: StorageManager](val sm: S) {
     r.factToString
   }
 
-  def atomToString(a: Seq[Atom]): String = {
-    s"${sm.ns(a.head.rId)}${a.head.terms.mkString("(", ", ", ")")} :- ${a.drop(1).map(b => sm.ns(b.rId) + b.terms.mkString("(", ", ", ")")).mkString("", ", ", "")}"
+  def ruleToString(a: Seq[Atom]): String = {
+    s"${sm.ns(a.head.rId)}${
+      a.head.terms.mkString("(", ", ", ")")
+    } :- ${
+      a.drop(1).map(b => (if (b.negated) "!" else "") + sm.ns(b.rId) + b.terms.mkString("(", ", ", ")")).mkString("", ", ", "")
+    }"
   }
 
-  def ruleToString(r: mutable.ArrayBuffer[Seq[Atom]]): String = {
-    r.map(s => if (s.isEmpty) "<empty>" else s.head.toString + s.drop(1).mkString(" :- ", ",", ""))
-      .mkString("[", "; ", "]")
+  def rulesToString(r: mutable.ArrayBuffer[Seq[Atom]]): String = {
+    r.map(s =>
+      if (s.isEmpty)
+        "<empty>"
+      else
+        s.head.toString + s.drop(1).mkString(" :- ", ",", "")
+    ).mkString("[", "; ", "]")
   }
+  
   def edbToString(db: Database[?]): String = {
     immutable.ListMap(db.toSeq.sortBy(_._1):_*)
       .map((k, v) => (sm.ns(k), factToString(v)))
       .mkString("[\n  ", ",\n  ", "]")
   }
+  
   def naivePlanToString(keys: mutable.ArrayBuffer[JoinIndexes]): String = {
     "Union( " +
       keys.map(k =>
         if (k.edb)
-          "SCAN(" + k.deps.map((typ, n) => s"$typ${sm.ns(n)}").mkString("[", ", ", "]") + ")"
+          "SCAN(" + k.deps.map(tup => s"${sm.ns(tup)}").mkString("[", ", ", "]") + ")"
         else
           "Project" + k.projIndexes.map((typ, v) => f"$typ$v").mkString("[", " ", "]") + "( " +
             "JOIN" +
             k.varIndexes.map(v => v.mkString("$", "==$", "")).mkString("[", ",", "]") +
             k.constIndexes.map((k, v) => "$" + k + "==" + (if (v.isInstanceOf[String]) s"\"$v\"" else "v")).mkString("{", "&&", "}") +
-            k.deps.map((typ, n) =>
-              if(k.edb) typ + "edbs-" + sm.ns(n) else typ + sm.ns(n)
+            k.deps.map(tup =>
+              if(k.edb) "edbs-" + sm.ns(tup) else sm.ns(tup)
             ).mkString("(", "*", ")") +
             " )"
       ).mkString("", ", ", "") +
@@ -49,28 +59,27 @@ class Printer[S <: StorageManager](val sm: S) {
     "UNION( " +
       keys.map(k =>
         if (k.edb)
-          "SCAN(" + k.deps.map((typ, n) => s"$typ${sm.ns(n)}").mkString("[", ", ", "]") + ")"
+          "SCAN(" + k.deps.map(tup => s"${sm.ns(tup)}").mkString("[", ", ", "]") + ")"
         else
           var idx = -1
           "UNION(" +
             k.deps.map((typ, d) => {
               var found = false
-              typ + "PROJECT" + k.projIndexes.map((typ, v) => f"$typ$v").mkString("[", " ", "]") + "( " +
+               "PROJECT" + k.projIndexes.map((typ, v) => f"$typ$v").mkString("[", " ", "]") + "( " +
                 "JOIN" +
                 k.varIndexes.map(v => v.mkString("$", "==$", "")).mkString("[", ",", "]") +
                 k.constIndexes.map((k, v) => k + "==" + v).mkString("{", "&&", "}") +
-                k.deps.zipWithIndex.map((tn, i) => {
-                  val typ = tn._1
-                  val n = tn._2
+                k.deps.zipWithIndex.map((tup, i) => {
+                  val n = tup._2
                   if (n == d && !found && i > idx)
                     found = true
                     idx = i
-                    typ + "delta[known][" + sm.ns(n) + s"($n)" + "]"
+                    "delta[known][" + sm.ns(tup) + s"($n)" + "]"
                   else
                     if(k.edb)
-                      typ + "edbs[" + sm.ns(n) + s"($n)" + "]"
+                      "edbs[" + sm.ns(tup) + s"($n)" + "]"
                     else
-                      typ + "derived[known][" + sm.ns(n) + s"($n)" + "]"
+                      "derived[known][" + sm.ns(tup) + s"($n)" + "]"
                 }).mkString("(", "*", ")") +
                 " )"
             }).mkString("[ ", ", ", " ]") + " )"
@@ -87,7 +96,7 @@ class Printer[S <: StorageManager](val sm: S) {
    */
   def printIDB(idbs: mutable.Map[RelationId, mutable.ArrayBuffer[Seq[Atom]]]): String = {
     immutable.ListMap(idbs.toSeq.sortBy(_._1):_*)
-      .map((k, v) => (sm.ns(k), ruleToString(v)))
+      .map((k, v) => (sm.ns(k), rulesToString(v)))
       .mkString("[\n  ", ",\n  ", "]")
   }
 

@@ -5,11 +5,13 @@ import datalog.execution.{AllIndexes, JoinIndexes}
 import CollectionsCasts.*
 import datalog.tools.Debug.debug
 
+import scala.collection.mutable.ArrayBuffer
 import scala.collection.{Iterator, immutable, mutable}
 
 abstract class CollectionsStorageManager(override val ns: NS) extends StorageManager(ns) {
   // "database", i.e. relationID => Relation
   protected val edbs: CollectionsDatabase = CollectionsDatabase() // raw user-supplied EDBs from initialization.
+  val edbDomain: mutable.Set[StorageTerm] = mutable.Set.empty // incrementally grow the total domain of all EDBs, used for calculating complement of negated predicates
   protected val discoveredFacts: CollectionsDatabase = CollectionsDatabase() // all EDBs + facts discovered in previous strata
   var knownDbId: KnowledgeId = -1
   var newDbId: KnowledgeId = -1
@@ -63,49 +65,45 @@ abstract class CollectionsStorageManager(override val ns: NS) extends StorageMan
     else
       edbs(rule.rId) = CollectionsEDB()
       edbs(rule.rId).addOne(CollectionsRow(rule.terms))
+    edbDomain.addAll(rule.terms)
+  }
+  /* Call when adding an IDB rule so domain can grow incrementally */
+  override def addConstantsToDomain(constants: Seq[StorageTerm]): Unit = {
+    edbDomain.addAll(constants)
   }
   def getEmptyEDB(): CollectionsEDB = CollectionsEDB()
   def getEDB(rId: RelationId): CollectionsEDB = edbs(rId)
   def edbContains(rId: RelationId): Boolean = edbs.contains(rId)
   def getAllEDBS(): mutable.Map[RelationId, Any] = edbs.wrapped.asInstanceOf[mutable.Map[RelationId, Any]]
 
-  override def getAllPossibleEDBs(arity: Int): CollectionsEDB =
-    val constants = mutable.Set.empty[Constant]
-    // 1. Add all constants from the original EDB.
-    edbs.foreach((_, rel) =>
-      rel.iterator.foreach(row =>
-        row.iterator.foreach {
-          case c: Constant => constants.add(c)
-          case _ => ()
-        }
+  /**
+   * Used for computing DOM(k) of a negated relation. Returns the (unchanging) set of possible EDB values +
+   * constants in all IDB rules. Currently unused because we incrementally add elements to the domain but may
+   * be useful if we want a domain containing only predicates from <= strata.
+   */
+  def computeDomain(): Set[StorageTerm] = {
+    val constants = mutable.Set[StorageTerm]()
+    edbs.foreach((_, rows) => // avoid map or flatMap for CollectionsDatabase, CollectionRow
+      rows.foreach(row =>
+        constants.addAll(row.toSeq)
       )
     )
-    // 2. Add all constants from the IDB.
-    allRulesAllIndexes.foreach((_, indexes) =>
-      indexes.foreach((_, index) =>
-        index.atoms.foreach(atom =>
-          atom.terms.foreach {
-            case c: Constant => constants.add(c)
-            case _ => ()
-          }
-        )
-      )
+    constants.addAll(allRulesAllIndexes.flatMap((_, allIndexes) =>
+      allIndexes.head._2.constIndexes.values
+    ))
+    constants.toSet
+  }
+
+  /**
+   * Compute Dom * Dom * ... arity # times
+   */
+  override def getComplement(arity: Int): CollectionsEDB = {
+    // short but inefficient
+    val res = List.fill(arity)(edbDomain).flatten.combinations(arity).flatMap(_.permutations).toSeq
+    CollectionsEDB(
+      res.map(r => CollectionsRow(r.toSeq)):_*
     )
-    // 3. Return a combination from all the constants.
-    val list = constants.toList
-    val length = arity
-    val buffer = mutable.ArrayBuffer.empty[CollectionsRow]
-
-    // Populate all the combinations.
-    def combinations(): Unit =
-      def loop(i: Int, acc: List[Constant]): Unit =
-        if i == length then
-          buffer.addOne(CollectionsRow(acc))
-        else list.foreach(c => loop(i + 1, c :: acc))
-      loop(0, Nil)
-
-    combinations()
-    CollectionsEDB(buffer)
+  }
 
   override def getDiscoveredEDBs(rId: RelationId): CollectionsEDB =
     discoveredFacts.getOrElse(rId, CollectionsEDB())

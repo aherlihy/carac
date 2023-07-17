@@ -795,7 +795,7 @@ def stratified(program: Program) = {
   println(r.solve())
 }
 @main def main = {
-  val stratifiedA = false
+  val stratifiedA = true
   println("NAIVE")
   given engine0: ExecutionEngine = new NaiveExecutionEngine(new DefaultStorageManager(), stratified = stratifiedA)
   val program0 = Program(engine0)

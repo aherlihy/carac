@@ -7,7 +7,7 @@ import datalog.storage.DefaultStorageManager
 class StratifiedNegationTests extends munit.FunSuite {
 
   test("free variable in rule throws") {
-    val p = Program(new StagedExecutionEngine(new DefaultStorageManager()))
+    val p = Program(new NaiveExecutionEngine(new DefaultStorageManager()))
     val e = p.relation[Constant]("e")
     val t = p.relation[Constant]("t")
     val tc = p.relation[Constant]("tc")
@@ -24,7 +24,7 @@ class StratifiedNegationTests extends munit.FunSuite {
   }
 
   test("non-limited variable in rule throws") {
-    val p = Program(new StagedExecutionEngine(new DefaultStorageManager()))
+    val p = Program(new NaiveExecutionEngine(new DefaultStorageManager()))
     val e = p.relation[Constant]("e")
     val t = p.relation[Constant]("t")
     val tc = p.relation[Constant]("tc")

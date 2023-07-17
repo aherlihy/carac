@@ -45,6 +45,11 @@ class NS() {
     nameToRid.getOrElse(name, -1)
   def apply(rId: RelationId): String =
     rIdToName.getOrElse(rId, s"<$rId>")
+
+  def apply(tup: (String, RelationId)): String =
+    val name = rIdToName.getOrElse(tup._2, s"<${tup._2}>")
+    s"${if (tup._1 == "-") "!" else ""}$name"
+
   def update(key: String, value: RelationId): Unit = {
     nameToRid(key) = value
     rIdToName(value) = key

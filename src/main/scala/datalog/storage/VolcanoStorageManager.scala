@@ -17,25 +17,6 @@ class VolcanoStorageManager(ns: NS = NS()) extends CollectionsStorageManager(ns)
   def joinProjectHelper(inputs: Seq[EDB], k: JoinIndexes, sortOrder: (Int, Int, Int)): EDB = ???
   def joinProjectHelper_withHash(inputs: Seq[EDB], rId: Int, hash: String, sortOrder: (Int, Int, Int)): EDB = ???
 
-
-  /**
-   * Returns the [[relOps.VolOperator]] after applying negation, if the rule is
-   * actually negated.
-   *
-   * @param negated true iff the complement of the rule should be taken.
-   * @param arity the arity of the relation.
-   * @param rId the [[datalog.dsl.RelationId]] of the relation.
-   * @param edb the [[relOps.VolOperator]] representing the EDB.
-   * @return the [[relOps.VolOperator]] after applying negation.
-   */
-  private def withNegation(negated: Boolean)
-                          (rId: RelationId, arity: Int, edb: relOps.VolOperator): relOps.VolOperator =
-    import relOps.*
-    if !negated then edb
-    else
-      val complement = Scan(getAllPossibleEDBs(arity), rId)
-      Diff(mutable.ArrayBuffer(complement, edb))
-
   /**
    * Use relational operators to evaluate an IDB rule using Naive algo
    *

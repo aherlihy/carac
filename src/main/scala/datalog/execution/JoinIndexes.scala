@@ -65,7 +65,10 @@ object JoinIndexes {
               case Some(pos) =>
                 variables(v) = pos
               case None =>
-                throw new Exception(s"Variable with varId ${v.oid} appears only in negated rules")
+                if (v.oid != -1)
+                  throw new Exception(s"Variable with varId ${v.oid} appears only in negated rules")
+                else
+                  ()
             !v.anon && matches.length >= 2
           case c: Constant =>
             matches.foreach((_, idx) => constants(idx) = c)
