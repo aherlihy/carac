@@ -315,6 +315,10 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
 
       case op: DebugPeek =>
         op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o)))
+      
+      case op: ComplementOp =>
+        op.run(storageManager)
+        
       case _ => throw new Exception(s"Error: JIT-ing unknown operator ${irTree.code}")
     }
   }

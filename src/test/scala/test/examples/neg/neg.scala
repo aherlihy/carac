@@ -1,9 +1,9 @@
 package test.examples.neg
 
 import datalog.dsl.{Constant, Program, not}
-import test.ExampleTestGenerator
+import test.{ExampleTestGenerator, Tags}
 
-class neg_test extends ExampleTestGenerator("neg") with neg
+class neg_test extends ExampleTestGenerator("neg", tags = Set(Tags.Negated)) with neg
 trait neg {
   val toSolve = "c"
   def pretest(program: Program): Unit = {

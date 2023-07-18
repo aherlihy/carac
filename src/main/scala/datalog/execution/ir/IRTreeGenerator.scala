@@ -62,15 +62,20 @@ class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
           ScanEDBOp(r)
         else
           ProjectJoinFilterOp(atoms.head.rId, hash,
-            k.deps.zipWithIndex.map((tr, i) =>
-              val t = tr._1
-              val r = tr._2
-//              withNegation(k.negated(i))(k.sizes(i),
-                UnionOp(OpCode.UNION,
-                  ScanOp(r, DB.Derived, KNOWLEDGE.Known),
-                  ScanDiscoveredOp(r),
-//                )
+            k.deps.zipWithIndex.map((md, i) =>
+              val (typ, r) = md
+              val q = UnionOp(OpCode.UNION,
+                ScanOp(r, DB.Derived, KNOWLEDGE.Known),
+                ScanDiscoveredOp(r),
               )
+              typ match
+                case "+" =>
+                  q
+                case "-" =>
+                  val arity = k.atoms(i + 1).terms.length
+                  val res = DiffOp(ComplementOp(arity), q)
+                  debug(s"found negated relation, rule=", () => s"${ctx.storageManager.printer.ruleToString(k.atoms)}\n\tarity=$arity")
+                  res
             ):_*
           )
       case _ =>
@@ -97,27 +102,31 @@ class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
           UnionSPJOp(// a single rule body
             atoms.head.rId,
             hash,
-            k.deps.map((t, d) => {
+            k.deps.map((*, d) => {
               var found = false
               ProjectJoinFilterOp(atoms.head.rId, hash,
-                k.deps.zipWithIndex.map((tr, i) => {
-                  val r = tr._2
-                  if (r == d && !found && i > idx)
+                k.deps.zipWithIndex.map((md, i) => {
+                  val (typ, r) = md
+                  val q = if (r == d && !found && i > idx)
                     found = true
                     idx = i
-//                    withNegation(k.negated(i))(k.sizes(i),
-                      UnionOp(OpCode.UNION,
-                        ScanOp(r, DB.Delta, KNOWLEDGE.Known),
-                        ScanDiscoveredOp(r),
-//                      )
+                    UnionOp(OpCode.UNION,
+                      ScanOp(r, DB.Delta, KNOWLEDGE.Known),
+                      ScanDiscoveredOp(r),
                     )
                   else
-//                    withNegation(k.negated(i))(k.sizes(i),
-                      UnionOp(OpCode.UNION,
-                        ScanOp(r, DB.Derived, KNOWLEDGE.Known),
-                        ScanDiscoveredOp(r),
-//                      )
+                    UnionOp(OpCode.UNION,
+                      ScanOp(r, DB.Derived, KNOWLEDGE.Known),
+                      ScanDiscoveredOp(r),
                     )
+                  typ match
+                    case "+" =>
+                      q
+                    case "-" =>
+                      val arity = k.atoms(i + 1).terms.length
+                      val res = DiffOp(ComplementOp(arity), q)
+                      debug(s"found negated relation, rule=", () => s"${ctx.storageManager.printer.ruleToString(k.atoms)}\n\tarity=$arity")
+                      res
                 }): _*
               )
             }):_*

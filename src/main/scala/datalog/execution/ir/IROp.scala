@@ -16,6 +16,7 @@ import scala.util.{Failure, Success}
 enum OpCode:
   case PROGRAM, SWAP_CLEAR, SEQ,
   SCAN, SCANEDB, SCAN_DISCOVERED,
+  COMPLEMENT,
   SPJ, INSERT, UNION, DIFF,
   DEBUG, DEBUGP, DOWHILE, UPDATE_DISCOVERED,
   EVAL_STRATUM, EVAL_RULE_NAIVE, EVAL_RULE_SN, EVAL_RULE_BODY, EVAL_NAIVE, EVAL_SN, LOOP_BODY, OTHER // convenience labels for generating functions
@@ -197,6 +198,16 @@ case class ScanDiscoveredOp(rId: RelationId)(using JITOptions) extends IROp[EDB]
     storageManager.getDiscoveredEDBs(rId)
   override def run_continuation(storageManager: StorageManager, opFns: Seq[CompiledFn[EDB]]): EDB =
     run(storageManager) // leaf node, so no difference for continuation or run
+}
+
+case class ComplementOp(arity: Int)(using JITOptions) extends IROp[EDB] {
+  val code: OpCode = OpCode.COMPLEMENT
+
+  override def run(storageManager: StorageManager): EDB =
+    storageManager.getComplement(arity)
+
+  override def run_continuation(storageManager: StorageManager, opFns: Seq[CompiledFn[EDB]]): EDB =
+    run(storageManager) // bc leaf node, no difference for continuation or run
 }
 
 case class ScanOp(rId: RelationId, db: DB, knowledge: KNOWLEDGE)(using JITOptions) extends IROp[EDB] {

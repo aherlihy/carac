@@ -1,7 +1,7 @@
 package test.examples.orbits1
 import datalog.dsl.{Constant, Program, __}
-import test.ExampleTestGenerator
-class orbits1_test extends ExampleTestGenerator("orbits1") with orbits1
+import test.{ExampleTestGenerator, Tags}
+class orbits1_test extends ExampleTestGenerator("orbits1", tags = Set(Tags.Negated)) with orbits1
 trait orbits1 {
   val toSolve: String = "_"
   def pretest(program: Program): Unit = {

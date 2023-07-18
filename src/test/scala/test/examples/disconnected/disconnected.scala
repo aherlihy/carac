@@ -1,7 +1,7 @@
 package test.examples.disconnected
 import datalog.dsl.{Constant, Program, __}
-import test.ExampleTestGenerator
-class disconnected_test extends ExampleTestGenerator("disconnected") with disconnected
+import test.{ExampleTestGenerator, Tags}
+class disconnected_test extends ExampleTestGenerator("disconnected", tags = Set(Tags.Negated)) with disconnected
 trait disconnected {
   val toSolve: String = "DisConnected"
   def pretest(program: Program): Unit = {

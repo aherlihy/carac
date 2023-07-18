@@ -1,6 +1,6 @@
 package datalog
 
-import datalog.execution.{ExecutionEngine, JITOptions, NaiveExecutionEngine, SemiNaiveExecutionEngine, StagedExecutionEngine, StagedSnippetExecutionEngine, ir}
+import datalog.execution.{ExecutionEngine, JITOptions, NaiveExecutionEngine, NaiveStagedExecutionEngine, SemiNaiveExecutionEngine, StagedExecutionEngine, StagedSnippetExecutionEngine, ir}
 import datalog.dsl.{Constant, Program, __, not}
 import datalog.execution.ast.transform.CopyEliminationPass
 import datalog.execution.ir.InterpreterContext
@@ -794,28 +794,66 @@ def stratified(program: Program) = {
 
   println(r.solve())
 }
-@main def main = {
-  val stratifiedA = true
-  println("NAIVE")
-  given engine0: ExecutionEngine = new NaiveExecutionEngine(new DefaultStorageManager(), stratified = stratifiedA)
-  val program0 = Program(engine0)
-  neg(program0)
-  println("\n\n_______________________\n\n")
 
-//  val dotty = staging.Compiler.make(getClass.getClassLoader)
+def game2(program: Program): Unit = {
+  val X, Y, Z1, Z2 = program.variable()
+  val canMove = program.relation[Constant]("canMove")
+
+  val move = program.relation[Constant]("move")
+
+  val odd_move = program.relation[Constant]("odd_move")
+
+  val possible_winning = program.relation[Constant]("possible_winning")
+
+  val winning = program.relation[Constant]("winning")
+
+
+  move("1", "2") :- ()
+  move("2", "3") :- ()
+  move("3", "4") :- ()
+  move("1", "3") :- ()
+  move("1", "5") :- ()
+
+  canMove(X) :- (move(X, __))
+
+  possible_winning(X) :- (odd_move(X, Y), !canMove(Y))
+
+  winning(X) :- (move(X, Y), !possible_winning(Y))
+
+  odd_move(X, Y) :- (move(X, Y))
+
+  odd_move(X, Y) :- (move(X, Z1), move(Z1, Z2), odd_move(Z2, Y))
+
+  println(winning.solve())
+}
+@main def main = {
+  val dotty = staging.Compiler.make(getClass.getClassLoader)
+  val stratifiedA = true
+//  println("NAIVE")
+//  given engine0: ExecutionEngine = new NaiveExecutionEngine(new DefaultStorageManager(), stratified = stratifiedA)
+//  val program0 = Program(engine0)
+//  game2(program0)
+//  println("\n\n_______________________\n\n")
+
 //  println("SEMINAIVE:")
 //  given engine1: ExecutionEngine = new SemiNaiveExecutionEngine(new DefaultStorageManager(), stratified = stratifiedA)
 //  val program1 = Program(engine1)
-//  neg(program1)
-//  println("\n\n_______________________\n\n")
-//  stratified(program3)
+//  game2(program1)
 //  println("\n\n_______________________\n\n")
 //
-//  println("JIT Snippet")
-//  val engine4: ExecutionEngine = new StagedSnippetExecutionEngine(new DefaultStorageManager(), jo3)
-//  val program4 = Program(engine4)
-//  neg(program4)
-//  println("\n\n_______________________\n\n")
+  val jo = JITOptions(ir.OpCode.OTHER, dotty)
+  println("INTERPRET")
+  given engine2: ExecutionEngine = new StagedExecutionEngine(new DefaultStorageManager(), jo)
+  val program2 = Program(engine2)
+  game2(program2)
+  println("\n\n_______________________\n\n")
+
+  val jo3 = JITOptions(ir.OpCode.EVAL_RULE_BODY, dotty)
+  println("JIT Snippet")
+  val engine4: ExecutionEngine = new StagedSnippetExecutionEngine(new DefaultStorageManager(), jo3)
+  val program4 = Program(engine4)
+  game2(program4)
+  println("\n\n_______________________\n\n")
 
 //  println("JIT STAGED: aot EvalSN")
 //  val engine5: ExecutionEngine = new JITStagedExecutionEngine(new DefaultStorageManager(), ir.OpCode.EVAL_SN, true, true)
@@ -823,10 +861,10 @@ def stratified(program: Program) = {
 //  manyRelations(program5)
 //  println("\n\n_______________________\n\n")
 
-//  val jo6 = JITOptions(ir.OpCode.PROGRAM, dotty, aot = false, block = true, sortOrder = (0, 0, 0))
-//  println("COMPILE")
-//  given engine6: ExecutionEngine = new StagedExecutionEngine(new DefaultStorageManager(), jo6)
-//  val program6 = Program(engine6)
-//  stratified(program6)
-//  println("\n\n_______________________\n\n")
+  val jo6 = JITOptions(ir.OpCode.PROGRAM, dotty, aot = false, block = true, sortOrder = (0, 0, 0))
+  println("COMPILE")
+  given engine6: ExecutionEngine = new StagedExecutionEngine(new DefaultStorageManager(), jo6)
+  val program6 = Program(engine6)
+  game2(program6)
+  println("\n\n_______________________\n\n")
 }

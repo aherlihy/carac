@@ -1,7 +1,7 @@
 package test.examples.flights
 import datalog.dsl.{Constant, Program}
-import test.ExampleTestGenerator
-class flights_test extends ExampleTestGenerator("flights") with flights
+import test.{ExampleTestGenerator, Tags}
+class flights_test extends ExampleTestGenerator("flights", tags = Set(Tags.Negated)) with flights
 trait flights {
   val toSolve: String = "QAonly"
   def pretest(program: Program): Unit = {

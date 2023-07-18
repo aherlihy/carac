@@ -138,10 +138,8 @@ abstract class TestGenerator(directory: Path,
 
     override def munitFixtures = List(program)
 
-    Seq("Naive").foreach(execution => {
-      Seq("Default").foreach(storage => {
-//    Seq("SemiNaive", "Naive", "CompiledStaged", "InterpretedStaged", "JITStagedB1", "SemiNaiveStratified", "NaiveStratified", "CompiledStagedStratified", "InterpretedStagedStratified", "JITStagedB3Stratified"/* "JITStagedB2", "JITStagedB3"*/).foreach(execution => {
-//      Seq("Volcano", "Default").foreach(storage => {
+    Seq("SemiNaive", "Naive", "CompiledStaged", "InterpretedStaged", "JITStagedB1", "SemiNaiveStratified", "NaiveStratified", "CompiledStagedStratified", "InterpretedStagedStratified", "JITStagedB3Stratified"/* "JITStagedB2", "JITStagedB3"*/).foreach(execution => {
+      Seq("Volcano", "Default").foreach(storage => {
         if (execution.contains("Staged") && storage == "Volcano") {} // skip and don't report as skipped
         else if (
             skip.contains(execution) || skip.contains(storage) ||

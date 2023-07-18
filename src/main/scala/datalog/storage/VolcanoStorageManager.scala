@@ -34,14 +34,22 @@ class VolcanoStorageManager(ns: NS = NS()) extends CollectionsStorageManager(ns)
             Scan(edbs.getOrElse(rId, CollectionsEDB()), rId)
           else
             Project(
-              Join(k.deps.zipWithIndex.map((tr, i) =>
-                val r = tr._2
-                // TODO: warn if EDB is empty? Right now can't tell the difference between undeclared and empty EDB
-                Union(Seq(
+              Join(k.deps.zipWithIndex.map((md, i) =>
+                val (typ, r) = md
+                val q = Union(Seq(
                   Scan(getKnownDerivedDB(r), r),
                   Scan(getDiscoveredEDBs(r), r),
                 ))
-//                withNegation(k.negated(i))(r, k.sizes(i), scan)
+                typ match
+                  case "+" =>
+                    q
+                  case "-" =>
+                    val arity = k.atoms(i + 1).terms.length
+                    val compl = getComplement(arity)
+                    val res = Diff(Seq(Scan(compl, r), q))
+                    debug(s"found negated relation, rule=", () => s"${printer.ruleToString(k.atoms)}\n\tarity=$arity")
+                    res
+
               ), k.varIndexes, k.constIndexes),
               k.projIndexes
             )
@@ -71,24 +79,29 @@ class VolcanoStorageManager(ns: NS = NS()) extends CollectionsStorageManager(ns)
               var found = false
               Project(
                 Join(
-                  k.deps.zipWithIndex.map((tr, i) => {
-                    val r = tr._2
-                    if (r == d && !found && i > idx)
+                  k.deps.zipWithIndex.map((md, i) => {
+                    val (typ, r) = md
+                    val q = if (r == d && !found && i > idx)
                       found = true
                       idx = i
-//                      withNegation(k.negated(i))(r, k.sizes(i),
-                        Union(Seq(
-                          Scan(getKnownDeltaDB(r), r),
-                          Scan(getDiscoveredEDBs(r), r),
-                        ))
-//                      )
+                      Union(Seq(
+                        Scan(getKnownDeltaDB(r), r),
+                        Scan(getDiscoveredEDBs(r), r),
+                      ))
                     else
-//                      withNegation(k.negated(i))(r, k.sizes(i),
-                        Union(Seq(
-                          Scan(getKnownDerivedDB(r), r),
-                          Scan(getDiscoveredEDBs(r), r),
-                        ))
-//                      )
+                      Union(Seq(
+                        Scan(getKnownDerivedDB(r), r),
+                        Scan(getDiscoveredEDBs(r), r),
+                      ))
+                    typ match
+                      case "+" =>
+                        q
+                      case "-" =>
+                        val arity = k.atoms(i + 1).terms.length
+                        val compl = getComplement(arity)
+                        val res = Diff(Seq(Scan(compl, r), q))
+                        debug(s"found negated relation, rule=", () => s"${printer.ruleToString(k.atoms)}\n\tarity=$arity")
+                        res
                   }),
                   k.varIndexes,
                   k.constIndexes

@@ -1,9 +1,9 @@
 package test.examples.livevariables
 
 import datalog.dsl.{Constant, Program, not}
-import test.ExampleTestGenerator
+import test.{ExampleTestGenerator, Tags}
 
-class livevariables_test extends ExampleTestGenerator("livevariables") with livevariables
+class livevariables_test extends ExampleTestGenerator("livevariables", tags = Set(Tags.Negated)) with livevariables
 trait livevariables {
   val toSolve = "i"
   def pretest(program: Program): Unit = {

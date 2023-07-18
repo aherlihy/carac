@@ -1,7 +1,7 @@
 package test.examples.dfa_live_vars
 import datalog.dsl.{Constant, Program}
-import test.ExampleTestGenerator
-class dfa_live_vars_test extends ExampleTestGenerator("dfa_live_vars") with dfa_live_vars
+import test.{ExampleTestGenerator, Tags}
+class dfa_live_vars_test extends ExampleTestGenerator("dfa_live_vars", tags = Set(Tags.Negated)) with dfa_live_vars
 trait dfa_live_vars {
   val toSolve: String = "live_vars_out"
   def pretest(program: Program): Unit = {

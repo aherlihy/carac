@@ -219,7 +219,7 @@ class VolcanoOperators[S <: StorageManager](val storageManager: S) {
     }
     def close(): Unit = ops.foreach(o => o.close())
   }
-  case class Diff(ops: mutable.ArrayBuffer[VolOperator]) extends VolOperator {
+  case class Diff(ops: Seq[VolOperator]) extends VolOperator {
     private var outputRelation: CollectionsEDB = CollectionsEDB()
     private var index = 0
     def open(): Unit =

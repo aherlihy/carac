@@ -221,24 +221,28 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
         if (k.edb)
           edbs.getOrElse(rId, CollectionsEDB()).wrapped
         else
-          var idx = -1 // if dep is featured more than once, only us delta once, but at a different pos each time
-          k.deps.flatMap((typ, d) => {
+          var idx = -1 // if dep is featured more than once, only use delta once, but at a different pos each time
+          k.deps.flatMap((*, d) => {
             var found = false // TODO: perhaps need entry in derived/delta for each atom instead of each relation?
             joinProjectHelper(
               k.deps.zipWithIndex.map((tr, i) =>
-                val r = tr._2
-                if (r == d && !found && i > idx) {
+                val (typ, r) = tr
+                val q = if (r == d && !found && i > idx)
                   found = true
                   idx = i
-//                  withNegation(k.negated(i))(k.sizes(i),
-                    union(Seq(getKnownDeltaDB(r), getDiscoveredEDBs(r)))
-//                  )
-                }
-                else {
-//                  withNegation(k.negated(i))(k.sizes(i),
-                    union(Seq(getKnownDerivedDB(r), getDiscoveredEDBs(r)))
-//                  ) // TODO: warn if EDB is empty? Right now can't tell the difference between undeclared and empty EDB
-                }
+                  union(Seq(getKnownDeltaDB(r), getDiscoveredEDBs(r)))
+                else
+                  union(Seq(getKnownDerivedDB(r), getDiscoveredEDBs(r)))
+
+                typ match
+                  case "+" =>
+                    q
+                  case "-" =>
+                    val arity = k.atoms(i + 1).terms.length
+                    val compl = getComplement(arity)
+                    val res = diff(compl, q)
+                    debug("found negated relation, rule=", () => s"${printer.ruleToString(k.atoms)}\n\tarity=$arity, compl=${printer.factToString(compl)}, Q=${printer.factToString(q)}, final res=${printer.factToString(res)}")
+                    res
               ), k, (0, 0, 0)).wrapped // don't sort when not staging
           }).distinct
       ))
@@ -253,19 +257,18 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
         else
           projectHelper(
             joinHelper(
-              k.deps.zipWithIndex.map((md, idx) =>
+              k.deps.zipWithIndex.map((md, i) =>
                 val (typ, r) = md
-                val derivedR = union(Seq(getKnownDerivedDB(r), getDiscoveredEDBs(r)))
+                val q = union(Seq(getKnownDerivedDB(r), getDiscoveredEDBs(r)))
                 typ match
                   case "+" =>
-                    derivedR
+                    q
                   case "-" =>
-                    val arity = k.atoms(idx + 1).terms.length
+                    val arity = k.atoms(i + 1).terms.length
                     val compl = getComplement(arity)
-                    val res = diff(compl, derivedR)
-                    println(s"found negated relation, rule=${printer.ruleToString(k.atoms)}\n\tarity=$arity, compl=${printer.factToString(compl)}, Q=${printer.factToString(derivedR)}, final res=${printer.factToString(res)}")
+                    val res = diff(compl, q)
+                    debug(s"found negated relation, rule=", () => s"${printer.ruleToString(k.atoms)}\n\tarity=$arity, compl=${printer.factToString(compl)}, Q=${printer.factToString(q)}, final res=${printer.factToString(res)}")
                     res
-
               ), k // TODO: warn if EDB is empty? Right now can't tell the difference between undeclared and empty EDB)
             ), k
           ).wrapped.distinct

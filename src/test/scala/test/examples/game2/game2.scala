@@ -1,7 +1,7 @@
 package test.examples.game2
-import datalog.dsl.{Constant, Program}
-import test.ExampleTestGenerator
-class game2_test extends ExampleTestGenerator("game2") with game2
+import datalog.dsl.{Constant, Program, __}
+import test.{ExampleTestGenerator, Tags}
+class game2_test extends ExampleTestGenerator("game2", tags = Set(Tags.Negated)) with game2
 trait game2 {
   val toSolve: String = "winning"
   def pretest(program: Program): Unit = {
@@ -23,7 +23,7 @@ trait game2 {
     move("1","3") :- ()
     move("1","5") :- ()
     
-    canMove(X) :- ( move(X,Z1) )
+    canMove(X) :- ( move(X,__) )
     
     possible_winning(X):- ( odd_move(X,Y), !canMove(Y) )
     

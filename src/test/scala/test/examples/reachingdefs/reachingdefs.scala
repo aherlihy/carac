@@ -1,9 +1,9 @@
 package test.examples.reachingdefs
 
 import datalog.dsl.{Constant, Program, not}
-import test.ExampleTestGenerator
+import test.{ExampleTestGenerator, Tags}
 
-class reachingdefs_test extends ExampleTestGenerator("reachingdefs") with reachingdefs
+class reachingdefs_test extends ExampleTestGenerator("reachingdefs", tags = Set(Tags.Negated)) with reachingdefs
 trait reachingdefs {
   val toSolve = "o"
   def pretest(program: Program): Unit = {

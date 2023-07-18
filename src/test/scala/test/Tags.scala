@@ -9,4 +9,5 @@ object Tags {
   val IndexedColl = "IndexedColl"
   val SNStaged = "SemiNaiveStaged"
   val NStaged = "NaiveStaged"
+  val Negated = "Negated"
 }
