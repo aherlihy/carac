@@ -76,8 +76,6 @@ case class CollectionsDatabase(wrapped: mutable.Map[RelationId, CollectionsEDB])
 }
 object CollectionsDatabase {
   def apply(elems: (RelationId, CollectionsEDB)*): CollectionsDatabase = new CollectionsDatabase(mutable.Map[RelationId, CollectionsEDB](elems *))
-
-
 }
 
 
