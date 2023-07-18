@@ -180,7 +180,7 @@ class PrecedenceGraph(using ns: NS /* ns used for pretty printing */) {
   }
 
   def scc(target: Int): Seq[Set[Int]] = {
-    val sorted2 = ullman(Some(target))
+    val sorted2 = tarjan(Some(target))
     dropIrrelevant(sorted2, Some(target))
   }
 }
