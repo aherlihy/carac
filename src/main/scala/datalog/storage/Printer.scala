@@ -128,7 +128,6 @@ class Printer[S <: StorageManager](val sm: S) {
       case SequenceOp(fnCode, children:_*) => s"SEQ{${seq+1}${if (fnCode != OpCode.SEQ) "::" + fnCode else "_"}:${children.zipWithIndex.map((o, idx) => s"${seq+1}.$idx" + printIR(o, ident+1, seq+1)).mkString("[\n", ",\n", "]")}"
       case UpdateDiscoveredOp() => "UPDATE_DISCOVERED()"
       case ScanEDBOp(srcRel) => s"SCANEDB(edbs[${ctx.storageManager.ns(srcRel)}])"
-      case ScanDiscoveredOp(srcRel) => s"SCANDISCOVERED(${ctx.storageManager.ns(srcRel)})"
       case ScanOp(srcRel, db, knowledge) =>
         s"SCAN[$db.$knowledge](${ctx.storageManager.ns(srcRel)})"
       case ProjectJoinFilterOp(rId, hash, children:_*) =>

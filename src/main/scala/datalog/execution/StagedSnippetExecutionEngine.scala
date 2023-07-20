@@ -113,9 +113,6 @@ class StagedSnippetExecutionEngine(override val storageManager: StorageManager,
       case op: ComplementOp =>
         op.run(storageManager)
 
-      case op: ScanDiscoveredOp =>
-        op.run(storageManager)
-
       case _ => throw new Exception(s"Error: interpretRelOp called with unit operation: code=${irTree.code}")
     }
   }

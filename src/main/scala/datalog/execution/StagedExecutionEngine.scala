@@ -298,9 +298,6 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
       case op: ScanEDBOp =>
         op.run(storageManager)
 
-      case op: ScanDiscoveredOp =>
-        op.run(storageManager)
-
       case op: ComplementOp =>
         op.run(storageManager)
 

@@ -27,16 +27,6 @@ trait StorageManager(val ns: NS) {
   def addConstantsToDomain(constants: Seq[StorageTerm]): Unit
   def getComplement(arity: Int): CollectionsEDB
 
-  /**
-   * Returns the discovered EDBs from a previous stratum for a particular
-   * relation. The returned EDBs will always be monotonically increasing for any
-   * given relation.
-   *
-   * @param rId the relation to get the discovered EDBs for.
-   * @return the resulting EDBs.
-   */
-  def getDiscoveredEDBs(rId: RelationId): EDB
-  
   def getKnownDerivedDB(rId: RelationId): EDB
   def getNewDerivedDB(rId: RelationId): EDB
   def getKnownDeltaDB(rId: RelationId): EDB

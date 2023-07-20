@@ -219,7 +219,7 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
     debug("SPJU:", () => s"r=${ns(rId)} keys=${printer.snPlanToString(keys)} knownDBId $knownDbId")
       CollectionsEDB(keys.flatMap(k => // union of each definition of rId
         if (k.edb)
-          edbs.getOrElse(rId, CollectionsEDB()).wrapped
+          discoveredFacts.getOrElse(rId, CollectionsEDB()).wrapped
         else
           var idx = -1 // if dep is featured more than once, only use delta once, but at a different pos each time
           k.deps.flatMap((*, d) => {
@@ -230,9 +230,12 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
                 val q = if (r == d && !found && i > idx)
                   found = true
                   idx = i
-                  union(Seq(getKnownDeltaDB(r), getDiscoveredEDBs(r)))
+                  if (typ != "-") // if negated then we want the complement of all facts not just the delta
+                    getKnownDeltaDB(r)
+                  else
+                    getKnownDerivedDB(r)
                 else
-                  union(Seq(getKnownDerivedDB(r), getDiscoveredEDBs(r)))
+                  getKnownDerivedDB(r)
 
                 typ match
                   case "+" =>
@@ -253,13 +256,13 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
     CollectionsEDB(
       keys.flatMap(k => { // for each idb rule
         if (k.edb)
-          edbs.getOrElse(rId, CollectionsEDB()).wrapped
+          discoveredFacts.getOrElse(rId, CollectionsEDB()).wrapped
         else
           projectHelper(
             joinHelper(
               k.deps.zipWithIndex.map((md, i) =>
                 val (typ, r) = md
-                val q = union(Seq(getKnownDerivedDB(r), getDiscoveredEDBs(r)))
+                val q = getKnownDerivedDB(r)
                 typ match
                   case "+" =>
                     q

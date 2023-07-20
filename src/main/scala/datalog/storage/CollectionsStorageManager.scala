@@ -105,9 +105,6 @@ abstract class CollectionsStorageManager(override val ns: NS) extends StorageMan
     )
   }
 
-  override def getDiscoveredEDBs(rId: RelationId): CollectionsEDB =
-    discoveredFacts.getOrElse(rId, CollectionsEDB())
-
   // Read intermediate results
   def getKnownDerivedDB(rId: RelationId): CollectionsEDB =
     derivedDB(knownDbId).getOrElse(rId, discoveredFacts.getOrElse(rId, CollectionsEDB()))

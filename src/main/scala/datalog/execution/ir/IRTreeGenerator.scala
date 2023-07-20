@@ -52,7 +52,7 @@ class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
       case AllRulesNode(rules, rId, edb) =>
         var allRes = rules.map(naiveEvalRule).toSeq
         if (edb)
-          allRes = allRes :+ ScanEDBOp(rId)
+          allRes = allRes :+ ScanEDBOp(rId) // TODO: potentially change this to Discovered not EDB
 //        if(allRes.length == 1) allRes.head else
         UnionOp(OpCode.EVAL_RULE_NAIVE, allRes:_*)
       case RuleNode(head, _, atoms, hash) =>
@@ -64,10 +64,7 @@ class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
           ProjectJoinFilterOp(atoms.head.rId, hash,
             k.deps.zipWithIndex.map((md, i) =>
               val (typ, r) = md
-              val q = UnionOp(OpCode.UNION,
-                ScanOp(r, DB.Derived, KNOWLEDGE.Known),
-                ScanDiscoveredOp(r),
-              )
+              val q = ScanOp(r, DB.Derived, KNOWLEDGE.Known)
               typ match
                 case "+" =>
                   q
@@ -110,15 +107,12 @@ class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
                   val q = if (r == d && !found && i > idx)
                     found = true
                     idx = i
-                    UnionOp(OpCode.UNION,
-                      ScanOp(r, DB.Delta, KNOWLEDGE.Known),
-                      ScanDiscoveredOp(r),
-                    )
+                    if (typ != "-") // if negated then we want the complement of all facts not just the delta
+                      ScanOp(r, DB.Delta, KNOWLEDGE.Known)
+                    else
+                      ScanOp(r, DB.Derived, KNOWLEDGE.Known)
                   else
-                    UnionOp(OpCode.UNION,
-                      ScanOp(r, DB.Derived, KNOWLEDGE.Known),
-                      ScanDiscoveredOp(r),
-                    )
+                    ScanOp(r, DB.Derived, KNOWLEDGE.Known)
                   typ match
                     case "+" =>
                       q

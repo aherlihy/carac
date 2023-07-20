@@ -192,14 +192,6 @@ case class InsertOp(rId: RelationId, db: DB, knowledge: KNOWLEDGE, override val 
     }
 }
 
-case class ScanDiscoveredOp(rId: RelationId)(using JITOptions) extends IROp[EDB] {
-  val code: OpCode = OpCode.SCAN_DISCOVERED
-  override def run(storageManager: StorageManager): EDB =
-    storageManager.getDiscoveredEDBs(rId)
-  override def run_continuation(storageManager: StorageManager, opFns: Seq[CompiledFn[EDB]]): EDB =
-    run(storageManager) // leaf node, so no difference for continuation or run
-}
-
 case class ComplementOp(arity: Int)(using JITOptions) extends IROp[EDB] {
   val code: OpCode = OpCode.COMPLEMENT
 

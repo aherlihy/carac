@@ -31,15 +31,12 @@ class VolcanoStorageManager(ns: NS = NS()) extends CollectionsStorageManager(ns)
     val plan = Union(
         keys.map(k =>
           if (k.edb)
-            Scan(edbs.getOrElse(rId, CollectionsEDB()), rId)
+            Scan(discoveredFacts.getOrElse(rId, CollectionsEDB()), rId)
           else
             Project(
               Join(k.deps.zipWithIndex.map((md, i) =>
                 val (typ, r) = md
-                val q = Union(Seq(
-                  Scan(getKnownDerivedDB(r), r),
-                  Scan(getDiscoveredEDBs(r), r),
-                ))
+                val q = Scan(getKnownDerivedDB(r), r)
                 typ match
                   case "+" =>
                     q
@@ -71,7 +68,7 @@ class VolcanoStorageManager(ns: NS = NS()) extends CollectionsStorageManager(ns)
     val plan = Union(
       keys.map(k => // for each idb rule
         if (k.edb)
-          Scan(edbs.getOrElse(rId, CollectionsEDB()), rId)
+          Scan(discoveredFacts.getOrElse(rId, CollectionsEDB()), rId)
         else
           var idx = -1 // if dep is featured more than once, only us delta once, but at a different pos each time
           Union(
@@ -84,15 +81,12 @@ class VolcanoStorageManager(ns: NS = NS()) extends CollectionsStorageManager(ns)
                     val q = if (r == d && !found && i > idx)
                       found = true
                       idx = i
-                      Union(Seq(
-                        Scan(getKnownDeltaDB(r), r),
-                        Scan(getDiscoveredEDBs(r), r),
-                      ))
+                      if (typ != "-") // if negated then we want the complement of all facts not just the delta
+                        Scan(getKnownDeltaDB(r), r)
+                      else
+                        Scan(getKnownDerivedDB(r), r)
                     else
-                      Union(Seq(
-                        Scan(getKnownDerivedDB(r), r),
-                        Scan(getDiscoveredEDBs(r), r),
-                      ))
+                      Scan(getKnownDerivedDB(r), r)
                     typ match
                       case "+" =>
                         q
