@@ -38,13 +38,22 @@ class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: J
 
   given ToExpr[Atom] with {
     def apply(x: Atom)(using Quotes) = {
-      '{ Atom( ${ Expr(x.rId) }, ${ Expr.ofSeq(x.terms.map(y => Expr(y))) } ) }
+      '{ Atom( ${ Expr(x.rId) }, ${ Expr.ofSeq(x.terms.map(y => Expr(y))) }, ${ Expr(x.negated) } ) }
     }
   }
 
   given ToExpr[JoinIndexes] with {
     def apply(x: JoinIndexes)(using Quotes) = {
-      '{ JoinIndexes(${ Expr(x.varIndexes) }, ${ Expr(x.constIndexes) }, ${ Expr(x.projIndexes) }, ${ Expr(x.deps) }, ${Expr (x.atoms) }, ${ Expr(x.edb) }) }
+      '{
+        JoinIndexes(
+          ${ Expr(x.varIndexes) },
+          ${ Expr(x.constIndexes) },
+          ${ Expr(x.projIndexes) },
+          ${ Expr(x.deps) },
+          ${ Expr(x.atoms) },
+          ${ Expr(x.edb) }
+        )
+      }
     }
   }
 
@@ -70,6 +79,9 @@ class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: J
                 '{ $stagedSM.getKnownDeltaDB(${ Expr(rId) }) }
             }
         }
+
+      case ComplementOp(arity) =>
+        '{ $stagedSM.getComplement(${ Expr(arity) }) }
 
       case ScanEDBOp(rId) =>
         if (storageManager.edbContains(rId))

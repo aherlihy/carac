@@ -14,7 +14,10 @@ import scala.quoted.*
 import scala.util.{Failure, Success}
 
 enum OpCode:
-  case PROGRAM, SWAP_CLEAR, SEQ, SCAN, SCANEDB, SPJ, INSERT, UNION, DIFF, 
+  case PROGRAM, SWAP_CLEAR, SEQ,
+  SCAN, SCANEDB, SCAN_DISCOVERED,
+  COMPLEMENT,
+  SPJ, INSERT, UNION, DIFF,
   DEBUG, DEBUGP, DOWHILE, UPDATE_DISCOVERED,
   EVAL_STRATUM, EVAL_RULE_NAIVE, EVAL_RULE_SN, EVAL_RULE_BODY, EVAL_NAIVE, EVAL_SN, LOOP_BODY, OTHER // convenience labels for generating functions
 object OpCode {
@@ -189,6 +192,16 @@ case class InsertOp(rId: RelationId, db: DB, knowledge: KNOWLEDGE, override val 
     }
 }
 
+case class ComplementOp(arity: Int)(using JITOptions) extends IROp[EDB] {
+  val code: OpCode = OpCode.COMPLEMENT
+
+  override def run(storageManager: StorageManager): EDB =
+    storageManager.getComplement(arity)
+
+  override def run_continuation(storageManager: StorageManager, opFns: Seq[CompiledFn[EDB]]): EDB =
+    run(storageManager) // bc leaf node, no difference for continuation or run
+}
+
 case class ScanOp(rId: RelationId, db: DB, knowledge: KNOWLEDGE)(using JITOptions) extends IROp[EDB] {
   val code: OpCode = OpCode.SCAN
 
@@ -228,9 +241,9 @@ case class ScanEDBOp(rId: RelationId)(using JITOptions) extends IROp[EDB] {
  * @param joinIdx
  * @param children: [Scan*deps]
  */
-case class ProjectJoinFilterOp(rId: RelationId, var hash: String, override val children:ScanOp*)(using jitOptions: JITOptions) extends IROp[EDB](children:_*) {
+case class ProjectJoinFilterOp(rId: RelationId, var hash: String, override val children:IROp[EDB]*)(using jitOptions: JITOptions) extends IROp[EDB](children:_*) {
   val code: OpCode = OpCode.SPJ
-  var childrenSO: Array[ScanOp] = children.toArray
+  var childrenSO: Array[IROp[EDB]] = children.toArray
 
   override def run_continuation(storageManager: StorageManager, opFns: Seq[CompiledFn[EDB]]): EDB =
     val inputs = opFns.map(s => s(storageManager))

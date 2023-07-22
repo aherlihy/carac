@@ -22,23 +22,33 @@ case class Variable(oid: Int, anon: Boolean = false) {
 
 type Term = Constant | Variable
 
-type NegatedAtom = Atom
+def not(atom: Atom): Atom = !atom
 
-class Atom(val rId: Int, val terms: Seq[Term]) {
+class Atom(val rId: Int, val terms: Seq[Term], val negated: Boolean) {
+  def unary_! : Atom = ???
   def :- (body: Atom*): Unit = ???
   def :- (body: Unit): Unit = ???
-  val hash: String = s"$rId${terms.mkString("", "", "")}"
+  val hash: String = s"${if (negated) "!" else ""}$rId${terms.mkString("", "", "")}"
 }
 
 case class Relation[T <: Constant](id: Int, name: String)(using ee: ExecutionEngine) {
   type RelTerm = T | Variable
   ee.initRelation(id, name)
 
-  case class RelAtom(override val terms: Seq[RelTerm]) extends Atom(id, terms) { // extend Atom so :- can accept atom of any Relation
+  case class RelAtom(override val terms: Seq[RelTerm],
+                     override val negated: Boolean = false,
+                    ) extends Atom(id, terms, negated) { // extend Atom so :- can accept atom of any Relation
+    override def unary_! : Atom = copy(negated = !negated)
     // IDB tuple
-    override def :-(body: Atom*): Unit = ee.insertIDB(rId, this +: body)
+    override def :-(body: Atom*): Unit =
+      if (negated)
+        throw new Exception("Cannot have negated predicates in the head of a rule")
+      ee.insertIDB(rId, this +: body)
     // EDB tuple
-    override def :-(body: Unit): Unit = ee.insertEDB(this)
+    override def :-(body: Unit): Unit =
+      if (negated)
+        throw new Exception("Cannot have negated EDB, define a new EDB")
+      ee.insertEDB(this)
 
     override def toString = name + terms.mkString("(", ", ", ")")
   }
