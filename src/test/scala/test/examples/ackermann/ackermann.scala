@@ -3,9 +3,6 @@ package test.examples.ackermann
 import datalog.dsl.{Constant, Program}
 import test.{ExampleTestGenerator, Tags}
 
-import java.nio.file.{Path, Paths}
-import scala.util.Properties
-
 trait ackermann {
 
   val toSolve = "ack"

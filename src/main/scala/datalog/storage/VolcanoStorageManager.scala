@@ -16,6 +16,7 @@ class VolcanoStorageManager(ns: NS = NS()) extends CollectionsStorageManager(ns)
   def projectHelper(input: EDB, k: JoinIndexes): EDB = ???
   def joinProjectHelper(inputs: Seq[EDB], k: JoinIndexes, sortOrder: (Int, Int, Int)): EDB = ???
   def joinProjectHelper_withHash(inputs: Seq[EDB], rId: Int, hash: String, sortOrder: (Int, Int, Int)): EDB = ???
+
   /**
    * Use relational operators to evaluate an IDB rule using Naive algo
    *
@@ -30,11 +31,22 @@ class VolcanoStorageManager(ns: NS = NS()) extends CollectionsStorageManager(ns)
     val plan = Union(
         keys.map(k =>
           if (k.edb)
-            Scan(edbs.getOrElse(rId, CollectionsEDB()), rId)
+            Scan(discoveredFacts.getOrElse(rId, CollectionsEDB()), rId)
           else
             Project(
-              Join(k.deps.map(r => Scan(
-                derivedDB(knownDbId).getOrElse(r, edbs.getOrElse(r, CollectionsEDB())), r) // TODO: warn if EDB is empty? Right now can't tell the difference between undeclared and empty EDB
+              Join(k.deps.zipWithIndex.map((md, i) =>
+                val (typ, r) = md
+                val q = Scan(getKnownDerivedDB(r), r)
+                typ match
+                  case "+" =>
+                    q
+                  case "-" =>
+                    val arity = k.atoms(i + 1).terms.length
+                    val compl = getComplement(arity)
+                    val res = Diff(Seq(Scan(compl, r), q))
+                    debug(s"found negated relation, rule=", () => s"${printer.ruleToString(k.atoms)}\n\tarity=$arity")
+                    res
+
               ), k.varIndexes, k.constIndexes),
               k.projIndexes
             )
@@ -56,21 +68,34 @@ class VolcanoStorageManager(ns: NS = NS()) extends CollectionsStorageManager(ns)
     val plan = Union(
       keys.map(k => // for each idb rule
         if (k.edb)
-          Scan(edbs.getOrElse(rId, CollectionsEDB()), rId)
+          Scan(discoveredFacts.getOrElse(rId, CollectionsEDB()), rId)
         else
           var idx = -1 // if dep is featured more than once, only us delta once, but at a different pos each time
           Union(
-            k.deps.map(d => {
+            k.deps.map((typ, d) => {
               var found = false
               Project(
                 Join(
-                  k.deps.zipWithIndex.map((r, i) => {
-                    if (r == d && !found && i > idx)
+                  k.deps.zipWithIndex.map((md, i) => {
+                    val (typ, r) = md
+                    val q = if (r == d && !found && i > idx)
                       found = true
                       idx = i
-                      Scan(deltaDB(knownDbId).getOrElse(r, CollectionsEDB()), r)
+                      if (typ != "-") // if negated then we want the complement of all facts not just the delta
+                        Scan(getKnownDeltaDB(r), r)
+                      else
+                        Scan(getKnownDerivedDB(r), r)
                     else
-                      Scan(derivedDB(knownDbId).getOrElse(r, edbs.getOrElse(r, CollectionsEDB())), r)
+                      Scan(getKnownDerivedDB(r), r)
+                    typ match
+                      case "+" =>
+                        q
+                      case "-" =>
+                        val arity = k.atoms(i + 1).terms.length
+                        val compl = getComplement(arity)
+                        val res = Diff(Seq(Scan(compl, r), q))
+                        debug(s"found negated relation, rule=", () => s"${printer.ruleToString(k.atoms)}\n\tarity=$arity")
+                        res
                   }),
                   k.varIndexes,
                   k.constIndexes

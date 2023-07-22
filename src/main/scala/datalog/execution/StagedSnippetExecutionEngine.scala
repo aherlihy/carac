@@ -27,7 +27,7 @@ class StagedSnippetExecutionEngine(override val storageManager: StorageManager,
   given staging.Compiler = defaultJITOptions.dotty
 
   override def jit[T](irTree: IROp[T])(using jitOptions: JITOptions): T = {
-    debug("", () => s"IN SNIPPET IR, code=${irTree.code}")
+//    debug("", () => s"IN SNIPPET IR, code=${irTree.code}")
     irTree match {
       case op: ProgramOp if jitOptions.granularity == op.code =>
         if (op.compiledSnippetContinuationFn == null)
@@ -57,6 +57,9 @@ class StagedSnippetExecutionEngine(override val storageManager: StorageManager,
               op.children.flatMap(o => o.children.map(o2 => (sm: StorageManager) => jit(o2)))) // or o2.run(sm) for only interp
           case _ =>
             op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o)))
+
+      case op: UpdateDiscoveredOp =>
+        op.run(storageManager)
 
       case op: SwapAndClearOp =>
         op.run(storageManager)
@@ -107,7 +110,10 @@ class StagedSnippetExecutionEngine(override val storageManager: StorageManager,
       case op: DebugPeek =>
         op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o)))
 
-      case _ => throw new Exception("Error: interpretRelOp called with unit operation")
+      case op: ComplementOp =>
+        op.run(storageManager)
+
+      case _ => throw new Exception(s"Error: interpretRelOp called with unit operation: code=${irTree.code}")
     }
   }
 }

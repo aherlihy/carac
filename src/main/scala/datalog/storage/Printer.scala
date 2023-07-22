@@ -14,31 +14,41 @@ class Printer[S <: StorageManager](val sm: S) {
     r.factToString
   }
 
-  def atomToString(a: Seq[Atom]): String = {
-    s"${sm.ns(a.head.rId)}${a.head.terms.mkString("(", ", ", ")")} :- ${a.drop(1).map(b => sm.ns(b.rId) + b.terms.mkString("(", ", ", ")")).mkString("", ", ", "")}"
+  def ruleToString(a: Seq[Atom]): String = {
+    s"${sm.ns(a.head.rId)}${
+      a.head.terms.mkString("(", ", ", ")")
+    } :- ${
+      a.drop(1).map(b => (if (b.negated) "!" else "") + sm.ns(b.rId) + b.terms.mkString("(", ", ", ")")).mkString("", ", ", "")
+    }"
   }
 
-  def ruleToString(r: mutable.ArrayBuffer[Seq[Atom]]): String = {
-    r.map(s => if (s.isEmpty) "<empty>" else s.head.toString + s.drop(1).mkString(" :- ", ",", ""))
-      .mkString("[", "; ", "]")
+  def rulesToString(r: mutable.ArrayBuffer[Seq[Atom]]): String = {
+    r.map(s =>
+      if (s.isEmpty)
+        "<empty>"
+      else
+        s.head.toString + s.drop(1).mkString(" :- ", ",", "")
+    ).mkString("[", "; ", "]")
   }
+  
   def edbToString(db: Database[?]): String = {
     immutable.ListMap(db.toSeq.sortBy(_._1):_*)
       .map((k, v) => (sm.ns(k), factToString(v)))
       .mkString("[\n  ", ",\n  ", "]")
   }
+  
   def naivePlanToString(keys: mutable.ArrayBuffer[JoinIndexes]): String = {
     "Union( " +
       keys.map(k =>
         if (k.edb)
-          "SCAN(" + k.deps.map(n => sm.ns(n)).mkString("[", ", ", "]") + ")"
+          "SCAN(" + k.deps.map(tup => s"${sm.ns(tup)}").mkString("[", ", ", "]") + ")"
         else
           "Project" + k.projIndexes.map((typ, v) => f"$typ$v").mkString("[", " ", "]") + "( " +
             "JOIN" +
             k.varIndexes.map(v => v.mkString("$", "==$", "")).mkString("[", ",", "]") +
             k.constIndexes.map((k, v) => "$" + k + "==" + (if (v.isInstanceOf[String]) s"\"$v\"" else "v")).mkString("{", "&&", "}") +
-            k.deps.map(n =>
-              if(k.edb) "edbs-" + sm.ns(n)  else sm.ns(n)
+            k.deps.map(tup =>
+              if(k.edb) "edbs-" + sm.ns(tup) else sm.ns(tup)
             ).mkString("(", "*", ")") +
             " )"
       ).mkString("", ", ", "") +
@@ -49,26 +59,27 @@ class Printer[S <: StorageManager](val sm: S) {
     "UNION( " +
       keys.map(k =>
         if (k.edb)
-          "SCAN(" + k.deps.map(n => sm.ns(n)).mkString("[", ", ", "]") + ")"
+          "SCAN(" + k.deps.map(tup => s"${sm.ns(tup)}").mkString("[", ", ", "]") + ")"
         else
           var idx = -1
           "UNION(" +
-            k.deps.map(d => {
+            k.deps.map((typ, d) => {
               var found = false
-              "PROJECT" + k.projIndexes.map((typ, v) => f"$typ$v").mkString("[", " ", "]") + "( " +
+               "PROJECT" + k.projIndexes.map((typ, v) => f"$typ$v").mkString("[", " ", "]") + "( " +
                 "JOIN" +
                 k.varIndexes.map(v => v.mkString("$", "==$", "")).mkString("[", ",", "]") +
                 k.constIndexes.map((k, v) => k + "==" + v).mkString("{", "&&", "}") +
-                k.deps.zipWithIndex.map((n, i) => {
+                k.deps.zipWithIndex.map((tup, i) => {
+                  val n = tup._2
                   if (n == d && !found && i > idx)
                     found = true
                     idx = i
-                    "delta[known][" + sm.ns(n) + s"($n)" + "]"
+                    "delta[known][" + sm.ns(tup) + s"($n)" + "]"
                   else
                     if(k.edb)
-                      "edbs[" + sm.ns(n) + s"($n)" + "]"
+                      "edbs[" + sm.ns(tup) + s"($n)" + "]"
                     else
-                      "derived[known][" + sm.ns(n) + s"($n)" + "]"
+                      "derived[known][" + sm.ns(tup) + s"($n)" + "]"
                 }).mkString("(", "*", ")") +
                 " )"
             }).mkString("[ ", ", ", " ]") + " )"
@@ -85,7 +96,7 @@ class Printer[S <: StorageManager](val sm: S) {
    */
   def printIDB(idbs: mutable.Map[RelationId, mutable.ArrayBuffer[Seq[Atom]]]): String = {
     immutable.ListMap(idbs.toSeq.sortBy(_._1):_*)
-      .map((k, v) => (sm.ns(k), ruleToString(v)))
+      .map((k, v) => (sm.ns(k), rulesToString(v)))
       .mkString("[\n  ", ",\n  ", "]")
   }
 
@@ -97,8 +108,9 @@ class Printer[S <: StorageManager](val sm: S) {
         s"\n\t${printAST(head)} :- ${body.map(printAST).mkString("(", ", ", ")")}" +
           s" => idx=${sm.allRulesAllIndexes(atoms.head.rId)(hash).toStringWithNS(sm.ns)}\n"
       case n: AtomNode => n match {
-        case NegAtom(expr) => s"!${printAST(expr)}"
-        case LogicAtom(relation, terms) => s"${sm.ns(relation)}${terms.map(printAST).mkString("(", ", ", ")")}"
+        case LogicAtom(relation, terms, neg) =>
+          val prefix = if neg then "!" else ""
+          s"$prefix${sm.ns(relation)}${terms.map(printAST).mkString("(", ", ",")")}"
       }
       case n: TermNode => n match {
         case VarTerm(value) => s"${value.toString}"
@@ -114,6 +126,7 @@ class Printer[S <: StorageManager](val sm: S) {
       case SwapAndClearOp() => "SWAP & CLEAR"
       case DoWhileOp(toCmp, children:_*) => s"DO {\n${printIR(children.head, ident+1)}}\n${i}WHILE {$toCmp}\n"
       case SequenceOp(fnCode, children:_*) => s"SEQ{${seq+1}${if (fnCode != OpCode.SEQ) "::" + fnCode else "_"}:${children.zipWithIndex.map((o, idx) => s"${seq+1}.$idx" + printIR(o, ident+1, seq+1)).mkString("[\n", ",\n", "]")}"
+      case UpdateDiscoveredOp() => "UPDATE_DISCOVERED()"
       case ScanEDBOp(srcRel) => s"SCANEDB(edbs[${ctx.storageManager.ns(srcRel)}])"
       case ScanOp(srcRel, db, knowledge) =>
         s"SCAN[$db.$knowledge](${ctx.storageManager.ns(srcRel)})"
@@ -123,8 +136,13 @@ class Printer[S <: StorageManager](val sm: S) {
       case InsertOp(rId, db, knowledge, children:_*) =>
         s"INSERT INTO $db.$knowledge.${ctx.storageManager.ns(rId)}\n${children.map(s => printIR(s, ident+1)).mkString("", "\n", "")}\n"
       case UnionOp(fnCode, children:_*) => s"UNION${if (fnCode != OpCode.UNION) "::" + fnCode else "_"}${children.map(o => printIR(o, ident+1)).mkString("(\n", ",\n", ")")}"
-      case UnionSPJOp(rId, hash, children:_*) => s"UNION_SPJ::${ctx.storageManager.ns(rId)}::${sm.allRulesAllIndexes(rId)(hash)}::${children.map(o => printIR(o, ident+1)).mkString("(\n", ",\n", ")")}"
+      case UnionSPJOp(rId, hash, children:_*) =>
+        s"UNION_SPJ::${
+          ctx.storageManager.ns(rId)}::${
+          sm.allRulesAllIndexes(rId)(hash).toStringWithNS(sm.ns)}::${
+          children.map(o => printIR(o, ident+1)).mkString("(\n", ",\n", ")")}"
       case DiffOp(children:_*) => s"DIFF\n${printIR(children.head, ident+1)}\n-${printIR(children(1), ident+1)}"
+      case ComplementOp(arity) => s"COMPL|$arity|"
       case DebugNode(prefix, dbg) => s"DEBUG: $prefix"
       case DebugPeek(prefix, dbg, children:_*) => s"DEBUG PEEK: $prefix into: ${printIR(children.head)}"
     })

@@ -7,7 +7,8 @@ import datalog.tools.Debug.debug
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
-class NaiveExecutionEngine(val storageManager: StorageManager) extends ExecutionEngine {
+class NaiveExecutionEngine(val storageManager: StorageManager, stratified: Boolean = true /* Temp add for benchmarking */) extends ExecutionEngine {
+//  println(s"stratified=$stratified")
   val precedenceGraph = new PrecedenceGraph(using storageManager.ns)
   val prebuiltOpKeys: mutable.Map[RelationId, ArrayBuffer[JoinIndexes]] = mutable.Map[RelationId, mutable.ArrayBuffer[JoinIndexes]]()
 
@@ -36,14 +37,15 @@ class NaiveExecutionEngine(val storageManager: StorageManager) extends Execution
   def insertIDB(rId: RelationId, ruleSeq: Seq[Atom]): Unit = {
     val rule = ruleSeq.toArray
     precedenceGraph.addNode(rule)
-    precedenceGraph.idbs.addOne(rId)
     idbs.getOrElseUpdate(rId, mutable.ArrayBuffer[IndexedSeq[Atom]]()).addOne(rule.toIndexedSeq)
-    prebuiltOpKeys.getOrElseUpdate(rId, mutable.ArrayBuffer[JoinIndexes]()).addOne(getOperatorKey(rule))
+    val jIdx = getOperatorKey(rule)
+    prebuiltOpKeys.getOrElseUpdate(rId, mutable.ArrayBuffer[JoinIndexes]()).addOne(jIdx)
+    storageManager.addConstantsToDomain(jIdx.constIndexes.values.toSeq)
   }
 
   def insertEDB(rule: Atom): Unit = {
     if (!storageManager.edbContains(rule.rId))
-      prebuiltOpKeys.getOrElseUpdate(rule.rId, mutable.ArrayBuffer[JoinIndexes]()).addOne(JoinIndexes(IndexedSeq(), Map(), IndexedSeq(), Seq(rule.rId), Array(rule), true))
+      prebuiltOpKeys.getOrElseUpdate(rule.rId, mutable.ArrayBuffer[JoinIndexes]()).addOne(JoinIndexes(IndexedSeq(), Map(), IndexedSeq(), Seq(("+", rule.rId)), Array(rule), true))
     storageManager.insertEDB(rule)
   }
 
@@ -66,19 +68,8 @@ class NaiveExecutionEngine(val storageManager: StorageManager) extends Execution
     })
   }
 
-  def solve(toSolve: RelationId): Set[Seq[Term]] = {
-    storageManager.verifyEDBs(idbs.keys.to(mutable.Set))
-    if (storageManager.edbContains(toSolve) && !idbs.contains(toSolve)) { // if just an edb predicate then return
-      return storageManager.getEDBResult(toSolve)
-    }
-    if (!idbs.contains(toSolve)) {
-      throw new Exception("Solving for rule without body")
-    }
-    val relations = precedenceGraph.topSort(toSolve)
-    storageManager.initEvaluation() // facts discovered in the previous iteration
+  def innerSolve(rId: RelationId, relations: Seq[Int]): Unit = {
     var count = 0
-
-    debug(s"solving relation: ${storageManager.ns(toSolve)} order of relations=", relations.toString)
     var setDiff = true
     while (setDiff) {
       storageManager.swapKnowledge()
@@ -90,6 +81,33 @@ class NaiveExecutionEngine(val storageManager: StorageManager) extends Execution
 
       setDiff = !storageManager.compareDerivedDBs()
     }
+  }
+
+  def solve(toSolve: RelationId): Set[Seq[Term]] = {
+    storageManager.verifyEDBs(idbs.keys.to(mutable.Set))
+    if (storageManager.edbContains(toSolve) && !idbs.contains(toSolve)) { // if just an edb predicate then return
+      return storageManager.getEDBResult(toSolve)
+    }
+    if (!idbs.contains(toSolve)) {
+      throw new Exception("Solving for rule without body")
+    }
+    val strata = precedenceGraph.scc(toSolve)
+    storageManager.initEvaluation() // facts discovered in the previous iteration
+
+    debug(s"solving relation: ${storageManager.ns(toSolve)} order of strata=", () => strata.map(r => r.map(storageManager.ns.apply).mkString("(", ", ", ")")).mkString("{", ", ", "}"))
+
+    if (strata.length <= 1 || !stratified)
+      innerSolve(toSolve, strata.flatten)
+    else
+      // for each strata
+      strata.zipWithIndex.foreach((relations, idx) =>
+        debug(s"**STRATA@$idx, rels=", () => relations.map(storageManager.ns.apply).mkString("(", ", ", ")"))
+        innerSolve(toSolve, relations.toSeq)
+        if (idx < strata.length - 1)
+          storageManager.updateDiscovered()
+      )
     storageManager.getKnownIDBResult(toSolve)
   }
 }
+
+
