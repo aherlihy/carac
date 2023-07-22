@@ -11,8 +11,11 @@ lazy val root = project.in(file("."))
     name := "datalog",
 
     libraryDependencies ++= Seq(
+      "org.scala-lang" %% "scala3-compiler" % scalaVersion.value,
       "org.scala-lang" %% "scala3-staging" % scalaVersion.value,
       "org.scalameta" %% "munit" % "0.7.29" % Test,
+      "ch.epfl.scala" %% "tasty-query" % "0.7.3",
+      ("io.get-coursier" %% "coursier" % "2.1.3").cross(CrossVersion.for3Use2_13)
     ),
   )
 
