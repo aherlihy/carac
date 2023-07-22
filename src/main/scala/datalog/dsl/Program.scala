@@ -14,6 +14,9 @@ class Program(engine: ExecutionEngine) extends AbstractProgram {
   }
   var relCounter = 0
   def relation[T <: Constant](userName: String = relCounter.toString): Relation[T] = {
+    if (ee.storageManager.ns.contains(userName)) {
+      throw new Exception("Named relation '" + userName + "' already exists")
+    }
     relCounter += 1
     Relation[T](relCounter - 1, userName)
   }

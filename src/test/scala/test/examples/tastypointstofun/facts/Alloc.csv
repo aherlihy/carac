@@ -1,0 +1,5 @@
+String	String	String
+pointstofun.Main.writeReplace.temp	new[scala.runtime.ModuleSerializationProxy]#0	pointstofun.Main.writeReplace
+pointstofun.Main.main.p	new[pointstofun.PointsToFun]#1	pointstofun.Main.main
+pointstofun.PointsToFun.fun1.a1	new[pointstofun.A1]#2	pointstofun.PointsToFun.fun1
+pointstofun.PointsToFun.fun2.a2	new[pointstofun.A2]#3	pointstofun.PointsToFun.fun2

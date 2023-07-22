@@ -1,0 +1,11 @@
+String	String
+pointstofun.Main.<init>	pointstofun.Main.<init>.this
+pointstofun.Main.writeReplace	pointstofun.Main.writeReplace.this
+pointstofun.Main.main	pointstofun.Main.main.this
+pointstofun.A.<init>	pointstofun.A.<init>.this
+pointstofun.PointsToFun.<init>	pointstofun.PointsToFun.<init>.this
+pointstofun.PointsToFun.fun1	pointstofun.PointsToFun.fun1.this
+pointstofun.PointsToFun.fun2	pointstofun.PointsToFun.fun2.this
+pointstofun.PointsToFun.id	pointstofun.PointsToFun.id.this
+pointstofun.A1.<init>	pointstofun.A1.<init>.this
+pointstofun.A2.<init>	pointstofun.A2.<init>.this

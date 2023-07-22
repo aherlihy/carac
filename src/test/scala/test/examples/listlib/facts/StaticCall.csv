@@ -1,0 +1,7 @@
+String	String	String
+scala.Predef.println	instr#18	listlib.Main.main.display
+listlib.Main.main.range	instr#21	listlib.Main.main
+listlib.Main.main.display	instr#22	listlib.Main.main
+listlib.Main.main.display	instr#24	listlib.Main.main
+listlib.SimpleList.reverse.rec	instr#29	listlib.SimpleList.reverse.rec
+listlib.SimpleList.reverse.rec	instr#31	listlib.SimpleList.reverse

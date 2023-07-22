@@ -637,6 +637,379 @@ def isAfter(program: Program) =
 
   println(isAfter.solve().size)
 
+def pointstofun(program: Program) = {
+  val ActualArg = program.relation[String]("ActualArg")
+  val ActualReturn = program.relation[String]("ActualReturn")
+  val Alloc = program.relation[String]("Alloc")
+  val DefinesWith = program.relation[String]("DefinesWith")
+  val Extends = program.relation[String]("Extends")
+  val FormalArg = program.relation[String]("FormalArg")
+  val FormalReturn = program.relation[String]("FormalReturn")
+  val HeapType = program.relation[String]("HeapType")
+  val NotDefines = program.relation[String]("NotDefines")
+  val Reachable = program.relation[String]("Reachable")
+  val ThisVar = program.relation[String]("ThisVar")
+  val VCall = program.relation[String]("VCall")
+
+  val LookUp = program.relation[String]("LookUp")
+  val Store = program.relation[String]("Store")
+  val Load = program.relation[String]("Load")
+
+  val Move = program.relation[String]("Move")
+  val StaticCall = program.relation[String]("StaticCall")
+  val StaticLookUp = program.relation[String]("StaticLookUp")
+
+  val VarPointsTo = program.relation[String]("VarPointsTo")
+  val CallGraph = program.relation[String]()
+  val FldPointsTo = program.relation[String]()
+  val InterProcAssign = program.relation[String]()
+
+  val Delegate = program.relation[String]("Delegate")
+  val SuperCall = program.relation[String]("SuperCall")
+  val FieldValDef = program.relation[String]("FieldValDef")
+
+  val Refers = program.relation[String]("Refers")
+  val Overrides = program.relation[String]("Overrides")
+  val TopLevel = program.relation[String]("TopLevel")
+
+
+  ActualArg("instr#1", "list0", "arg0", "pointstofun.Main.writeReplace.temp#1") :- ()
+  ActualArg("instr#8", "list0", "arg0", "pointstofun.PointsToFun.fun1.a1") :- ()
+  ActualArg("instr#10", "list0", "arg0", "pointstofun.PointsToFun.fun2.a2") :- ()
+
+  ActualReturn("instr#4", "pointstofun.Main.main.temp") :- ()
+  ActualReturn("instr#8", "pointstofun.PointsToFun.fun1.b1") :- ()
+  ActualReturn("instr#10", "pointstofun.PointsToFun.fun2.b2") :- ()
+
+  Alloc("pointstofun.Main.writeReplace.temp", "new[scala.runtime.ModuleSerializationProxy]#0", "pointstofun.Main.writeReplace") :- ()
+  Alloc("pointstofun.Main.main.p", "new[pointstofun.PointsToFun]#1", "pointstofun.Main.main") :- ()
+  Alloc("pointstofun.PointsToFun.fun1.a1", "new[pointstofun.A1]#2", "pointstofun.PointsToFun.fun1") :- ()
+  Alloc("pointstofun.PointsToFun.fun2.a2", "new[pointstofun.A2]#3", "pointstofun.PointsToFun.fun2") :- ()
+
+  DefinesWith("pointstofun.Main", "pointstofun.Main.main", "pointstofun.Main.main") :- ()
+  DefinesWith("pointstofun.Main", "pointstofun.Main.writeReplace", "pointstofun.Main.writeReplace") :- ()
+  DefinesWith("pointstofun.Main", "pointstofun.Main.<init>", "pointstofun.Main.<init>") :- ()
+  DefinesWith("pointstofun.A", "pointstofun.A.<init>", "pointstofun.A.<init>") :- ()
+  DefinesWith("pointstofun.PointsToFun", "pointstofun.PointsToFun.fun1", "pointstofun.PointsToFun.fun1") :- ()
+  DefinesWith("pointstofun.PointsToFun", "pointstofun.PointsToFun.fun2", "pointstofun.PointsToFun.fun2") :- ()
+  DefinesWith("pointstofun.PointsToFun", "pointstofun.PointsToFun.<init>", "pointstofun.PointsToFun.<init>") :- ()
+  DefinesWith("pointstofun.PointsToFun", "pointstofun.PointsToFun.id", "pointstofun.PointsToFun.id") :- ()
+  DefinesWith("pointstofun.A1", "pointstofun.A1.<init>", "pointstofun.A1.<init>") :- ()
+  DefinesWith("pointstofun.A2", "pointstofun.A2.<init>", "pointstofun.A2.<init>") :- ()
+
+  Extends("pointstofun.Main", "java.lang.Object") :- ()
+  Extends("pointstofun.A", "java.lang.Object") :- ()
+  Extends("pointstofun.PointsToFun", "java.lang.Object") :- ()
+  Extends("pointstofun.A1", "pointstofun.A") :- ()
+  Extends("pointstofun.A2", "pointstofun.A") :- ()
+
+  FormalArg("pointstofun.PointsToFun.id", "list0", "arg0", "pointstofun.PointsToFun.id.a") :- ()
+
+  FormalReturn("pointstofun.Main.writeReplace", "pointstofun.Main.writeReplace.temp") :- ()
+  FormalReturn("pointstofun.Main.main", "pointstofun.Main.main.temp") :- ()
+  FormalReturn("pointstofun.PointsToFun.fun1", "pointstofun.PointsToFun.fun1.temp") :- ()
+  FormalReturn("pointstofun.PointsToFun.fun2", "pointstofun.PointsToFun.fun2.temp") :- ()
+  FormalReturn("pointstofun.PointsToFun.id", "pointstofun.PointsToFun.id.a") :- ()
+
+  HeapType("new[scala.runtime.ModuleSerializationProxy]#0", "scala.runtime.ModuleSerializationProxy") :- ()
+  HeapType("new[pointstofun.PointsToFun]#1", "pointstofun.PointsToFun") :- ()
+  HeapType("new[pointstofun.A1]#2", "pointstofun.A1") :- ()
+  HeapType("new[pointstofun.A2]#3", "pointstofun.A2") :- ()
+
+  NotDefines("pointstofun.Main", "scala.Any.asInstanceOf") :- ()
+  NotDefines("pointstofun.Main", "scala.Any.equals") :- ()
+  NotDefines("pointstofun.Main", "scala.Any.isInstanceOf") :- ()
+  NotDefines("pointstofun.Main", "scala.Any.##") :- ()
+  NotDefines("pointstofun.Main", "scala.Any.$asInstanceOf$") :- ()
+  NotDefines("pointstofun.Main", "scala.Any.getClass") :- ()
+  NotDefines("pointstofun.Main", "scala.Any.!=") :- ()
+  NotDefines("pointstofun.Main", "scala.Any.==") :- ()
+  NotDefines("pointstofun.Main", "scala.Any.$isInstanceOf$") :- ()
+  NotDefines("pointstofun.Main", "scala.Any.asInstanceOf") :- ()
+  NotDefines("pointstofun.Main", "scala.Any.equals") :- ()
+  NotDefines("pointstofun.Main", "scala.Any.isInstanceOf") :- ()
+  NotDefines("pointstofun.Main", "scala.Any.##") :- ()
+  NotDefines("pointstofun.Main", "scala.Any.$asInstanceOf$") :- ()
+  NotDefines("pointstofun.Main", "scala.Any.getClass") :- ()
+  NotDefines("pointstofun.Main", "scala.Any.!=") :- ()
+  NotDefines("pointstofun.Main", "scala.Any.==") :- ()
+  NotDefines("pointstofun.Main", "scala.Any.$isInstanceOf$") :- ()
+  NotDefines("pointstofun.Main", "java.lang.Object.finalize") :- ()
+  NotDefines("pointstofun.Main", "java.lang.Object.notifyAll") :- ()
+  NotDefines("pointstofun.Main", "java.lang.Object.equals") :- ()
+  NotDefines("pointstofun.Main", "java.lang.Object.ne") :- ()
+  NotDefines("pointstofun.Main", "java.lang.Object.getClass") :- ()
+  NotDefines("pointstofun.Main", "java.lang.Object.notify") :- ()
+  NotDefines("pointstofun.Main", "java.lang.Object.hashCode") :- ()
+  NotDefines("pointstofun.Main", "java.lang.Object.<init>") :- ()
+  NotDefines("pointstofun.Main", "java.lang.Object.toString") :- ()
+  NotDefines("pointstofun.Main", "java.lang.Object.clone") :- ()
+  NotDefines("pointstofun.Main", "java.lang.Object.wait") :- ()
+  NotDefines("pointstofun.Main", "java.lang.Object.wait#1") :- ()
+  NotDefines("pointstofun.Main", "java.lang.Object.wait#2") :- ()
+  NotDefines("pointstofun.Main", "java.lang.Object.synchronized") :- ()
+  NotDefines("pointstofun.Main", "java.lang.Object.eq") :- ()
+  NotDefines("pointstofun.A", "scala.Any.asInstanceOf") :- ()
+  NotDefines("pointstofun.A", "scala.Any.equals") :- ()
+  NotDefines("pointstofun.A", "scala.Any.isInstanceOf") :- ()
+  NotDefines("pointstofun.A", "scala.Any.##") :- ()
+  NotDefines("pointstofun.A", "scala.Any.$asInstanceOf$") :- ()
+  NotDefines("pointstofun.A", "scala.Any.getClass") :- ()
+  NotDefines("pointstofun.A", "scala.Any.!=") :- ()
+  NotDefines("pointstofun.A", "scala.Any.==") :- ()
+  NotDefines("pointstofun.A", "scala.Any.$isInstanceOf$") :- ()
+  NotDefines("pointstofun.A", "scala.Any.asInstanceOf") :- ()
+  NotDefines("pointstofun.A", "scala.Any.equals") :- ()
+  NotDefines("pointstofun.A", "scala.Any.isInstanceOf") :- ()
+  NotDefines("pointstofun.A", "scala.Any.##") :- ()
+  NotDefines("pointstofun.A", "scala.Any.$asInstanceOf$") :- ()
+  NotDefines("pointstofun.A", "scala.Any.getClass") :- ()
+  NotDefines("pointstofun.A", "scala.Any.!=") :- ()
+  NotDefines("pointstofun.A", "scala.Any.==") :- ()
+  NotDefines("pointstofun.A", "scala.Any.$isInstanceOf$") :- ()
+  NotDefines("pointstofun.A", "java.lang.Object.finalize") :- ()
+  NotDefines("pointstofun.A", "java.lang.Object.notifyAll") :- ()
+  NotDefines("pointstofun.A", "java.lang.Object.equals") :- ()
+  NotDefines("pointstofun.A", "java.lang.Object.ne") :- ()
+  NotDefines("pointstofun.A", "java.lang.Object.getClass") :- ()
+  NotDefines("pointstofun.A", "java.lang.Object.notify") :- ()
+  NotDefines("pointstofun.A", "java.lang.Object.hashCode") :- ()
+  NotDefines("pointstofun.A", "java.lang.Object.<init>") :- ()
+  NotDefines("pointstofun.A", "java.lang.Object.toString") :- ()
+  NotDefines("pointstofun.A", "java.lang.Object.clone") :- ()
+  NotDefines("pointstofun.A", "java.lang.Object.wait") :- ()
+  NotDefines("pointstofun.A", "java.lang.Object.wait#1") :- ()
+  NotDefines("pointstofun.A", "java.lang.Object.wait#2") :- ()
+  NotDefines("pointstofun.A", "java.lang.Object.synchronized") :- ()
+  NotDefines("pointstofun.A", "java.lang.Object.eq") :- ()
+  NotDefines("pointstofun.PointsToFun", "scala.Any.asInstanceOf") :- ()
+  NotDefines("pointstofun.PointsToFun", "scala.Any.equals") :- ()
+  NotDefines("pointstofun.PointsToFun", "scala.Any.isInstanceOf") :- ()
+  NotDefines("pointstofun.PointsToFun", "scala.Any.##") :- ()
+  NotDefines("pointstofun.PointsToFun", "scala.Any.$asInstanceOf$") :- ()
+  NotDefines("pointstofun.PointsToFun", "scala.Any.getClass") :- ()
+  NotDefines("pointstofun.PointsToFun", "scala.Any.!=") :- ()
+  NotDefines("pointstofun.PointsToFun", "scala.Any.==") :- ()
+  NotDefines("pointstofun.PointsToFun", "scala.Any.$isInstanceOf$") :- ()
+  NotDefines("pointstofun.PointsToFun", "scala.Any.asInstanceOf") :- ()
+  NotDefines("pointstofun.PointsToFun", "scala.Any.equals") :- ()
+  NotDefines("pointstofun.PointsToFun", "scala.Any.isInstanceOf") :- ()
+  NotDefines("pointstofun.PointsToFun", "scala.Any.##") :- ()
+  NotDefines("pointstofun.PointsToFun", "scala.Any.$asInstanceOf$") :- ()
+  NotDefines("pointstofun.PointsToFun", "scala.Any.getClass") :- ()
+  NotDefines("pointstofun.PointsToFun", "scala.Any.!=") :- ()
+  NotDefines("pointstofun.PointsToFun", "scala.Any.==") :- ()
+  NotDefines("pointstofun.PointsToFun", "scala.Any.$isInstanceOf$") :- ()
+  NotDefines("pointstofun.PointsToFun", "java.lang.Object.finalize") :- ()
+  NotDefines("pointstofun.PointsToFun", "java.lang.Object.notifyAll") :- ()
+  NotDefines("pointstofun.PointsToFun", "java.lang.Object.equals") :- ()
+  NotDefines("pointstofun.PointsToFun", "java.lang.Object.ne") :- ()
+  NotDefines("pointstofun.PointsToFun", "java.lang.Object.getClass") :- ()
+  NotDefines("pointstofun.PointsToFun", "java.lang.Object.notify") :- ()
+  NotDefines("pointstofun.PointsToFun", "java.lang.Object.hashCode") :- ()
+  NotDefines("pointstofun.PointsToFun", "java.lang.Object.<init>") :- ()
+  NotDefines("pointstofun.PointsToFun", "java.lang.Object.toString") :- ()
+  NotDefines("pointstofun.PointsToFun", "java.lang.Object.clone") :- ()
+  NotDefines("pointstofun.PointsToFun", "java.lang.Object.wait") :- ()
+  NotDefines("pointstofun.PointsToFun", "java.lang.Object.wait#1") :- ()
+  NotDefines("pointstofun.PointsToFun", "java.lang.Object.wait#2") :- ()
+  NotDefines("pointstofun.PointsToFun", "java.lang.Object.synchronized") :- ()
+  NotDefines("pointstofun.PointsToFun", "java.lang.Object.eq") :- ()
+  NotDefines("pointstofun.A1", "scala.Any.asInstanceOf") :- ()
+  NotDefines("pointstofun.A1", "scala.Any.equals") :- ()
+  NotDefines("pointstofun.A1", "scala.Any.isInstanceOf") :- ()
+  NotDefines("pointstofun.A1", "scala.Any.##") :- ()
+  NotDefines("pointstofun.A1", "scala.Any.$asInstanceOf$") :- ()
+  NotDefines("pointstofun.A1", "scala.Any.getClass") :- ()
+  NotDefines("pointstofun.A1", "scala.Any.!=") :- ()
+  NotDefines("pointstofun.A1", "scala.Any.==") :- ()
+  NotDefines("pointstofun.A1", "scala.Any.$isInstanceOf$") :- ()
+  NotDefines("pointstofun.A1", "scala.Any.asInstanceOf") :- ()
+  NotDefines("pointstofun.A1", "scala.Any.equals") :- ()
+  NotDefines("pointstofun.A1", "scala.Any.isInstanceOf") :- ()
+  NotDefines("pointstofun.A1", "scala.Any.##") :- ()
+  NotDefines("pointstofun.A1", "scala.Any.$asInstanceOf$") :- ()
+  NotDefines("pointstofun.A1", "scala.Any.getClass") :- ()
+  NotDefines("pointstofun.A1", "scala.Any.!=") :- ()
+  NotDefines("pointstofun.A1", "scala.Any.==") :- ()
+  NotDefines("pointstofun.A1", "scala.Any.$isInstanceOf$") :- ()
+  NotDefines("pointstofun.A1", "java.lang.Object.finalize") :- ()
+  NotDefines("pointstofun.A1", "java.lang.Object.notifyAll") :- ()
+  NotDefines("pointstofun.A1", "java.lang.Object.equals") :- ()
+  NotDefines("pointstofun.A1", "java.lang.Object.ne") :- ()
+  NotDefines("pointstofun.A1", "java.lang.Object.getClass") :- ()
+  NotDefines("pointstofun.A1", "java.lang.Object.notify") :- ()
+  NotDefines("pointstofun.A1", "java.lang.Object.hashCode") :- ()
+  NotDefines("pointstofun.A1", "java.lang.Object.<init>") :- ()
+  NotDefines("pointstofun.A1", "java.lang.Object.toString") :- ()
+  NotDefines("pointstofun.A1", "java.lang.Object.clone") :- ()
+  NotDefines("pointstofun.A1", "java.lang.Object.wait") :- ()
+  NotDefines("pointstofun.A1", "java.lang.Object.wait#1") :- ()
+  NotDefines("pointstofun.A1", "java.lang.Object.wait#2") :- ()
+  NotDefines("pointstofun.A1", "java.lang.Object.synchronized") :- ()
+  NotDefines("pointstofun.A1", "java.lang.Object.eq") :- ()
+  NotDefines("pointstofun.A1", "pointstofun.A.<init>") :- ()
+  NotDefines("pointstofun.A2", "scala.Any.asInstanceOf") :- ()
+  NotDefines("pointstofun.A2", "scala.Any.equals") :- ()
+  NotDefines("pointstofun.A2", "scala.Any.isInstanceOf") :- ()
+  NotDefines("pointstofun.A2", "scala.Any.##") :- ()
+  NotDefines("pointstofun.A2", "scala.Any.$asInstanceOf$") :- ()
+  NotDefines("pointstofun.A2", "scala.Any.getClass") :- ()
+  NotDefines("pointstofun.A2", "scala.Any.!=") :- ()
+  NotDefines("pointstofun.A2", "scala.Any.==") :- ()
+  NotDefines("pointstofun.A2", "scala.Any.$isInstanceOf$") :- ()
+  NotDefines("pointstofun.A2", "scala.Any.asInstanceOf") :- ()
+  NotDefines("pointstofun.A2", "scala.Any.equals") :- ()
+  NotDefines("pointstofun.A2", "scala.Any.isInstanceOf") :- ()
+  NotDefines("pointstofun.A2", "scala.Any.##") :- ()
+  NotDefines("pointstofun.A2", "scala.Any.$asInstanceOf$") :- ()
+  NotDefines("pointstofun.A2", "scala.Any.getClass") :- ()
+  NotDefines("pointstofun.A2", "scala.Any.!=") :- ()
+  NotDefines("pointstofun.A2", "scala.Any.==") :- ()
+  NotDefines("pointstofun.A2", "scala.Any.$isInstanceOf$") :- ()
+  NotDefines("pointstofun.A2", "java.lang.Object.finalize") :- ()
+  NotDefines("pointstofun.A2", "java.lang.Object.notifyAll") :- ()
+  NotDefines("pointstofun.A2", "java.lang.Object.equals") :- ()
+  NotDefines("pointstofun.A2", "java.lang.Object.ne") :- ()
+  NotDefines("pointstofun.A2", "java.lang.Object.getClass") :- ()
+  NotDefines("pointstofun.A2", "java.lang.Object.notify") :- ()
+  NotDefines("pointstofun.A2", "java.lang.Object.hashCode") :- ()
+  NotDefines("pointstofun.A2", "java.lang.Object.<init>") :- ()
+  NotDefines("pointstofun.A2", "java.lang.Object.toString") :- ()
+  NotDefines("pointstofun.A2", "java.lang.Object.clone") :- ()
+  NotDefines("pointstofun.A2", "java.lang.Object.wait") :- ()
+  NotDefines("pointstofun.A2", "java.lang.Object.wait#1") :- ()
+  NotDefines("pointstofun.A2", "java.lang.Object.wait#2") :- ()
+  NotDefines("pointstofun.A2", "java.lang.Object.synchronized") :- ()
+  NotDefines("pointstofun.A2", "java.lang.Object.eq") :- ()
+  NotDefines("pointstofun.A2", "pointstofun.A.<init>") :- ()
+
+  Reachable("pointstofun.Main.main") :- ()
+
+  ThisVar("pointstofun.Main.<init>", "pointstofun.Main.<init>.this") :- ()
+  ThisVar("pointstofun.Main.writeReplace", "pointstofun.Main.writeReplace.this") :- ()
+  ThisVar("pointstofun.Main.main", "pointstofun.Main.main.this") :- ()
+  ThisVar("pointstofun.A.<init>", "pointstofun.A.<init>.this") :- ()
+  ThisVar("pointstofun.PointsToFun.<init>", "pointstofun.PointsToFun.<init>.this") :- ()
+  ThisVar("pointstofun.PointsToFun.fun1", "pointstofun.PointsToFun.fun1.this") :- ()
+  ThisVar("pointstofun.PointsToFun.fun2", "pointstofun.PointsToFun.fun2.this") :- ()
+  ThisVar("pointstofun.PointsToFun.id", "pointstofun.PointsToFun.id.this") :- ()
+  ThisVar("pointstofun.A1.<init>", "pointstofun.A1.<init>.this") :- ()
+  ThisVar("pointstofun.A2.<init>", "pointstofun.A2.<init>.this") :- ()
+
+  VCall("pointstofun.Main.<init>.this", "java.lang.Object.<init>", "instr#0", "pointstofun.Main.<init>") :- ()
+  VCall("pointstofun.Main.writeReplace.temp", "scala.runtime.ModuleSerializationProxy.<init>", "instr#1", "pointstofun.Main.writeReplace") :- ()
+  VCall("pointstofun.Main.main.p", "pointstofun.PointsToFun.<init>", "instr#2", "pointstofun.Main.main") :- ()
+  VCall("pointstofun.Main.main.p", "pointstofun.PointsToFun.fun1", "instr#3", "pointstofun.Main.main") :- ()
+  VCall("pointstofun.Main.main.p", "pointstofun.PointsToFun.fun2", "instr#4", "pointstofun.Main.main") :- ()
+  VCall("pointstofun.A.<init>.this", "java.lang.Object.<init>", "instr#5", "pointstofun.A.<init>") :- ()
+  VCall("pointstofun.PointsToFun.<init>.this", "java.lang.Object.<init>", "instr#6", "pointstofun.PointsToFun.<init>") :- ()
+  VCall("pointstofun.PointsToFun.fun1.a1", "pointstofun.A1.<init>", "instr#7", "pointstofun.PointsToFun.fun1") :- ()
+  VCall("pointstofun.PointsToFun.fun1.this", "pointstofun.PointsToFun.id", "instr#8", "pointstofun.PointsToFun.fun1") :- ()
+  VCall("pointstofun.PointsToFun.fun2.a2", "pointstofun.A2.<init>", "instr#9", "pointstofun.PointsToFun.fun2") :- ()
+  VCall("pointstofun.PointsToFun.fun2.this", "pointstofun.PointsToFun.id", "instr#10", "pointstofun.PointsToFun.fun2") :- ()
+  VCall("pointstofun.A1.<init>.this", "pointstofun.A.<init>", "instr#11", "pointstofun.A1.<init>") :- ()
+  VCall("pointstofun.A2.<init>.this", "pointstofun.A.<init>", "instr#12", "pointstofun.A2.<init>") :- ()
+
+  val varr, heap, meth, to, from, base, baseH, fld, ref = program.variable()
+  val toMeth, thiss, thisFrom, invo, sig, inMeth, heapT, m, n, actualFld = program.variable()
+  val classA, classB, classC, sigA, sigB, sigC = program.variable()
+
+  VarPointsTo(varr, heap) :- (Reachable(meth), Alloc(varr, heap, meth))
+  VarPointsTo(to, heap) :- (Move(to, from), VarPointsTo(from, heap))
+  FldPointsTo(baseH, fld, heap) :- (Store(base, fld, from), VarPointsTo(from, heap), VarPointsTo(base, baseH))
+  VarPointsTo(to, heap) :- (Load(to, base, fld, inMeth), VarPointsTo(base, baseH), FldPointsTo(baseH, fld, heap))
+
+  Reachable(toMeth) :-
+    (VCall(base, sig, invo, inMeth), Reachable(inMeth),
+      VarPointsTo(base, heap),
+      HeapType(heap, heapT), LookUp(heapT, sig, toMeth),
+      ThisVar(toMeth, thiss))
+
+  VarPointsTo(thiss, heap) :-
+    (VCall(base, sig, invo, inMeth), Reachable(inMeth),
+      VarPointsTo(base, heap),
+      HeapType(heap, heapT), LookUp(heapT, sig, toMeth),
+      ThisVar(toMeth, thiss))
+
+  CallGraph(invo, toMeth) :-
+    (VCall(base, sig, invo, inMeth), Reachable(inMeth),
+      VarPointsTo(base, heap),
+      HeapType(heap, heapT), LookUp(heapT, sig, toMeth),
+      ThisVar(toMeth, thiss))
+
+  // rules for dynamic val
+  Reachable(toMeth) :-
+    (Load(to, base, sig, inMeth), Reachable(inMeth),
+      VarPointsTo(base, heap),
+      HeapType(heap, heapT), LookUp(heapT, sig, toMeth),
+      ThisVar(toMeth, thiss),
+      FormalReturn(toMeth, from))
+
+  VarPointsTo(thiss, heap) :-
+    (Load(to, base, sig, inMeth), Reachable(inMeth),
+      VarPointsTo(base, heap),
+      HeapType(heap, heapT), LookUp(heapT, sig, toMeth),
+      ThisVar(toMeth, thiss),
+      FormalReturn(toMeth, from))
+
+  InterProcAssign(to, from) :-
+    (Load(to, base, sig, inMeth), Reachable(inMeth),
+      VarPointsTo(base, heap),
+      HeapType(heap, heapT), LookUp(heapT, sig, toMeth),
+      ThisVar(toMeth, thiss),
+      FormalReturn(toMeth, from))
+
+  InterProcAssign(to, from) :- (CallGraph(invo, meth), FormalArg(meth, m, n, to), ActualArg(invo, m, n, from))
+
+  InterProcAssign(to, from) :- (CallGraph(invo, meth), FormalReturn(meth, from), ActualReturn(invo, to))
+
+  VarPointsTo(to, heap) :- (InterProcAssign(to, from), VarPointsTo(from, heap))
+
+  Reachable(toMeth) :- (StaticCall(toMeth, invo, inMeth), Reachable(inMeth))
+
+  CallGraph(invo, toMeth) :- (StaticCall(toMeth, invo, inMeth), Reachable(inMeth))
+
+  // without negation support, we generate NotDefines facts
+  LookUp(classC, sig, meth) :- DefinesWith(classC, sig, meth)
+  LookUp(classC, sigA, sigB) :- (LookUp(classB, sigA, sigB), NotDefines(classC, sigB), Extends(classC, classB))
+  DefinesWith(classC, sigA, sigC) :- (DefinesWith(classC, sigB, sigC), DefinesWith(classB, sigA, sigB))
+  DefinesWith(classC, sigC, sigC) :- DefinesWith(classC, sigB, sigC)
+
+  // with negations we would have something like:
+  // LookUp(classC, sig, meth) :- DefinesWith(classC, sig, meth)
+  // LookUp(classC, sigA, sigB) :- (LookUp(classB, sigA, sigB), Not(Defines(classC, sigB)), Extends(classC, classB))
+  // DefinesWith(classC, sigA, sigC) :- (DefinesWith(classC, sigB, sigC), DefinesWith(classB, sigA, sigB))
+  // DefinesWith(classC, sigC, sigC) :- DefinesWith(classC, sigB, sigC)
+  // Defines(classC, sigA) :- DefinesWith(classC, sigA, sigC)
+
+  // super calls
+  Reachable(toMeth) :-
+    (SuperCall(toMeth, invo, inMeth), Reachable(inMeth),
+      ThisVar(inMeth, thisFrom), VarPointsTo(thisFrom, heap),
+      ThisVar(toMeth, thiss))
+
+  VarPointsTo(thiss, heap) :-
+    (SuperCall(toMeth, invo, inMeth), Reachable(inMeth),
+      ThisVar(inMeth, thisFrom), VarPointsTo(thisFrom, heap),
+      ThisVar(toMeth, thiss))
+
+  CallGraph(invo, toMeth) :-
+    (SuperCall(toMeth, invo, inMeth), Reachable(inMeth),
+      ThisVar(inMeth, thisFrom), VarPointsTo(thisFrom, heap),
+      ThisVar(toMeth, thiss))
+
+  VarPointsTo(to, heap) :-
+    (Load(to, base, fld, inMeth), VarPointsTo(base, baseH),
+      HeapType(baseH, heapT), LookUp(heapT, fld, actualFld),
+      FieldValDef(actualFld, from),
+      VarPointsTo(from, heap))
+
+  println(program.ee.storageManager.toString())
+
+  println(s"RES=${VarPointsTo.solve().size}")
+}
+
 @main def main = {
 //  val engine = new NaiveExecutionEngine(new VolcanoStorageManager())
 //  val program = Program(engine)
@@ -650,12 +1023,12 @@ def isAfter(program: Program) =
 //  acyclic(program0)
 //  println("\n\n_______________________\n\n")
 
-  val dotty = staging.Compiler.make(getClass.getClassLoader)
-  var sort = 1
+//  val dotty = staging.Compiler.make(getClass.getClassLoader)
+//  var sort = 1
 //    println(s"OLD SN: $sort")
-//    given engine1: ExecutionEngine = new SemiNaiveExecutionEngine(new DefaultStorageManager())
-//    val program1 = Program(engine1)
-//    func(program1)
+    given engine1: ExecutionEngine = new SemiNaiveExecutionEngine(new DefaultStorageManager())
+    val program1 = Program(engine1)
+    pointstofun(program1)
 //    println("\n\n_______________________\n\n")
 
 //    val jo2 = JITOptions(ir.OpCode.OTHER, dotty, aot = false, block = true)
@@ -666,12 +1039,12 @@ def isAfter(program: Program) =
 //    isEqual(program3a)
 //    println("\n\n_______________________\n\n")
 //
-    val jo = JITOptions(ir.OpCode.EVAL_RULE_SN, dotty, aot = false, block = true, sortOrder = (0, 0, 0))
-    println("JIT")
-    given engine3: ExecutionEngine = new StagedExecutionEngine(new DefaultStorageManager(), jo)
-    val program3 = Program(engine3)
-    ackermann(program3)
-    println("\n\n_______________________\n\n")
+//    val jo = JITOptions(ir.OpCode.EVAL_RULE_SN, dotty, aot = false, block = true, sortOrder = (0, 0, 0))
+//    println("JIT")
+//    given engine3: ExecutionEngine = new StagedExecutionEngine(new DefaultStorageManager(), jo)
+//    val program3 = Program(engine3)
+//    ackermann(program3)
+//    println("\n\n_______________________\n\n")
 
 //  println("JIT Snippet")
 //  val engine4: ExecutionEngine = new StagedSnippetExecutionEngine(new DefaultStorageManager(), jo)

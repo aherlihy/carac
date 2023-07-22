@@ -1,0 +1,16 @@
+String	String	String
+listlib.Main.writeReplace.temp	new[scala.runtime.ModuleSerializationProxy]#0	listlib.Main.writeReplace
+listlib.Main.main.temp#4	new[listlib.Empty]#1	listlib.Main.main
+listlib.Main.main.temp#5	new[listlib.IntWrap]#2	listlib.Main.main
+listlib.Main.main.temp#7	new[listlib.IntWrap]#3	listlib.Main.main
+listlib.Main.main.temp#9	new[listlib.IntWrap]#4	listlib.Main.main
+listlib.Main.main.temp#11	new[listlib.IntWrap]#5	listlib.Main.main
+listlib.Main.main.range.build	new[listlib.Empty]#6	listlib.Main.main.range
+listlib.Main.main.range.elem$4	new[listlib.IntWrap]#7	listlib.Main.main.range
+listlib.SimpleList.::.temp	new[listlib.Cons]#8	listlib.SimpleList.::
+listlib.SimpleList.reverse.temp#3	new[listlib.Empty]#9	listlib.SimpleList.reverse
+listlib.SimpleList.take.temp	new[listlib.Empty]#10	listlib.SimpleList.take
+listlib.Empty.get.temp#1	new[java.lang.Exception]#11	listlib.Empty.get
+listlib.Empty.head.temp#1	new[java.lang.Exception]#12	listlib.Empty.head
+listlib.Empty.tail.temp#1	new[java.lang.Exception]#13	listlib.Empty.tail
+listlib.Cons.++.temp	new[listlib.Cons]#14	listlib.Cons.++

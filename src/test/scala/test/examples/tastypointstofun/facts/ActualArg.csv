@@ -1,0 +1,4 @@
+String	String	String	String
+instr#1	list0	arg0	pointstofun.Main.writeReplace.temp#1
+instr#8	list0	arg0	pointstofun.PointsToFun.fun1.a1
+instr#10	list0	arg0	pointstofun.PointsToFun.fun2.a2

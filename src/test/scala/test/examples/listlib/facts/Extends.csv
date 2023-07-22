@@ -1,0 +1,8 @@
+String	String
+listlib.Main	java.lang.Object
+listlib.SimpleList	java.lang.Object
+listlib.SimpleList	listlib.Printable
+listlib.IntWrap	java.lang.Object
+listlib.Printable	java.lang.Object
+listlib.Empty	listlib.SimpleList
+listlib.Cons	listlib.SimpleList
