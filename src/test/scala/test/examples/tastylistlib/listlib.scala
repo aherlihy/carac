@@ -1,4 +1,4 @@
-package test.examples.tastylistlib.facts
+package test.examples.tastylistlib
 
 import datalog.dsl.{Constant, Program}
 import test.ExampleTestGenerator

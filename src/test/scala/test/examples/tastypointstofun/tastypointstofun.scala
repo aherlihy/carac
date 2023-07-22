@@ -1,4 +1,4 @@
-package test.examples.tastypointstofun.facts
+package test.examples.tastypointstofun
 
 import datalog.dsl.{Constant, Program}
 import test.ExampleTestGenerator
