@@ -1,11 +1,11 @@
-package test.examples.listlib.facts
+package test.examples.tastylistlib.facts
 
 import datalog.dsl.{Constant, Program}
 import test.ExampleTestGenerator
 
-class listlib_test extends ExampleTestGenerator("listlib") with listlib
+class tastylistlib_test extends ExampleTestGenerator("tastylistlib") with tastylistlib
 
-trait listlib {
+trait tastylistlib {
   val toSolve = "VarPointsTo"
 
   def pretest(program: Program): Unit = {
