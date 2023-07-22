@@ -42,6 +42,7 @@ trait tastypointstofun {
     val Refers = program.relation[String]("Refers")
     val Overrides = program.relation[String]("Overrides")
     val TopLevel = program.relation[String]("TopLevel")
+    val Defines = program.relation[String]("Defines")
 
     val varr, heap, meth, to, from, base, baseH, fld, ref = program.variable()
     val toMeth, thiss, thisFrom, invo, sig, inMeth, heapT, m, n, actualFld = program.variable()
@@ -103,17 +104,17 @@ trait tastypointstofun {
     CallGraph(invo, toMeth) :- (StaticCall(toMeth, invo, inMeth), Reachable(inMeth))
 
     // without negation support, we generate NotDefines facts
-    LookUp(classC, sig, meth) :- DefinesWith(classC, sig, meth)
-    LookUp(classC, sigA, sigB) :- (LookUp(classB, sigA, sigB), NotDefines(classC, sigB), Extends(classC, classB))
-    DefinesWith(classC, sigA, sigC) :- (DefinesWith(classC, sigB, sigC), DefinesWith(classB, sigA, sigB))
-    DefinesWith(classC, sigC, sigC) :- DefinesWith(classC, sigB, sigC)
+//    LookUp(classC, sig, meth) :- DefinesWith(classC, sig, meth)
+//    LookUp(classC, sigA, sigB) :- (LookUp(classB, sigA, sigB), NotDefines(classC, sigB), Extends(classC, classB))
+//    DefinesWith(classC, sigA, sigC) :- (DefinesWith(classC, sigB, sigC), DefinesWith(classB, sigA, sigB))
+//    DefinesWith(classC, sigC, sigC) :- DefinesWith(classC, sigB, sigC)
 
     // with negations we would have something like:
-    // LookUp(classC, sig, meth) :- DefinesWith(classC, sig, meth)
-    // LookUp(classC, sigA, sigB) :- (LookUp(classB, sigA, sigB), Not(Defines(classC, sigB)), Extends(classC, classB))
-    // DefinesWith(classC, sigA, sigC) :- (DefinesWith(classC, sigB, sigC), DefinesWith(classB, sigA, sigB))
-    // DefinesWith(classC, sigC, sigC) :- DefinesWith(classC, sigB, sigC)
-    // Defines(classC, sigA) :- DefinesWith(classC, sigA, sigC)
+    Defines(classC, sigA) :- DefinesWith(classC, sigA, sigC)
+    LookUp(classC, sig, meth) :- DefinesWith(classC, sig, meth)
+    LookUp(classC, sigA, sigB) :- (LookUp(classB, sigA, sigB), !Defines(classC, sigB), Extends(classC, classB))
+    DefinesWith(classC, sigA, sigC) :- (DefinesWith(classC, sigB, sigC), DefinesWith(classB, sigA, sigB))
+    DefinesWith(classC, sigC, sigC) :- DefinesWith(classC, sigB, sigC)
 
     // super calls
     Reachable(toMeth) :-
