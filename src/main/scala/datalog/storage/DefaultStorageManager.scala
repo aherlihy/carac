@@ -1,7 +1,7 @@
 package datalog.storage
 
 import datalog.dsl.{Atom, Constant, Variable}
-import datalog.execution.{AllIndexes, JoinIndexes}
+import datalog.execution.{AllIndexes, JoinIndexes, PredicateType}
 import datalog.storage.CollectionsCasts.*
 
 import scala.collection.{immutable, mutable}
@@ -230,7 +230,7 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
                 val q = if (r == d && !found && i > idx)
                   found = true
                   idx = i
-                  if (typ != "-") // if negated then we want the complement of all facts not just the delta
+                  if (typ != PredicateType.NEGATED) // if negated then we want the complement of all facts not just the delta
                     getKnownDeltaDB(r)
                   else
                     getKnownDerivedDB(r)
@@ -238,15 +238,14 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
                   getKnownDerivedDB(r)
 
                 typ match
-                  case "+" =>
-                    q
-                  case "-" =>
+                  case PredicateType.NEGATED =>
                     val arity = k.atoms(i + 1).terms.length
                     val compl = getComplement(arity)
                     val res = diff(compl, q)
                     debug("found negated relation, rule=", () => s"${printer.ruleToString(k.atoms)}\n\tarity=$arity, compl=${printer.factToString(compl)}, Q=${printer.factToString(q)}, final res=${printer.factToString(res)}")
                     res
-              ), k, (0, 0, 0)).wrapped // don't sort when not staging
+                  case _ => q
+            ), k, (0, 0, 0)).wrapped // don't sort when not staging
           }).distinct
       ))
   }
@@ -264,14 +263,13 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
                 val (typ, r) = md
                 val q = getKnownDerivedDB(r)
                 typ match
-                  case "+" =>
-                    q
-                  case "-" =>
+                  case PredicateType.NEGATED =>
                     val arity = k.atoms(i + 1).terms.length
                     val compl = getComplement(arity)
                     val res = diff(compl, q)
                     debug(s"found negated relation, rule=", () => s"${printer.ruleToString(k.atoms)}\n\tarity=$arity, compl=${printer.factToString(compl)}, Q=${printer.factToString(q)}, final res=${printer.factToString(res)}")
                     res
+                  case _ => q
               ), k // TODO: warn if EDB is empty? Right now can't tell the difference between undeclared and empty EDB)
             ), k
           ).wrapped.distinct

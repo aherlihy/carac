@@ -11,6 +11,9 @@ import scala.reflect.ClassTag
 
 type AllIndexes = mutable.Map[String, JoinIndexes]
 
+enum PredicateType:
+  case POSITIVE, NEGATED
+
 /**
  * Wrapper object for join keys for IDB rules
  *
@@ -23,7 +26,7 @@ type AllIndexes = mutable.Map[String, JoinIndexes]
 case class JoinIndexes(varIndexes: Seq[Seq[Int]],
                        constIndexes: Map[Int, Constant],
                        projIndexes: Seq[(String, Constant)],
-                       deps: Seq[(String, RelationId)],
+                       deps: Seq[(PredicateType, RelationId)],
                        atoms: Array[Atom],
                        edb: Boolean = false
                       ) {
@@ -50,7 +53,7 @@ object JoinIndexes {
 
     val body = rule.drop(1)
 
-    val deps = body.map(a => (if (a.negated) "-" else "+", a.rId))
+    val deps = body.map(a => (if (a.negated) PredicateType.NEGATED else PredicateType.POSITIVE, a.rId))
 
     val typeHelper = body.flatMap(a => a.terms.map(* => !a.negated))
 

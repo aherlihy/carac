@@ -1,10 +1,11 @@
 package datalog.execution.ir
 
-import datalog.execution.{JITOptions, StagedCompiler, ir}
+import datalog.execution.{JITOptions, PredicateType, StagedCompiler, ir}
 import datalog.execution.ast.{ASTNode, AllRulesNode, LogicAtom, ProgramNode, RuleNode}
 import datalog.storage.{DB, EDB, KNOWLEDGE, RelationId, StorageManager}
 import datalog.tools.Debug.debug
 
+import java.util.function.Predicate
 import scala.collection.mutable
 
 class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
@@ -66,13 +67,12 @@ class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
               val (typ, r) = md
               val q = ScanOp(r, DB.Derived, KNOWLEDGE.Known)
               typ match
-                case "+" =>
-                  q
-                case "-" =>
+                case PredicateType.NEGATED =>
                   val arity = k.atoms(i + 1).terms.length
                   val res = DiffOp(ComplementOp(arity), q)
                   debug(s"found negated relation, rule=", () => s"${ctx.storageManager.printer.ruleToString(k.atoms)}\n\tarity=$arity")
                   res
+                case _ => q
             ):_*
           )
       case _ =>
@@ -107,20 +107,19 @@ class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
                   val q = if (r == d && !found && i > idx)
                     found = true
                     idx = i
-                    if (typ != "-") // if negated then we want the complement of all facts not just the delta
+                    if (typ != PredicateType.NEGATED) // if negated then we want the complement of all facts not just the delta
                       ScanOp(r, DB.Delta, KNOWLEDGE.Known)
                     else
                       ScanOp(r, DB.Derived, KNOWLEDGE.Known)
                   else
                     ScanOp(r, DB.Derived, KNOWLEDGE.Known)
                   typ match
-                    case "+" =>
-                      q
-                    case "-" =>
+                    case PredicateType.NEGATED =>
                       val arity = k.atoms(i + 1).terms.length
                       val res = DiffOp(ComplementOp(arity), q)
                       debug(s"found negated relation, rule=", () => s"${ctx.storageManager.printer.ruleToString(k.atoms)}\n\tarity=$arity")
                       res
+                    case _ => q
                 }): _*
               )
             }):_*

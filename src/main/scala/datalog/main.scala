@@ -1074,9 +1074,9 @@ def stratified(program: Program) = {
 
   val dotty = staging.Compiler.make(getClass.getClassLoader)
   println("SEMINAIVE:")
-  given engine1: ExecutionEngine = new SemiNaiveExecutionEngine(new DefaultStorageManager())
+  given engine1: ExecutionEngine = new NaiveExecutionEngine(new DefaultStorageManager())
   val program1 = Program(engine1)
-  clique(program1)
+  tc(program1)
   println("\n\n_______________________\n\n")
 
 //    val jo2 = JITOptions(ir.OpCode.OTHER, dotty, aot = false, block = true)

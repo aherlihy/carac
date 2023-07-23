@@ -2,6 +2,7 @@ package datalog.storage
 
 import datalog.dsl.{Constant, Term, Variable}
 import datalog.dsl.Variable
+import datalog.execution.PredicateType
 
 import scala.collection.mutable
 
@@ -46,9 +47,9 @@ class NS() {
   def apply(rId: RelationId): String =
     rIdToName.getOrElse(rId, s"<$rId>")
 
-  def apply(tup: (String, RelationId)): String =
+  def apply(tup: (PredicateType, RelationId)): String =
     val name = rIdToName.getOrElse(tup._2, s"<${tup._2}>")
-    s"${if (tup._1 == "-") "!" else ""}$name"
+    s"${if (tup._1 == PredicateType.NEGATED) "!" else ""}$name"
 
   def update(key: String, value: RelationId): Unit = {
     nameToRid(key) = value

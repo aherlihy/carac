@@ -45,7 +45,7 @@ class NaiveExecutionEngine(val storageManager: StorageManager, stratified: Boole
 
   def insertEDB(rule: Atom): Unit = {
     if (!storageManager.edbContains(rule.rId))
-      prebuiltOpKeys.getOrElseUpdate(rule.rId, mutable.ArrayBuffer[JoinIndexes]()).addOne(JoinIndexes(IndexedSeq(), Map(), IndexedSeq(), Seq(("+", rule.rId)), Array(rule), true))
+      prebuiltOpKeys.getOrElseUpdate(rule.rId, mutable.ArrayBuffer[JoinIndexes]()).addOne(JoinIndexes(IndexedSeq(), Map(), IndexedSeq(), Seq((PredicateType.POSITIVE, rule.rId)), Array(rule), true))
     storageManager.insertEDB(rule)
   }
 

@@ -2,7 +2,7 @@ package datalog.storage
 
 import datalog.dsl.{Atom, Constant, Variable}
 import datalog.tools.Debug.debug
-import datalog.execution.{AllIndexes, JoinIndexes}
+import datalog.execution.{AllIndexes, JoinIndexes, PredicateType}
 
 import scala.collection.{immutable, mutable}
 
@@ -38,14 +38,13 @@ class VolcanoStorageManager(ns: NS = NS()) extends CollectionsStorageManager(ns)
                 val (typ, r) = md
                 val q = Scan(getKnownDerivedDB(r), r)
                 typ match
-                  case "+" =>
-                    q
-                  case "-" =>
+                  case PredicateType.NEGATED =>
                     val arity = k.atoms(i + 1).terms.length
                     val compl = getComplement(arity)
                     val res = Diff(Seq(Scan(compl, r), q))
                     debug(s"found negated relation, rule=", () => s"${printer.ruleToString(k.atoms)}\n\tarity=$arity")
                     res
+                  case _ => q
 
               ), k.varIndexes, k.constIndexes),
               k.projIndexes
@@ -81,21 +80,20 @@ class VolcanoStorageManager(ns: NS = NS()) extends CollectionsStorageManager(ns)
                     val q = if (r == d && !found && i > idx)
                       found = true
                       idx = i
-                      if (typ != "-") // if negated then we want the complement of all facts not just the delta
+                      if (typ != PredicateType.NEGATED) // if negated then we want the complement of all facts not just the delta
                         Scan(getKnownDeltaDB(r), r)
                       else
                         Scan(getKnownDerivedDB(r), r)
                     else
                       Scan(getKnownDerivedDB(r), r)
                     typ match
-                      case "+" =>
-                        q
-                      case "-" =>
+                      case PredicateType.NEGATED =>
                         val arity = k.atoms(i + 1).terms.length
                         val compl = getComplement(arity)
                         val res = Diff(Seq(Scan(compl, r), q))
                         debug(s"found negated relation, rule=", () => s"${printer.ruleToString(k.atoms)}\n\tarity=$arity")
                         res
+                      case _ => q
                   }),
                   k.varIndexes,
                   k.constIndexes

@@ -42,6 +42,12 @@ class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: J
     }
   }
 
+  given ToExpr[PredicateType] with {
+    def apply(x: PredicateType)(using Quotes) = {
+      Expr(x)
+    }
+  }
+
   given ToExpr[JoinIndexes] with {
     def apply(x: JoinIndexes)(using Quotes) = {
       '{
