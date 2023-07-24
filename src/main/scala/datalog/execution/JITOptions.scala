@@ -11,8 +11,7 @@ case class JITOptions(
                        block: Boolean = true,
                        thresholdNum: Int = 0,
                        thresholdVal: Float = 2,
-                       sortOrder: (Int, Int, Int) = (0, 0, 0),
-                       stratified: Boolean = true
+                       sortOrder: (Int, Int, Int) = (0, 0, 0)
                      ) {
   private val unique = Seq(OpCode.DOWHILE, OpCode.EVAL_NAIVE, OpCode.LOOP_BODY)
   if (!aot && !block && unique.contains(granularity))

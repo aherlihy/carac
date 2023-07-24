@@ -5,13 +5,11 @@ if [[ $# -eq 0 ]] ; then
     exit 0
 fi
 
-TESTNAME="$1"
-TESTDIR=./src/test/scala/test/examples/$TESTNAME
+TESTNAME=$1
+TESTDIR=./src/test/scala/graphs/fromFile/complete/$TESTNAME
 
-IMPORTS="package test.examples.$TESTNAME\nimport datalog.dsl.{Constant, Program}\nimport test.ExampleTestGenerator\n"
-
-TEMPLATE="class ${TESTNAME}_test extends ExampleTestGenerator(\"$TESTNAME\") with $TESTNAME\n"
-TEMPLATE2="trait $TESTNAME {\n  val toSolve: String = \"$TESTNAME\"\n  def pretest(program: Program): Unit = {"
+TEMPLATE="package graphs\n\nimport datalog.dsl.{Program, Constant}\nclass $1 extends TestIDB {\n"
+TEMPLATE2="  def run(program: Program): Unit = {"
 
 echo "mkdir $TESTDIR/expected"
 mkdir "$TESTDIR"/expected
@@ -34,13 +32,13 @@ for i in "$TESTDIR"/*.dl; do
   [ -f "$i" ] || break
   PROGRAM=${i%.dl}.scala
   touch $PROGRAM
-  echo -e "$IMPORTS$TEMPLATE$TEMPLATE2" > $PROGRAM
+  echo -e "$TEMPLATE" > $PROGRAM
+  echo -e "$TEMPLATE2" >> $PROGRAM
   for e in $TESTDIR/facts/*.facts; do
     [ -f "$e" ] || break
     EDB=$(basename $e .facts)
     echo -e "    val $EDB = program.namedRelation[Constant](\"$EDB\")\n" >> $PROGRAM
   done
-  echo -e "    val x, y, z = program.variable()" >> $PROGRAM
   for j in $TESTDIR/expected/*.csv; do
     [ -f "$j" ] || break
     IDB=$(basename $j .csv)

@@ -2,7 +2,6 @@ package datalog.storage
 
 import datalog.dsl.{Constant, Term, Variable}
 import datalog.dsl.Variable
-import datalog.execution.PredicateType
 
 import scala.collection.mutable
 
@@ -42,15 +41,8 @@ trait Database[T <: EDB] {
 class NS() {
   private val nameToRid = mutable.Map[String, RelationId]()
   private val rIdToName = mutable.Map[RelationId, String]()
-  def apply(name: String): RelationId =
-    nameToRid.getOrElse(name, -1)
-  def apply(rId: RelationId): String =
-    rIdToName.getOrElse(rId, s"<$rId>")
-
-  def apply(tup: (PredicateType, RelationId)): String =
-    val name = rIdToName.getOrElse(tup._2, s"<${tup._2}>")
-    s"${if (tup._1 == PredicateType.NEGATED) "!" else ""}$name"
-
+  def apply(name: String): RelationId = nameToRid(name)
+  def apply(rId: RelationId): String = rIdToName(rId)
   def update(key: String, value: RelationId): Unit = {
     nameToRid(key) = value
     rIdToName(value) = key

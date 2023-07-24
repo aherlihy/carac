@@ -2,16 +2,15 @@ package datalog.execution
 
 import datalog.dsl.Atom
 import datalog.tools.Debug.debug
-import datalog.storage.{NS, RelationId}
+import datalog.storage.NS
 
 import scala.collection.mutable
 
-class Node(r: RelationId)(using ns: NS) {
-  val rId: RelationId = r
+private class Node(r: Int)(using ns: NS) {
+  val rId: Int = r
   var idx: Int = -1
   var lowLink: Int = -1
-  var edges: mutable.Set[Node] = mutable.Set[Node]() // "weak", i.e. positive edges
-  var negEdges: mutable.Set[Node] = mutable.Set[Node]() // "strong", i.e. negative edges
+  var edges: mutable.Set[Node] = mutable.Set[Node]()
   var onStack: Boolean = false
 
   // self-recursion, i.e. the head predicate appears in the body at least once. Does not indicate if there is any multi-hop/mutual recursion.
@@ -24,23 +23,9 @@ class Node(r: RelationId)(using ns: NS) {
       + "}"
 }
 
-class PrecedenceGraph(using ns: NS /* ns used for pretty printing */) {
-  private val adjacencyList = mutable.Map[RelationId, Seq[RelationId]]()
-  private val negAdjacencyList = mutable.Map[RelationId, Seq[RelationId]]()
-  private val aliases = mutable.Map[RelationId, RelationId]()
-  val idbs: mutable.Set[RelationId] = mutable.Set[RelationId]()
-
-  override def toString: String = buildGraph().map((r, n) => ns(r) + " -> " + (n.edges.map(e => s"+${ns(e.rId)}") ++ n.negEdges.map(e => s"-${ns(e.rId)}")).mkString("[", ", ", "]")).mkString("{", ", ", "}")
-
-  def addNode(rule: Seq[Atom]): Unit = {
-    idbs.addOne(rule.head.rId)
-    adjacencyList.update(rule.head.rId, adjacencyList.getOrElse(rule.head.rId, Seq.empty) ++ rule.drop(1).filter(!_.negated).map(_.rId))
-    negAdjacencyList.update(rule.head.rId, negAdjacencyList.getOrElse(rule.head.rId, Seq.empty) ++ rule.drop(1).filter(_.negated).map(_.rId))
-  }
-
-  def updateNodeAlias(aliases: mutable.Map[RelationId, RelationId]): Unit = {
-    this.aliases.addAll(aliases)
-  }
+class PrecedenceGraph(using ns: NS /* for debugging */) {
+  private val adjacencyList = mutable.Map[Int, mutable.Set[Int]]()
+  private val aliases = mutable.Map[Int, Int]()
 
   /**
    * Get the rule id that corresponds to the given rule id, following alias
@@ -48,7 +33,7 @@ class PrecedenceGraph(using ns: NS /* ns used for pretty printing */) {
    * @param rId the rule id to resolve
    * @return the rule id that corresponds to the given rule id
    */
-  private def getAliasedId(rId: RelationId): RelationId = {
+  private def getAliasedId(rId: Int): Int = {
     var current = rId
     while aliases.contains(current) do
       current = aliases(current)
@@ -58,8 +43,8 @@ class PrecedenceGraph(using ns: NS /* ns used for pretty printing */) {
   /**
    * Compute a new graph from the adjacency list, respecting alias definitions.
    */
-  private def buildGraph(): mutable.Map[RelationId, Node] = {
-    val nodes = mutable.Map[RelationId, Node]()
+  private def buildGraph = {
+    val nodes = mutable.Map[Int, Node]()
     for (from, list) <- adjacencyList do
       for to <- list do
         val fAlias = getAliasedId(from)
@@ -68,20 +53,32 @@ class PrecedenceGraph(using ns: NS /* ns used for pretty printing */) {
         val f = nodes.getOrElseUpdate(fAlias, Node(fAlias))
         val t = nodes.getOrElseUpdate(tAlias, Node(tAlias))
         f.edges.addOne(t)
-
-    for (from, list) <- negAdjacencyList do
-      for to <- list do
-        val fAlias = getAliasedId(from)
-        val tAlias = getAliasedId(to)
-
-        val f = nodes.getOrElseUpdate(fAlias, Node(fAlias))
-        val t = nodes.getOrElseUpdate(tAlias, Node(tAlias))
-        f.negEdges.addOne(t)
-    nodes
+    nodes.toMap
   }
 
-  // TODO: Any vertex that is not on a directed cycle forms a strongly connected component all by itself, so potentially collapse single-node strata into preceding strata
-  def tarjan(target: Option[Int] = None): Seq[Set[Int]] = {
+  val idbs: mutable.Set[Int] = mutable.Set[Int]()
+
+  override def toString: String = buildGraph.map((r, n) => ns(r) + " -> " + n.edges.map(e => ns(e.rId)).mkString("[", ", ", "]")).mkString("{", ", ", "}")
+
+  def sortedString(): String =
+    scc()
+      .map(n => n.map(ns.apply))
+      .map(_.mkString("(", ", ", ")"))
+      .mkString("{", ", ", "}")
+
+  def addNode(rule: Seq[Atom]): Unit = {
+    addNode(rule.head.rId, rule.tail.map(_.rId))
+  }
+
+  def updateNodeAlias(rId: Int, aliases: mutable.Map[Int, Int]): Unit = {
+    this.aliases.addAll(aliases)
+  }
+
+  def addNode(rId: Int, deps: Seq[Int]): Unit = {
+    adjacencyList.getOrElseUpdate(rId, mutable.Set[Int]()).addAll(deps)
+  }
+
+  private def tarjan(target: Option[Int]): Seq[Set[Int]] = {
     var index = 0
     val stack = mutable.Stack[Node]()
     val sorted = mutable.Queue[mutable.Set[Int]]()
@@ -93,7 +90,7 @@ class PrecedenceGraph(using ns: NS /* ns used for pretty printing */) {
       stack.push(v)
       v.onStack = true
 
-      (v.edges ++ v.negEdges).foreach(w => {  // for now use both + / - edges, TODO: only use negative edges?
+      v.edges.foreach(w => {
         if (w.idx == -1) { // recur
           strongConnect(w)
           v.lowLink = v.lowLink.min(w.lowLink)
@@ -112,13 +109,13 @@ class PrecedenceGraph(using ns: NS /* ns used for pretty printing */) {
           w.onStack = false
           res.addOne(w.rId)
           w.rId != v.rId
-        do {}
+        do {} // TODO: weird?
         sorted.addOne(res)
       }
     }
 
     // give tarjan a hint
-    val graph = buildGraph()
+    val graph = buildGraph
     val order = target.map(t => {
       graph.values.filter(_.rId == t) ++ graph.values.filter(_.rId != t)
     }).getOrElse(graph.values)
@@ -129,58 +126,22 @@ class PrecedenceGraph(using ns: NS /* ns used for pretty printing */) {
       }
     })
 
-    val result = sorted.map(_.toSet).toSeq
-
-    // check for negative cycle
-    result.foreach(strata =>
-      strata.foreach(p =>
-        if (graph(p).negEdges.map(n => n.rId).intersect(strata).nonEmpty)
-          throw new Exception("Negative cycle detected in input program")
-      )
-    )
-
-    result
+    sorted.map(_.toSet).toSeq
   }
 
-  def ullman(target: Option[Int] = None): Seq[Set[RelationId]] = {
-    // give ullman the same hint
-    val graph = buildGraph()
-    val order = target.map(t => {
-      graph.values.filter(_.rId == t) ++ graph.values.filter(_.rId != t)
-    }).getOrElse(graph.values)
-
-    val stratum = graph.map((k, *) => (k, 0))
-    var prevStratum = graph.map((k, *) => (k, 0))
-    var setDiff = true
-    while (setDiff) {
-      order.foreach(node =>
-        val p = node.rId
-        node.negEdges.foreach(q =>
-          stratum(p) = stratum(p).max(1 + stratum(q.rId))
-        )
-        node.edges.foreach(q =>
-          stratum(p) = stratum(p).max(stratum(q.rId))
-        )
-      )
-      if (stratum.nonEmpty && stratum.values.max > stratum.keys.size)
-        throw new Exception("Negative cycle detected in input program")
-      setDiff = prevStratum != stratum
-      prevStratum = stratum.clone
-    }
-    stratum.toSeq.groupBy(_._2).toSeq.sortBy(_._1).map(_._2).map(v => v.map(_._1).toSet)
-  }
-
-  def dropIrrelevant(sorted: Seq[Set[Int]], target: Option[Int] = None): Seq[Set[Int]] = {
-    val drop = target.map(t => sorted.size - 1 - sorted.indexWhere(g => g.contains(t)))
+  def topSort(target: Int): Seq[Int] = {
+    val sorted = tarjan(target = Some(target))
     sorted
-      .dropRight(drop.get)
-      .map(_.toSet)
-      .map(_.intersect(idbs)) // sort and remove edbs
-      .filter(_.nonEmpty)
+      .dropRight(sorted.size - 1 - sorted.indexWhere(g => g.contains(target)))
+      .flatMap(s => s.toSeq).filter(r => idbs.contains(r)) // sort and remove edbs
   }
 
-  def scc(target: Int): Seq[Set[Int]] = {
-    val sorted2 = tarjan(Some(target))
-    dropIrrelevant(sorted2, Some(target))
+  def scc(): Seq[Set[Int]] = {
+    debug("precedencegraph:", () => toString())
+    tarjan(target = None).map(_.toSet)
+  }
+
+  def removeAliases(aliases: mutable.Map[Int, Int]): Unit = {
+
   }
 }

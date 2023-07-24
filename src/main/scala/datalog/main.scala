@@ -77,12 +77,10 @@ def ackermann(program: Program) = {
 def tc(program: Program): Unit = {
   val edge = program.relation[Constant]("edge")
   val path = program.relation[Constant]("path")
-  val path2a = program.relation[Constant]("path2a")
   val x, y, z = program.variable()
 
   path(x, y) :- edge(x, y)
-  path(x, z) :- (edge(x, y), path(y, z))
-  path2a(x, y) :- (path(x, y), edge(y, "a"))
+  path(x, z) :- (edge(x, y), path(y, z), edge(y, "a"))
 
   edge("a", "a", "red") :- ()
   edge("a", "b", "blue") :- ()
@@ -277,31 +275,6 @@ def cliquer(program: Program): Unit = {
   reachable("e", "f") :- ()
 
   println("reachable=" + same_clique.solve().size)
-}
-
-def clique(program: Program): Unit = {
-  val edge = program.relation("edge")
-  val reachable = program.relation[Constant]("reachable")
-  val same_clique = program.relation[Constant]("same_clique")
-  val x, y, z = program.variable()
-
-  edge(0,	1) :- ()
-  edge(1,	2) :- ()
-  edge(2,	3) :- ()
-  edge(3,	4) :- ()
-  edge(4,	5) :- ()
-  edge(5,	0) :- ()
-  edge(5,	6) :- ()
-  edge(6,	7) :- ()
-  edge(7,	8) :- ()
-  edge(8,	9) :- ()
-  edge(9,	10) :- ()
-  edge(10,	7) :- ()
-  reachable(x, y) :- edge(x, y)
-  reachable(x, y) :- (edge(x, z), reachable(z, y))
-  same_clique(x, y) :- (reachable(x, y), reachable(y, x))
-
-  println("result=" + same_clique.solve().size)
 }
 
 def input_output(program: Program): Unit = {
@@ -1037,67 +1010,46 @@ def pointstofun(program: Program) = {
   println(s"RES=${VarPointsTo.solve().size}")
 }
 
-def stratified(program: Program) = {
-  val b = program.relation[Constant]("e")
-  val p1 = program.relation[Constant]("p1")
-  val p2 = program.relation[Constant]("p2")
-  val p3 = program.relation[Constant]("p3")
-  val q = program.relation[Constant]("q")
-  val r = program.relation[Constant]("r")
-  val x, y, z = program.variable()
-
-  // p1, p2 and p3 are in the same stratum
-  p1(x, y, z) :- b(x, y, z)
-  p1(x, y, z) :- p2(y, z, x)
-  p2(x, y, z) :- b(x, y, z)
-  p2(x, y, z) :- p3(y, z, x)
-  p3(x, y, z) :- b(x, y, z)
-  p3(x, y, z) :- p1(y, z, x)
-
-  q(x, y, z) :- (p1(x, y, z), p2(x, y, z), p3(x, y, z))
-
-  r(x, y, z) :- (q(x, y, z), p1(x, y, z), p2(x, y, z), p3(x, y, z))
-
-
-  b("a", "b", "c") :- ()
-  b("x", "y", "z") :- ()
-
-  println(r.solve())
-}
 @main def main = {
-//  val stratifiedA = false
-//  println("NAIVE")
-//  given engine0: ExecutionEngine = new NaiveExecutionEngine(new DefaultStorageManager(), stratified = stratifiedA)
-//  val program0 = Program(engine0)
-//  stratified(program0)
+//  val engine = new NaiveExecutionEngine(new VolcanoStorageManager())
+//  val program = Program(engine)
+//  println("SemiNaive")
+//  tc(program)
 //  println("\n\n_______________________\n\n")
 
-  val dotty = staging.Compiler.make(getClass.getClassLoader)
-  println("SEMINAIVE:")
-  given engine1: ExecutionEngine = new NaiveExecutionEngine(new DefaultStorageManager())
-  val program1 = Program(engine1)
-  tc(program1)
-  println("\n\n_______________________\n\n")
+//  println("OLD N")
+//  given engine0: ExecutionEngine = new NaiveExecutionEngine(new DefaultStorageManager())
+//  val program0 = Program(engine0)
+//  acyclic(program0)
+//  println("\n\n_______________________\n\n")
+
+//  val dotty = staging.Compiler.make(getClass.getClassLoader)
+//  var sort = 1
+//    println(s"OLD SN: $sort")
+    given engine1: ExecutionEngine = new SemiNaiveExecutionEngine(new DefaultStorageManager())
+    val program1 = Program(engine1)
+    pointstofun(program1)
+//    println("\n\n_______________________\n\n")
 
 //    val jo2 = JITOptions(ir.OpCode.OTHER, dotty, aot = false, block = true)
 //    println("INTERP")
-//    given engine3a: ExecutionEngine = new StagedExecutionEngine(new DefaultStorageManager(), jo2)
-
+//    given engine3a: ExecutionEngine = new StagedExecutionEngine(new DefaultStorageManager(preSortAhead = 1, sortAhead = 1, sortOnline = 0), jo2)
+//
 //    val program3a = Program(engine3a)
-//    stratified(program3a)
+//    isEqual(program3a)
 //    println("\n\n_______________________\n\n")
 //
-//  val jo3 = JITOptions(ir.OpCode.EVAL_RULE_SN, dotty, aot = false, block = true, sortOrder = (0, 0, 0), stratified = stratifiedA)
-//  println("JIT")
-//  given engine3: ExecutionEngine = new StagedExecutionEngine(new DefaultStorageManager(), jo3)
-//  val program3 = Program(engine3)
-//  stratified(program3)
-//  println("\n\n_______________________\n\n")
-//
+//    val jo = JITOptions(ir.OpCode.EVAL_RULE_SN, dotty, aot = false, block = true, sortOrder = (0, 0, 0))
+//    println("JIT")
+//    given engine3: ExecutionEngine = new StagedExecutionEngine(new DefaultStorageManager(), jo)
+//    val program3 = Program(engine3)
+//    ackermann(program3)
+//    println("\n\n_______________________\n\n")
+
 //  println("JIT Snippet")
-//  val engine4: ExecutionEngine = new StagedSnippetExecutionEngine(new DefaultStorageManager(), jo3)
+//  val engine4: ExecutionEngine = new StagedSnippetExecutionEngine(new DefaultStorageManager(), jo)
 //  val program4 = Program(engine4)
-//  stratified(program4)
+//  tc(program4)
 //  println("\n\n_______________________\n\n")
 
 //  println("JIT STAGED: aot EvalSN")
@@ -1105,11 +1057,10 @@ def stratified(program: Program) = {
 //  val program5 = Program(engine5)
 //  manyRelations(program5)
 //  println("\n\n_______________________\n\n")
-
-//  val jo6 = JITOptions(ir.OpCode.PROGRAM, dotty, aot = false, block = true, sortOrder = (0, 0, 0))
-//  println("COMPILE")
-//  given engine6: ExecutionEngine = new StagedExecutionEngine(new DefaultStorageManager(), jo6)
-//  val program6 = Program(engine6)
-//  stratified(program6)
+  //  println("JIT STAGED")
+//
+//  given engine3: ExecutionEngine = new CompiledStagedExecutionEngine(new DefaultStorageManager())//, ir.OpCode.LOOP_BODY, false, false)
+//  val program3 = Program(engine3)
+//  tc(program3)
 //  println("\n\n_______________________\n\n")
 }

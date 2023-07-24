@@ -12,8 +12,7 @@ import scala.collection.mutable
  *
  * @param storageManager
  */
-class SemiNaiveExecutionEngine(override val storageManager: StorageManager, stratified: Boolean = true /* TODO: temp remove */) extends NaiveExecutionEngine(storageManager) {
-//  println(s"stratified=$stratified")
+class SemiNaiveExecutionEngine(override val storageManager: StorageManager) extends NaiveExecutionEngine(storageManager) {
   def evalRuleSN(rId: RelationId): EDB = {
     storageManager.SPJU(rId, getOperatorKeys(rId))
   }
@@ -47,50 +46,46 @@ class SemiNaiveExecutionEngine(override val storageManager: StorageManager, stra
     })
   }
 
-  override def innerSolve(rId: RelationId, relations: Seq[Int]): Unit = {
-    var count = 0
-    debug("initial state @ -1", storageManager.toString)
-    evalNaive(relations, true) // this fills derived[new] and and delta[new]
-
-    var setDiff = true
-    while (setDiff) {
-      storageManager.swapKnowledge()
-      storageManager.clearNewDerived()
-
-      debug(s"initial state @ $count", storageManager.toString)
-      count += 1
-      evalSN(rId, relations)
-      setDiff = storageManager.compareNewDeltaDBs()
-    }
-    debug(s"final state @$count", storageManager.toString)
-  }
-
-  override def solve(toSolve: RelationId): Set[Seq[Term]] = {
+  override def solve(rId: RelationId): Set[Seq[Term]] = {
     storageManager.verifyEDBs(idbs.keys.to(mutable.Set))
-    if (storageManager.edbContains(toSolve) && !idbs.contains(toSolve)) { // if just an edb predicate then return
-      return storageManager.getEDBResult(toSolve)
+    if (storageManager.edbContains(rId) && !idbs.contains(rId)) { // if just an edb predicate then return
+      return storageManager.getEDBResult(rId)
     }
-    if (!idbs.contains(toSolve)) {
+    if (!idbs.contains(rId)) {
       throw new Exception("Solving for rule without body")
     }
     // TODO: if a IDB predicate without vars, then solve all and test contains result?
     //    if (relations.isEmpty)
     //      return Set()
-    val strata = precedenceGraph.scc(toSolve)
-    storageManager.initEvaluation() // facts previously derived
+    val relations = precedenceGraph.topSort(rId)
+    debug(s"precedence graph=", precedenceGraph.sortedString)
+    debug(s"solving relation: ${storageManager.ns(rId)} order of relations=", relations.toString)
+    storageManager.initEvaluation()
+    var count = 0
 
-    debug(s"solving relation: ${storageManager.ns(toSolve)} sCount=${strata.length} order of strata=", () => strata.map(r => r.map(storageManager.ns.apply).mkString("(", ", ", ")")).mkString("{", ", ", "}"))
+    debug("initial state @ -1", storageManager.toString)
+    evalNaive(relations, true) // this fills derived[new] and and delta[new]
 
-    if(strata.length <= 1 || !stratified)
-      innerSolve(toSolve, strata.flatten)
-    else
-      // for each stratum
-      strata.zipWithIndex.foreach((relations, idx) =>
-        debug(s"**STRATA@$idx, rels=", () => relations.map(storageManager.ns.apply).mkString("(", ", ", ")"))
-        innerSolve(toSolve, relations.toSeq)
-        if (idx < strata.length - 1)
-          storageManager.updateDiscovered()
-      )
-    storageManager.getNewIDBResult(toSolve)
+    var setDiff = true
+    while(setDiff) {
+      storageManager.swapKnowledge()
+      storageManager.clearNewDerived()
+
+      debug(s"initial state @ $count", storageManager.printer.toString)
+      count += 1
+      evalSN(rId, relations)
+      setDiff = storageManager.compareNewDeltaDBs()
+//      System.gc()
+//      System.gc()
+//      val mb = 1024*1024
+//      val runtime = Runtime.getRuntime
+//      println(s"END ITERATION iteration $count, results in MB")
+//      println("** Used Memory:  " + (runtime.totalMemory - runtime.freeMemory) / mb)
+//      println("** Free Memory:  " + runtime.freeMemory / mb)
+//      println("** Total Memory: " + runtime.totalMemory / mb)
+//      println("** Max Memory:   " + runtime.maxMemory / mb)
+    }
+    debug(s"final state @$count", storageManager.printer.toString)
+    storageManager.getNewIDBResult(rId)
   }
 }

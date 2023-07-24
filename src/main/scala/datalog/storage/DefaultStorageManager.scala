@@ -1,7 +1,7 @@
 package datalog.storage
 
 import datalog.dsl.{Atom, Constant, Variable}
-import datalog.execution.{AllIndexes, JoinIndexes, PredicateType}
+import datalog.execution.{AllIndexes, JoinIndexes}
 import datalog.storage.CollectionsCasts.*
 
 import scala.collection.{immutable, mutable}
@@ -219,33 +219,22 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
     debug("SPJU:", () => s"r=${ns(rId)} keys=${printer.snPlanToString(keys)} knownDBId $knownDbId")
       CollectionsEDB(keys.flatMap(k => // union of each definition of rId
         if (k.edb)
-          discoveredFacts.getOrElse(rId, CollectionsEDB()).wrapped
+          edbs.getOrElse(rId, CollectionsEDB()).wrapped
         else
-          var idx = -1 // if dep is featured more than once, only use delta once, but at a different pos each time
-          k.deps.flatMap((*, d) => {
+          var idx = -1 // if dep is featured more than once, only us delta once, but at a different pos each time
+          k.deps.flatMap(d => {
             var found = false // TODO: perhaps need entry in derived/delta for each atom instead of each relation?
             joinProjectHelper(
-              k.deps.zipWithIndex.map((tr, i) =>
-                val (typ, r) = tr
-                val q = if (r == d && !found && i > idx)
+              k.deps.zipWithIndex.map((r, i) =>
+                if (r == d && !found && i > idx) {
                   found = true
                   idx = i
-                  if (typ != PredicateType.NEGATED) // if negated then we want the complement of all facts not just the delta
-                    getKnownDeltaDB(r)
-                  else
-                    getKnownDerivedDB(r)
-                else
-                  getKnownDerivedDB(r)
-
-                typ match
-                  case PredicateType.NEGATED =>
-                    val arity = k.atoms(i + 1).terms.length
-                    val compl = getComplement(arity)
-                    val res = diff(compl, q)
-                    debug("found negated relation, rule=", () => s"${printer.ruleToString(k.atoms)}\n\tarity=$arity, compl=${printer.factToString(compl)}, Q=${printer.factToString(q)}, final res=${printer.factToString(res)}")
-                    res
-                  case _ => q
-            ), k, (0, 0, 0)).wrapped // don't sort when not staging
+                  deltaDB(knownDbId)(r)
+                }
+                else {
+                  derivedDB(knownDbId).getOrElse(r, edbs.getOrElse(r, CollectionsEDB())) // TODO: warn if EDB is empty? Right now can't tell the difference between undeclared and empty EDB
+                }
+              ), k, (0, 0, 0)).wrapped // don't sort when not staging
           }).distinct
       ))
   }
@@ -255,22 +244,11 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
     CollectionsEDB(
       keys.flatMap(k => { // for each idb rule
         if (k.edb)
-          discoveredFacts.getOrElse(rId, CollectionsEDB()).wrapped
+          edbs.getOrElse(rId, CollectionsEDB()).wrapped
         else
           projectHelper(
             joinHelper(
-              k.deps.zipWithIndex.map((md, i) =>
-                val (typ, r) = md
-                val q = getKnownDerivedDB(r)
-                typ match
-                  case PredicateType.NEGATED =>
-                    val arity = k.atoms(i + 1).terms.length
-                    val compl = getComplement(arity)
-                    val res = diff(compl, q)
-                    debug(s"found negated relation, rule=", () => s"${printer.ruleToString(k.atoms)}\n\tarity=$arity, compl=${printer.factToString(compl)}, Q=${printer.factToString(q)}, final res=${printer.factToString(res)}")
-                    res
-                  case _ => q
-              ), k // TODO: warn if EDB is empty? Right now can't tell the difference between undeclared and empty EDB)
+              k.deps.map(r => derivedDB(knownDbId).getOrElse(r, edbs.getOrElse(r, CollectionsEDB()))), k // TODO: warn if EDB is empty? Right now can't tell the difference between undeclared and empty EDB)
             ), k
           ).wrapped.distinct
       })

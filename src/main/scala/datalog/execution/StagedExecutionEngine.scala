@@ -15,7 +15,6 @@ import scala.util.{Failure, Success}
 import scala.quoted.*
 
 class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOptions: JITOptions = JITOptions()) extends ExecutionEngine {
-//  println(s"stratified=${defaultJITOptions.stratified}")
   val precedenceGraph = new PrecedenceGraph(using storageManager.ns)
   val prebuiltOpKeys: mutable.Map[Int, mutable.ArrayBuffer[JoinIndexes]] = mutable.Map[Int, mutable.ArrayBuffer[JoinIndexes]]() // TODO: currently unused, mb remove from EE
   val ast: ProgramNode = ProgramNode()
@@ -26,7 +25,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
   compiler.clearDottyThread()
   var stragglers: mutable.WeakHashMap[Int, Future[CompiledFn[?]]] = mutable.WeakHashMap.empty // should be ok since we are only removing by ref and then iterating on values only?
 
-  def createIR(ast: ASTNode)(using InterpreterContext): IROp[Any] = IRTreeGenerator().generateTopLevelProgram(ast, naive=false, stratified=defaultJITOptions.stratified)
+  def createIR(ast: ASTNode)(using InterpreterContext): IROp[Any] = IRTreeGenerator().generateSemiNaive(ast)
 
   def initRelation(rId: Int, name: String): Unit = {
     storageManager.ns(rId) = name
@@ -48,12 +47,13 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
 
   def insertIDB(rId: Int, ruleSeq: Seq[Atom]): Unit = {
     val rule = ruleSeq.toArray
+    precedenceGraph.idbs.addOne(rId)
     val allRules = ast.rules.getOrElseUpdate(rId, AllRulesNode(mutable.ArrayBuffer.empty, rId)).asInstanceOf[AllRulesNode]
     // TODO: sort here in case EDBs/etc are already defined?
     val allK = JoinIndexes.allOrders(rule)
     storageManager.allRulesAllIndexes.getOrElseUpdate(rId, mutable.Map[String, JoinIndexes]()) ++= allK
     val hash = JoinIndexes.getRuleHash(rule)
-    precedenceGraph.addNode(ruleSeq)
+    precedenceGraph.addNode(rId, allK(hash).deps)
 
     allRules.rules.append(
       RuleNode(
@@ -62,15 +62,12 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
           rule.head.terms.map {
             case x: Variable => VarTerm(x)
             case x: Constant => ConstTerm(x)
-          },
-          rule.head.negated
-        ),
+          }),
         rule.drop(1).map(b =>
           LogicAtom(b.rId, b.terms.map {
             case x: Variable => VarTerm(x)
             case x: Constant => ConstTerm(x)
-          }, b.negated)
-        ),
+          })),
         rule,
         hash
       ))
@@ -184,8 +181,6 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
       case op: SequenceOp =>
         op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o)))
 
-      case op: UpdateDiscoveredOp =>
-        op.run(storageManager)
 
       case op: SwapAndClearOp =>
         op.run(storageManager)
@@ -298,9 +293,6 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
       case op: ScanEDBOp =>
         op.run(storageManager)
 
-      case op: ComplementOp =>
-        op.run(storageManager)
-
       case op: ProjectJoinFilterOp =>
         op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o)))
 
@@ -315,7 +307,6 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
 
       case op: DebugPeek =>
         op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o)))
-
       case _ => throw new Exception(s"Error: JIT-ing unknown operator ${irTree.code}")
     }
   }
@@ -361,7 +352,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
     given irCtx: InterpreterContext = InterpreterContext(storageManager, precedenceGraph, toSolve)
     debug("AST: ", () => storageManager.printer.printAST(ast))
     debug("TRANSFORMED: ", () => storageManager.printer.printAST(transformedAST))
-    debug("PG: ", () => precedenceGraph.toString())
+    debug("PG: ", () => irCtx.sortedRelations.toString())
 
     val irTree = createIR(transformedAST)
 
@@ -375,5 +366,5 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
   }
 }
 class NaiveStagedExecutionEngine(storageManager: StorageManager, defaultJITOptions: JITOptions = JITOptions()) extends StagedExecutionEngine(storageManager, defaultJITOptions) {
-  override def createIR(ast: ASTNode)(using InterpreterContext): IROp[Any] = IRTreeGenerator().generateTopLevelProgram(ast, naive=true, stratified=defaultJITOptions.stratified)
+  override def createIR(ast: ASTNode)(using InterpreterContext): IROp[Any] = IRTreeGenerator().generateNaive(ast)
 }

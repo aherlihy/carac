@@ -26,7 +26,7 @@ class CopyEliminationPass()(using ASTTransformerContext) extends Transformer {
         if (body.size == 1) // for now just subst simple equality
           (head, body(0)) match {
             case (h: LogicAtom, b: LogicAtom) =>
-              if (h.terms == b.terms && h.terms.forall(p => p.isInstanceOf[VarTerm]) && h.negated == b.negated)
+              if (h.terms == b.terms && h.terms.forall(p => p.isInstanceOf[VarTerm]))
                 ctx.aliases(h.relation) = ctx.aliases.getOrElse(b.relation, b.relation)
             case _ =>
           }
@@ -50,7 +50,7 @@ class CopyEliminationPass()(using ASTTransformerContext) extends Transformer {
           val transformedAtoms = atoms.head +: atoms.drop(1).map(a =>
             if (ctx.aliases.contains(a.rId))
               aliased = true
-              Atom(ctx.aliases.getOrElse(a.rId, a.rId), a.terms, a.negated)
+              Atom(ctx.aliases.getOrElse(a.rId, a.rId), a.terms)
             else
               a
           )
@@ -58,13 +58,15 @@ class CopyEliminationPass()(using ASTTransformerContext) extends Transformer {
             val allK = JoinIndexes.allOrders(transformedAtoms)
             ctx.sm.allRulesAllIndexes.getOrElseUpdate(transformedAtoms.head.rId, mutable.Map[String, JoinIndexes]()) ++= allK
             hash = JoinIndexes.getRuleHash(transformedAtoms)
-            ctx.precedenceGraph.addNode(transformedAtoms)
-            ctx.precedenceGraph.updateNodeAlias(ctx.aliases)
+            ctx.precedenceGraph.addNode(transformedAtoms.head.rId, allK(hash).deps)
+            ctx.precedenceGraph.updateNodeAlias(transformedAtoms.head.rId, ctx.aliases)
 
           RuleNode(transform(head), body.map(transform), transformedAtoms, hash)
         case n: AtomNode => n match {
-          case LogicAtom(relation, terms, neg) =>
-            LogicAtom(ctx.aliases.getOrElse(relation, relation), terms, neg)
+          case NegAtom(expr) =>
+            NegAtom(transform(expr))
+          case LogicAtom(relation, terms) =>
+            LogicAtom(ctx.aliases.getOrElse(relation, relation), terms)
         }
         case n: TermNode => n
       }

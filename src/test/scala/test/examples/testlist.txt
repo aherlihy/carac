@@ -1,4 +1,4 @@
-🟨 2sat - negation, but with var only in negated
+❌ 2sat - negation
 ✅ access-policy
 ✅ ackermann
 ❌ amicable - aggregators, functions
@@ -8,9 +8,9 @@
 ❌ catalan - aggregators
 ✅ cba_expr_value
 ❌ cellular_automata - aggregators, negation
-❌ centroids - negation, built-in predicates
-❌ circuit_eval - negation, disjunction
-❌ circuit_records - aggregators
+❌ centroids - negation
+❌ circuit_eval - negation
+❌ circuit_records - aggregation
 ❌ circuit_sat - aggregators, negation
 ✅ clique
 ✅ cliquer
@@ -21,12 +21,12 @@
 ❌ counter - aggregators, str
 ❌ degree - aggregators
 ❌ dfa - comp, negation
-✅ dfa_live_vars - negation
+❌ dfa_live_vars - negation
 ❌ dfa_min - negation, aggregators
 ❌ dfa_parse - negation, aggregators
 ❌ dfa_summary_function - comp, negation
-✅ disconnected - negation
-❌ dnf - negation, disjunction
+❌ disconnected - negation
+❌ dnf - negation
 ❌ dominance - negation, aggregators, comp
 double_tree
 ❌ earley - aggregators, negation
@@ -35,28 +35,28 @@ double_tree
 ❌ euclid - aggregators, negation
 ❌ factorial - aggregators
 ❌ factoring - aggregators
-❌ [in future] family - negation, built-in pred
+❌ family - negation
 ✅ fib
-❌ fib1 - negation, aggregators
-✅ flights - negation
+❌ fib1 - negation
+❌ flights - negation
 ❌ flights2 - types
 ❌ floydwarshall
 ❌ fractional_knapsack - datatypes
 ✅ func
-✅ game2 - negation
+❌ game2 - negation
 ✅ grad
-❌ graph - aggregators
-❌ grid - aggregators
+❌ graph - aggregation
+❌ grid - aggregation
 ❌ highest_degree - aggregator
-✅ hmmer - negation
+❌ hmmer - negation
 ❌ independent_body3 - aggregator
 ❌ inline_nats - aggregator
 ✅ input_output
 ✅ java-pointsto
 ❌ josephus - aggregators
-❌ k-permutations - negation, cat functor
-❌ linksum - aggregators
-❌ longest_path - aggregators
+❌ k-permutations - negation
+❌ linksum - aggregation
+❌ longest_path - aggregation
 🔶 lubm - doable but benchmark
 ❌ lucas - aggregators
 ❌ magic_access-policy - for magic sets
@@ -68,13 +68,13 @@ double_tree
 ❌ minpath1 - aggregators, negation
 ❌ minpath2 - aggregators, negation
 ❌ minpath3 - aggregators, negation
-❌ mmult - negation, aggregators
+❌ mmult - negation
 ❌ movies - aggregators
 ❌ nfsa2fsa - aggregators
 ❌ not_match - aggregators, negation
 ❌ nqueens
-✅ orbits - negation
-✅ orbits1 - negation
+❌ orbits - negation
+❌ orbits1 - negation
 ✅ palindrome
 ✅ paths (elsewhere)
 ❌ peano_arithmetic
@@ -106,8 +106,8 @@ ship
 ❌ strategies - datatype
 ❌ tak - aggregators
 ✅ tc
-❌ tic-tac-toe - negation, built-in predicates
-❌ [future] topological_ordering - negation
+❌ tic-tac-toe - negation
+✅/❌ topological_ordering - negation
 ✅ traffic
 ✅ trains
 ✅ trans

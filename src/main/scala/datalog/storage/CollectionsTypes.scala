@@ -15,9 +15,7 @@ object CollectionsCasts {
 }
 
 /**
- * Precise type for the EDB type in CollectionsStorageManager.
- * Represents one EDB relation, i.e. the set of rows of tuples in a particular EDB relation.
- * AKA mutable.ArrayBuffer[Seq[StorageTerm]]
+ * Precise type for the EDB type in CollectionsStorageManager, essentially just wraps an ArrayBuffer of CollectionsRow
  */
 case class CollectionsEDB(wrapped: mutable.ArrayBuffer[CollectionsRow]) extends EDB with IterableOnce[CollectionsRow] {
   export wrapped.{ length, clear, nonEmpty, toSet, apply, mkString, iterator }
@@ -54,9 +52,7 @@ object CollectionsEDB {
 }
 
 /**
- * Precise type for the Row (aka Tuple) type in CollectionsStorageManager.
- * Represents a single tuple within a relation, either EDB or IDB.
- * AKA a Seq[StorageTerm]
+ * Precise type for the Row (aka Tuple) type in CollectionsStorageManager, essentially just wraps an Seq of StorageTerms
  */
 case class CollectionsRow(wrapped: Seq[StorageTerm]) extends Row[StorageTerm] {
   def toSeq = wrapped
@@ -67,9 +63,7 @@ case class CollectionsRow(wrapped: Seq[StorageTerm]) extends Row[StorageTerm] {
 }
 
 /**
- * Precise type for the Database type in CollectionsStorageManager.
- * Represents a DB containing a set of rows, i.e. tuples of terms.
- * AKA a mutable.Map[RelationId, ArrayBuffer[Seq[Term]]].
+ * Precise type for the Database type in CollectionsStorageManager, essentially just wraps a mutable.Map of CollectionsEDB
  */
 case class CollectionsDatabase(wrapped: mutable.Map[RelationId, CollectionsEDB]) extends Database[CollectionsEDB] {
   export wrapped.{ apply, getOrElse, foreach, contains, update, exists, toSeq }

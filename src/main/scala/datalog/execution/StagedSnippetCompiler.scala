@@ -40,28 +40,13 @@ class StagedSnippetCompiler(val storageManager: StorageManager)(using val jitOpt
 
   given ToExpr[Atom] with {
     def apply(x: Atom)(using Quotes) = {
-      '{ Atom( ${ Expr(x.rId) }, ${ Expr.ofSeq(x.terms.map(y => Expr(y))) }, ${ Expr(x.negated) } ) }
+      '{ Atom( ${ Expr(x.rId) }, ${ Expr.ofSeq(x.terms.map(y => Expr(y))) } ) }
     }
   }
-
-  given ToExpr[PredicateType] with {
-    def apply(x: PredicateType)(using Quotes) = {
-      Expr(x)
-    }
-  }
-
 
   given ToExpr[JoinIndexes] with {
     def apply(x: JoinIndexes)(using Quotes) = {
-      '{
-        JoinIndexes(
-          ${ Expr(x.varIndexes) },
-          ${ Expr(x.constIndexes) },
-          ${ Expr(x.projIndexes) },
-          ${ Expr(x.deps) },
-          ${ Expr(x.atoms) },
-          ${ Expr(x.edb) },
-        ) }
+      '{ JoinIndexes(${ Expr(x.varIndexes) }, ${ Expr(x.constIndexes) }, ${ Expr(x.projIndexes) }, ${ Expr(x.deps) }, ${Expr (x.atoms) }, ${ Expr(x.edb) }) }
     }
   }
 
@@ -84,9 +69,6 @@ class StagedSnippetCompiler(val storageManager: StorageManager)(using val jitOpt
                 '{ $stagedSM.getKnownDeltaDB(${ Expr(rId) }) }
             }
         }
-
-      case ComplementOp(arity) =>
-        '{ $stagedSM.getComplement(${ Expr(arity) }) }
 
       case ScanEDBOp(rId) =>
         if (storageManager.edbContains(rId))
@@ -141,9 +123,6 @@ class StagedSnippetCompiler(val storageManager: StorageManager)(using val jitOpt
             $cond;
           }) ()
         }
-
-      case UpdateDiscoveredOp() =>
-        '{ $stagedSM.updateDiscovered() }
 
       case SwapAndClearOp() =>
         '{ $stagedSM.swapKnowledge() ; $stagedSM.clearNewDerived() }

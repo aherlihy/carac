@@ -47,11 +47,11 @@ abstract class DLBenchmark {
     val sortCombos = Seq(0, 1).flatMap(i1 => Seq(0, 1).flatMap(i2 => Seq(0, 1).map(i3 => (i1, i2, i3))))
 
     sortCombos.foreach(s =>
-      programs(s"interpreted_default_${toS(s._1, s._2, s._3)}") = Program(StagedExecutionEngine(
+      programs(s"interpreted_default_${toS(s._1, s._2, s._3)}") = Program(NaiveStagedExecutionEngine(
         DefaultStorageManager(),
         JITOptions(ir.OpCode.OTHER, dotty, false, sortOrder = s)
       ))
-      programs(s"interpreted_default_${toS(-s._1, -s._2, -s._3)}") = Program(StagedExecutionEngine(
+      programs(s"interpreted_default_${toS(-s._1, -s._2, -s._3)}") = Program(NaiveStagedExecutionEngine(
         DefaultStorageManager(),
         JITOptions(ir.OpCode.OTHER, dotty, false, sortOrder = (-s._1, -s._2, -s._3))
       ))
