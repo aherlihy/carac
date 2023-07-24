@@ -158,15 +158,19 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
 
     else
       var preSortedK = originalK // TODO: find better ways to reduce with 2 acc
-      var newBody = originalK.atoms.drop(1).zipWithIndex.sortBy((a, _) => getKnownDerivedDB(a.rId).length)
-      if (sortOrder._1 == -1) newBody = newBody.reverse
-      val newAtoms = originalK.atoms.head +: newBody.map(_._1)
-      val newHash = JoinIndexes.getRuleHash(newAtoms)
-      if (newHash != originalK.hash)
-        println(s"\t${originalK.atoms.drop(1).map(a => /*sm.ns(a.rId) + ":|" + */ getKnownDerivedDB(a.rId).length).mkString("", ", ", "")}")
-        println(s"\t${newAtoms.drop(1).map(a => /*sm.ns(a.rId) + ":|" + */ getKnownDerivedDB(a.rId).length).mkString("", ", ", "")}")
-      var sorted = newBody.map((_, oldP) => inputs(oldP))
-//      var sorted = inputs
+      var sorted =
+        if (sortOrder._1 != 0)
+          var newBody = originalK.atoms.drop(1).zipWithIndex.sortBy((a, _) => getKnownDerivedDB(a.rId).length)
+          if (sortOrder._1 == -1) newBody = newBody.reverse
+          val newAtoms = originalK.atoms.head +: newBody.map(_._1)
+          val newHash = JoinIndexes.getRuleHash(newAtoms)
+          if (newHash != originalK.hash)
+            println(s"\t${originalK.atoms.drop(1).map(a => /*sm.ns(a.rId) + ":|" + */ getKnownDerivedDB(a.rId).length).mkString("", ", ", "")}")
+            println(s"\t${newAtoms.drop(1).map(a => /*sm.ns(a.rId) + ":|" + */ getKnownDerivedDB(a.rId).length).mkString("", ", ", "")}")
+          newBody.map((_, oldP) => inputs(oldP)).toSeq
+        else
+          inputs
+
       if (sortOrder._2 != 0)
         var edbToAtom = inputs.toArray.zipWithIndex.map((edb, i) => (edb, originalK.atoms(i + 1))).sortBy((edb, _) => edb.length)
         if (sortOrder._2 == -1) edbToAtom = edbToAtom.reverse
