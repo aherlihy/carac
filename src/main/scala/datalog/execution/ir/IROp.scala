@@ -288,7 +288,7 @@ case class UnionSPJOp(rId: RelationId, var hash: String, override val children:P
       hash,
       storageManager
     )
-//    println(s"UnionSPJ.run for rule ${storageManager.printer.atomToString(storageManager.allRulesAllIndexes(rId)(hash).atoms)}")
+    println(s"UnionSPJ.run for rule ${storageManager.printer.atomToString(storageManager.allRulesAllIndexes(rId)(hash).atoms)}")
     storageManager.union(sortedChildren.map((s: ProjectJoinFilterOp) => s.run(storageManager)))
 }
 /**

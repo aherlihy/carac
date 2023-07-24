@@ -1023,19 +1023,20 @@ def pointstofun(program: Program) = {
 //  acyclic(program0)
 //  println("\n\n_______________________\n\n")
 
-//  val dotty = staging.Compiler.make(getClass.getClassLoader)
+  val dotty = staging.Compiler.make(getClass.getClassLoader)
 //  var sort = 1
 //    println(s"OLD SN: $sort")
-    given engine1: ExecutionEngine = new SemiNaiveExecutionEngine(new DefaultStorageManager())
-    val program1 = Program(engine1)
-    listlib(program1)
+//    given engine1: ExecutionEngine = new SemiNaiveExecutionEngine(new DefaultStorageManager())
+//    val program1 = Program(engine1)
+//    listlib(program1)
 //    println("\n\n_______________________\n\n")
 
-//    val jo2 = JITOptions(ir.OpCode.OTHER, dotty, aot = false, block = true)
+    val jo2 = JITOptions(ir.OpCode.OTHER, dotty, sortOrder = (1, 1, 1))
 //    println("INTERP")
-//    given engine3a: ExecutionEngine = new StagedExecutionEngine(new DefaultStorageManager(preSortAhead = 1, sortAhead = 1, sortOnline = 0), jo2)
+    given engine3a: ExecutionEngine = new StagedExecutionEngine(new DefaultStorageManager(), jo2)
 //
-//    val program3a = Program(engine3a)
+    val program3a = Program(engine3a)
+    listlib(program3a)
 //    isEqual(program3a)
 //    println("\n\n_______________________\n\n")
 //

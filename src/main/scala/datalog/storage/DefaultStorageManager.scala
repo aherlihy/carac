@@ -248,7 +248,7 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
                 else {
                   derivedDB(knownDbId).getOrElse(r, edbs.getOrElse(r, CollectionsEDB())) // TODO: warn if EDB is empty? Right now can't tell the difference between undeclared and empty EDB
                 }
-              ), k, (-1, -1,-1)).wrapped // don't sort when not staging
+              ), k, (1, 1,1)).wrapped // don't sort when not staging
           }).distinct
       ))
   }
