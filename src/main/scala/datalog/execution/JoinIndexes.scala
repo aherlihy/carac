@@ -104,6 +104,9 @@ object JoinIndexes {
       if (jitOptions.sortOrder._1 == -1) newBody = newBody.reverse
       val newAtoms = originalK.atoms.head +: newBody.map(_._1)
       val newHash = JoinIndexes.getRuleHash(newAtoms)
+//      if (newHash != oldHash)
+//        println(s"\t${originalK.atoms.drop(1).map(a => /*sm.ns(a.rId) + ":|" + */sortBy(a)).mkString("", ", ", "")}")
+//        println(s"\t${newAtoms.drop(1).map(a => /*sm.ns(a.rId) + ":|" + */sortBy(a)).mkString("", ", ", "")}")
       (input.map(c => ProjectJoinFilterOp(rId, newHash, newBody.map((_, oldP) => c.childrenSO(oldP)): _*)), newHash)
     else
       (input, oldHash)

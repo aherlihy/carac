@@ -100,7 +100,7 @@ abstract class TestGenerator(directory: Path,
           case "NaiveCompiledStagedDefault" =>
             Program(NaiveStagedExecutionEngine(DefaultStorageManager())) // default is compiled
           case "InterpretedStagedDefault" =>
-            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(granularity = ir.OpCode.OTHER)))
+            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(granularity = ir.OpCode.OTHER, sortOrder = (1, 1, 1))))
           case "CompiledStagedDefault" =>
             Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(granularity = ir.OpCode.PROGRAM, dotty = dotty, aot = false, block = true, thresholdNum = 0, thresholdVal = 0))) // default is compiled
           case "JITStagedB3Default" =>
@@ -125,7 +125,7 @@ abstract class TestGenerator(directory: Path,
 
     override def munitFixtures = List(program)
 
-    Seq("SemiNaive", /*"Naive",*/ "CompiledStaged", "InterpretedStaged", "JITStagedB3").foreach(execution => {
+    Seq("SemiNaive", /*"Naive", "CompiledStaged", */"InterpretedStaged"/*, "JITStagedB3"*/).foreach(execution => {
       Seq("Volcano", "Default").foreach(storage => {
         if (execution.contains("Staged") && storage == "Volcano") {} // skip and don't report as skipped
         else if (

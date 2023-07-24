@@ -1028,7 +1028,7 @@ def pointstofun(program: Program) = {
 //    println(s"OLD SN: $sort")
     given engine1: ExecutionEngine = new SemiNaiveExecutionEngine(new DefaultStorageManager())
     val program1 = Program(engine1)
-    pointstofun(program1)
+    listlib(program1)
 //    println("\n\n_______________________\n\n")
 
 //    val jo2 = JITOptions(ir.OpCode.OTHER, dotty, aot = false, block = true)

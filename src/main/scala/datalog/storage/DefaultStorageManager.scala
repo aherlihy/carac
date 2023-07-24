@@ -141,6 +141,7 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
   }
 
   override def joinProjectHelper(inputsEDB: Seq[EDB], originalK: JoinIndexes, sortOrder: (Int, Int, Int)): CollectionsEDB = { // OLD, only keep around for benchmarks
+    println(s"SPJU for rule ${printer.atomToString(originalK.atoms)}")
     val inputs = asCollectionsSeqEDB(inputsEDB)
     if (inputs.length == 1) // just filter
       inputs.head
@@ -157,7 +158,15 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
 
     else
       var preSortedK = originalK // TODO: find better ways to reduce with 2 acc
-      var sorted = inputs
+      var newBody = originalK.atoms.drop(1).zipWithIndex.sortBy((a, _) => getKnownDerivedDB(a.rId).length)
+      if (sortOrder._1 == -1) newBody = newBody.reverse
+      val newAtoms = originalK.atoms.head +: newBody.map(_._1)
+      val newHash = JoinIndexes.getRuleHash(newAtoms)
+      if (newHash != originalK.hash)
+        println(s"\t${originalK.atoms.drop(1).map(a => /*sm.ns(a.rId) + ":|" + */ getKnownDerivedDB(a.rId).length).mkString("", ", ", "")}")
+        println(s"\t${newAtoms.drop(1).map(a => /*sm.ns(a.rId) + ":|" + */ getKnownDerivedDB(a.rId).length).mkString("", ", ", "")}")
+      var sorted = newBody.map((_, oldP) => inputs(oldP))
+//      var sorted = inputs
       if (sortOrder._2 != 0)
         var edbToAtom = inputs.toArray.zipWithIndex.map((edb, i) => (edb, originalK.atoms(i + 1))).sortBy((edb, _) => edb.length)
         if (sortOrder._2 == -1) edbToAtom = edbToAtom.reverse
@@ -234,7 +243,7 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
                 else {
                   derivedDB(knownDbId).getOrElse(r, edbs.getOrElse(r, CollectionsEDB())) // TODO: warn if EDB is empty? Right now can't tell the difference between undeclared and empty EDB
                 }
-              ), k, (0, 0, 0)).wrapped // don't sort when not staging
+              ), k, (1, 1, 1)).wrapped // don't sort when not staging
           }).distinct
       ))
   }
