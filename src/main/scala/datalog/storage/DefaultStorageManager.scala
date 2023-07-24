@@ -141,7 +141,7 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
   }
 
   override def joinProjectHelper(inputsEDB: Seq[EDB], originalK: JoinIndexes, sortOrder: (Int, Int, Int)): CollectionsEDB = { // OLD, only keep around for benchmarks
-    println(s"SPJU for rule ${printer.atomToString(originalK.atoms)}")
+//    println(s"SPJU for rule ${printer.atomToString(originalK.atoms)}")
     val inputs = asCollectionsSeqEDB(inputsEDB)
     if (inputs.length == 1) // just filter
       inputs.head
@@ -163,18 +163,19 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
           var newBody = originalK.atoms.drop(1).zipWithIndex.sortBy((a, _) => getKnownDerivedDB(a.rId).length)
           if (sortOrder._1 == -1) newBody = newBody.reverse
           val newAtoms = originalK.atoms.head +: newBody.map(_._1)
-          val newHash = JoinIndexes.getRuleHash(newAtoms)
-          if (newHash != originalK.hash)
-            println(s"\t${originalK.atoms.drop(1).map(a => /*sm.ns(a.rId) + ":|" + */ getKnownDerivedDB(a.rId).length).mkString("", ", ", "")}")
-            println(s"\t${newAtoms.drop(1).map(a => /*sm.ns(a.rId) + ":|" + */ getKnownDerivedDB(a.rId).length).mkString("", ", ", "")}")
+//          val newHash = JoinIndexes.getRuleHash(newAtoms)
+//          if (newHash != originalK.hash)
+//            println(s"\t${originalK.atoms.drop(1).map(a => /*sm.ns(a.rId) + ":|" + */ getKnownDerivedDB(a.rId).length).mkString("", ", ", "")}")
+//            println(s"\t${newAtoms.drop(1).map(a => /*sm.ns(a.rId) + ":|" + */ getKnownDerivedDB(a.rId).length).mkString("", ", ", "")}")
+          preSortedK = JoinIndexes(newAtoms)
           newBody.map((_, oldP) => inputs(oldP)).toSeq
         else
           inputs
 
       if (sortOrder._2 != 0)
-        var edbToAtom = inputs.toArray.zipWithIndex.map((edb, i) => (edb, originalK.atoms(i + 1))).sortBy((edb, _) => edb.length)
+        var edbToAtom = sorted.toArray.zipWithIndex.map((edb, i) => (edb, preSortedK.atoms(i + 1))).sortBy((edb, _) => edb.length)
         if (sortOrder._2 == -1) edbToAtom = edbToAtom.reverse
-        val newAtoms = originalK.atoms.head +: edbToAtom.map(_._2)
+        val newAtoms = preSortedK.atoms.head +: edbToAtom.map(_._2)
         preSortedK = JoinIndexes(newAtoms)
         sorted = edbToAtom.map(_._1)
 
@@ -247,7 +248,7 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
                 else {
                   derivedDB(knownDbId).getOrElse(r, edbs.getOrElse(r, CollectionsEDB())) // TODO: warn if EDB is empty? Right now can't tell the difference between undeclared and empty EDB
                 }
-              ), k, (1, 1, 1)).wrapped // don't sort when not staging
+              ), k, (-1, -1,-1)).wrapped // don't sort when not staging
           }).distinct
       ))
   }
