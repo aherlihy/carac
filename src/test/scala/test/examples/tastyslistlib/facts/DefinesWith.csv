@@ -4,6 +4,8 @@ slistlib.Main	slistlib.Main.writeReplace	slistlib.Main.writeReplace
 slistlib.Main	slistlib.Main.<init>	slistlib.Main.<init>
 slistlib.StringWrap	slistlib.StringWrap.s	slistlib.StringWrap.s
 slistlib.StringWrap	slistlib.StringWrap.<init>	slistlib.StringWrap.<init>
+slistlib.StringWrap	java.lang.Object.toString	slistlib.StringWrap.toString
+slistlib.StringWrap	scala.Any.toString	slistlib.StringWrap.toString
 slistlib.SimpleList	slistlib.SimpleList.contains	slistlib.SimpleList.contains
 slistlib.SimpleList	slistlib.SimpleList.reverse	slistlib.SimpleList.reverse
 slistlib.SimpleList	slistlib.SimpleList.size	slistlib.SimpleList.size
@@ -19,6 +21,8 @@ slistlib.SimpleList	slistlib.SimpleList.<init>	slistlib.SimpleList.<init>
 slistlib.SimpleList	slistlib.SimpleList.tail	slistlib.SimpleList.tail
 slistlib.SimpleList	slistlib.SimpleList.last	slistlib.SimpleList.last
 slistlib.IntWrap	slistlib.IntWrap.<init>	slistlib.IntWrap.<init>
+slistlib.IntWrap	java.lang.Object.toString	slistlib.IntWrap.toString
+slistlib.IntWrap	scala.Any.toString	slistlib.IntWrap.toString
 slistlib.IntWrap	slistlib.IntWrap.c	slistlib.IntWrap.c
 slistlib.Printable	slistlib.Printable.str	slistlib.Printable.str
 slistlib.Printable	slistlib.Printable.<init>	slistlib.Printable.<init>

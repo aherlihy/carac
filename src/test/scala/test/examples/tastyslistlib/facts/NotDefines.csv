@@ -58,7 +58,6 @@ slistlib.StringWrap	java.lang.Object.getClass
 slistlib.StringWrap	java.lang.Object.notify
 slistlib.StringWrap	java.lang.Object.hashCode
 slistlib.StringWrap	java.lang.Object.<init>
-slistlib.StringWrap	java.lang.Object.toString
 slistlib.StringWrap	java.lang.Object.clone
 slistlib.StringWrap	java.lang.Object.wait
 slistlib.StringWrap	java.lang.Object.wait#1
@@ -159,7 +158,6 @@ slistlib.IntWrap	java.lang.Object.getClass
 slistlib.IntWrap	java.lang.Object.notify
 slistlib.IntWrap	java.lang.Object.hashCode
 slistlib.IntWrap	java.lang.Object.<init>
-slistlib.IntWrap	java.lang.Object.toString
 slistlib.IntWrap	java.lang.Object.clone
 slistlib.IntWrap	java.lang.Object.wait
 slistlib.IntWrap	java.lang.Object.wait#1

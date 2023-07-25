@@ -3,6 +3,7 @@ slistlib.Main.<init>	slistlib.Main.<init>.this
 slistlib.Main.writeReplace	slistlib.Main.writeReplace.this
 slistlib.Main.main	slistlib.Main.main.this
 slistlib.StringWrap.<init>	slistlib.StringWrap.<init>.this
+slistlib.StringWrap.toString	slistlib.StringWrap.toString.this
 slistlib.SimpleList.<init>	slistlib.SimpleList.<init>.this
 slistlib.SimpleList.::	slistlib.SimpleList.::.this
 slistlib.SimpleList.++	slistlib.SimpleList.++.this
@@ -18,6 +19,7 @@ slistlib.SimpleList.take	slistlib.SimpleList.take.this
 slistlib.SimpleList.slice	slistlib.SimpleList.slice.this
 slistlib.SimpleList.serialize	slistlib.SimpleList.serialize.this
 slistlib.IntWrap.<init>	slistlib.IntWrap.<init>.this
+slistlib.IntWrap.toString	slistlib.IntWrap.toString.this
 slistlib.Printable.<init>	slistlib.Printable.<init>.this
 slistlib.Printable.str	slistlib.Printable.str.this
 slistlib.Empty.<init>	slistlib.Empty.<init>.this

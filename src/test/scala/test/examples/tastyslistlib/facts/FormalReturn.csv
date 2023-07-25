@@ -1,9 +1,10 @@
 String	String
 slistlib.Main.writeReplace	slistlib.Main.writeReplace.temp
 slistlib.Main.main	slistlib.Main.main.temp
+slistlib.Main.main.display	slistlib.Main.main.display.temp
 slistlib.Main.main.deserialize	slistlib.Main.main.deserialize.temp
 slistlib.Main.main.range	slistlib.Main.main.range.temp
-slistlib.Main.main.display	slistlib.Main.main.display.temp
+slistlib.StringWrap.toString	slistlib.StringWrap.toString.temp
 slistlib.SimpleList.::	slistlib.SimpleList.::.temp
 slistlib.SimpleList.reverse	slistlib.SimpleList.reverse.temp
 slistlib.SimpleList.reverse.rec	slistlib.SimpleList.reverse.rec.temp
@@ -12,6 +13,7 @@ slistlib.SimpleList.last	slistlib.SimpleList.last.temp
 slistlib.SimpleList.take	slistlib.SimpleList.take.temp
 slistlib.SimpleList.slice	slistlib.SimpleList.slice.temp
 slistlib.SimpleList.serialize	slistlib.SimpleList.serialize.temp
+slistlib.IntWrap.toString	slistlib.IntWrap.toString.temp
 slistlib.Empty.contains	slistlib.Empty.contains.temp
 slistlib.Empty.++	slistlib.Empty.++.suffix
 slistlib.Empty.str	slistlib.Empty.str.temp
