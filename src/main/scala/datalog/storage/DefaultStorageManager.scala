@@ -162,12 +162,12 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
     else
       var preSortedK = originalK // TODO: find better ways to reduce with 2 acc
       var sorted = inputs
-      if (sortOrder._2 != 0)
-        var edbToAtom = inputs.toArray.zipWithIndex.map((edb, i) => (edb, originalK.atoms(i + 1))).sortBy((edb, _) => edb.length)
-        if (sortOrder._2 == -1) edbToAtom = edbToAtom.reverse
-        val newAtoms = originalK.atoms.head +: edbToAtom.map(_._2)
-        preSortedK = JoinIndexes(newAtoms)
-        sorted = edbToAtom.map(_._1)
+//      if (sortOrder._2 != 0)
+//        var edbToAtom = inputs.toArray.zipWithIndex.map((edb, i) => (edb, originalK.atoms(i + 1))).sortBy((edb, _) => edb.length)
+//        if (sortOrder._2 == -1) edbToAtom = edbToAtom.reverse
+//        val newAtoms = originalK.atoms.head +: edbToAtom.map(_._2)
+//        preSortedK = JoinIndexes(newAtoms)
+//        sorted = edbToAtom.map(_._1)
 
       val result = sorted
         .foldLeft(

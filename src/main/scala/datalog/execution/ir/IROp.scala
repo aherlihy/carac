@@ -247,17 +247,17 @@ case class ProjectJoinFilterOp(rId: RelationId, var hash: String, override val c
 
   override def run_continuation(storageManager: StorageManager, opFns: Seq[CompiledFn[EDB]]): EDB =
     val inputs = opFns.map(s => s(storageManager))
-    val (sorted, newHash) = JoinIndexes.getSortAhead(
-      inputs.toArray,
-      edb => edb.length,
+//    val (sorted, newHash) = JoinIndexes.getSortAhead(
+//      inputs.toArray,
+//      edb => edb.length,
+//      rId,
+//      hash,
+//      storageManager
+//    )
+    storageManager.joinProjectHelper_withHash(
+      inputs,
       rId,
       hash,
-      storageManager
-    )
-    storageManager.joinProjectHelper_withHash(
-      sorted,
-      rId,
-      newHash,
       jitOptions.sortOrder
     )
   override def run(storageManager: StorageManager): EDB =
@@ -273,7 +273,7 @@ case class ProjectJoinFilterOp(rId: RelationId, var hash: String, override val c
         inputs,
         rId,
         hash,
-        (0, 0, 0) // don't sort when interpreting
+        jitOptions.sortOrder
       )
 }
 
@@ -305,7 +305,7 @@ case class UnionSPJOp(rId: RelationId, var hash: String, override val children:P
     storageManager.union(opFns.map(o => o(storageManager)))
 
   override def run(storageManager: StorageManager): EDB =
-    val (sortedChildren, _) = JoinIndexes.getPresortWithCxn( // TODO: this isn't saved anywhere, in case this is traversed again
+    val (sortedChildren, _) = JoinIndexes.getPresortSelect( // TODO: this isn't saved anywhere, in case this is traversed again
       children.toArray,
       a => storageManager.getKnownDerivedDB(a.rId).length,
       rId,

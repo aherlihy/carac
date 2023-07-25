@@ -113,21 +113,21 @@ object JoinIndexes {
     new JoinIndexes(bodyVars, constants.toMap, projects, deps, rule, cxns)
   }
 
-  def getSortAhead[T: ClassTag](input: Array[T], sortBy: T => Int, rId: Int, oldHash: String, sm: StorageManager)(using jitOptions: JITOptions): (Array[T], String) = {
-    if (jitOptions.sortOrder._2 != 0)
-      val oldAtoms = sm.allRulesAllIndexes(rId)(oldHash).atoms
-//      debug("", () => s"in getSorted: deps=${oldAtoms.drop(1).map(s => sm.ns(s.rId)).mkString("", ",", "")} current relation sizes: ${input.map(i => s"${sortBy(i)}|").mkString("", ", ", "")}")
-      var tToAtom = input.zipWithIndex.map((t, i) => (t, oldAtoms(i + 1))).sortBy((t, _) => sortBy(t))
-      if (jitOptions.sortOrder._2 == -1) tToAtom = tToAtom.reverse
-      val newHash = JoinIndexes.getRuleHash(oldAtoms.head +: tToAtom.map(_._2))
+//  def getSortAhead[T: ClassTag](input: Array[T], sortBy: T => Int, rId: Int, oldHash: String, sm: StorageManager)(using jitOptions: JITOptions): (Array[T], String) = {
+//    if (jitOptions.sortOrder._2 != 0)
+//      val oldAtoms = sm.allRulesAllIndexes(rId)(oldHash).atoms
+////      debug("", () => s"in getSorted: deps=${oldAtoms.drop(1).map(s => sm.ns(s.rId)).mkString("", ",", "")} current relation sizes: ${input.map(i => s"${sortBy(i)}|").mkString("", ", ", "")}")
+//      var tToAtom = input.zipWithIndex.map((t, i) => (t, oldAtoms(i + 1))).sortBy((t, _) => sortBy(t))
+//      if (jitOptions.sortOrder._2 == -1) tToAtom = tToAtom.reverse
+//      val newHash = JoinIndexes.getRuleHash(oldAtoms.head +: tToAtom.map(_._2))
+//
+//      val sortedT = tToAtom.map(_._1)
+//      (sortedT, newHash)
+//    else
+//      (input, oldHash)
+//  }
 
-      val sortedT = tToAtom.map(_._1)
-      (sortedT, newHash)
-    else
-      (input, oldHash)
-  }
-
-  def getPresortWithCxn(input: Array[ProjectJoinFilterOp], sortBy: Atom => Int, rId: Int, oldHash: String, sm: StorageManager)(using jitOptions: JITOptions): (Array[ProjectJoinFilterOp], String) = {
+  def getPresortSelect(input: Array[ProjectJoinFilterOp], sortBy: Atom => Int, rId: Int, oldHash: String, sm: StorageManager)(using jitOptions: JITOptions): (Array[ProjectJoinFilterOp], String) = {
     val originalK = sm.allRulesAllIndexes(rId)(oldHash)
 
     var sortedBody = originalK.atoms.drop(1).zipWithIndex.sortBy((a, _) => sortBy(a))
@@ -174,24 +174,24 @@ object JoinIndexes {
     //      (input, oldHash)
   }
 
-  def getPreSortAhead(input: Array[ProjectJoinFilterOp], sortBy: Atom => Int, rId: Int, oldHash: String, sm: StorageManager)(using jitOptions: JITOptions): (Array[ProjectJoinFilterOp], String) = {
-    val originalK = sm.allRulesAllIndexes(rId)(oldHash)
-
-    var newBody = originalK.atoms.drop(1).zipWithIndex.sortBy((a, _) => sortBy(a))
-    if (jitOptions.sortOrder._1 == -1) newBody = newBody.reverse
-    val newAtoms = originalK.atoms.head +: newBody.map(_._1)
-    val newHash = JoinIndexes.getRuleHash(newAtoms)
-//    if (input.length > 2)
-//      println(s"Rule: ${sm.printer.ruleToString(originalK.atoms)}")
-//      println(s"Rule cxn: ${originalK.cxnsToString(sm.ns)}")
-//    if (jitOptions.sortOrder._1 == 0)
-//      println(s"\tCard: ${originalK.atoms.drop(1).map(a => s"${sm.ns(a.rId)}:|${sortBy(a)}|").mkString("", ", ", "")}")
-//    else
-//      println(s"\tCard: ${newBody.map((a, _) => s"${sm.ns(a.rId)}:|${sortBy(a)}|").mkString("", ", ", "")}")
-    (input.map(c => ProjectJoinFilterOp(rId, newHash, newBody.map((_, oldP) => c.childrenSO(oldP)): _*)), newHash)
-//    else
-//      (input, oldHash)
-  }
+//  def getPreSortCard(input: Array[ProjectJoinFilterOp], sortBy: Atom => Int, rId: Int, oldHash: String, sm: StorageManager)(using jitOptions: JITOptions): (Array[ProjectJoinFilterOp], String) = {
+//    val originalK = sm.allRulesAllIndexes(rId)(oldHash)
+//
+//    var newBody = originalK.atoms.drop(1).zipWithIndex.sortBy((a, _) => sortBy(a))
+//    if (jitOptions.sortOrder._1 == -1) newBody = newBody.reverse
+//    val newAtoms = originalK.atoms.head +: newBody.map(_._1)
+//    val newHash = JoinIndexes.getRuleHash(newAtoms)
+////    if (input.length > 2)
+////      println(s"Rule: ${sm.printer.ruleToString(originalK.atoms)}")
+////      println(s"Rule cxn: ${originalK.cxnsToString(sm.ns)}")
+////    if (jitOptions.sortOrder._1 == 0)
+////      println(s"\tCard: ${originalK.atoms.drop(1).map(a => s"${sm.ns(a.rId)}:|${sortBy(a)}|").mkString("", ", ", "")}")
+////    else
+////      println(s"\tCard: ${newBody.map((a, _) => s"${sm.ns(a.rId)}:|${sortBy(a)}|").mkString("", ", ", "")}")
+//    (input.map(c => ProjectJoinFilterOp(rId, newHash, newBody.map((_, oldP) => c.childrenSO(oldP)): _*)), newHash)
+////    else
+////      (input, oldHash)
+//  }
   def allOrders(rule: Array[Atom]): AllIndexes = {
     mutable.Map[String, JoinIndexes](rule.drop(1).permutations.map(r =>
       val toRet = JoinIndexes(rule.head +: r)

@@ -97,29 +97,29 @@ class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: J
           '{ $stagedSM.getEmptyEDB() }
 
       case ProjectJoinFilterOp(rId, hash, children: _*) =>
-        val FPJOp = irTree.asInstanceOf[ProjectJoinFilterOp]
-        val (sortedChildren, newHash) = JoinIndexes.getSortAhead(
-          FPJOp.childrenSO,
-          c => c.run(storageManager).length,
-          rId,
-          hash,
-          storageManager
-        )
-        FPJOp.childrenSO = sortedChildren
+//        val FPJOp = irTree.asInstanceOf[ProjectJoinFilterOp]
+//        val (sortedChildren, newHash) = JoinIndexes.getSortAhead(
+//          FPJOp.childrenSO,
+//          c => c.run(storageManager).length,
+//          rId,
+//          hash,
+//          storageManager
+//        )
+//        FPJOp.childrenSO = sortedChildren
         //        FPJOp.children = sortedChildren.asInstanceOf[Array[IROp[EDB]]] // save for next run so sorting is faster
-        FPJOp.hash = newHash
-        val compiledOps = Expr.ofSeq(sortedChildren.map(compileIRRelOp))
+//        FPJOp.hash = newHash
+        val compiledOps = Expr.ofSeq(children.map(compileIRRelOp))
         '{
           $stagedSM.joinProjectHelper_withHash(
             $compiledOps,
             ${ Expr(rId) },
-            ${ Expr(newHash) },
+            ${ Expr(hash) },
             ${ Expr(jitOptions.sortOrder) }
           )
         }
 
       case UnionSPJOp(rId, hash, children: _*) =>
-        val (sortedChildren, newHash) = JoinIndexes.getPreSortAhead(
+        val (sortedChildren, newHash) = JoinIndexes.getPresortSelect(
           children.toArray,
           a => storageManager.getKnownDerivedDB(a.rId).length,
           rId,
@@ -127,7 +127,7 @@ class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: J
           storageManager
         )
 
-        val compiledOps = sortedChildren.map(compileIRRelOp)
+        val compiledOps = sortedChildren.map(compileIRRelOp) // NOTE: always using sorted here
         '{ $stagedSM.union(${ Expr.ofSeq(compiledOps) }) }
 
       case UnionOp(label, children: _*) =>
@@ -262,7 +262,7 @@ class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: J
       case uOp: UnionOp =>
         '{ ${Expr.ofSeq(uOp.children.toSeq.map(compileIRRelOp))}($i) }
       case uSPJOp: UnionSPJOp =>
-        val (sortedChildren, newHash) = JoinIndexes.getPreSortAhead(
+        val (sortedChildren, newHash) = JoinIndexes.getPresortSelect(
           uSPJOp.children.toArray,
           a => storageManager.getKnownDerivedDB(a.rId).length,
           uSPJOp.rId,
