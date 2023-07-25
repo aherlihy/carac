@@ -31,9 +31,9 @@ trait tastyslistlib {
     val StaticLookUp = program.relation[String]("StaticLookUp")
 
     val VarPointsTo = program.relation[String]("VarPointsTo")
-    val CallGraph = program.relation[String]()
-    val FldPointsTo = program.relation[String]()
-    val InterProcAssign = program.relation[String]()
+    val CallGraph = program.relation[String]("CallGraph")
+    val FldPointsTo = program.relation[String]("FldPointsTo")
+    val InterProcAssign = program.relation[String]("InterProcAssign")
 
     val Delegate = program.relation[String]("Delegate")
     val SuperCall = program.relation[String]("SuperCall")

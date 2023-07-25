@@ -57,6 +57,7 @@ class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: J
           ${ Expr(x.projIndexes) },
           ${ Expr(x.deps) },
           ${ Expr(x.atoms) },
+          ${ Expr(x.cxns) },
           ${ Expr(x.edb) }
         )
       }

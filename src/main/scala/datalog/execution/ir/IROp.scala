@@ -299,19 +299,24 @@ case class UnionOp(override val code: OpCode, override val children:IROp[EDB]*)(
 case class UnionSPJOp(rId: RelationId, var hash: String, override val children:ProjectJoinFilterOp*)(using JITOptions) extends IROp[EDB](children:_*) {
   val code: OpCode = OpCode.EVAL_RULE_BODY
   var compiledFnIndexed: Future[CompiledFnIndexed[EDB]] = null
+  var tmp: Seq[ProjectJoinFilterOp] = null
   // for now not filled out bc not planning on compiling higher than this
   override def run_continuation(storageManager: StorageManager, opFns: Seq[CompiledFn[EDB]]): EDB =
     storageManager.union(opFns.map(o => o(storageManager)))
 
   override def run(storageManager: StorageManager): EDB =
-    val (sortedChildren, _) = JoinIndexes.getPreSortAhead( // TODO: this isn't saved anywhere, in case this is traversed again
+    val (sortedChildren, _) = JoinIndexes.getPresortWithCxn( // TODO: this isn't saved anywhere, in case this is traversed again
       children.toArray,
       a => storageManager.getKnownDerivedDB(a.rId).length,
       rId,
       hash,
       storageManager
     )
-    storageManager.union(sortedChildren.map((s: ProjectJoinFilterOp) => s.run(storageManager)))
+    tmp = sortedChildren // so cost of sorting always included in benchmark
+    if (jitOptions.sortOrder._1 == 0 || children.length < 3)
+      storageManager.union(children.map((s: ProjectJoinFilterOp) => s.run(storageManager)))
+    else
+      storageManager.union(sortedChildren.map((s: ProjectJoinFilterOp) => s.run(storageManager)))
 }
 /**
  * @param children: [Union|Scan, Scan]

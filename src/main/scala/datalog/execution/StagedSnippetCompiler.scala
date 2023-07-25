@@ -60,6 +60,7 @@ class StagedSnippetCompiler(val storageManager: StorageManager)(using val jitOpt
           ${ Expr(x.projIndexes) },
           ${ Expr(x.deps) },
           ${ Expr(x.atoms) },
+          ${ Expr(x.cxns) },
           ${ Expr(x.edb) },
         ) }
     }

@@ -82,6 +82,7 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
   override def joinProjectHelper_withHash(inputsEDB: Seq[EDB], rId: Int, hash: String, sortOrder: (Int, Int, Int)): CollectionsEDB = {
     val inputs = asCollectionsSeqEDB(inputsEDB)
     val originalK = allRulesAllIndexes(rId)(hash)
+//    var intermediateCardinalities = Seq[Int]()
     if (inputs.length == 1) // just filter
       inputs.head
         .filter(e =>
@@ -106,7 +107,7 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
           if (atomI == 0) // not a monad :(
             (innerT, atomI + 1, k)
           else
-            val (inner, outer) =
+            val (inner, outer) = // on the fly swapping of join order
               if (atomI > 1 && ((sortOrder._3 == 1 && outerT.length > innerT.length) || (sortOrder._3 == -1 && innerT.length > outerT.length)))
                 val body = k.atoms.drop(1)
                 val newerHash = JoinIndexes.getRuleHash(Array(k.atoms.head, body(atomI)) ++ body.dropRight(body.length - atomI) ++ body.drop(atomI + 1))
@@ -114,6 +115,7 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
                 (outerT, innerT)
               else
                 (innerT, outerT)
+            // outer = outer relation, inner = inner relation
             val edbResult = outer
               .filter(o =>
                 prefilter(k.constIndexes.filter((i, _) => i < o.length), 0, o)
@@ -124,8 +126,10 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
                     prefilter(k.constIndexes.filter((ind, _) => ind >= outerTuple.length && ind < (outerTuple.length + i.length)), outerTuple.length, i) && toJoin(k, outerTuple, i)
                   )
                   .map(innerTuple => outerTuple.concat(innerTuple)))
+//            intermediateCardinalities = intermediateCardinalities :+ edbResult.length
             (edbResult, atomI + 1, k)
         )
+//      if (inputs.length > 2) println(s"${intermediateCardinalities.dropRight(1).mkString("", "\n", "")}")
       result._1
         .filter(edb => result._3.constIndexes.filter((i, _) => i >= edb.length).isEmpty)
         .map(t =>

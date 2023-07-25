@@ -101,6 +101,8 @@ abstract class TestGenerator(directory: Path,
             Program(NaiveStagedExecutionEngine(DefaultStorageManager())) // default is compiled
           case "InterpretedStagedDefault" =>
             Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(granularity = ir.OpCode.OTHER)))
+          case "InterpretedStagedB1Default" =>
+            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(granularity = ir.OpCode.OTHER, sortOrder = (1, 0, 0))))
           case "CompiledStagedDefault" =>
             Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(granularity = ir.OpCode.PROGRAM, dotty = dotty, aot = false, block = true, thresholdNum = 0, thresholdVal = 0))) // default is compiled
           case "JITStagedB3Default" =>

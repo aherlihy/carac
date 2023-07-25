@@ -77,6 +77,14 @@ class SemiNaiveExecutionEngine(override val storageManager: StorageManager, stra
     //    if (relations.isEmpty)
     //      return Set()
     val strata = precedenceGraph.scc(toSolve)
+
+//    strata.flatten.foreach(r =>
+//      println(s"Relation ${storageManager.ns(r)}")
+//      val keys = getOperatorKeys(r)
+//      println(s"\t" + keys.map(k => 
+//        s"${storageManager.printer.ruleToString(k.atoms)}: ${k.cxnsToString(storageManager.ns)}").mkString("", "\n\t", "")
+//      )
+//    )
     storageManager.initEvaluation() // facts previously derived
 
     debug(s"solving relation: ${storageManager.ns(toSolve)} sCount=${strata.length} order of strata=", () => strata.map(r => r.map(storageManager.ns.apply).mkString("(", ", ", ")")).mkString("{", ", ", "}"))

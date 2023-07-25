@@ -687,9 +687,9 @@ def pointstofun(program: Program) = {
   val StaticLookUp = program.relation[String]("StaticLookUp")
 
   val VarPointsTo = program.relation[String]("VarPointsTo")
-  val CallGraph = program.relation[String]()
-  val FldPointsTo = program.relation[String]()
-  val InterProcAssign = program.relation[String]()
+  val CallGraph = program.relation[String]("CallGraph")
+  val FldPointsTo = program.relation[String]("FldPointsTo")
+  val InterProcAssign = program.relation[String]("InterProcAssign")
 
   val Delegate = program.relation[String]("Delegate")
   val SuperCall = program.relation[String]("SuperCall")
@@ -1032,8 +1032,6 @@ def pointstofun(program: Program) = {
       FieldValDef(actualFld, from),
       VarPointsTo(from, heap))
 
-  println(program.ee.storageManager.toString())
-
   println(s"RES=${VarPointsTo.solve().size}")
 }
 
@@ -1074,9 +1072,9 @@ def stratified(program: Program) = {
 
   val dotty = staging.Compiler.make(getClass.getClassLoader)
   println("SEMINAIVE:")
-  given engine1: ExecutionEngine = new NaiveExecutionEngine(new DefaultStorageManager())
+  given engine1: ExecutionEngine = new SemiNaiveExecutionEngine(new DefaultStorageManager())
   val program1 = Program(engine1)
-  tc(program1)
+  pointstofun(program1)
   println("\n\n_______________________\n\n")
 
 //    val jo2 = JITOptions(ir.OpCode.OTHER, dotty, aot = false, block = true)
