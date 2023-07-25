@@ -104,13 +104,11 @@ abstract class TestGenerator(directory: Path,
           case "InterpretedStagedB1Default" =>
             Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(granularity = ir.OpCode.OTHER, sortOrder = (1, 0, 0))))
           case "CompiledStagedDefault" =>
-            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(granularity = ir.OpCode.PROGRAM, dotty = dotty, aot = false, block = true, thresholdNum = 0, thresholdVal = 0))) // default is compiled
+            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(granularity = ir.OpCode.PROGRAM, dotty = dotty, aot = false, block = true))) // default is compiled
+          case "JITStagedB1Default" =>
+            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(ir.OpCode.EVAL_RULE_BODY, dotty = dotty, aot = false, block = true, sortOrder = (1, 0, 0))))
           case "JITStagedB3Default" =>
-            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(ir.OpCode.EVAL_RULE_BODY, aot = false, block = true, sortOrder = (1, 1, 1))))
-//          case "JITStagedB2Default" =>
-//            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(ir.OpCode.EVAL_RULE_BODY, aot = true, block = true, sortOrder = (1, 1, 0))))
-//          case "JITStagedB1Default" =>
-//            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(ir.OpCode.EVAL_RULE_BODY, aot = false, block = true, sortOrder = (0, 0, 0))))
+            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(ir.OpCode.EVAL_RULE_BODY, dotty = dotty, aot = false, block = true, sortOrder = (0, 0, 1))))
           case _ => // WARNING: MUnit just returns null pointers everywhere if an error or assert is triggered in beforeEach
             throw new Exception(s"Unknown engine construction ${context.test.name}") // TODO: this is reported as passing
         }
@@ -127,7 +125,7 @@ abstract class TestGenerator(directory: Path,
 
     override def munitFixtures = List(program)
 
-    Seq("SemiNaive", /*"Naive",*/ "CompiledStaged", "InterpretedStaged", "JITStagedB3").foreach(execution => {
+    Seq("SemiNaive", /*"Naive",*/ "CompiledStaged", "InterpretedStaged", "JITStagedB1", "JITStagedB3").foreach(execution => {
       Seq("Volcano", "Default").foreach(storage => {
         if (execution.contains("Staged") && storage == "Volcano") {} // skip and don't report as skipped
         else if (

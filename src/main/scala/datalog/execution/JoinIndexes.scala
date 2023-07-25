@@ -127,71 +127,125 @@ object JoinIndexes {
 //      (input, oldHash)
 //  }
 
-  def getPresortSelect(input: Array[ProjectJoinFilterOp], sortBy: Atom => Int, rId: Int, oldHash: String, sm: StorageManager)(using jitOptions: JITOptions): (Array[ProjectJoinFilterOp], String) = {
+  private def getWorstPresortSelect(input: Array[ProjectJoinFilterOp], sortBy: Atom => Int, rId: Int, oldHash: String, sm: StorageManager)(using  JITOptions): (Array[ProjectJoinFilterOp], String) = {
     val originalK = sm.allRulesAllIndexes(rId)(oldHash)
 
-    var sortedBody = originalK.atoms.drop(1).zipWithIndex.sortBy((a, _) => sortBy(a))
-    if (jitOptions.sortOrder._1 == -1) sortedBody = sortedBody.reverse
-//    if (input.length > 2)
+    val sortedBody = originalK.atoms.drop(1).zipWithIndex.sortBy((a, _) => sortBy(a)).reverse
+    //    if (input.length > 2)
 //    println(s"Rule: ${sm.printer.ruleToString(originalK.atoms)}")
 //    println(s"Rule cxn: ${originalK.cxnsToString(sm.ns)}")
 
     val rStack = sortedBody.to(mutable.ListBuffer)
     var newBody = Array[(Atom, Int)]()
-//    println("START, stack=" + rStack)
-    while(rStack.nonEmpty)
-      var next = rStack.head
-//      println(s"picking head ${sm.ns(next._1.rId)} off stack")
-      while(next != null)
+//    println("START, stack=" + rStack.map(_._1).mkString("[", ", ", "]"))
+    while (rStack.nonEmpty)
+      var nextOpt = rStack.headOption
+//      println(s"\tpicking head ${sm.ns(nextOpt.get._1.rId)} off stack")
+      while (nextOpt.nonEmpty)
+        val next = nextOpt.get
         newBody = newBody :+ next
         rStack.remove(rStack.indexOf(next))
-//        println(s"body now: ${newBody.map(_._1).map(a => sm.ns(a.rId)).mkString("[", ", ", "]")}")
+//        println(s"\t\tbody now: ${newBody.map(_._1).map(a => sm.ns(a.rId)).mkString("[", ", ", "]")}")
 
         val cxns = originalK.cxns(next._1.rId)
+
         if (cxns.nonEmpty)
-          val bestCxn = cxns.max._2
-//          println(s"r with max cxn=${bestCxn.map(r => sm.ns(r)).mkString("[", ", ", "]")}")
-          val availableCxn = rStack.filter((atom, _) => bestCxn.contains(atom.rId)) // use filter not intersect to retain order
-//          println(s"cxns that are still on the stack = ${availableCxn.map(p => sm.ns(p._1.rId))}")
-          if (availableCxn.isEmpty)
-            next = null
-          else
-            next = availableCxn.head
-//            println(s"got strongest cxn, ${sm.ns(next._1.rId)}")
+//          println(s"\t\tcxns, in order: ${cxns.toSeq.sortBy(_._1).map((_, rIds) => rIds.map(r => sm.ns(r)).mkString("(", ", ", ")"))}")
+          val availableNonoverlapping = rStack.filterNot((atom, _) => cxns.values.flatten.toSeq.contains(atom.rId))
+          if (availableNonoverlapping.nonEmpty) // pick largest non-overlapping relation
+            nextOpt = availableNonoverlapping.headOption
+          else // pick the largest relation with the least overlap
+            nextOpt = cxns.toSeq.sortBy(_._1).view.map((count, worstCxn) =>
+//              println(s"\t\t\ttesting worst cxn of $count = ${worstCxn.map(r => sm.ns(r)).mkString("[", ", ", "]")}")
+              val availableCxn = rStack.filter((atom, _) => worstCxn.contains(atom.rId)) // use filter not intersect to retain order
+//              println(s"\t\t\tcxns that are still on the stack = ${availableCxn.map(p => sm.ns(p._1.rId))}")
+              availableCxn.headOption
+            ).collectFirst { case Some(x) => x }
         else
-          next = null
+          nextOpt = None
+//        println(s"\t\t\t==>next cxn to add: ${nextOpt.map(next => sm.ns(next._1.rId)).getOrElse("None")}")
 
     val newAtoms = originalK.atoms.head +: newBody.map(_._1)
     val newHash = JoinIndexes.getRuleHash(newAtoms)
 
-//    if (jitOptions.sortOrder._1 == 0)
-//      println(s"\tOrder: ${originalK.atoms.drop(1).map(a => s"${sm.ns(a.rId)}:|${sortBy(a)}|").mkString("", ", ", "")}")
-//    else
-//      println(s"\tOrder: ${newBody.map((a, _) => s"${sm.ns(a.rId)}:|${sortBy(a)}|").mkString("", ", ", "")}")
+//    println(s"\tOrder: ${newBody.map((a, _) => s"${sm.ns(a.rId)}:|${sortBy(a)}|").mkString("", ", ", "")}")
 
     (input.map(c => ProjectJoinFilterOp(rId, newHash, newBody.map((_, oldP) => c.childrenSO(oldP)): _*)), newHash)
     //    else
     //      (input, oldHash)
   }
 
-//  def getPreSortCard(input: Array[ProjectJoinFilterOp], sortBy: Atom => Int, rId: Int, oldHash: String, sm: StorageManager)(using jitOptions: JITOptions): (Array[ProjectJoinFilterOp], String) = {
-//    val originalK = sm.allRulesAllIndexes(rId)(oldHash)
-//
-//    var newBody = originalK.atoms.drop(1).zipWithIndex.sortBy((a, _) => sortBy(a))
-//    if (jitOptions.sortOrder._1 == -1) newBody = newBody.reverse
-//    val newAtoms = originalK.atoms.head +: newBody.map(_._1)
-//    val newHash = JoinIndexes.getRuleHash(newAtoms)
-////    if (input.length > 2)
-////      println(s"Rule: ${sm.printer.ruleToString(originalK.atoms)}")
-////      println(s"Rule cxn: ${originalK.cxnsToString(sm.ns)}")
-////    if (jitOptions.sortOrder._1 == 0)
-////      println(s"\tCard: ${originalK.atoms.drop(1).map(a => s"${sm.ns(a.rId)}:|${sortBy(a)}|").mkString("", ", ", "")}")
-////    else
-////      println(s"\tCard: ${newBody.map((a, _) => s"${sm.ns(a.rId)}:|${sortBy(a)}|").mkString("", ", ", "")}")
-//    (input.map(c => ProjectJoinFilterOp(rId, newHash, newBody.map((_, oldP) => c.childrenSO(oldP)): _*)), newHash)
-////    else
-////      (input, oldHash)
-//  }
+  private def getBestPresortSelect(input: Array[ProjectJoinFilterOp], sortBy: Atom => Int, rId: Int, oldHash: String, sm: StorageManager)(using jitOptions: JITOptions): (Array[ProjectJoinFilterOp], String) = {
+    val originalK = sm.allRulesAllIndexes(rId)(oldHash)
+
+    val sortedBody = originalK.atoms.drop(1).zipWithIndex.sortBy((a, _) => sortBy(a))
+//    if (input.length > 2)
+//    println(s"Rule: ${sm.printer.ruleToString(originalK.atoms)}")
+//    println(s"Rule cxn: ${originalK.cxnsToString(sm.ns)}")
+
+    val rStack = sortedBody.to(mutable.ListBuffer)
+    var newBody = Array[(Atom, Int)]()
+//    println("START, stack=" + rStack.map(_._1).mkString("[", ", ", "]"))
+    while(rStack.nonEmpty)
+      var nextOpt = rStack.headOption
+//      println(s"\tpicking head ${sm.ns(nextOpt.get._1.rId)} off stack")
+      while(nextOpt.nonEmpty)
+        val next = nextOpt.get
+        newBody = newBody :+ next
+        rStack.remove(rStack.indexOf(next))
+//        println(s"\t\tbody now: ${newBody.map(_._1).map(a => sm.ns(a.rId)).mkString("[", ", ", "]")}")
+
+        val cxns = originalK.cxns(next._1.rId)
+        if (cxns.nonEmpty)
+//          println(s"\t\tcxns, in order: ${cxns.toSeq.sortBy(_._1).reverse.map((_, rIds) => rIds.map(r => sm.ns(r)).mkString("(", ", ", ")"))}")
+          nextOpt = cxns.toSeq.sortBy(_._1).reverse.view.map((count, bestCxn) =>
+//            println(s"\t\t\ttesting best cxn of $count = ${bestCxn.map(r => sm.ns(r)).mkString("[", ", ", "]")}")
+            val availableCxn = rStack.filter((atom, _) => bestCxn.contains(atom.rId)) // use filter not intersect to retain order
+//            println(s"\t\t\tcxns that are still on the stack = ${availableCxn.map(p => sm.ns(p._1.rId))}")
+            availableCxn.headOption
+          ).collectFirst { case Some(x) => x }
+        else
+          nextOpt = None
+//        println(s"\t\t\t==>next cxn to add: ${nextOpt.map(next => sm.ns(next._1.rId)).getOrElse("None")}")
+
+    val newAtoms = originalK.atoms.head +: newBody.map(_._1)
+    val newHash = JoinIndexes.getRuleHash(newAtoms)
+
+//    println(s"\tOrder: ${newBody.map((a, _) => s"${sm.ns(a.rId)}:|${sortBy(a)}|").mkString("", ", ", "")}")
+
+    (input.map(c => ProjectJoinFilterOp(rId, newHash, newBody.map((_, oldP) => c.childrenSO(oldP)): _*)), newHash)
+    //    else
+    //      (input, oldHash)
+  }
+
+  def getPresort(input: Array[ProjectJoinFilterOp], sortBy: Atom => Int, rId: Int, oldHash: String, sm: StorageManager)(using jitOptions: JITOptions): (Array[ProjectJoinFilterOp], String) = {
+    jitOptions.sortOrder._1 match
+      case 0 => getBestPresortSelect(input, sortBy, rId, oldHash, sm) // sort anyway for benchmarking purposes
+      case 1 => getBestPresortSelect(input, sortBy, rId, oldHash, sm)
+      case -1 => getWorstPresortSelect(input, sortBy, rId, oldHash, sm)
+      case 2 => getPreSortCard(input, sortBy, rId, oldHash, sm, true)
+      case -2 => getPreSortCard(input, sortBy, rId, oldHash, sm, false)
+      case _ => throw new Exception(s"Unknown sort order ${jitOptions.sortOrder}")
+  }
+
+  private def getPreSortCard(input: Array[ProjectJoinFilterOp], sortBy: Atom => Int, rId: Int, oldHash: String, sm: StorageManager, best: Boolean)(using JITOptions): (Array[ProjectJoinFilterOp], String) = {
+    val originalK = sm.allRulesAllIndexes(rId)(oldHash)
+
+    var newBody = originalK.atoms.drop(1).zipWithIndex.sortBy((a, _) => sortBy(a))
+    if (!best) newBody = newBody.reverse
+    val newAtoms = originalK.atoms.head +: newBody.map(_._1)
+    val newHash = JoinIndexes.getRuleHash(newAtoms)
+//    if (input.length > 2)
+//      println(s"Rule: ${sm.printer.ruleToString(originalK.atoms)}")
+//      println(s"Rule cxn: ${originalK.cxnsToString(sm.ns)}")
+//    if (jitOptions.sortOrder._1 == 0)
+//      println(s"\tCard: ${originalK.atoms.drop(1).map(a => s"${sm.ns(a.rId)}:|${sortBy(a)}|").mkString("", ", ", "")}")
+//    else
+//    println(s"\tCard: ${newBody.map((a, _) => s"${sm.ns(a.rId)}:|${sortBy(a)}|").mkString("", ", ", "")}")
+    (input.map(c => ProjectJoinFilterOp(rId, newHash, newBody.map((_, oldP) => c.childrenSO(oldP)): _*)), newHash)
+//    else
+//      (input, oldHash)
+  }
   def allOrders(rule: Array[Atom]): AllIndexes = {
     mutable.Map[String, JoinIndexes](rule.drop(1).permutations.map(r =>
       val toRet = JoinIndexes(rule.head +: r)

@@ -119,15 +119,19 @@ class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: J
         }
 
       case UnionSPJOp(rId, hash, children: _*) =>
-        val (sortedChildren, newHash) = JoinIndexes.getPresortSelect(
-          children.toArray,
-          a => storageManager.getKnownDerivedDB(a.rId).length,
-          rId,
-          hash,
-          storageManager
-        )
+        val (sortedChildren, newHash) =
+          if (jitOptions.sortOrder._1 != 0)
+            JoinIndexes.getPresort(
+              children.toArray,
+              a => storageManager.getKnownDerivedDB(a.rId).length,
+              rId,
+              hash,
+              storageManager
+            )
+          else
+            (children.toArray, hash)
 
-        val compiledOps = sortedChildren.map(compileIRRelOp) // NOTE: always using sorted here
+        val compiledOps = sortedChildren.map(compileIRRelOp)
         '{ $stagedSM.union(${ Expr.ofSeq(compiledOps) }) }
 
       case UnionOp(label, children: _*) =>
@@ -262,13 +266,17 @@ class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: J
       case uOp: UnionOp =>
         '{ ${Expr.ofSeq(uOp.children.toSeq.map(compileIRRelOp))}($i) }
       case uSPJOp: UnionSPJOp =>
-        val (sortedChildren, newHash) = JoinIndexes.getPresortSelect(
-          uSPJOp.children.toArray,
-          a => storageManager.getKnownDerivedDB(a.rId).length,
-          uSPJOp.rId,
-          uSPJOp.hash,
-          storageManager
-        )
+        val (sortedChildren, newHash) =
+          if (jitOptions.sortOrder._1 != 0)
+            JoinIndexes.getPresort(
+              uSPJOp.children.toArray,
+              a => storageManager.getKnownDerivedDB(a.rId).length,
+              uSPJOp.rId,
+              uSPJOp.hash,
+              storageManager
+            )
+          else
+            (uSPJOp.children.toArray, uSPJOp.hash)
         '{ ${ Expr.ofSeq(sortedChildren.toSeq.map(compileIRRelOp)) } ($i) }
       case _ => throw new Exception(s"Indexed compilation: Unhandled IROp ${irTree.code}")
   }

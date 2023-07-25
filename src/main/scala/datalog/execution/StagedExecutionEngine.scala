@@ -368,7 +368,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
     debug("IRTree: ", () => storageManager.printer.printIR(irTree))
     if (defaultJITOptions.granularity == OpCode.OTHER) // i.e. never compile
       solveInterpreted(irTree, irCtx)
-    else if (defaultJITOptions.granularity == OpCode.PROGRAM && defaultJITOptions.aot && defaultJITOptions.block) // i.e. compile asap
+    else if (defaultJITOptions.granularity == OpCode.PROGRAM && defaultJITOptions.aot && defaultJITOptions.block) // i.e. compile asap and block
       solveCompiled(irTree, irCtx)
     else
       solveJIT(irTree, irCtx)

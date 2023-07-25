@@ -305,7 +305,7 @@ case class UnionSPJOp(rId: RelationId, var hash: String, override val children:P
     storageManager.union(opFns.map(o => o(storageManager)))
 
   override def run(storageManager: StorageManager): EDB =
-    val (sortedChildren, _) = JoinIndexes.getPresortSelect( // TODO: this isn't saved anywhere, in case this is traversed again
+    val (sortedChildren, _) = JoinIndexes.getPresort( // TODO: this isn't saved anywhere, in case this is traversed again
       children.toArray,
       a => storageManager.getKnownDerivedDB(a.rId).length,
       rId,
@@ -313,7 +313,7 @@ case class UnionSPJOp(rId: RelationId, var hash: String, override val children:P
       storageManager
     )
     tmp = sortedChildren // so cost of sorting always included in benchmark
-    if (jitOptions.sortOrder._1 == 0 || children.length < 3)
+    if (jitOptions.sortOrder._1 == 0 || children.length < 3 || jitOptions.granularity != OpCode.OTHER) // If not mainly interpreting, then don't optimize
       storageManager.union(children.map((s: ProjectJoinFilterOp) => s.run(storageManager)))
     else
       storageManager.union(sortedChildren.map((s: ProjectJoinFilterOp) => s.run(storageManager)))

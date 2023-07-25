@@ -1062,6 +1062,102 @@ def stratified(program: Program) = {
 
   println(r.solve())
 }
+
+def select(program: Program): Unit = {
+  val one0 = program.relation[Constant]("one0")
+  val one1 = program.relation[Constant]("one1")
+  val two1 = program.relation[Constant]("two1")
+  val two2 = program.relation[Constant]("two2")
+  val two3 = program.relation[Constant]("two3")
+  val three4 = program.relation[Constant]("three4")
+  val three5 = program.relation[Constant]("three5")
+  val three6 = program.relation[Constant]("three6")
+  val three7 = program.relation[Constant]("three7")
+  val threeAndOne7 = program.relation[Constant]("threeAndOne7")
+  val extra9 = program.relation[Constant]("extra9")
+  val extra10 = program.relation[Constant]("extra10")
+
+  val rule = program.relation[Constant]("rule")
+
+  val x, a, b, c, d, e, f, g, h, i = program.variable()
+
+  one1(1) :- ()
+
+  two1(1, 2) :- ()
+
+  two2(0, 1) :- ()
+  two2(1, 0) :- ()
+
+  two3(1, 0) :- ()
+  two3(0, 0) :- ()
+  two3(1, 1) :- ()
+
+  three4(1, 0, 1) :- ()
+  three4(1, 1, 1) :- ()
+  three4(1, 0, 0) :- ()
+  three4(0, 0, 0) :- ()
+
+  three5(1, 0, 0) :- ()
+  three5(1, 1, 0) :- ()
+  three5(1, 0, 1) :- ()
+  three5(1, 1, 0) :- ()
+  three5(1, 1, 1) :- ()
+
+  three6(1, 0, 0) :- ()
+  three6(1, 1, 0) :- ()
+  three6(1, 0, 1) :- ()
+  three6(1, 1, 0) :- ()
+  three6(1, 1, 1) :- ()
+  three6(0, 0, 0) :- ()
+
+  three7(1, 0, 0) :- ()
+  three7(1, 1, 0) :- ()
+  three7(1, 0, 1) :- ()
+  three7(1, 1, 0) :- ()
+  three7(1, 1, 1) :- ()
+  three7(0, 0, 0) :- ()
+  three7(2, 0, 0) :- ()
+
+  threeAndOne7(1) :- ()
+  threeAndOne7(2) :- ()
+  threeAndOne7(3) :- ()
+  threeAndOne7(4) :- ()
+  threeAndOne7(5) :- ()
+  threeAndOne7(6) :- ()
+  threeAndOne7(7) :- ()
+  threeAndOne7(8) :- ()
+
+  extra9(1) :- ()
+  extra9(2) :- ()
+  extra9(3) :- ()
+  extra9(4) :- ()
+  extra9(5) :- ()
+  extra9(6) :- ()
+  extra9(7) :- ()
+  extra9(8) :- ()
+  extra9(9) :- ()
+
+  extra10(1) :- ()
+  extra10(10) :- ()
+  extra10(2) :- ()
+  extra10(3) :- ()
+  extra10(4) :- ()
+  extra10(5) :- ()
+  extra10(6) :- ()
+  extra10(7) :- ()
+  extra10(8) :- ()
+  extra10(9) :- ()
+
+  rule(x) :- (
+//    one0(x), one1(x),
+    two3(a, b), extra9(a, b), two2(a, b),
+//    three4(c, d, e), three5(c, d, e), three6(c, d, e), three7(c, d, e),
+    threeAndOne7(f, g, h, i), extra10(f, g, h), extra9(i, f, g, h, x)
+  )
+
+  println("about to solvee")
+  rule.solve()
+}
 @main def main = {
 //  val stratifiedA = false
 //  println("NAIVE")
@@ -1071,18 +1167,18 @@ def stratified(program: Program) = {
 //  println("\n\n_______________________\n\n")
 
   val dotty = staging.Compiler.make(getClass.getClassLoader)
-  println("SEMINAIVE:")
-  given engine1: ExecutionEngine = new SemiNaiveExecutionEngine(new DefaultStorageManager())
-  val program1 = Program(engine1)
-  pointstofun(program1)
-  println("\n\n_______________________\n\n")
+//  println("SEMINAIVE:")
+//  given engine1: ExecutionEngine = new SemiNaiveExecutionEngine(new DefaultStorageManager())
+//  val program1 = Program(engine1)
+//  pointstofun(program1)
+//  println("\n\n_______________________\n\n")
 
-//    val jo2 = JITOptions(ir.OpCode.OTHER, dotty, aot = false, block = true)
-//    println("INTERP")
-//    given engine3a: ExecutionEngine = new StagedExecutionEngine(new DefaultStorageManager(), jo2)
-
-//    val program3a = Program(engine3a)
-//    stratified(program3a)
+    val jo2 = JITOptions(ir.OpCode.OTHER, dotty, sortOrder = (2, 0, 0))
+    println("INTERP")
+    given engine3a: ExecutionEngine = new StagedExecutionEngine(new DefaultStorageManager(), jo2)
+//
+    val program3a = Program(engine3a)
+    select(program3a)
 //    println("\n\n_______________________\n\n")
 //
 //  val jo3 = JITOptions(ir.OpCode.EVAL_RULE_SN, dotty, aot = false, block = true, sortOrder = (0, 0, 0), stratified = stratifiedA)
