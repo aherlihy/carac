@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1690317776768,
+  "lastUpdate": 1690322503613,
   "repoUrl": "https://github.com/aherlihy/carac",
   "entries": {
     "Benchmark": [
@@ -10090,6 +10090,774 @@ window.BENCHMARK_DATA = {
           {
             "name": "datalog.benchmarks.examples.tree.seminaive_volcano__ci",
             "value": 1.3702388170066095,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "herlihyap@gmail.com",
+            "name": "aherlihy",
+            "username": "aherlihy"
+          },
+          "committer": {
+            "email": "herlihyap@gmail.com",
+            "name": "aherlihy",
+            "username": "aherlihy"
+          },
+          "distinct": true,
+          "id": "f8ac08cc4e5b560fe211f9a0c6e21205871cb519",
+          "message": "Update Serializable ListLib test",
+          "timestamp": "2023-07-25T20:18:19+02:00",
+          "tree_id": "4231ca9cae84b11f37308320736112621f1e30d9",
+          "url": "https://github.com/aherlihy/carac/commit/f8ac08cc4e5b560fe211f9a0c6e21205871cb519"
+        },
+        "date": 1690322502605,
+        "tool": "jmh",
+        "benches": [
+          {
+            "name": "datalog.benchmarks.Bench_ci.compiled_default_unordered__",
+            "value": 2.672017980997586,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.Bench_ci.interpreted_default_unordered__ci",
+            "value": 0.6910205181284443,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.Bench_ci.jit_default_unordered_async_EVALRULEBODY__",
+            "value": 6.115199885872093,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.Bench_ci.jit_default_unordered_async_EVALRULEBODY_aot__",
+            "value": 6.353988038931952,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.Bench_ci.jit_default_unordered_blocking_EVALRULEBODY__ci",
+            "value": 1.294558478656936,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.Bench_ci.naive_default__",
+            "value": 0.302129064140234,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.Bench_ci.naive_volcano__",
+            "value": 0.28869024536981663,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.Bench_ci.seminaive_default__ci",
+            "value": 0.23467579437740732,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.Bench_ci.seminaive_volcano__ci",
+            "value": 0.19969352095688886,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.ackermann.interpreted_default_unordered__ci",
+            "value": 40.80502259384615,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.ackermann.seminaive_default__ci",
+            "value": 43.70070681166667,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.ackermann.seminaive_volcano__ci",
+            "value": 42.13733728474359,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.andersen.interpreted_default_unordered__ci",
+            "value": 1.3911910279464128,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.andersen.jit_default_unordered_blocking_EVALRULEBODY__ci",
+            "value": 4.325948711320153,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.andersen.seminaive_default__ci",
+            "value": 0.9264849796254608,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.andersen.seminaive_volcano__ci",
+            "value": 1.0525788631932222,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.anonvar.interpreted_default_unordered__ci",
+            "value": 221.653514834,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.anonvar.jit_default_unordered_blocking_EVALRULEBODY__ci",
+            "value": 222.815033386,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.anonvar.seminaive_default__ci",
+            "value": 115.21210122400001,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.anonvar.seminaive_volcano__ci",
+            "value": 156.98791136,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.cbaexprvalue.interpreted_default_unordered__ci",
+            "value": 10.965307431299735,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.cbaexprvalue.jit_default_unordered_blocking_EVALRULEBODY__ci",
+            "value": 30.685678591653776,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.cbaexprvalue.seminaive_default__ci",
+            "value": 8.517341110389404,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.cbaexprvalue.seminaive_volcano__ci",
+            "value": 11.185000722354483,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.clique.interpreted_default_unordered__ci",
+            "value": 52.96853738835931,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.clique.jit_default_unordered_blocking_EVALRULEBODY__ci",
+            "value": 112.65922634134532,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.clique.seminaive_default__ci",
+            "value": 79.8557920375923,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.clique.seminaive_volcano__ci",
+            "value": 39.71373971279344,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.cliquer.interpreted_default_unordered__ci",
+            "value": 3.5722112249788376,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.cliquer.jit_default_unordered_blocking_EVALRULEBODY__ci",
+            "value": 12.2340360423811,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.cliquer.seminaive_default__ci",
+            "value": 2.811918366274823,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.cliquer.seminaive_volcano__ci",
+            "value": 3.015080704064385,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.equal.interpreted_default_unordered__ci",
+            "value": 175.75003734836613,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.equal.jit_default_unordered_blocking_EVALRULEBODY__ci",
+            "value": 292.52519052140076,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.equal.seminaive_default__ci",
+            "value": 158.93231595509536,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.equal.seminaive_volcano__ci",
+            "value": 88.48412169496538,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.fib.interpreted_default_unordered__ci",
+            "value": 178.72697564631594,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.fib.jit_default_unordered_blocking_EVALRULEBODY__ci",
+            "value": 380.7962422479071,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.fib.seminaive_default__ci",
+            "value": 134.1595882789015,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.fib.seminaive_volcano__ci",
+            "value": 141.89740565184857,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.func.interpreted_default_unordered__ci",
+            "value": 2.280221938195839,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.func.jit_default_unordered_blocking_EVALRULEBODY__ci",
+            "value": 6.8511802995863915,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.func.seminaive_default__ci",
+            "value": 1.777969512977902,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.func.seminaive_volcano__ci",
+            "value": 1.6779880358989332,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.grad.interpreted_default_unordered__ci",
+            "value": 0.5982316828002803,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.grad.jit_default_unordered_blocking_EVALRULEBODY__ci",
+            "value": 1.9503891149399462,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.grad.seminaive_default__ci",
+            "value": 0.484900424503533,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.grad.seminaive_volcano__ci",
+            "value": 0.5417719570510878,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.inputoutput.interpreted_default_unordered__ci",
+            "value": 7.637710184557416,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.inputoutput.jit_default_unordered_blocking_EVALRULEBODY__ci",
+            "value": 23.88018203942321,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.inputoutput.seminaive_default__ci",
+            "value": 6.919541150151806,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.inputoutput.seminaive_volcano__ci",
+            "value": 7.048617190128243,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.isafter.interpreted_default_unordered__ci",
+            "value": 80.96228023241514,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.isafter.jit_default_unordered_blocking_EVALRULEBODY__ci",
+            "value": 183.79875025374625,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.isafter.seminaive_default__ci",
+            "value": 77.33924068849893,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.isafter.seminaive_volcano__ci",
+            "value": 63.54308604450297,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.isbefore.interpreted_default_unordered__ci",
+            "value": 12.869889573986958,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.isbefore.jit_default_unordered_blocking_EVALRULEBODY__ci",
+            "value": 32.364234577181264,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.isbefore.seminaive_default__ci",
+            "value": 13.26377813598152,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.isbefore.seminaive_volcano__ci",
+            "value": 10.430393559478526,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.javapointsto.interpreted_default_unordered__ci",
+            "value": 0.4977425118252058,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.javapointsto.jit_default_unordered_blocking_EVALRULEBODY__ci",
+            "value": 1.2748011197496385,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.javapointsto.seminaive_default__ci",
+            "value": 0.3149116368826574,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.javapointsto.seminaive_volcano__ci",
+            "value": 0.36363777414181614,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.metro.interpreted_default_unordered__ci",
+            "value": 1.864959175269155,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.metro.jit_default_unordered_blocking_EVALRULEBODY__ci",
+            "value": 6.724381685879304,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.metro.seminaive_default__ci",
+            "value": 1.8471970509417985,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.metro.seminaive_volcano__ci",
+            "value": 2.0433761648325186,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.palindrome.interpreted_default_unordered__ci",
+            "value": 83.24821973472145,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.palindrome.jit_default_unordered_blocking_EVALRULEBODY__ci",
+            "value": 113.0159059946789,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.palindrome.seminaive_default__ci",
+            "value": 55.23814301888284,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.palindrome.seminaive_volcano__ci",
+            "value": 41.48021268088259,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.pointsto.interpreted_default_unordered__ci",
+            "value": 246.4381677433333,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.pointsto.jit_default_unordered_blocking_EVALRULEBODY__ci",
+            "value": 253.03994795,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.pointsto.seminaive_default__ci",
+            "value": 192.79210275333332,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.pointsto.seminaive_volcano__ci",
+            "value": 132.13553559500002,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.prime.interpreted_default_unordered__ci",
+            "value": 84.93246833056148,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.prime.jit_default_unordered_blocking_EVALRULEBODY__ci",
+            "value": 248.2133665674704,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.prime.seminaive_default__ci",
+            "value": 89.21987111481748,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.prime.seminaive_volcano__ci",
+            "value": 70.21401810546497,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.puzzle.interpreted_default_unordered__ci",
+            "value": 18.17921409852764,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.puzzle.jit_default_unordered_blocking_EVALRULEBODY__ci",
+            "value": 43.09951787239302,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.puzzle.seminaive_default__ci",
+            "value": 19.953058091102793,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.puzzle.seminaive_volcano__ci",
+            "value": 14.8739943965949,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.ranpo.interpreted_default_unordered__ci",
+            "value": 244.0358392733333,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.ranpo.jit_default_unordered_blocking_EVALRULEBODY__ci",
+            "value": 253.09152866333335,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.ranpo.seminaive_default__ci",
+            "value": 108.35180327999998,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.ranpo.seminaive_volcano__ci",
+            "value": 160.75182867,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.rsg.interpreted_default_unordered__ci",
+            "value": 1.9084325836271567,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.rsg.jit_default_unordered_blocking_EVALRULEBODY__ci",
+            "value": 6.116286644310245,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.rsg.seminaive_default__ci",
+            "value": 1.5929043794315851,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.rsg.seminaive_volcano__ci",
+            "value": 1.3882512950303854,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.ship.interpreted_default_unordered__ci",
+            "value": 0.753336136004606,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.ship.jit_default_unordered_blocking_EVALRULEBODY__ci",
+            "value": 2.900533715621766,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.ship.seminaive_default__ci",
+            "value": 0.6377532529081572,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.ship.seminaive_volcano__ci",
+            "value": 0.6815013735657389,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.small.interpreted_default_unordered__ci",
+            "value": 2.6459104069124644,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.small.jit_default_unordered_blocking_EVALRULEBODY__ci",
+            "value": 8.6773494044774,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.small.seminaive_default__ci",
+            "value": 2.063214460181069,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.small.seminaive_volcano__ci",
+            "value": 2.138084145550402,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.strata.interpreted_default_unordered__ci",
+            "value": 0.027524932222478038,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.strata.jit_default_unordered_blocking_EVALRULEBODY__ci",
+            "value": 0.09896678305931685,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.strata.seminaive_default__ci",
+            "value": 0.036977943387868084,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.strata.seminaive_volcano__ci",
+            "value": 0.02095468868966712,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.tc.interpreted_default_unordered__ci",
+            "value": 2.1435223687519427,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.tc.jit_default_unordered_blocking_EVALRULEBODY__ci",
+            "value": 6.950294358018148,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.tc.seminaive_default__ci",
+            "value": 2.004555496877603,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.tc.seminaive_volcano__ci",
+            "value": 1.7746420505090206,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.traffic.interpreted_default_unordered__ci",
+            "value": 1.5062647012147774,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.traffic.jit_default_unordered_blocking_EVALRULEBODY__ci",
+            "value": 6.0120763024264035,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.traffic.seminaive_default__ci",
+            "value": 1.3480276031618592,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.traffic.seminaive_volcano__ci",
+            "value": 1.21740007733066,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.trains.interpreted_default_unordered__ci",
+            "value": 58.287396173333335,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.trains.jit_default_unordered_blocking_EVALRULEBODY__ci",
+            "value": 98.04850649266666,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.trains.seminaive_default__ci",
+            "value": 46.41006302,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.trains.seminaive_volcano__ci",
+            "value": 36.19689676428571,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.trans.interpreted_default_unordered__ci",
+            "value": 1.0593351937256297,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.trans.jit_default_unordered_blocking_EVALRULEBODY__ci",
+            "value": 3.7701062452090355,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.trans.seminaive_default__ci",
+            "value": 0.8340177296810646,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.trans.seminaive_volcano__ci",
+            "value": 0.7433327611551797,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.tree.interpreted_default_unordered__ci",
+            "value": 1.8473691066891234,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.tree.jit_default_unordered_blocking_EVALRULEBODY__ci",
+            "value": 8.057421177794916,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.tree.seminaive_default__ci",
+            "value": 1.4215292770951387,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.tree.seminaive_volcano__ci",
+            "value": 1.3117610667173412,
             "unit": "s/op",
             "extra": "iterations: 5\nforks: 1\nthreads: 1"
           }
