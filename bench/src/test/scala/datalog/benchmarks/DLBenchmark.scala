@@ -85,7 +85,7 @@ abstract class DLBenchmark {
     jitGranularities.foreach(gran =>
       sortCombos.foreach(s =>
         blocking.foreach(sync =>
-          val jo = JITOptions(ir.OpCode.EVAL_RULE_BODY, dotty, true, sync, sortOrder = s)
+          val jo = JITOptions(gran, dotty, true, sync, sortOrder = s)
           programs(s"jit_default_${toS(s._1, s._2, s._3)}_${if (sync) "async" else "blocking"}_${gran.toString.replace("_", "")}_aot") = Program(
             StagedExecutionEngine(DefaultStorageManager(), jo)
           )
