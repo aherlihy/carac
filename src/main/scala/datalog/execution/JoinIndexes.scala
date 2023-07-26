@@ -220,7 +220,7 @@ object JoinIndexes {
 
   def getPresort(input: Array[ProjectJoinFilterOp], sortBy: Atom => Int, rId: Int, oldHash: String, sm: StorageManager)(using jitOptions: JITOptions): (Array[ProjectJoinFilterOp], String) = {
     jitOptions.sortOrder._1 match
-      case 0 => getBestPresortSelect(input, sortBy, rId, oldHash, sm) // sort anyway for benchmarking purposes
+      case 0 => (input, oldHash) // getBestPresortSelect(input, sortBy, rId, oldHash, sm) // sort anyway for benchmarking purposes
       case 1 => getBestPresortSelect(input, sortBy, rId, oldHash, sm)
       case -1 => getWorstPresortSelect(input, sortBy, rId, oldHash, sm)
       case 2 => getPreSortCard(input, sortBy, rId, oldHash, sm, true)
