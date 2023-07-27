@@ -29,9 +29,8 @@ trait ExecutionEngine {
    * @param rule - Includes the head at idx 0
    */
   inline def getOperatorKey(rule: Array[Atom]): JoinIndexes =
-    JoinIndexes(rule)
+    JoinIndexes(rule, None)
 
-  def getOperatorKeys(rId: RelationId): mutable.ArrayBuffer[JoinIndexes] = {
+  def getOperatorKeys(rId: RelationId): mutable.ArrayBuffer[JoinIndexes] =
     prebuiltOpKeys.getOrElseUpdate(rId, mutable.ArrayBuffer[JoinIndexes]())
-  }
 }

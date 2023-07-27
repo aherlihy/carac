@@ -44,7 +44,9 @@ class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: J
 
   given ToExpr[PredicateType] with {
     def apply(x: PredicateType)(using Quotes) = {
-      Expr(x)
+      x match
+        case PredicateType.POSITIVE => '{PredicateType.POSITIVE}
+        case PredicateType.NEGATED => '{PredicateType.NEGATED}
     }
   }
 
@@ -96,40 +98,28 @@ class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: J
         else
           '{ $stagedSM.getEmptyEDB() }
 
-      case ProjectJoinFilterOp(rId, hash, children: _*) =>
-//        val FPJOp = irTree.asInstanceOf[ProjectJoinFilterOp]
-//        val (sortedChildren, newHash) = JoinIndexes.getSortAhead(
-//          FPJOp.childrenSO,
-//          c => c.run(storageManager).length,
-//          rId,
-//          hash,
-//          storageManager
-//        )
-//        FPJOp.childrenSO = sortedChildren
-        //        FPJOp.children = sortedChildren.asInstanceOf[Array[IROp[EDB]]] // save for next run so sorting is faster
-//        FPJOp.hash = newHash
+      case ProjectJoinFilterOp(rId, k, children: _*) =>
         val compiledOps = Expr.ofSeq(children.map(compileIRRelOp))
         '{
-          $stagedSM.joinProjectHelper_withHash(
+          $stagedSM.joinProjectHelper(
             $compiledOps,
-            ${ Expr(rId) },
-            ${ Expr(hash) },
+            ${ Expr(k) },
             ${ Expr(jitOptions.sortOrder) }
           )
         }
 
-      case UnionSPJOp(rId, hash, children: _*) =>
-        val (sortedChildren, newHash) =
+      case UnionSPJOp(rId, k, children: _*) =>
+        val (sortedChildren, newk) =
           if (jitOptions.sortOrder._1 != 0)
             JoinIndexes.getPresort(
               children.toArray,
               a => storageManager.getKnownDerivedDB(a.rId).length,
               rId,
-              hash,
+              k,
               storageManager
             )
           else
-            (children.toArray, hash)
+            (children.toArray, k)
 
         val compiledOps = sortedChildren.map(compileIRRelOp)
         '{ $stagedSM.union(${ Expr.ofSeq(compiledOps) }) }
@@ -266,17 +256,13 @@ class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: J
       case uOp: UnionOp =>
         '{ ${Expr.ofSeq(uOp.children.toSeq.map(compileIRRelOp))}($i) }
       case uSPJOp: UnionSPJOp =>
-        val (sortedChildren, newHash) =
-          if (jitOptions.sortOrder._1 != 0)
-            JoinIndexes.getPresort(
-              uSPJOp.children.toArray,
-              a => storageManager.getKnownDerivedDB(a.rId).length,
-              uSPJOp.rId,
-              uSPJOp.hash,
-              storageManager
-            )
-          else
-            (uSPJOp.children.toArray, uSPJOp.hash)
+        val (sortedChildren, newk) =
+          JoinIndexes.getPresort(
+            uSPJOp.children.toArray,
+            a => storageManager.getKnownDerivedDB(a.rId).length,
+            uSPJOp.rId,
+            uSPJOp.k,
+            storageManager)
         '{ ${ Expr.ofSeq(sortedChildren.toSeq.map(compileIRRelOp)) } ($i) }
       case _ => throw new Exception(s"Indexed compilation: Unhandled IROp ${irTree.code}")
   }

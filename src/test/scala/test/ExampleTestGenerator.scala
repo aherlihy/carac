@@ -158,9 +158,9 @@ abstract class TestGenerator(directory: Path,
     override def munitFixtures = List(program)
 
     Seq(
-      // "Naive",
-//      "SemiNaive",
-      // "CompiledStaged",
+       "Naive",
+      "SemiNaive",
+       "CompiledStaged",
       "InterpretedStaged",
 //      "InterpretedStagedB1",
 //      "InterpretedStagedW1",

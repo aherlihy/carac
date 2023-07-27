@@ -2,7 +2,7 @@ package datalog.storage
 
 import datalog.dsl.{Atom, Constant, Variable}
 import datalog.tools.Debug.debug
-import datalog.execution.{AllIndexes, JoinIndexes, PredicateType}
+import datalog.execution.{JoinIndexes, PredicateType}
 
 import scala.collection.{immutable, mutable}
 
@@ -15,7 +15,6 @@ class VolcanoStorageManager(ns: NS = NS()) extends CollectionsStorageManager(ns)
   def joinHelper(inputs: Seq[EDB], k: JoinIndexes): EDB = ???
   def projectHelper(input: EDB, k: JoinIndexes): EDB = ???
   def joinProjectHelper(inputs: Seq[EDB], k: JoinIndexes, sortOrder: (Int, Int, Int)): EDB = ???
-  def joinProjectHelper_withHash(inputs: Seq[EDB], rId: Int, hash: String, sortOrder: (Int, Int, Int)): EDB = ???
 
   /**
    * Use relational operators to evaluate an IDB rule using Naive algo

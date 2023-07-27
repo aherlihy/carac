@@ -1,7 +1,7 @@
 package datalog.storage
 
 import datalog.dsl.{Atom, Term, Variable, Constant}
-import datalog.execution.{JoinIndexes, AllIndexes}
+import datalog.execution.JoinIndexes
 
 import scala.collection.mutable
 import scala.collection.immutable
@@ -9,8 +9,6 @@ trait StorageManager(val ns: NS) {
   var iteration = 0
   var knownDbId: KnowledgeId
   var newDbId: KnowledgeId
-
-  val allRulesAllIndexes: mutable.Map[RelationId, AllIndexes]
 
   val printer: Printer[this.type]
 
@@ -51,7 +49,6 @@ trait StorageManager(val ns: NS) {
   def joinHelper(inputs: Seq[EDB], k: JoinIndexes): EDB
   def projectHelper(input: EDB, k: JoinIndexes): EDB
   def joinProjectHelper(inputs: Seq[EDB], k: JoinIndexes, sortOrder: (Int, Int, Int)): EDB
-  def joinProjectHelper_withHash(inputs: Seq[EDB], rId: Int, hash: String, sortOrder: (Int, Int, Int)): EDB
   def diff(lhs: EDB, rhs: EDB): EDB
   def union(edbs: Seq[EDB]): EDB
 

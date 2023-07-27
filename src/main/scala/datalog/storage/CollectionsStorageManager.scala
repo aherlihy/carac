@@ -1,7 +1,7 @@
 package datalog.storage
 
 import datalog.dsl.{Atom, Constant, Term, Variable}
-import datalog.execution.{AllIndexes, JoinIndexes}
+import datalog.execution.{JoinIndexes}
 import CollectionsCasts.*
 import datalog.tools.Debug.debug
 
@@ -21,7 +21,6 @@ abstract class CollectionsStorageManager(override val ns: NS) extends StorageMan
   protected val derivedDB: mutable.Map[KnowledgeId, CollectionsDatabase] = mutable.Map[KnowledgeId, CollectionsDatabase]()
   protected val deltaDB: mutable.Map[KnowledgeId, CollectionsDatabase] = mutable.Map[KnowledgeId, CollectionsDatabase]()
 
-  val allRulesAllIndexes: mutable.Map[RelationId, AllIndexes] = mutable.Map.empty
   val printer: Printer[this.type] = Printer[this.type](this)
 
   val relOps: VolcanoOperators[this.type] = VolcanoOperators(this)
@@ -81,18 +80,18 @@ abstract class CollectionsStorageManager(override val ns: NS) extends StorageMan
    * constants in all IDB rules. Currently unused because we incrementally add elements to the domain but may
    * be useful if we want a domain containing only predicates from <= strata.
    */
-  def computeDomain(): Set[StorageTerm] = {
-    val constants = mutable.Set[StorageTerm]()
-    edbs.foreach((_, rows) => // avoid map or flatMap for CollectionsDatabase, CollectionRow
-      rows.foreach(row =>
-        constants.addAll(row.toSeq)
-      )
-    )
-    constants.addAll(allRulesAllIndexes.flatMap((_, allIndexes) =>
-      allIndexes.head._2.constIndexes.values
-    ))
-    constants.toSet
-  }
+//  def computeDomain(): Set[StorageTerm] = {
+//    val constants = mutable.Set[StorageTerm]()
+//    edbs.foreach((_, rows) => // avoid map or flatMap for CollectionsDatabase, CollectionRow
+//      rows.foreach(row =>
+//        constants.addAll(row.toSeq)
+//      )
+//    )
+//    constants.addAll(allRulesAllIndexes.flatMap((_, allIndexes) =>
+//      allIndexes.head._2.constIndexes.values
+//    ))
+//    constants.toSet
+//  }
 
   /**
    * Compute Dom * Dom * ... arity # times

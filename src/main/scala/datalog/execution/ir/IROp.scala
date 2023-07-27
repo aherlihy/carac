@@ -241,38 +241,22 @@ case class ScanEDBOp(rId: RelationId)(using JITOptions) extends IROp[EDB] {
  * @param joinIdx
  * @param children: [Scan*deps]
  */
-case class ProjectJoinFilterOp(rId: RelationId, var hash: String, override val children:IROp[EDB]*)(using jitOptions: JITOptions) extends IROp[EDB](children:_*) {
+case class ProjectJoinFilterOp(rId: RelationId, var k: JoinIndexes, override val children:IROp[EDB]*)(using jitOptions: JITOptions) extends IROp[EDB](children:_*) {
   val code: OpCode = OpCode.SPJ
   var childrenSO: Array[IROp[EDB]] = children.toArray
 
   override def run_continuation(storageManager: StorageManager, opFns: Seq[CompiledFn[EDB]]): EDB =
     val inputs = opFns.map(s => s(storageManager))
-//    val (sorted, newHash) = JoinIndexes.getSortAhead(
-//      inputs.toArray,
-//      edb => edb.length,
-//      rId,
-//      hash,
-//      storageManager
-//    )
-    storageManager.joinProjectHelper_withHash(
+    storageManager.joinProjectHelper(
       inputs,
-      rId,
-      hash,
+      k,
       jitOptions.sortOrder
     )
   override def run(storageManager: StorageManager): EDB =
     val inputs = children.map(s => s.run(storageManager))
-//    val (sorted, newHash) = JoinIndexes.getSortAhead(
-//      inputs.toArray,
-//      edb => edb.length,
-//      rId,
-//      hash,
-//      storageManager
-//    )
-    storageManager.joinProjectHelper_withHash(
+    storageManager.joinProjectHelper(
         inputs,
-        rId,
-        hash,
+        k,
         jitOptions.sortOrder
       )
 }
@@ -296,7 +280,7 @@ case class UnionOp(override val code: OpCode, override val children:IROp[EDB]*)(
  * @param code
  * @param children: [Scan*atoms]
  */
-case class UnionSPJOp(rId: RelationId, var hash: String, override val children:ProjectJoinFilterOp*)(using JITOptions) extends IROp[EDB](children:_*) {
+case class UnionSPJOp(rId: RelationId, var k: JoinIndexes, override val children:ProjectJoinFilterOp*)(using JITOptions) extends IROp[EDB](children:_*) {
   val code: OpCode = OpCode.EVAL_RULE_BODY
   var compiledFnIndexed: Future[CompiledFnIndexed[EDB]] = null
   var tmp: Seq[ProjectJoinFilterOp] = null
@@ -308,11 +292,11 @@ case class UnionSPJOp(rId: RelationId, var hash: String, override val children:P
     if (jitOptions.sortOrder._1 == 0 || children.length < 3 || jitOptions.granularity != OpCode.OTHER) // If not only interpreting, then don't optimize since we are waiting for the optimized version to compile
       storageManager.union(children.map((s: ProjectJoinFilterOp) => s.run(storageManager)))
     else
-      val (sortedChildren, newHash) = JoinIndexes.getPresort(
+      val (sortedChildren, newK) = JoinIndexes.getPresort(
         children.toArray,
         a => storageManager.getKnownDerivedDB(a.rId).length,
         rId,
-        hash,
+        k,
         storageManager
       )
       storageManager.union(sortedChildren.map((s: ProjectJoinFilterOp) => s.run(storageManager)))

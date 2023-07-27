@@ -9,8 +9,6 @@ import scala.collection.mutable
 import scala.quoted.*
 import scala.reflect.ClassTag
 
-type AllIndexes = mutable.Map[String, JoinIndexes]
-
 enum PredicateType:
   case POSITIVE, NEGATED
 
@@ -23,14 +21,14 @@ enum PredicateType:
  * @param deps - set of relations directly depended upon by this rule and the type of operation. Current either ("+", relationId) for positive edges or ("-", relationId) for negative edges, TODO: expand for aggregations
  * @param edb - for rules that have EDBs defined on the same predicate, just read
  * @param atoms - the original atoms from the DSL
- * @param cxns - convenience data structure tracking how many variables in common each atom has
+ *
  */
 case class JoinIndexes(varIndexes: Seq[Seq[Int]],
                        constIndexes: Map[Int, Constant],
                        projIndexes: Seq[(String, Constant)],
                        deps: Seq[(PredicateType, RelationId)],
                        atoms: Array[Atom],
-                       cxns: Map[RelationId, Map[Int, Seq[RelationId]]],
+                       cxns: Map[RelationId, Map[Int, Seq[RelationId]]], // TODO: right now treats repeated relations the same
                        edb: Boolean = false
                       ) {
   override def toString(): String = toStringWithNS(null)
@@ -40,7 +38,6 @@ case class JoinIndexes(varIndexes: Seq[Seq[Int]],
       ", project:" + projToString() +
       ", deps:" + depsToString(ns) +
       ", edb:" + edb +
-      ", cxn: " + cxnsToString(ns) +
       " }"
 
   def varToString(): String = varIndexes.map(v => v.mkString("$", "==$", "")).mkString("[", ",", "]")
@@ -52,7 +49,7 @@ case class JoinIndexes(varIndexes: Seq[Seq[Int]],
 }
 
 object JoinIndexes {
-  def apply(rule: Array[Atom]) = {
+  def apply(rule: Array[Atom], precalculatedCxns: Option[Map[RelationId, Map[Int, Seq[RelationId]]]]) = {
     val constants = mutable.Map[Int, Constant]() // position => constant
     val variables = mutable.Map[Variable, Int]() // v.oid => position
 
@@ -99,37 +96,22 @@ object JoinIndexes {
       case c: Constant => ("c", c)
     }
 
-    // produces (atom, { # repeated vars => atom } )
-    val cxns = body.zipWithIndex.map((atom, idx) =>
-      (atom.rId, body.zipWithIndex.map((atom2, idx2) =>
-        (idx2, atom2.rId, atom.terms.filter(t => t.isInstanceOf[Variable]).intersect(atom2.terms).size)
-      )
-        .filter((idx2, rId, count) => idx != idx2 && count != 0)
-        .map(t => (t._2, t._3))
-        .groupBy(_._2)
-        .map((count, rIds) => (count, rIds.map((rId, count2) => rId).toSeq)))
-    ).toMap
-
-    new JoinIndexes(bodyVars, constants.toMap, projects, deps, rule, cxns)
+    // produces (atom, { # repeated vars => atom } ) if not already created
+    val cxns = precalculatedCxns.getOrElse(
+        body.zipWithIndex.map((atom, idx) =>
+          (atom.rId, body.zipWithIndex.map((atom2, idx2) =>
+            (idx2, atom2.rId, atom.terms.filter(t => t.isInstanceOf[Variable]).intersect(atom2.terms).size)
+          )
+            .filter((idx2, rId, count) => idx != idx2 && count != 0)
+            .map(t => (t._2, t._3))
+            .groupBy(_._2)
+            .map((count, rIds) => (count, rIds.map((rId, count2) => rId).toSeq)))
+        ).toMap
+    )
+        new JoinIndexes(bodyVars, constants.toMap, projects, deps, rule, cxns)
   }
 
-//  def getSortAhead[T: ClassTag](input: Array[T], sortBy: T => Int, rId: Int, oldHash: String, sm: StorageManager)(using jitOptions: JITOptions): (Array[T], String) = {
-//    if (jitOptions.sortOrder._2 != 0)
-//      val oldAtoms = sm.allRulesAllIndexes(rId)(oldHash).atoms
-////      debug("", () => s"in getSorted: deps=${oldAtoms.drop(1).map(s => sm.ns(s.rId)).mkString("", ",", "")} current relation sizes: ${input.map(i => s"${sortBy(i)}|").mkString("", ", ", "")}")
-//      var tToAtom = input.zipWithIndex.map((t, i) => (t, oldAtoms(i + 1))).sortBy((t, _) => sortBy(t))
-//      if (jitOptions.sortOrder._2 == -1) tToAtom = tToAtom.reverse
-//      val newHash = JoinIndexes.getRuleHash(oldAtoms.head +: tToAtom.map(_._2))
-//
-//      val sortedT = tToAtom.map(_._1)
-//      (sortedT, newHash)
-//    else
-//      (input, oldHash)
-//  }
-
-  private def getWorstPresortSelect(input: Array[ProjectJoinFilterOp], sortBy: Atom => Int, rId: Int, oldHash: String, sm: StorageManager)(using  JITOptions): (Array[ProjectJoinFilterOp], String) = {
-    val originalK = sm.allRulesAllIndexes(rId)(oldHash)
-
+  private def getWorstPresortSelect(input: Array[ProjectJoinFilterOp], sortBy: Atom => Int, rId: Int, originalK: JoinIndexes, sm: StorageManager)(using  JITOptions): (Array[ProjectJoinFilterOp], JoinIndexes) = {
     val sortedBody = originalK.atoms.drop(1).zipWithIndex.sortBy((a, _) => sortBy(a)).reverse
     //    if (input.length > 2)
 //    println(s"Rule: ${sm.printer.ruleToString(originalK.atoms)}")
@@ -166,17 +148,14 @@ object JoinIndexes {
 //        println(s"\t\t\t==>next cxn to add: ${nextOpt.map(next => sm.ns(next._1.rId)).getOrElse("None")}")
 
     val newAtoms = originalK.atoms.head +: newBody.map(_._1)
-    val newHash = JoinIndexes.getRuleHash(newAtoms)
+    val newK = JoinIndexes(newAtoms, Some(originalK.cxns))
 
 //    println(s"\tOrder: ${newBody.map((a, _) => s"${sm.ns(a.rId)}:|${sortBy(a)}|").mkString("", ", ", "")}")
 
-    (input.map(c => ProjectJoinFilterOp(rId, newHash, newBody.map((_, oldP) => c.childrenSO(oldP)): _*)), newHash)
-    //    else
-    //      (input, oldHash)
+    (input.map(c => ProjectJoinFilterOp(rId, newK, newBody.map((_, oldP) => c.childrenSO(oldP)): _*)), newK)
   }
 
-  private def getBestPresortSelect(input: Array[ProjectJoinFilterOp], sortBy: Atom => Int, rId: Int, oldHash: String, sm: StorageManager)(using jitOptions: JITOptions): (Array[ProjectJoinFilterOp], String) = {
-    val originalK = sm.allRulesAllIndexes(rId)(oldHash)
+  private def getBestPresortSelect(input: Array[ProjectJoinFilterOp], sortBy: Atom => Int, rId: Int, originalK: JoinIndexes, sm: StorageManager)(using jitOptions: JITOptions): (Array[ProjectJoinFilterOp], JoinIndexes) = {
 
     val sortedBody = originalK.atoms.drop(1).zipWithIndex.sortBy((a, _) => sortBy(a))
 //    if (input.length > 2)
@@ -209,49 +188,28 @@ object JoinIndexes {
 //        println(s"\t\t\t==>next cxn to add: ${nextOpt.map(next => sm.ns(next._1.rId)).getOrElse("None")}")
 
     val newAtoms = originalK.atoms.head +: newBody.map(_._1)
-    val newHash = JoinIndexes.getRuleHash(newAtoms)
+    val newK = JoinIndexes(newAtoms, Some(originalK.cxns))
 
 //    println(s"\tOrder: ${newBody.map((a, _) => s"${sm.ns(a.rId)}:|${sortBy(a)}|").mkString("", ", ", "")}")
 
-    (input.map(c => ProjectJoinFilterOp(rId, newHash, newBody.map((_, oldP) => c.childrenSO(oldP)): _*)), newHash)
-    //    else
-    //      (input, oldHash)
+    (input.map(c => ProjectJoinFilterOp(rId, newK, newBody.map((_, oldP) => c.childrenSO(oldP)): _*)), newK)
   }
 
-  def getPresort(input: Array[ProjectJoinFilterOp], sortBy: Atom => Int, rId: Int, oldHash: String, sm: StorageManager)(using jitOptions: JITOptions): (Array[ProjectJoinFilterOp], String) = {
+  def getPresort(input: Array[ProjectJoinFilterOp], sortBy: Atom => Int, rId: Int, oldK: JoinIndexes, sm: StorageManager)(using jitOptions: JITOptions): (Array[ProjectJoinFilterOp], JoinIndexes) = {
     jitOptions.sortOrder._1 match
-      case 0 => (input, oldHash) // getBestPresortSelect(input, sortBy, rId, oldHash, sm) // sort anyway for benchmarking purposes
-      case 1 => getBestPresortSelect(input, sortBy, rId, oldHash, sm)
-      case -1 => getWorstPresortSelect(input, sortBy, rId, oldHash, sm)
-      case 2 => getPreSortCard(input, sortBy, rId, oldHash, sm, true)
-      case -2 => getPreSortCard(input, sortBy, rId, oldHash, sm, false)
+      case 0 => (input, oldK)
+      case 1 => getBestPresortSelect(input, sortBy, rId, oldK, sm)
+      case -1 => getWorstPresortSelect(input, sortBy, rId, oldK, sm)
+      case 2 => getPreSortCard(input, sortBy, rId, oldK, sm, true)
+      case -2 => getPreSortCard(input, sortBy, rId, oldK, sm, false)
       case _ => throw new Exception(s"Unknown sort order ${jitOptions.sortOrder}")
   }
 
-  private def getPreSortCard(input: Array[ProjectJoinFilterOp], sortBy: Atom => Int, rId: Int, oldHash: String, sm: StorageManager, best: Boolean)(using JITOptions): (Array[ProjectJoinFilterOp], String) = {
-    val originalK = sm.allRulesAllIndexes(rId)(oldHash)
-
+  private def getPreSortCard(input: Array[ProjectJoinFilterOp], sortBy: Atom => Int, rId: Int, originalK: JoinIndexes, sm: StorageManager, best: Boolean)(using JITOptions): (Array[ProjectJoinFilterOp], JoinIndexes) = {
     var newBody = originalK.atoms.drop(1).zipWithIndex.sortBy((a, _) => sortBy(a))
     if (!best) newBody = newBody.reverse
     val newAtoms = originalK.atoms.head +: newBody.map(_._1)
-    val newHash = JoinIndexes.getRuleHash(newAtoms)
-//    if (input.length > 2)
-//      println(s"Rule: ${sm.printer.ruleToString(originalK.atoms)}")
-//      println(s"Rule cxn: ${originalK.cxnsToString(sm.ns)}")
-//    if (jitOptions.sortOrder._1 == 0)
-//      println(s"\tCard: ${originalK.atoms.drop(1).map(a => s"${sm.ns(a.rId)}:|${sortBy(a)}|").mkString("", ", ", "")}")
-//    else
-//    println(s"\tCard: ${newBody.map((a, _) => s"${sm.ns(a.rId)}:|${sortBy(a)}|").mkString("", ", ", "")}")
-    (input.map(c => ProjectJoinFilterOp(rId, newHash, newBody.map((_, oldP) => c.childrenSO(oldP)): _*)), newHash)
-//    else
-//      (input, oldHash)
+    val newK = JoinIndexes(newAtoms, Some(originalK.cxns))
+    (input.map(c => ProjectJoinFilterOp(rId, newK, newBody.map((_, oldP) => c.childrenSO(oldP)): _*)), newK)
   }
-  def allOrders(rule: Array[Atom]): AllIndexes = {
-    mutable.Map[String, JoinIndexes](rule.drop(1).permutations.map(r =>
-      val toRet = JoinIndexes(rule.head +: r)
-      toRet.hash -> toRet
-    ).toSeq:_*)
-  }
-
-  def getRuleHash(rule: Array[Atom]): String = rule.map(r => r.hash).mkString("", "", "")
 }

@@ -1,7 +1,7 @@
 package datalog.storage
 
 import datalog.dsl.{Atom, Constant, Variable}
-import datalog.execution.{AllIndexes, JoinIndexes, PredicateType}
+import datalog.execution.{JoinIndexes, PredicateType}
 import datalog.storage.CollectionsCasts.*
 
 import scala.collection.{immutable, mutable}
@@ -79,10 +79,8 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
     )
   }
 
-  override def joinProjectHelper_withHash(inputsEDB: Seq[EDB], rId: Int, hash: String, sortOrder: (Int, Int, Int)): CollectionsEDB = {
+  override def joinProjectHelper(inputsEDB: Seq[EDB], originalK: JoinIndexes, sortOrder: (Int, Int, Int)): CollectionsEDB = {
     val inputs = asCollectionsSeqEDB(inputsEDB)
-    val originalK = allRulesAllIndexes(rId)(hash)
-//    var intermediateCardinalities = Seq[Int]()
     if (inputs.length == 1) // just filter
       inputs.head
         .filter(e =>
@@ -95,83 +93,11 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
               case "c" => Some(idx)
               case _ => throw new Exception("Internal error: projecting something that is not a constant nor a variable")
             })))
+
     else
-//      val (sorted, newHash) = JoinIndexes.getSorted(inputs.toArray, edb => edb.length, rId, hash, this, sortAhead) // NOTE: already sorted in staged compiler/ProjectJoinFilterOp.run
       val result = inputs
         .foldLeft(
-          (CollectionsEDB(), 0, allRulesAllIndexes(rId)(hash))
-        )((combo: (CollectionsEDB, Int, JoinIndexes), innerT: CollectionsEDB) =>
-          val outerT = combo._1
-          val atomI = combo._2
-          var k = combo._3
-          if (atomI == 0) // not a monad :(
-            (innerT, atomI + 1, k)
-          else
-            val (inner, outer) = // on the fly swapping of join order
-              if (atomI > 1 && ((sortOrder._3 == 1 && outerT.length > innerT.length) || (sortOrder._3 == -1 && innerT.length > outerT.length)))
-                val body = k.atoms.drop(1)
-                val newerHash = JoinIndexes.getRuleHash(Array(k.atoms.head, body(atomI)) ++ body.dropRight(body.length - atomI) ++ body.drop(atomI + 1))
-                k = allRulesAllIndexes(rId)(newerHash)
-                (outerT, innerT)
-              else
-                (innerT, outerT)
-            // outer = outer relation, inner = inner relation
-            val edbResult = outer
-              .filter(o =>
-                prefilter(k.constIndexes.filter((i, _) => i < o.length), 0, o)
-              ) // filter outer tuple
-              .flatMap(outerTuple =>
-                inner
-                  .filter(i =>
-                    prefilter(k.constIndexes.filter((ind, _) => ind >= outerTuple.length && ind < (outerTuple.length + i.length)), outerTuple.length, i) && toJoin(k, outerTuple, i)
-                  )
-                  .map(innerTuple => outerTuple.concat(innerTuple)))
-//            intermediateCardinalities = intermediateCardinalities :+ edbResult.length
-            (edbResult, atomI + 1, k)
-        )
-//      if (inputs.length > 2) println(s"${intermediateCardinalities.dropRight(1).mkString("", "\n", "")}")
-      result._1
-        .filter(edb => result._3.constIndexes.filter((i, _) => i >= edb.length).isEmpty)
-        .map(t =>
-          CollectionsRow(
-            result._3.projIndexes.flatMap((typ, idx) =>
-              typ match {
-                case "v" => t.lift(idx.asInstanceOf[Int])
-                case "c" => Some(idx)
-                case _ => throw new Exception("Internal error: projecting something that is not a constant nor a variable")
-              })
-          )
-        )
-  }
-
-  override def joinProjectHelper(inputsEDB: Seq[EDB], originalK: JoinIndexes, sortOrder: (Int, Int, Int)): CollectionsEDB = { // OLD, only keep around for benchmarks
-    val inputs = asCollectionsSeqEDB(inputsEDB)
-    if (inputs.length == 1) // just filter
-      inputs.head
-        .filter(e =>
-          val filteredC = originalK.constIndexes.filter((ind, _) => ind < e.length)
-          prefilter(filteredC, 0, e) && filteredC.size == originalK.constIndexes.size)
-        .map(t =>
-          CollectionsRow(originalK.projIndexes.flatMap((typ, idx) =>
-            typ match {
-              case "v" => t.lift(idx.asInstanceOf[Int])
-              case "c" => Some(idx)
-              case _ => throw new Exception("Internal error: projecting something that is not a constant nor a variable")
-            })))
-
-    else
-      var preSortedK = originalK // TODO: find better ways to reduce with 2 acc
-      var sorted = inputs
-//      if (sortOrder._2 != 0)
-//        var edbToAtom = inputs.toArray.zipWithIndex.map((edb, i) => (edb, originalK.atoms(i + 1))).sortBy((edb, _) => edb.length)
-//        if (sortOrder._2 == -1) edbToAtom = edbToAtom.reverse
-//        val newAtoms = originalK.atoms.head +: edbToAtom.map(_._2)
-//        preSortedK = JoinIndexes(newAtoms)
-//        sorted = edbToAtom.map(_._1)
-
-      val result = sorted
-        .foldLeft(
-          (CollectionsEDB(), 0, preSortedK)
+          (CollectionsEDB(), 0, originalK)
         )((combo: (CollectionsEDB, Int, JoinIndexes), innerT: CollectionsEDB) =>
           val outerT = combo._1
           val atomI = combo._2
@@ -182,7 +108,7 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
             val (inner, outer) =
               if (atomI > 1 && ((sortOrder._3 == 1 && outerT.length > innerT.length) || (sortOrder._3 == -1 && innerT.length > outerT.length)))
                 val body = k.atoms.drop(1)
-                k = JoinIndexes(Array(k.atoms.head, body(atomI)) ++ body.dropRight(body.length - atomI) ++ body.drop(atomI + 1))
+                k = JoinIndexes(Array(k.atoms.head, body(atomI)) ++ body.dropRight(body.length - atomI) ++ body.drop(atomI + 1), Some(k.cxns))
                 (outerT, innerT)
               else
                 (innerT, outerT)
@@ -196,8 +122,10 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
                     prefilter(k.constIndexes.filter((ind, _) => ind >= outerTuple.length && ind < (outerTuple.length + i.length)), outerTuple.length, i) && toJoin(k, outerTuple, i)
                   )
                   .map(innerTuple => outerTuple.concat(innerTuple)))
+//            csintermediateCardinalities = intermediateCardinalities :+ edbResult.length
             (edbResult, atomI + 1, k)
           )
+//      if (inputs.length > 2) println(s"${intermediateCardinalities.dropRight(1).mkString("", "\n", "")}")
       result._1
         .filter(edb => result._3.constIndexes.filter((i, _) => i >= edb.length).isEmpty)
         .map(t =>

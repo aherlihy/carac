@@ -56,13 +56,12 @@ class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
           allRes = allRes :+ ScanEDBOp(rId) // TODO: potentially change this to Discovered not EDB
 //        if(allRes.length == 1) allRes.head else
         UnionOp(OpCode.EVAL_RULE_NAIVE, allRes:_*)
-      case RuleNode(head, _, atoms, hash) =>
-        val k = ctx.storageManager.allRulesAllIndexes(atoms.head.rId)(hash)
+      case RuleNode(head, _, atoms, k) =>
         val r = head.asInstanceOf[LogicAtom].relation
         if (k.edb)
           ScanEDBOp(r)
         else
-          ProjectJoinFilterOp(atoms.head.rId, hash,
+          ProjectJoinFilterOp(atoms.head.rId, k,
             k.deps.zipWithIndex.map((md, i) =>
               val (typ, r) = md
               val q = ScanOp(r, DB.Derived, KNOWLEDGE.Known)
@@ -89,19 +88,18 @@ class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
           allRes = allRes :+ ScanEDBOp(rId)
 //        if(allRes.length == 1) allRes.head else
         UnionOp(OpCode.EVAL_RULE_SN, allRes:_*) // None bc union of unions so no point in sorting
-      case RuleNode(head, body, atoms, hash) =>
+      case RuleNode(head, body, atoms, k) =>
         val r = head.asInstanceOf[LogicAtom].relation
-        val k = ctx.storageManager.allRulesAllIndexes(atoms.head.rId)(hash)
         if (k.edb)
           ScanEDBOp(r)
         else
           var idx = -1 // if dep is featured more than once, only use delta once, but at a different pos each time
           UnionSPJOp(// a single rule body
             atoms.head.rId,
-            hash,
+            k,
             k.deps.map((*, d) => {
               var found = false
-              ProjectJoinFilterOp(atoms.head.rId, hash,
+              ProjectJoinFilterOp(atoms.head.rId, k,
                 k.deps.zipWithIndex.map((md, i) => {
                   val (typ, r) = md
                   val q = if (r == d && !found && i > idx)
