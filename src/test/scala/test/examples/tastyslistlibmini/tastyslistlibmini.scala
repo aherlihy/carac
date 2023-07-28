@@ -193,7 +193,7 @@ trait tastyslistlibmini {
 
     val des, ser, input, F, instr, invF, invInstr, ctx, v0, v1, v2, v3 = program.variable()
 
-    Equiv(des, input, heap) :- (
+    Equiv(des, input) :- (
       ActualReturn(instr, des),
       StaticCall(F, instr, ctx),
       Reachable(ctx),
