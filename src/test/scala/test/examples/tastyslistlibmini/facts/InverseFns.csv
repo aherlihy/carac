@@ -1,0 +1,3 @@
+String	String
+slistlib.Main.string_from_int	slistlib.Main.int_from_string
+slistlib.Main.int_from_string	slistlib.Main.string_from_int

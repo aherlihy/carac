@@ -1,0 +1,4 @@
+String	String	String	String
+slistlib.Main.<init>.this	java.lang.Object.<init>	instr#0	slistlib.Main.<init>
+slistlib.Main.writeReplace.temp	scala.runtime.ModuleSerializationProxy.<init>	instr#1	slistlib.Main.writeReplace
+slistlib.Main.string_from_int.int	scala.Any.toString	instr#3	slistlib.Main.string_from_int

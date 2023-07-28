@@ -1,0 +1,6 @@
+String	String
+slistlib.Main.<init>	slistlib.Main.<init>.this
+slistlib.Main.writeReplace	slistlib.Main.writeReplace.this
+slistlib.Main.int_from_string	slistlib.Main.int_from_string.this
+slistlib.Main.string_from_int	slistlib.Main.string_from_int.this
+slistlib.Main.main	slistlib.Main.main.this

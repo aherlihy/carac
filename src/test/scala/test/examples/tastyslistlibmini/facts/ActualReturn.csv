@@ -1,0 +1,5 @@
+String	String
+instr#2	slistlib.Main.int_from_string.temp#1
+instr#3	slistlib.Main.string_from_int.temp
+instr#4	slistlib.Main.main.serialized
+instr#5	slistlib.Main.main.desrialized

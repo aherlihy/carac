@@ -1,0 +1,4 @@
+String	String	String	String
+slistlib.Main.int_from_string	list0	arg0	slistlib.Main.int_from_string.string
+slistlib.Main.string_from_int	list0	arg0	slistlib.Main.string_from_int.int
+slistlib.Main.main	list0	arg0	slistlib.Main.main.args
