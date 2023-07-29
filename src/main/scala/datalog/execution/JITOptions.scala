@@ -17,4 +17,6 @@ case class JITOptions(
   private val unique = Seq(OpCode.DOWHILE, OpCode.EVAL_NAIVE, OpCode.LOOP_BODY)
   if (!aot && !block && unique.contains(granularity))
     throw new Exception(s"Cannot online, async compile singleton IR nodes: $granularity (theres no point)")
+
+  override def toString: String = s"{ Gran: $granularity, AOT: $aot, blocking: $block, sortOrder: $sortOrder }"
 }

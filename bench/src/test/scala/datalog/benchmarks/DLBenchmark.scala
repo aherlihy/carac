@@ -71,27 +71,26 @@ abstract class DLBenchmark {
     )
     val blocking = Seq(true, false)
 
-    // Not AOT
     jitGranularities.foreach(gran =>
       sortCombos.foreach(s =>
         blocking.foreach(block =>
-          val jo = JITOptions(gran, dotty, false, block, sortOrder = s)
+          val jo = JITOptions(granularity = gran, dotty = dotty, aot = !block, block = block, sortOrder = s)
           programs(s"jit_default_${toS(s._1, s._2, s._3)}_${if (!block) "async" else "blocking"}_${gran.toString.replace("_", "")}") = Program(
             StagedExecutionEngine(DefaultStorageManager(), jo)
           )
         )
       )
     )
-    jitGranularities.foreach(gran =>
-      sortCombos.foreach(s =>
-        blocking.foreach(sync =>
-          val jo = JITOptions(gran, dotty, true, sync, sortOrder = s)
-          programs(s"jit_default_${toS(s._1, s._2, s._3)}_${if (sync) "async" else "blocking"}_${gran.toString.replace("_", "")}_aot") = Program(
-            StagedExecutionEngine(DefaultStorageManager(), jo)
-          )
-        )
-      )
-    )
+//    jitGranularities.foreach(gran =>
+//      sortCombos.foreach(s =>
+//        blocking.foreach(sync =>
+//          val jo = JITOptions(gran, dotty, true, sync, sortOrder = s)
+//          programs(s"jit_default_${toS(s._1, s._2, s._3)}_${if (sync) "async" else "blocking"}_${gran.toString.replace("_", "")}_aot") = Program(
+//            StagedExecutionEngine(DefaultStorageManager(), jo)
+//          )
+//        )
+//      )
+//    )
 //    println(programs)
   }
 
