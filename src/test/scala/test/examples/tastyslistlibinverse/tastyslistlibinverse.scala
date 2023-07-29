@@ -317,22 +317,22 @@ trait tastyslistlibinverse {
     InverseFns("slistlib.Main.main.serialize", "slistlib.Main.main.deserialize") :- ()
     VarEquiv(v0, v1) :- (VarPointsTo(v0, heap), VarPointsTo(v1, heap))
 
-    // "unoptimized"
-    Equiv(output, input) :- (
-      VarEquiv(output, v2),
-      VarEquiv(arg, v1),
-      VarEquiv(input, v0),
-      ActualReturn(instr, v2),
-      ActualReturn(invInstr, v1),
-      Reachable(ctx),
-      ActualArg(instr, a0, a1, arg),
-      ActualArg(invInstr, a2, a3, v0),
-      InverseFns(F, invF),
-      StaticCall(F, instr, ctx),
-      StaticCall(invF, invInstr, ctx),
-    )
+    // "unoptimized" with pt on either side
+//    Equiv(output, input) :- (
+//      VarEquiv(output, v2),
+//      VarEquiv(arg, v1),
+//      VarEquiv(input, v0),
+//      ActualReturn(instr, v2),
+//      ActualReturn(invInstr, v1),
+//      Reachable(ctx),
+//      ActualArg(instr, a0, a1, arg),
+//      ActualArg(invInstr, a2, a3, v0),
+//      InverseFns(F, invF),
+//      StaticCall(F, instr, ctx),
+//      StaticCall(invF, invInstr, ctx),
+//    )
 
-    // "optimized"
+    // "optimized" with pt on either side
 //    Equiv(output, input) :- (
 //      VarEquiv(output, v2),
 //      ActualReturn(instr, v2),
@@ -346,6 +346,32 @@ trait tastyslistlibinverse {
 //      ActualArg(invInstr, a2, a3, v0),
 //      VarEquiv(input, v0)
 //    )
+
+    // "optimized
+//    Equiv(output, input) :- (
+//      ActualReturn(instr, output),
+//      StaticCall(F, instr, ctx),
+//      Reachable(ctx),
+//      ActualArg(instr, a0, a1, arg),
+//      VarEquiv(arg, v1),
+//      ActualReturn(invInstr, v1),
+//      StaticCall(invF, invInstr, ctx),
+//      InverseFns(F, invF),
+//      ActualArg(invInstr, a2, a3, input),
+//    )
+
+    // "unoptimized"
+        Equiv(output, input) :- (
+          VarEquiv(arg, v1),
+          ActualReturn(instr, output),
+          ActualReturn(invInstr, v1),
+          Reachable(ctx),
+          ActualArg(instr, a0, a1, arg),
+          ActualArg(invInstr, a2, a3, input),
+          InverseFns(F, invF),
+          StaticCall(F, instr, ctx),
+          StaticCall(invF, invInstr, ctx),
+        )
     EquivToOutput(v0) :- Equiv("slistlib.Main.main.OUTPUT_VAR", v0)
   }
 }

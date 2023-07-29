@@ -27,7 +27,7 @@ instr#20	list1	arg0	slistlib.Main.main.temp#11
 instr#28	list0	arg0	slistlib.Main.main.temp#12
 instr#29	list0	arg0	slistlib.Main.main.temp#13
 instr#30	list0	arg0	slistlib.Main.main.INPUT_VAR
-instr#31	list0	arg0	slistlib.Main.main.INT_INPUT_2
+instr#31	list0	arg0	slistlib.Main.main.INPUT_VAR
 instr#32	list0	arg0	slistlib.Main.main.INT_SERIALIZED
 instr#33	list0	arg0	slistlib.Main.main.temp#14
 instr#35	list0	arg0	slistlib.Main.main.range.to

@@ -15,7 +15,7 @@ instr#22	slistlib.Main.main.temp#2
 instr#21	slistlib.Main.main.temp#1
 instr#20	slistlib.Main.main.INPUT_VAR
 instr#31	slistlib.Main.main.SERIALIZED_VAR
-instr#32	slistlib.Main.main.INT_OUTPUT_1
+instr#32	slistlib.Main.main.OUTPUT_VAR
 instr#33	slistlib.Main.main.elt
 instr#37	slistlib.Main.main.range.build
 instr#38	slistlib.Main.main.range.i
