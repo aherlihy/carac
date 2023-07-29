@@ -48,8 +48,15 @@ trait tastyslistlibinverse {
     val classA, classB, classC, sigA, sigB, sigC = program.variable()
 
     def unoptimizedPointsTo(): Unit = {
-      VarPointsTo(varr, heap) :- (Reachable(meth), Alloc(varr, heap, meth))
-      VarPointsTo(to, heap) :- (Move(to, from), VarPointsTo(from, heap))
+      VarPointsTo(varr, heap) :- (
+        Reachable(meth),
+        Alloc(varr, heap, meth)
+      )
+      VarPointsTo(to, heap) :- (
+        Move(to, from),
+        VarPointsTo(from, heap)
+      )
+
       /*x*/ FldPointsTo(baseH, fld, heap) :- (
         VarPointsTo(from, heap),
         VarPointsTo(base, baseH),
@@ -62,62 +69,66 @@ trait tastyslistlibinverse {
       )
 
       /*x*/ Reachable(toMeth) :- (
-        LookUp(heapT, sig, toMeth),
         VarPointsTo(base, heap),
+        LookUp(heapT, sig, toMeth),
+        Reachable(inMeth),
         ThisVar(toMeth, thiss),
         VCall(base, sig, invo, inMeth),
         HeapType(heap, heapT),
-        Reachable(inMeth),
       )
 
       /*x*/ VarPointsTo(thiss, heap) :- (
-        LookUp(heapT, sig, toMeth),
         VarPointsTo(base, heap),
+        LookUp(heapT, sig, toMeth),
+        Reachable(inMeth),
         ThisVar(toMeth, thiss),
         VCall(base, sig, invo, inMeth),
         HeapType(heap, heapT),
-        Reachable(inMeth),
       )
 
       /*x*/ CallGraph(invo, toMeth) :- (
-        LookUp(heapT, sig, toMeth),
         VarPointsTo(base, heap),
+        LookUp(heapT, sig, toMeth),
+        Reachable(inMeth),
         ThisVar(toMeth, thiss),
         VCall(base, sig, invo, inMeth),
         HeapType(heap, heapT),
-        Reachable(inMeth)
       )
-      CallGraph(invo, toMeth) :- (Reachable(inMeth), StaticCall(toMeth, invo, inMeth))
+
+      CallGraph(invo, toMeth) :- (
+        Reachable(inMeth),
+        StaticCall(toMeth, invo, inMeth)
+      )
 
       // rules for dynamic val
       /*x*/ Reachable(toMeth) :- (
-        LookUp(heapT, sig, toMeth),
         VarPointsTo(base, heap),
+        LookUp(heapT, sig, toMeth),
+        Reachable(inMeth),
         ThisVar(toMeth, thiss),
         HeapType(heap, heapT),
         FormalReturn(toMeth, from),
         Load(to, base, sig, inMeth),
-        Reachable(inMeth),
       )
 
       /*x*/ VarPointsTo(thiss, heap) :- (
-        LookUp(heapT, sig, toMeth),
         VarPointsTo(base, heap),
+        LookUp(heapT, sig, toMeth),
+        Reachable(inMeth),
         ThisVar(toMeth, thiss),
         HeapType(heap, heapT),
         FormalReturn(toMeth, from),
         Load(to, base, sig, inMeth),
-        Reachable(inMeth),
       )
 
       /*x*/ InterProcAssign(to, from) :- (
-        LookUp(heapT, sig, toMeth),
         VarPointsTo(base, heap),
+        LookUp(heapT, sig, toMeth),
+        Reachable(inMeth),
         ThisVar(toMeth, thiss),
         HeapType(heap, heapT),
         FormalReturn(toMeth, from),
         Load(to, base, sig, inMeth),
-        Reachable(inMeth),
       )
 
       /*x*/ InterProcAssign(to, from) :- (
@@ -132,9 +143,15 @@ trait tastyslistlibinverse {
         CallGraph(invo, meth),
       )
 
-      VarPointsTo(to, heap) :- (InterProcAssign(to, from), VarPointsTo(from, heap))
+      VarPointsTo(to, heap) :- (
+        VarPointsTo(from, heap),
+        InterProcAssign(to, from),
+      )
 
-      Reachable(toMeth) :- (StaticCall(toMeth, invo, inMeth), Reachable(inMeth))
+      Reachable(toMeth) :- (
+        Reachable(inMeth),
+        StaticCall(toMeth, invo, inMeth),
+      )
 
 
       // without negation support, we generate NotDefines facts
@@ -145,7 +162,10 @@ trait tastyslistlibinverse {
         LookUp(classB, sigA, sigB),
         Extends(classC, classB)
       )
-      DefinesWith(classC, sigA, sigC) :- (DefinesWith(classC, sigB, sigC), DefinesWith(classB, sigA, sigB))
+      DefinesWith(classC, sigA, sigC) :- (
+        DefinesWith(classB, sigA, sigB),
+        DefinesWith(classC, sigB, sigC)
+      )
       DefinesWith(classC, sigC, sigC) :- DefinesWith(classC, sigB, sigC)
 
       // with negations we would have something like:
@@ -157,33 +177,33 @@ trait tastyslistlibinverse {
 
       // super calls
       /*x*/ Reachable(toMeth) :- (
-        ThisVar(toMeth, thiss),
-        ThisVar(inMeth, thisFrom),
         VarPointsTo(thisFrom, heap),
         Reachable(inMeth),
+        ThisVar(toMeth, thiss),
+        ThisVar(inMeth, thisFrom),
         SuperCall(toMeth, invo, inMeth),
       )
 
       /*x*/ VarPointsTo(thiss, heap) :- (
-        ThisVar(inMeth, thisFrom),
-        ThisVar(toMeth, thiss),
         VarPointsTo(thisFrom, heap),
         Reachable(inMeth),
+        ThisVar(inMeth, thisFrom),
+        ThisVar(toMeth, thiss),
         SuperCall(toMeth, invo, inMeth),
       )
 
       /*x*/ CallGraph(invo, toMeth) :- (
-        ThisVar(inMeth, thisFrom),
-        ThisVar(toMeth, thiss),
         VarPointsTo(thisFrom, heap),
         Reachable(inMeth),
+        ThisVar(inMeth, thisFrom),
+        ThisVar(toMeth, thiss),
         SuperCall(toMeth, invo, inMeth)
       )
 
       /*x*/ VarPointsTo(to, heap) :- (
-        LookUp(heapT, fld, actualFld),
         VarPointsTo(from, heap),
         VarPointsTo(base, baseH),
+        LookUp(heapT, fld, actualFld),
         HeapType(baseH, heapT),
         Load(to, base, fld, inMeth),
         FieldValDef(actualFld, from),
@@ -297,19 +317,35 @@ trait tastyslistlibinverse {
     InverseFns("slistlib.Main.main.serialize", "slistlib.Main.main.deserialize") :- ()
     VarEquiv(v0, v1) :- (VarPointsTo(v0, heap), VarPointsTo(v1, heap))
 
+    // "unoptimized"
     Equiv(output, input) :- (
       VarEquiv(output, v2),
+      VarEquiv(arg, v1),
+      VarEquiv(input, v0),
       ActualReturn(instr, v2),
-      StaticCall(F, instr, ctx),
+      ActualReturn(invInstr, v1),
       Reachable(ctx),
       ActualArg(instr, a0, a1, arg),
-      VarEquiv(arg, v1),
-      ActualReturn(invInstr, v1),
-      StaticCall(invF, invInstr, ctx),
-      InverseFns(F, invF),
       ActualArg(invInstr, a2, a3, v0),
-      VarEquiv(input, v0)
+      InverseFns(F, invF),
+      StaticCall(F, instr, ctx),
+      StaticCall(invF, invInstr, ctx),
     )
+
+    // "optimized"
+//    Equiv(output, input) :- (
+//      VarEquiv(output, v2),
+//      ActualReturn(instr, v2),
+//      StaticCall(F, instr, ctx),
+//      Reachable(ctx),
+//      ActualArg(instr, a0, a1, arg),
+//      VarEquiv(arg, v1),
+//      ActualReturn(invInstr, v1),
+//      StaticCall(invF, invInstr, ctx),
+//      InverseFns(F, invF),
+//      ActualArg(invInstr, a2, a3, v0),
+//      VarEquiv(input, v0)
+//    )
     EquivToOutput(v0) :- Equiv("slistlib.Main.main.OUTPUT_VAR", v0)
   }
 }
