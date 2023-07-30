@@ -12,6 +12,7 @@ lazy val root = project.in(file("."))
 
     libraryDependencies ++= Seq(
       "org.scala-lang" %% "scala3-staging" % scalaVersion.value,
+      "org.glavo" % "classfile" % "0.4.0", // Copy of jdk.internal.classfile, won't be necessary when https://openjdk.org/jeps/8280389 is done.
       "org.scalameta" %% "munit" % "0.7.29" % Test,
     ),
   )
