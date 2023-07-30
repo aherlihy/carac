@@ -147,6 +147,13 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
     storageManager.getNewIDBResult(ctx.toSolve)
   }
 
+  def solveBytecodeGenerated(irTree: IROp[Any], ctx: InterpreterContext): Set[Seq[Term]] = {
+    debug("", () => "bytecode generated mode")
+    val compiled = compiler.getBytecodeGenerated(irTree)
+    compiled(storageManager)
+    storageManager.getNewIDBResult(ctx.toSolve)
+  }
+
   def solveCompiled(irTree: IROp[Any], ctx: InterpreterContext): Set[Seq[Term]] = {
     debug("", () => "compile-only mode")
     val compiled = compiler.getCompiled(irTree)
@@ -194,9 +201,15 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
 //      op.blockingCompiledFn = compiler.getCompiled(op)
 //    else
     given scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
-    op.compiledFn = Future {
-      compiler.getCompiled(op)
-    }
+    op.compiledFn = if (jitOptions.useBytecodeGenerator)
+        Future {
+        compiler.getBytecodeGenerated(op)
+      }
+    else
+      Future {
+         compiler.getCompiled(op)
+      }
+
     stragglers.addOne(op.compiledFn.hashCode(), op.compiledFn)
 
   def jit[T](irTree: IROp[T])(using jitOptions: JITOptions): T = {
@@ -342,7 +355,12 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
         //        } else if (jitOptions.aot && op.compiledFnIndexed != null && storageManager.deltaDB(storageManager.knownDbId).values.map(_.length).exists(_ > jitOptions.thresholdNum)) {
         //          op.compiledFnIndexed(storageManager)
         if (jitOptions.block) {
-          op.blockingCompiledFn = compiler.getCompiled(op)
+          // HACK: this should only happen with useBytecodeGenerator enabled
+          op.blockingCompiledFn = if (jitOptions.useBytecodeGenerator)
+            compiler.getBytecodeGenerated(op)
+          else
+            compiler.getCompiled(op)
+
           op.blockingCompiledFn(storageManager)
         } else {
           given scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
@@ -449,6 +467,14 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
     debug("IRTree: ", () => storageManager.printer.printIR(irTree))
     if (defaultJITOptions.granularity == OpCode.OTHER) // i.e. never compile
       solveInterpreted(irTree, irCtx)
+//    else if (defaultJITOptions.useBytecodeGenerator) {
+//      // TODO: generalize bytecode generation to relax these constraints?
+//      assert(
+//        defaultJITOptions.granularity == OpCode.PROGRAM && defaultJITOptions.aot && defaultJITOptions.block,
+//        s"unsupported configuration: $defaultJITOptions"
+//      )
+//      solveBytecodeGenerated(irTree, irCtx)
+//    }
     else if (defaultJITOptions.granularity == OpCode.PROGRAM && defaultJITOptions.aot && defaultJITOptions.block) // i.e. compile asap and block
       solveCompiled(irTree, irCtx)
     else

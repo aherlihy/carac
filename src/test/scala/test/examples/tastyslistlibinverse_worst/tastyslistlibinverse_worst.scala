@@ -3,11 +3,19 @@ package test.examples.tastyslistlibinverse_worst
 import datalog.dsl.{Constant, Program}
 import test.{ExampleTestGenerator, Tags}
 
+<<<<<<< HEAD:src/test/scala/test/examples/tastyslistlibinverse_worst/tastyslistlibinverse_worst.scala
 class tastyslistlibinverse_worst_test extends ExampleTestGenerator(
   "tastyslistlibinverse_worst",
   Set(Tags.Naive, Tags.Volcano),
   Set(Tags.Slow, Tags.CI)
 ) with tastyslistlibinverse_worst
+=======
+class tastyslistlibinverse_test extends ExampleTestGenerator(
+  "tastyslistlibinverse",
+  Set(Tags.Naive, Tags.Volcano),
+  Set(Tags.Slow, Tags.CI)
+) with tastyslistlibinverse
+>>>>>>> 4d2bffe (Add an experimental IROp to bytecode compiler):src/test/scala/test/examples/tastyslistlibinverse/tastyslistlibinverse.scala
 
 trait tastyslistlibinverse_worst {
   val toSolve = "EquivToOutput"

@@ -115,12 +115,17 @@ abstract class TestGenerator(directory: Path,
 
           case "JITStagedB1_EVR_BlockDefault" =>
             Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(ir.OpCode.EVAL_RULE_BODY, dotty = dotty, aot = false, block = true, sortOrder = (1, 0, 0))))
+          case "JITStagedB1_ESN_BlockDefault" =>
+            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(ir.OpCode.EVAL_RULE_SN, dotty = dotty, aot = false, block = true, sortOrder = (1, 0, 0))))
+          case "JITStagedB1_BC_EVR_BlockDefault" =>
+            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(ir.OpCode.EVAL_RULE_BODY, dotty = dotty, aot = false, block = true, sortOrder = (1, 0, 0), useBytecodeGenerator = true)))
+          case "JITStagedB1_BC_ESN_BlockDefault" =>
+            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(ir.OpCode.EVAL_RULE_SN, dotty = dotty, aot = false, block = true, sortOrder = (1, 0, 0), useBytecodeGenerator = true)))
+
           case "JITStagedB1_fuzzy_EVR_BlockDefault" =>
             Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(ir.OpCode.EVAL_RULE_BODY, dotty = dotty, aot = false, block = true, sortOrder = (1, 1, 0))))
           case "JITStagedB1_EVR_AsyncDefault" =>
             Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(ir.OpCode.EVAL_RULE_BODY, dotty = dotty, aot = false, block = false, sortOrder = (1, 0, 0))))
-          case "JITStagedB1_ESN_BlockDefault" =>
-            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(ir.OpCode.EVAL_RULE_SN, dotty = dotty, aot = false, block = true, sortOrder = (1, 0, 0))))
           case "JITStagedB1_ESN_AsyncDefault" =>
             Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(ir.OpCode.EVAL_RULE_SN, dotty = dotty, aot = false, block = false, sortOrder = (1, 0, 0))))
             Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(ir.OpCode.EVAL_RULE_SN, dotty = dotty, aot = false, block = false, sortOrder = (-1, 0, 0))))
@@ -151,12 +156,14 @@ abstract class TestGenerator(directory: Path,
       "InterpretedStaged_sel",
 //      "InterpretedStagedW1",
 //      "JITStagedB1_fuzzy_EVR_Block",
-//      "JITStagedB1_EVR_Async",
-//      "JITStagedB1_ESN_Block",
-//      "JITStagedB1_ESN_Async",
+      "JITStagedB1_BC_ESN_Block",
+      "JITStagedB1_BC_EVR_Block",
+      "JITStagedB1_ESN_Block",
+      "JITStagedB1_EVR_Block",
+      // "JITStagedB1_ESN_Async",
     ).foreach(execution => {
       Seq("Volcano", "Default").foreach(storage => {
-        if (execution.contains("Staged") && storage == "Volcano") {} // skip and don't report as skipped
+        if ((execution.contains("Staged") || execution.contains("BytecodeGenerated")) && storage == "Volcano") {} // skip and don't report as skipped
         else if (
             skip.contains(execution) || skip.contains(storage) ||
               (tags ++ Set(execution, storage)).flatMap(t => Properties.envOrNone(t.toUpperCase())).nonEmpty// manually implement --exclude for intellij

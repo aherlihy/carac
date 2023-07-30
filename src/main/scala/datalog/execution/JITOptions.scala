@@ -12,7 +12,9 @@ case class JITOptions(
                        thresholdNum: Int = 0,
                        thresholdVal: Float = 2,
                        sortOrder: (Int, Int, Int) = (0, 0, 0),
-                       stratified: Boolean = true
+                       stratified: Boolean = true,
+                       // TODO: if this is set, some other options are ignored, JITOptions should be an enum to make meaningless states irrepresentable.
+                       useBytecodeGenerator: Boolean = false,
                      ) {
   private val unique = Seq(OpCode.DOWHILE, OpCode.EVAL_NAIVE, OpCode.LOOP_BODY)
   if (!aot && !block && unique.contains(granularity))
