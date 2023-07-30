@@ -5,6 +5,7 @@ import test.{ExampleTestGenerator, Tags}
 
 class tastyslistlibinverse_autobestsel_test extends ExampleTestGenerator(
   "tastyslistlibinverse_autobestsel",
+  Set(Tags.Naive, Tags.Volcano),
   Set(Tags.Slow, Tags.CI)
 ) with tastyslistlibinverse_autobestsel
 

@@ -11,6 +11,7 @@ import java.util.concurrent.atomic.AtomicReference
 import scala.collection.mutable
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
+import scala.reflect.ClassTag
 import scala.quoted.*
 import scala.util.{Failure, Success}
 
@@ -32,7 +33,7 @@ type CompiledFnIndexed[T] = (StorageManager, Int) => T
 /**
  * Intermediate representation based on Souffle's RAM
  */
-abstract class IROp[T](val children: IROp[T]*)(using val jitOptions: JITOptions) {
+abstract class IROp[T](val children: IROp[T]*)(using val jitOptions: JITOptions, val classTag: ClassTag[T]) {
   val code: OpCode
   var compiledFn: Future[CompiledFn[T]] = null
   var blockingCompiledFn: CompiledFn[T] = null // for when we're blocking and not ahead-of-time, so might as well skip the future
@@ -314,7 +315,7 @@ case class UnionSPJOp(rId: RelationId, var hash: String, override val children:P
 //      storageManager
 //    )
 
-    if (jitOptions.sortOrder._1 == 0 || children.length < 3 || jitOptions.granularity != OpCode.OTHER) // If not only interpreting, then don't optimize since we are waiting for the optimized version to compile
+    if (jitOptions.sortOrder._1 == 0 || jitOptions.sortOrder._1 == 5 || children.length < 3 || jitOptions.granularity != OpCode.OTHER) // If not only interpreting, then don't optimize since we are waiting for the optimized version to compile
       storageManager.union(children.map((s: ProjectJoinFilterOp) => s.run(storageManager)))
     else
       val sortFn =

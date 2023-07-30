@@ -1173,20 +1173,20 @@ def select(program: Program): Unit = {
 //  pointstofun(program1)
 //  println("\n\n_______________________\n\n")
 
-    val jo2 = JITOptions(ir.OpCode.OTHER, dotty, sortOrder = (1, 0, 0))
-    println("INTERP")
-    given engine3a: ExecutionEngine = new StagedExecutionEngine(new DefaultStorageManager(), jo2)
-//
-    val program3a = Program(engine3a)
-    pointstofun(program3a)
+//    val jo2 = JITOptions(ir.OpCode.OTHER, dotty, sortOrder = (1, 0, 0))
+//    println("INTERP")
+//    given engine3a: ExecutionEngine = new StagedExecutionEngine(new DefaultStorageManager(), jo2)
+////
+//    val program3a = Program(engine3a)
+//    pointstofun(program3a)
 //    println("\n\n_______________________\n\n")
 //
-//  val jo3 = JITOptions(ir.OpCode.EVAL_RULE_SN, dotty, aot = false, block = true, sortOrder = (0, 0, 0), stratified = stratifiedA)
-//  println("JIT")
-//  given engine3: ExecutionEngine = new StagedExecutionEngine(new DefaultStorageManager(), jo3)
-//  val program3 = Program(engine3)
-//  stratified(program3)
-//  println("\n\n_______________________\n\n")
+  val jo3 = JITOptions(ir.OpCode.EVAL_RULE_SN, dotty, aot = false, block = true, sortOrder = (0, 0, 0), useBytecodeGenerator = true)
+  println("JIT")
+  given engine3: ExecutionEngine = new StagedExecutionEngine(new DefaultStorageManager(), jo3)
+  val program3 = Program(engine3)
+  pointstofun(program3)
+  println("\n\n_______________________\n\n")
 //
 //  println("JIT Snippet")
 //  val engine4: ExecutionEngine = new StagedSnippetExecutionEngine(new DefaultStorageManager(), jo3)

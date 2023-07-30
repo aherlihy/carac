@@ -5,6 +5,7 @@ import test.{ExampleTestGenerator, Tags}
 
 class tastyslistlibinverse_autobestmixed_test extends ExampleTestGenerator(
   "tastyslistlibinverse_autobestmixed",
+  Set(Tags.Naive, Tags.Volcano),
   Set(Tags.Slow, Tags.CI)
 ) with tastyslistlibinverse_autobestmixed
 

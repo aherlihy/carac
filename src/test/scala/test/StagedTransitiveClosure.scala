@@ -66,6 +66,28 @@ class SemiNaiveStagedCompiledTransitiveClosure extends munit.FunSuite {
       }
     }))
 }
+
+class SemiNaiveBytecodeGeneratedTransitiveClosure extends munit.FunSuite {
+  val jo = JITOptions(granularity = ir.OpCode.PROGRAM, aot = true, block = true,
+    useBytecodeGenerator = true)
+  List(
+    Acyclic(new Program(new StagedExecutionEngine(new DefaultStorageManager(), jo))),
+    MultiIsolatedCycle(new Program(new StagedExecutionEngine(new DefaultStorageManager(), jo))),
+    SingleCycle(new Program(new StagedExecutionEngine(new DefaultStorageManager(), jo))),
+    RecursivePath(new Program(new StagedExecutionEngine(new DefaultStorageManager(), jo))),
+    TopSort(new Program(new StagedExecutionEngine(new DefaultStorageManager(), jo))),
+    MultiJoin(new Program(new StagedExecutionEngine(new DefaultStorageManager(), jo)))
+  ).map(graph =>
+    graph.queries.map((hint, query) => {
+      test(graph.description + "." + query.description) {
+        assertEquals(
+          query.relation.solve(),
+          query.solution,
+          hint
+        )
+      }
+    }))
+}
 class SemiNaiveStagedInterpretedTransitiveClosure extends munit.FunSuite {
   val jitOptions = JITOptions(granularity = ir.OpCode.OTHER)
   List(

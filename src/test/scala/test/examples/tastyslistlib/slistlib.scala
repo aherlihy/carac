@@ -1,9 +1,13 @@
 package test.examples.tastyslistlib
 
 import datalog.dsl.{Constant, Program}
-import test.ExampleTestGenerator
+import test.{ExampleTestGenerator, Tags}
 
-class tastyslistlib_test extends ExampleTestGenerator("tastyslistlib") with tastyslistlib
+class tastyslistlib_test extends ExampleTestGenerator(
+  "tastyslistlib",
+  Set(Tags.Naive, Tags.Volcano),
+  Set(Tags.Slow, Tags.CI)
+) with tastyslistlib
 
 trait tastyslistlib {
   val toSolve = "VarPointsTo"

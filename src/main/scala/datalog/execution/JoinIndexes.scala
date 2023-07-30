@@ -202,7 +202,7 @@ object JoinIndexes {
 
   def getPresort(input: Array[ProjectJoinFilterOp], sortBy: Atom => (Boolean, Int), rId: Int, oldHash: String, sm: StorageManager)(using jitOptions: JITOptions): (Array[ProjectJoinFilterOp], String) = {
     jitOptions.sortOrder._1 match
-      case 0 => (input, oldHash) // getBestPresortSelect(input, sortBy, rId, oldHash, sm) // sort anyway for benchmarking purposes
+      case 0|5 => (input, oldHash) // getBestPresortSelect(input, sortBy, rId, oldHash, sm) // sort anyway for benchmarking purposes
       case 1|3|4 =>
         val originalK = sm.allRulesAllIndexes(rId)(oldHash)
         val (newBody, newHash) = presortSelect(sortBy, originalK, sm)

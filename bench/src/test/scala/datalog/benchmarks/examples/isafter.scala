@@ -15,6 +15,7 @@ import java.util.concurrent.TimeUnit
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class isafter() extends ExampleBenchmarkGenerator("isafter")  with isafter_test {
+
   @Setup
   def s(): Unit = setup() // can't add annotations to super, so just call
 
@@ -59,6 +60,20 @@ class isafter() extends ExampleBenchmarkGenerator("isafter")  with isafter_test 
     blackhole.consume(run(programs(p), result))
   }
 
+  @Benchmark def interpreted_default_badluck__(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  @Benchmark def interpreted_default_sel__(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
   // compiled
   @Benchmark def compiled_default_unordered__(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
@@ -68,22 +83,49 @@ class isafter() extends ExampleBenchmarkGenerator("isafter")  with isafter_test 
   }
 
   // jit
-  @Benchmark def jit_default_unordered_blocking_EVALRULEBODY__ci(blackhole: Blackhole): Unit = {
+  @Benchmark def jit_default_sel_blocking_EVALRULESN__ci(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
     blackhole.consume(run(programs(p), result))
   }
 
-  @Benchmark def jit_default_unordered_async_EVALRULEBODY__(blackhole: Blackhole): Unit = {
+  @Benchmark def jit_default_sel_blocking_bytecode_EVALRULESN__(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
     blackhole.consume(run(programs(p), result))
   }
 
-  // jit
-  @Benchmark def jit_default_unordered_async_EVALRULEBODY_aot__(blackhole: Blackhole): Unit = {
+  @Benchmark def jit_default_sel_blocking_EVALRULEBODY__(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  @Benchmark def jit_default_sel_blocking_bytecode_EVALRULEBODY__(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  @Benchmark def jit_default_unordered_blocking_bytecode_EVALRULESN__(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  @Benchmark def jit_default_unordered_blocking_bytecode_EVALRULEBODY__(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  @Benchmark def jit_default_sel_async_EVALRULESN__(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")

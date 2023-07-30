@@ -10,6 +10,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
+    - uses: actions/setup-java@v3
+      with:
+        distribution: 'temurin'
+        java-version: '17'
     - name: Run unit tests
       run: sbt test
   bench:
@@ -18,8 +22,12 @@ jobs:
     if: github.event_name != 'pull_request'
     steps:
     - uses: actions/checkout@v2
+    - uses: actions/setup-java@v3
+      with:
+        distribution: 'temurin'
+        java-version: '17'
     - name: run benchmarks
-      run: sbt 'bench/Jmh/run -rf json -rff benchmark_out.json -i 5 -wi 3 -to 5 -w 5 -r 5 .*ci.*'
+      run: sbt 'bench/Jmh/run -rf json -rff benchmark_out.json -i 5 -wi 3 -to 5 -w 5 -r 5 .*ci.* -e tasty'
     # Download previous benchmark result from cache (if exists)
     - name: Download previous benchmark data
       uses: actions/cache@v1
