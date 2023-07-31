@@ -1,9 +1,12 @@
 package test.examples.tastyslistlibinverse_bpt_binv
 
 import datalog.dsl.{Constant, Program}
-import test.ExampleTestGenerator
+import test.{ExampleTestGenerator, Tags}
 
-class tastyslistlibinverse_bpt_binv_test extends ExampleTestGenerator("tastyslistlibinverse_bpt_binv") with tastyslistlibinverse_bpt_binv
+class tastyslistlibinverse_bpt_binv_test extends ExampleTestGenerator(
+  "tastyslistlibinverse_bpt_binv",
+  Set(Tags.Slow, Tags.CI)
+) with tastyslistlibinverse_bpt_binv
 
 trait tastyslistlibinverse_bpt_binv {
   val toSolve = "EquivToOutput"

@@ -1173,7 +1173,7 @@ def select(program: Program): Unit = {
 //  pointstofun(program1)
 //  println("\n\n_______________________\n\n")
 
-    val jo2 = JITOptions(ir.OpCode.OTHER, dotty, sortOrder = (2, 0, 0))
+    val jo2 = JITOptions(ir.OpCode.OTHER, dotty, sortOrder = (1, 0, 0))
     println("INTERP")
     given engine3a: ExecutionEngine = new StagedExecutionEngine(new DefaultStorageManager(), jo2)
 //

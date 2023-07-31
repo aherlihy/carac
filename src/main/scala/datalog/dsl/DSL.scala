@@ -28,7 +28,7 @@ class Atom(val rId: Int, val terms: Seq[Term], val negated: Boolean) {
   def unary_! : Atom = ???
   def :- (body: Atom*): Unit = ???
   def :- (body: Unit): Unit = ???
-  val hash: String = s"${if (negated) "!" else ""}$rId${terms.mkString("", "", "")}"
+  val hash: String = s"${if (negated) "!" else ""}$rId.${terms.mkString("", "", "")}"
 }
 
 case class Relation[T <: Constant](id: Int, name: String)(using ee: ExecutionEngine) {

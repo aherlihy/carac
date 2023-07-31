@@ -1,9 +1,12 @@
 package test.examples.tastyslistlibinverse_bpt_winv
 
 import datalog.dsl.{Constant, Program}
-import test.ExampleTestGenerator
+import test.{ExampleTestGenerator, Tags}
 
-class tastyslistlibinverse_bpt_winv_test extends ExampleTestGenerator("tastyslistlibinverse_bpt_winv") with tastyslistlibinverse_bpt_winv
+class tastyslistlibinverse_bpt_winv_test extends ExampleTestGenerator(
+  "tastyslistlibinverse_bpt_winv",
+  Set(Tags.Slow, Tags.CI)
+) with tastyslistlibinverse_bpt_winv
 
 trait tastyslistlibinverse_bpt_winv {
   val toSolve = "EquivToOutput"

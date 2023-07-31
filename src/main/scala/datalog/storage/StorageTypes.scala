@@ -62,4 +62,10 @@ class NS() {
   def contains(key: String): Boolean = nameToRid.contains(key)
   def contains(key: RelationId): Boolean = rIdToName.contains(key)
   def rIds(): Iterable[RelationId] = rIdToName.keys
+  def hashToAtom(hash: String): String =
+    val h = hash.split("\\.").toSeq
+    val head = h.head.replace("!", "")
+    val neg = if (h.head.contains("!")) "!" else ""
+//    s"${rIdToName(h.head.toInt)}${h.drop(1).mkString("(", ", ", ")")}"
+    s"$neg${rIdToName(head.toInt)}.${h(1)}"
 }
