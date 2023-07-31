@@ -1,8 +1,9 @@
 package datalog.execution.ir
 
+import datalog.dsl.Atom
 import datalog.execution.{JITOptions, JoinIndexes, PrecedenceGraph, StagedCompiler, ir}
 import datalog.execution.ast.*
-import datalog.storage.{StorageManager, DB, KNOWLEDGE, RelationId, EDB}
+import datalog.storage.{DB, EDB, KNOWLEDGE, RelationId, StorageManager}
 import datalog.tools.Debug
 import datalog.tools.Debug.debug
 
@@ -299,7 +300,6 @@ case class UnionOp(override val code: OpCode, override val children:IROp[EDB]*)(
 case class UnionSPJOp(rId: RelationId, var hash: String, override val children:ProjectJoinFilterOp*)(using JITOptions) extends IROp[EDB](children:_*) {
   val code: OpCode = OpCode.EVAL_RULE_BODY
   var compiledFnIndexed: Future[CompiledFnIndexed[EDB]] = null
-  var tmp: Seq[ProjectJoinFilterOp] = null
   // for now not filled out bc not planning on compiling higher than this
   override def run_continuation(storageManager: StorageManager, opFns: Seq[CompiledFn[EDB]]): EDB =
     storageManager.union(opFns.map(o => o(storageManager)))
@@ -317,9 +317,24 @@ case class UnionSPJOp(rId: RelationId, var hash: String, override val children:P
     if (jitOptions.sortOrder._1 == 0 || children.length < 3 || jitOptions.granularity != OpCode.OTHER) // If not only interpreting, then don't optimize since we are waiting for the optimized version to compile
       storageManager.union(children.map((s: ProjectJoinFilterOp) => s.run(storageManager)))
     else
+      val sortFn =
+        jitOptions.sortOrder._1 match
+          case 3 =>
+            (a: Atom) =>
+              if (storageManager.edbContains(a.rId))
+                (true, storageManager.getEDBResult(a.rId).size)
+              else
+                (true, Int.MaxValue)
+          case 1 =>
+            (a: Atom) => (true, storageManager.getKnownDerivedDB(a.rId).length)
+          case 4 =>
+            (a: Atom) => (storageManager.allRulesAllIndexes.contains(a.rId), storageManager.getKnownDerivedDB(a.rId).length)
+          case _ => throw new Exception(s"Unknown sort order ${jitOptions.sortOrder}")
+
+
       val (sortedChildren, newHash) = JoinIndexes.getPresort(
         children.toArray,
-        a => storageManager.getKnownDerivedDB(a.rId).length,
+        sortFn,
         rId,
         hash,
         storageManager

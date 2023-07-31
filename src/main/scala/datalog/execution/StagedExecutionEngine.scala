@@ -1,10 +1,11 @@
 package datalog.execution
 
 import datalog.dsl.{Atom, Constant, Term, Variable}
+import datalog.execution
 import datalog.execution.ast.*
 import datalog.execution.ast.transform.{ASTTransformerContext, CopyEliminationPass, Transformer}
 import datalog.execution.ir.*
-import datalog.storage.{DB, KNOWLEDGE, StorageManager, EDB}
+import datalog.storage.{DB, EDB, KNOWLEDGE, StorageManager}
 import datalog.tools.Debug.debug
 
 import scala.collection.mutable
@@ -15,7 +16,6 @@ import scala.util.{Failure, Success}
 import scala.quoted.*
 
 class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOptions: JITOptions = JITOptions()) extends ExecutionEngine {
-//  println(s"stratified=${defaultJITOptions.stratified}")
   val precedenceGraph = new PrecedenceGraph(using storageManager.ns)
   val prebuiltOpKeys: mutable.Map[Int, mutable.ArrayBuffer[JoinIndexes]] = mutable.Map[Int, mutable.ArrayBuffer[JoinIndexes]]() // TODO: currently unused, mb remove from EE
   val ast: ProgramNode = ProgramNode()
@@ -47,14 +47,30 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
   }
 
   def insertIDB(rId: Int, ruleSeq: Seq[Atom]): Unit = {
-    val rule = ruleSeq.toArray
-    val allRules = ast.rules.getOrElseUpdate(rId, AllRulesNode(mutable.ArrayBuffer.empty, rId)).asInstanceOf[AllRulesNode]
-    // TODO: sort here in case EDBs/etc are already defined?
+    precedenceGraph.addNode(ruleSeq)
+//    println(s"${storageManager.printer.ruleToString(ruleSeq)}")
+
+    var rule = ruleSeq.toArray
     val allK = JoinIndexes.allOrders(rule)
     storageManager.allRulesAllIndexes.getOrElseUpdate(rId, mutable.Map[String, JoinIndexes]()) ++= allK
-    val hash = JoinIndexes.getRuleHash(rule)
-    precedenceGraph.addNode(ruleSeq)
+    var hash = JoinIndexes.getRuleHash(rule)
+//    val k = storageManager.allRulesAllIndexes(rId)(hash)
+//    if (defaultJITOptions.sortOrder._1 == 1) // sort before inserting, just in case EDBs are defined
+//      val (sortedBody, newHash) = JoinIndexes.presortSelect(
+//        a =>
+//          if (storageManager.edbContains(a.rId))
+//            storageManager.getEDBResult(a.rId).size
+//          else
+//            Int.MaxValue,
+//        k,
+//        storageManager
+//      )
+//      rule = rule.head +: sortedBody.map(_._1)
+//      hash = newHash
 
+//    println(s"${storageManager.printer.ruleToString(rule)}")
+
+    val allRules = ast.rules.getOrElseUpdate(rId, AllRulesNode(mutable.ArrayBuffer.empty, rId)).asInstanceOf[AllRulesNode]
     allRules.rules.append(
       RuleNode(
         LogicAtom(
@@ -197,7 +213,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
         op.run(storageManager)
 
       case op: UnionSPJOp if jitOptions.granularity == op.code => // check if aot compile is ready
-        if (!jitOptions.aot) {
+        if (!jitOptions.aot) { // not AOT therefore not async, so compile + block
           startCompileThread(op)
           checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o))))
         } else {
@@ -218,7 +234,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
                 //              stragglers.remove(op.compiledFn.hashCode())
                 throw Exception(s"Error compiling ${op.code} with: ${e.getCause}")
               case None =>
-                if (jitOptions.block)
+                if (jitOptions.block) // TODO: get rid of this since can't block + AOT anymore
                   debug(s"${op.code} compilation not ready yet, so blocking", () => "")
                   val res = Await.result(op.compiledFnIndexed, Duration.Inf)(storageManager, i)
                   //                stragglers.remove(op.compiledFn.hashCode())

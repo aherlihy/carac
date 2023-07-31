@@ -97,17 +97,6 @@ class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: J
           '{ $stagedSM.getEmptyEDB() }
 
       case ProjectJoinFilterOp(rId, hash, children: _*) =>
-//        val FPJOp = irTree.asInstanceOf[ProjectJoinFilterOp]
-//        val (sortedChildren, newHash) = JoinIndexes.getSortAhead(
-//          FPJOp.childrenSO,
-//          c => c.run(storageManager).length,
-//          rId,
-//          hash,
-//          storageManager
-//        )
-//        FPJOp.childrenSO = sortedChildren
-        //        FPJOp.children = sortedChildren.asInstanceOf[Array[IROp[EDB]]] // save for next run so sorting is faster
-//        FPJOp.hash = newHash
         val compiledOps = Expr.ofSeq(children.map(compileIRRelOp))
         '{
           $stagedSM.joinProjectHelper_withHash(
@@ -121,9 +110,28 @@ class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: J
       case UnionSPJOp(rId, hash, children: _*) =>
         val (sortedChildren, newHash) =
           if (jitOptions.sortOrder._1 != 0)
+
+            val sortFn =
+              jitOptions.sortOrder._1 match
+                case 3 =>
+                  (a: Atom)
+                  =>
+                  if (storageManager.edbContains(a.rId))
+                    (true, storageManager.getEDBResult(a.rId).size)
+                  else
+                    (true, Int.MaxValue)
+                case 1 =>
+                  (a: Atom)
+                  => (true, storageManager.getKnownDerivedDB(a.rId).length)
+                case 4 =>
+                  (a: Atom)
+                  => (storageManager.allRulesAllIndexes.contains(a.rId), storageManager.getKnownDerivedDB(a.rId).length)
+                case _ => throw new Exception(s"Unknown sort order ${jitOptions.sortOrder}")
+
+
             JoinIndexes.getPresort(
               children.toArray,
-              a => storageManager.getKnownDerivedDB(a.rId).length,
+              sortFn,
               rId,
               hash,
               storageManager
@@ -268,9 +276,26 @@ class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: J
       case uSPJOp: UnionSPJOp =>
         val (sortedChildren, newHash) =
           if (jitOptions.sortOrder._1 != 0)
+            val sortFn =
+              jitOptions.sortOrder._1 match
+                case 3 =>
+                  (a: Atom)
+                  =>
+                  if (storageManager.edbContains(a.rId))
+                    (true, storageManager.getEDBResult(a.rId).size)
+                  else
+                    (true, Int.MaxValue)
+                case 1 =>
+                  (a: Atom)
+                  => (true, storageManager.getKnownDerivedDB(a.rId).length)
+                case 4 =>
+                  (a: Atom)
+                  => (storageManager.allRulesAllIndexes.contains(a.rId), storageManager.getKnownDerivedDB(a.rId).length)
+                case _ => throw new Exception(s"Unknown sort order ${jitOptions.sortOrder}")
+
             JoinIndexes.getPresort(
               uSPJOp.children.toArray,
-              a => storageManager.getKnownDerivedDB(a.rId).length,
+              sortFn,
               uSPJOp.rId,
               uSPJOp.hash,
               storageManager

@@ -1178,7 +1178,7 @@ def select(program: Program): Unit = {
     given engine3a: ExecutionEngine = new StagedExecutionEngine(new DefaultStorageManager(), jo2)
 //
     val program3a = Program(engine3a)
-    select(program3a)
+    pointstofun(program3a)
 //    println("\n\n_______________________\n\n")
 //
 //  val jo3 = JITOptions(ir.OpCode.EVAL_RULE_SN, dotty, aot = false, block = true, sortOrder = (0, 0, 0), stratified = stratifiedA)
