@@ -131,6 +131,13 @@ class tastyslistlib() extends ExampleBenchmarkGenerator("tastyslistlib") with ta
     blackhole.consume(run(programs(p), result))
   }
 
+  @Benchmark def jit_default_mixedOnline_blocking_EVALRULEBODY__(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
   @Benchmark def jit_default_mixedOnline_fuzzytwo_blocking_EVALRULEBODY__(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
     if (!programs.contains(p))

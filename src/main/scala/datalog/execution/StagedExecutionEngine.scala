@@ -54,19 +54,19 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
     val allK = JoinIndexes.allOrders(rule)
     storageManager.allRulesAllIndexes.getOrElseUpdate(rId, mutable.Map[String, JoinIndexes]()) ++= allK
     var hash = JoinIndexes.getRuleHash(rule)
-//    val k = storageManager.allRulesAllIndexes(rId)(hash)
-//    if (defaultJITOptions.sortOrder._1 == 1) // sort before inserting, just in case EDBs are defined
-//      val (sortedBody, newHash) = JoinIndexes.presortSelect(
-//        a =>
-//          if (storageManager.edbContains(a.rId))
-//            storageManager.getEDBResult(a.rId).size
-//          else
-//            Int.MaxValue,
-//        k,
-//        storageManager
-//      )
-//      rule = rule.head +: sortedBody.map(_._1)
-//      hash = newHash
+    val k = storageManager.allRulesAllIndexes(rId)(hash)
+    if (defaultJITOptions.sortOrder._1 == 1) // sort before inserting, just in case EDBs are defined
+      val (sortedBody, newHash) = JoinIndexes.presortSelect(
+        a =>
+          if (storageManager.edbContains(a.rId))
+            (true, storageManager.getEDBResult(a.rId).size)
+          else
+            (true, Int.MaxValue),
+        k,
+        storageManager
+      )
+      rule = rule.head +: sortedBody.map(_._1)
+      hash = newHash
 
 //    println(s"${storageManager.printer.ruleToString(rule)}")
 
@@ -212,8 +212,62 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
       case op: DebugNode =>
         op.run(storageManager)
 
-      case op: UnionSPJOp if jitOptions.granularity == op.code => // check if aot compile is ready
-        if (!jitOptions.aot) { // not AOT therefore not async, so compile + block
+      case op: UnionSPJOp if jitOptions.granularity == op.code =>
+        val shortC = if (jitOptions.sortOrder._1 != 0 && op.children.size < 3 && jitOptions.sortOrder._2 != 0) { // don't recompile query plans with <2 joins
+//          println("skip <3")
+          Some(op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o))))
+        } else if (jitOptions.sortOrder._1 != 0 && jitOptions.sortOrder._2 == 2) { // sort child relations and see if change is above threshold
+          val sortFn =
+            jitOptions.sortOrder._1 match
+              case 3 =>
+                (a: Atom)
+                =>
+                if (storageManager.edbContains(a.rId))
+                  (true, storageManager.getEDBResult(a.rId).size)
+                else
+                  (true, Int.MaxValue)
+              case 1 =>
+                (a: Atom)
+                => (true, storageManager.getKnownDerivedDB(a.rId).length)
+              case 4 =>
+                (a: Atom)
+                => (storageManager.allRulesAllIndexes.contains(a.rId), storageManager.getKnownDerivedDB(a.rId).length)
+              case _ => throw new Exception(s"Unknown sort order ${jitOptions.sortOrder}")
+          val oldK = storageManager.allRulesAllIndexes(op.rId)(op.hash)
+          val (nb, _) = JoinIndexes.presortSelect(sortFn, oldK, storageManager)
+          val oldBody = oldK.atoms.drop(1).map(_.hash)
+          val newBodyIdx = nb.map(h => oldBody.indexOf(h._1.hash))
+
+          def levenshtein(s1: String, s2: String): Int = { // from wikipedia
+            val memorizedCosts = mutable.Map[(Int, Int), Int]()
+            def lev: ((Int, Int)) => Int = {
+              case (k1, k2) =>
+                memorizedCosts.getOrElseUpdate((k1, k2), (k1, k2) match {
+                  case (i, 0) => i
+                  case (0, j) => j
+                  case (i, j) =>
+                    Seq(1 + lev((i - 1, j)),
+                      1 + lev((i, j - 1)),
+                      lev((i - 1, j - 1))
+                        + (if (s1(i - 1) != s2(j - 1)) 1 else 0)).min
+                })
+            }
+            lev((s1.length, s2.length))
+          }
+
+          val distance = levenshtein(newBodyIdx.mkString("", "", ""), Array.range(0, newBodyIdx.length).mkString("", "", ""))
+
+//          println(s"newBodyIdxs: ${newBodyIdx.mkString("[", ", ", "]")} distance: $distance")
+          if (distance < 3)
+            Some(op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o))))
+          else
+            None // TODO: fix this
+        } else {
+          None
+        }
+        if (shortC.isDefined)
+          shortC.get
+        else if (jitOptions.block) { // not AOT therefore not async, so compile + block
           startCompileThread(op)
           checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o))))
         } else {
@@ -273,10 +327,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
         //          op.compiledFn(storageManager)
         //        } else if (jitOptions.aot && op.compiledFnIndexed != null && storageManager.deltaDB(storageManager.knownDbId).values.map(_.length).exists(_ > jitOptions.thresholdNum)) {
         //          op.compiledFnIndexed(storageManager)
-        if (!jitOptions.aot && !jitOptions.block) {
-          startCompileThread(op)
-          checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o))))
-        } else if (!jitOptions.aot && jitOptions.block) {
+        if (jitOptions.block) {
           op.blockingCompiledFn = compiler.getCompiled(op)
           op.blockingCompiledFn(storageManager)
         } else {

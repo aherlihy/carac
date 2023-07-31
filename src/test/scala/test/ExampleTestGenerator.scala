@@ -111,35 +111,15 @@ abstract class TestGenerator(directory: Path,
 
           case "JITStagedB1_EVR_BlockDefault" =>
             Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(ir.OpCode.EVAL_RULE_BODY, dotty = dotty, aot = false, block = true, sortOrder = (1, 0, 0))))
+          case "JITStagedB1_fuzzy_EVR_BlockDefault" =>
+            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(ir.OpCode.EVAL_RULE_BODY, dotty = dotty, aot = false, block = true, sortOrder = (1, 1, 0))))
           case "JITStagedB1_EVR_AsyncDefault" =>
             Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(ir.OpCode.EVAL_RULE_BODY, dotty = dotty, aot = false, block = false, sortOrder = (1, 0, 0))))
-          case "JITStagedB1_EVR_BlockAOTDefault" =>
-            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(ir.OpCode.EVAL_RULE_BODY, dotty = dotty, aot = true, block = true, sortOrder = (1, 0, 0))))
-          case "JITStagedB1_EVR_AsyncAOTDefault" =>
-            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(ir.OpCode.EVAL_RULE_BODY, dotty = dotty, aot = true, block = false, sortOrder = (1, 0, 0))))
           case "JITStagedB1_ESN_BlockDefault" =>
             Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(ir.OpCode.EVAL_RULE_SN, dotty = dotty, aot = false, block = true, sortOrder = (1, 0, 0))))
           case "JITStagedB1_ESN_AsyncDefault" =>
             Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(ir.OpCode.EVAL_RULE_SN, dotty = dotty, aot = false, block = false, sortOrder = (1, 0, 0))))
-          case "JITStagedB1_ESN_BlockAOTDefault" =>
-            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(ir.OpCode.EVAL_RULE_SN, dotty = dotty, aot = true, block = true, sortOrder = (1, 0, 0))))
-          case "JITStagedB1_ESN_AsyncAOTDefault" =>
-            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(ir.OpCode.EVAL_RULE_SN, dotty = dotty, aot = true, block = false, sortOrder = (1, 0, 0))))
-          case "JITStagedW1_EVR_BlockDefault" =>
-            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(ir.OpCode.EVAL_RULE_BODY, dotty = dotty, aot = false, block = true, sortOrder = (-1, 0, 0))))
-          case "JITStagedW1_EVR_AsyncDefault" =>
-            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(ir.OpCode.EVAL_RULE_BODY, dotty = dotty, aot = false, block = false, sortOrder = (-1, 0, 0))))
-          case "JITStagedW1_EVR_BlockAOTDefault" =>
-            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(ir.OpCode.EVAL_RULE_BODY, dotty = dotty, aot = true, block = true, sortOrder = (-1, 0, 0))))
-          case "JITStagedW1_EVR_AsyncAOTDefault" =>
-            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(ir.OpCode.EVAL_RULE_BODY, dotty = dotty, aot = true, block = false, sortOrder = (-1, 0, 0))))
-          case "JITStagedW1_ESN_BlockDefault" =>
-            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(ir.OpCode.EVAL_RULE_SN, dotty = dotty, aot = false, block = true, sortOrder = (-1, 0, 0))))
-          case "JITStagedW1_ESN_AsyncDefault" =>
             Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(ir.OpCode.EVAL_RULE_SN, dotty = dotty, aot = false, block = false, sortOrder = (-1, 0, 0))))
-          case "JITStagedW1_ESN_BlockAOTDefault" =>
-            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(ir.OpCode.EVAL_RULE_SN, dotty = dotty, aot = true, block = true, sortOrder = (-1, 0, 0))))
-          case "JITStagedW1_ESN_AsyncAOTDefault" =>
             Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(ir.OpCode.EVAL_RULE_SN, dotty = dotty, aot = true, block = false, sortOrder = (-1, 0, 0))))
           case _ => // WARNING: MUnit just returns null pointers everywhere if an error or assert is triggered in beforeEach
             throw new Exception(s"Unknown engine construction ${context.test.name}") // TODO: this is reported as passing
@@ -162,12 +142,12 @@ abstract class TestGenerator(directory: Path,
 //      "SemiNaive",
       // "CompiledStaged",
 //      "InterpretedStaged",
-      "InterpretedStagedB1",
+//      "InterpretedStagedB1",
 //      "InterpretedStagedW1",
-//      "JITStagedB1_EVR_Block", "JITStagedB1_EVR_Async", "JITStagedB1_EVR_BlockAOT", "JITStagedB1_EVR_AsyncAOT",
-//      "JITStagedB1_ESN_Block", "JITStagedB1_ESN_Async", "JITStagedB1_ESN_BlockAOT", "JITStagedB1_ESN_AsyncAOT",
-//      "JITStagedW1_EVR_Block", "JITStagedW1_EVR_Async", "JITStagedW1_EVR_BlockAOT", "JITStagedW1_EVR_AsyncAOT",
-//      "JITStagedW1_ESN_Block", "JITStagedW1_ESN_Async", "JITStagedW1_ESN_BlockAOT", "JITStagedW1_ESN_AsyncAOT"
+      "JITStagedB1_fuzzy_EVR_Block",
+//      "JITStagedB1_EVR_Async",
+//      "JITStagedB1_ESN_Block",
+//      "JITStagedB1_ESN_Async",
     ).foreach(execution => {
       Seq("Volcano", "Default").foreach(storage => {
         if (execution.contains("Staged") && storage == "Volcano") {} // skip and don't report as skipped
