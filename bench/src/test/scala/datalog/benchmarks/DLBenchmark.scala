@@ -44,18 +44,26 @@ abstract class DLBenchmark {
     programs("compiled_default_unordered") = Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(ir.OpCode.PROGRAM, dotty)))
     // Optimization modes
     def toS(s: Int*): String = s"${
-      if (s.forall(_ == 0)) "unordered" else if (s.forall(_ >= 0)) "best" else "worst"
+      if (s.forall(_ == 0)) "unordered" else "" //if (s.forall(_ >= 0)) "best" else "worst"
     }${
       s(0).abs match
-        case 2 => "crd"
         case 0 => ""
+        case 2 => "crd"
         case 1 => "sel"
         case 3 => "intmax"
         case 4 => "mixed"
     }${
-      s.zipWithIndex.map((o, i) => if (o == 0) "" else s"${i.abs+1}").mkString("", "", "")
+//      s.zipWithIndex.map((o, i) => if (o == 0) "" else s"${i.abs+1}").mkString("", "", "")
+      s(2).abs match
+        case 0 => ""
+        case 1 => "Online"
+    }${
+      s(1).abs match
+        case 0 => ""
+        case 1 => "_fuzzytwo"
+        case 2 => "_fuzzyall"
     }"
-    val sortCombos = Seq(0, 1, 2, 3, 4).flatMap(i1 => Seq(0).flatMap(i2 => Seq(0, 1).map(i3 => (i1, i2, i3))))
+    val sortCombos = Seq(0, 1, 2, 3, 4).flatMap(i1 => Seq(0, 1, 2).flatMap(i2 => Seq(0, 1).map(i3 => (i1, i2, i3))))
 
     sortCombos.foreach(s =>
       programs(s"interpreted_default_${toS(s._1, s._2, s._3)}") = Program(StagedExecutionEngine(
