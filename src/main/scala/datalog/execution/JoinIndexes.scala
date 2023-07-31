@@ -120,51 +120,44 @@ object JoinIndexes {
     new JoinIndexes(bodyVars, constants.toMap, projects, deps, rule, cxns)
   }
 
-  def presortSelectWorst(sortBy: Atom => Int, rId: Int, originalK: JoinIndexes, sm: StorageManager): (Array[(Atom, Int)], String) = {
+  // used to approximate poor user-defined order
+  def presortSelectWorst(sortBy: Atom => Int, originalK: JoinIndexes, sm: StorageManager): (Array[(Atom, Int)], String) = {
     val sortedBody = originalK.atoms.drop(1).zipWithIndex.sortBy((a, _) => sortBy(a)).reverse
-    //    if (input.length > 2)
-//    println(s"Rule: ${sm.printer.ruleToString(originalK.atoms)}")
-//    println(s"Rule cxn: ${originalK.cxnsToString(sm.ns)}")
 
     val rStack = sortedBody.to(mutable.ListBuffer)
     var newBody = Array[(Atom, Int)]()
-//    println("START, stack=" + rStack.map(_._1).mkString("[", ", ", "]"))
     while (rStack.nonEmpty)
       var nextOpt = rStack.headOption
-//      println(s"\tpicking head ${sm.ns.hashToAtom(nextOpt.get._1.hash)} off stack")
       while (nextOpt.nonEmpty)
         val next = nextOpt.get
         newBody = newBody :+ next
         rStack.remove(rStack.indexOf(next))
-//        println(s"\t\tbody now: ${newBody.map(_._1).map(a => sm.ns(a.rId)).mkString("[", ", ", "]")}")
 
         val cxns = originalK.cxns(next._1.hash)
 
         if (cxns.nonEmpty)
-//          println(s"\t\tcxns, in order: ${cxns.toSeq.sortBy(_._1).map((_, hashs) => hashs.map(r => sm.ns.hashToAtom(r)).mkString("(", ", ", ")"))}")
           val availableNonoverlapping = rStack.filterNot((atom, _) => cxns.values.flatten.toSeq.contains(atom.hash))
           if (availableNonoverlapping.nonEmpty) // pick largest non-overlapping relation
             nextOpt = availableNonoverlapping.headOption
           else // pick the largest relation with the least overlap
             nextOpt = cxns.toSeq.sortBy(_._1).view.map((count, worstCxn) =>
-//              println(s"\t\t\ttesting worst cxn of $count = ${worstCxn.map(h => sm.ns.hashToAtom(h)).mkString("[", ", ", "]")}")
               val availableCxn = rStack.filter((atom, _) => worstCxn.contains(atom.hash)) // use filter not intersect to retain order
-//              println(s"\t\t\tcxns that are still on the stack = ${availableCxn.map(p => sm.ns.hashToAtom(p._1.hash))}")
               availableCxn.headOption
             ).collectFirst { case Some(x) => x }
         else
           nextOpt = None
-//        println(s"\t\t\t==>next cxn to add: ${nextOpt.map(next => sm.ns(next._1.rId)).getOrElse("None")}")
 
     val newAtoms = originalK.atoms.head +: newBody.map(_._1)
     val newHash = JoinIndexes.getRuleHash(newAtoms)
 
 //    println(s"\tOrder: ${newBody.map((a, _) => s"${sm.ns(a.rId)}:|${sortBy(a)}|").mkString("", ", ", "")}")
+//    print(s"Rule: ${sm.printer.ruleToString(originalK.atoms)} => ")
+//    println(s"${sm.printer.ruleToString(originalK.atoms.head +: newBody.map(_._1))}")
 
     (newBody, newHash)
   }
 
-  def presortSelect(sortBy: Atom => Int, rId: Int, originalK: JoinIndexes, sm: StorageManager): (Array[(Atom, Int)], String) = {
+  def presortSelect(sortBy: Atom => Int, originalK: JoinIndexes, sm: StorageManager): (Array[(Atom, Int)], String) = {
 
     val sortedBody = originalK.atoms.drop(1).zipWithIndex.sortBy((a, _) => sortBy(a))
     //    if (input.length > 2)
@@ -208,11 +201,11 @@ object JoinIndexes {
       case 0 => (input, oldHash) // getBestPresortSelect(input, sortBy, rId, oldHash, sm) // sort anyway for benchmarking purposes
       case 1 =>
         val originalK = sm.allRulesAllIndexes(rId)(oldHash)
-        val (newBody, newHash) = presortSelect(sortBy, rId, originalK, sm)
+        val (newBody, newHash) = presortSelect(sortBy, originalK, sm)
         (input.map(c => ProjectJoinFilterOp(rId, newHash, newBody.map((_, oldP) => c.childrenSO(oldP)): _*)), newHash)
       case -1 =>
         val originalK = sm.allRulesAllIndexes(rId)(oldHash)
-        val (newBody, newHash) = presortSelectWorst(sortBy, rId, originalK, sm)
+        val (newBody, newHash) = presortSelectWorst(sortBy, originalK, sm)
         (input.map(c => ProjectJoinFilterOp(rId, newHash, newBody.map((_, oldP) => c.childrenSO(oldP)): _*)), newHash)
       case 2 => getPreSortCard(input, sortBy, rId, oldHash, sm, true)
       case -2 => getPreSortCard(input, sortBy, rId, oldHash, sm, false)

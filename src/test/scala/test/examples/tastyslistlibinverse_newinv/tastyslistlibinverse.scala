@@ -1,14 +1,14 @@
-package test.examples.tastyslistlibinverse_newwinv
+package test.examples.tastyslistlibinverse_newinv
 
 import datalog.dsl.{Constant, Program}
 import test.{ExampleTestGenerator, Tags}
 
-class tastyslistlibinverse_newwinv_test extends ExampleTestGenerator(
-  "tastyslistlibinverse_newwinv",
+class tastyslistlibinverse_newinv_test extends ExampleTestGenerator(
+  "tastyslistlibinverse_newinv",
   Set(Tags.Slow, Tags.CI)
-) with tastyslistlibinverse_newwinv
+) with tastyslistlibinverse_newinv
 
-trait tastyslistlibinverse_newwinv {
+trait tastyslistlibinverse_newinv {
   val toSolve = "EquivToOutput"
 
   def pretest(program: Program): Unit = {

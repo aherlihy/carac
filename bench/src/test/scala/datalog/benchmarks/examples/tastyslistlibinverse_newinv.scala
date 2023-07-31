@@ -4,7 +4,7 @@ import datalog.benchmarks.ExampleBenchmarkGenerator
 import datalog.dsl.{Constant, Program}
 import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.Blackhole
-import test.examples.tastyslistlibinverse_newwinv.tastyslistlibinverse_newwinv as tastyslistlibinverse_newwinv_test
+import test.examples.tastyslistlibinverse_newinv.tastyslistlibinverse_newinv as tastyslistlibinverse_newinv_test
 
 import java.nio.file.Paths
 import java.util.concurrent.TimeUnit
@@ -14,7 +14,7 @@ import java.util.concurrent.TimeUnit
 @Measurement(iterations = examples_iterations, time = examples_time, timeUnit = TimeUnit.SECONDS, batchSize = examples_xl_batchsize)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
-class tastyslistlibinverse_newinv() extends ExampleBenchmarkGenerator("tastyslistlibinverse_newwinv") with tastyslistlibinverse_newwinv_test {
+class tastyslistlibinverse_newinv() extends ExampleBenchmarkGenerator("tastyslistlibinverse_newinv") with tastyslistlibinverse_newinv_test {
 
   @Setup
   def s(): Unit = setup() // can't add annotations to super, so just call

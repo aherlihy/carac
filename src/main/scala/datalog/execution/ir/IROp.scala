@@ -305,6 +305,15 @@ case class UnionSPJOp(rId: RelationId, var hash: String, override val children:P
     storageManager.union(opFns.map(o => o(storageManager)))
 
   override def run(storageManager: StorageManager): EDB =
+
+    // uncomment to print out "worst" order
+//    val originalK = storageManager.allRulesAllIndexes(rId)(hash)
+//    JoinIndexes.presortSelectWorst(
+//      a => storageManager.getKnownDerivedDB(a.rId).length,
+//      originalK,
+//      storageManager
+//    )
+
     if (jitOptions.sortOrder._1 == 0 || children.length < 3 || jitOptions.granularity != OpCode.OTHER) // If not only interpreting, then don't optimize since we are waiting for the optimized version to compile
       storageManager.union(children.map((s: ProjectJoinFilterOp) => s.run(storageManager)))
     else
