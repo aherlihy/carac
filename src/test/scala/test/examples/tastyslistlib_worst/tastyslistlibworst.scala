@@ -1,15 +1,15 @@
-package test.examples.tastyslistlibworst
+package test.examples.tastyslistlib_worst
 
 import datalog.dsl.{Constant, Program}
 import test.{ExampleTestGenerator, Tags}
 
-class tastyslistlibworst_test extends ExampleTestGenerator(
-  "tastyslistlibworst",
+class tastyslistlib_worst_test extends ExampleTestGenerator(
+  "tastyslistlib_worst",
   Set(Tags.Naive, Tags.Volcano),
   Set(Tags.Slow, Tags.CI)
-) with tastyslistlibworst
+) with tastyslistlib_worst
 
-trait tastyslistlibworst {
+trait tastyslistlib_worst {
   val toSolve = "VarPointsTo"
 
   def pretest(program: Program): Unit = {

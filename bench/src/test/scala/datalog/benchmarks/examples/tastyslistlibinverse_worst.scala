@@ -4,7 +4,7 @@ import datalog.benchmarks.ExampleBenchmarkGenerator
 import datalog.dsl.{Constant, Program}
 import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.Blackhole
-import test.examples.tastyslistlib.tastyslistlib as tastyslistlib_test
+import test.examples.tastyslistlibinverse_worst.tastyslistlibinverse_worst as tastyslistlibinverse_worst_test
 
 import java.nio.file.Paths
 import java.util.concurrent.TimeUnit
@@ -14,7 +14,7 @@ import java.util.concurrent.TimeUnit
 @Measurement(iterations = examples_iterations, time = examples_time, timeUnit = TimeUnit.SECONDS, batchSize = examples_xl_batchsize)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
-class tastyslistlib() extends ExampleBenchmarkGenerator("tastyslistlib") with tastyslistlib_test {
+class tastyslistlibinverse_worst() extends ExampleBenchmarkGenerator("tastyslistlibinverse_worst") with tastyslistlibinverse_worst_test {
 
   @Setup
   def s(): Unit = setup() // can't add annotations to super, so just call
@@ -67,6 +67,7 @@ class tastyslistlib() extends ExampleBenchmarkGenerator("tastyslistlib") with ta
       throw new Exception(f"Error: program for '$p' not found")
     blackhole.consume(run(programs(p), result))
   }
+
   // Mode: interpreted
   // Sort: best 1 + 3
   @Benchmark def interpreted_default_selOnline__(blackhole: Blackhole): Unit = {
@@ -84,6 +85,27 @@ class tastyslistlib() extends ExampleBenchmarkGenerator("tastyslistlib") with ta
   }
 
   @Benchmark def interpreted_default_mixedOnline__(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  @Benchmark def interpreted_default_sel__(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  @Benchmark def interpreted_default_intmax__(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  @Benchmark def interpreted_default_mixed__(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
@@ -229,6 +251,34 @@ class tastyslistlib() extends ExampleBenchmarkGenerator("tastyslistlib") with ta
   }
 
   @Benchmark def jit_default_sel_async_EVALRULESN__(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  @Benchmark def jit_default_intmax_blocking_EVALRULESN__(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  @Benchmark def jit_default_intmax_async_EVALRULESN__(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  @Benchmark def jit_default_mixed_blocking_EVALRULESN__(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  @Benchmark def jit_default_mixed_async_EVALRULESN__(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")

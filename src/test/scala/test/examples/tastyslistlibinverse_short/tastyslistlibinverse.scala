@@ -1,15 +1,15 @@
-package test.examples.tastyslistlibinverse
+package test.examples.tastyslistlibinverse_short
 
 import datalog.dsl.{Constant, Program}
 import test.ExampleTestGenerator
 
-class tastyslistlibinverse_test extends ExampleTestGenerator("tastyslistlibinverse") with tastyslistlibinverse
+class tastyslistlibinverse_short_test extends ExampleTestGenerator("tastyslistlibinverse_short") with tastyslistlibinverse_short
 
-trait tastyslistlibinverse {
+trait tastyslistlibinverse_short {
   val toSolve = "EquivToOutput"
 
   def pretest(program: Program): Unit = {
-    println("setup inv")
+    println("setup short")
     val ActualArg = program.namedRelation[String]("ActualArg")
     val ActualReturn = program.namedRelation[String]("ActualReturn")
     val Alloc = program.namedRelation[String]("Alloc")
@@ -361,18 +361,42 @@ trait tastyslistlibinverse {
 //      ActualArg(invInstr, a2, a3, input),
 //    )
 
+    val CalledInv = program.relation[String]("CalledInv")
+    CalledInv(instr, output, F, ctx) :- (
+      ActualReturn(instr, output),
+//    ActualReturn(instr, output),
+      StaticCall(F, instr, ctx),
+//    StaticCall(F, instr, ctx),
+//      ActualArg(instr, a0, a1, arg)
+//    ActualArg(instr, a0, a1, arg),
+    )
+
+    Equiv(output, input) :- (
+      Reachable(ctx),
+      CalledInv(instr, output, F, ctx),
+//      ActualReturn(instr, output),
+//      StaticCall(F, instr, ctx),
+      ActualArg(instr, a0, a1, arg),
+      VarEquiv(arg, v1),
+      CalledInv(invInstr, v1, invF, ctx),
+//      ActualReturn(invInstr, v1),
+//      StaticCall(invF, invInstr, ctx),
+      InverseFns(F, invF),
+      ActualArg(invInstr, a2, a3, input),
+    )
+
     // "unoptimized"
-        Equiv(output, input) :- (
-          VarEquiv(arg, v1),
-          ActualReturn(instr, output),
-          ActualReturn(invInstr, v1),
-          Reachable(ctx),
-          ActualArg(instr, a0, a1, arg),
-          ActualArg(invInstr, a2, a3, input),
-          InverseFns(F, invF),
-          StaticCall(F, instr, ctx),
-          StaticCall(invF, invInstr, ctx),
-        )
+//    Equiv(output, input) :- (
+//      VarEquiv(arg, v1),
+//      ActualReturn(instr, output),
+//      ActualReturn(invInstr, v1),
+//      Reachable(ctx),
+//      ActualArg(instr, a0, a1, arg),
+//      ActualArg(invInstr, a2, a3, input),
+//      InverseFns(F, invF),
+//      StaticCall(F, instr, ctx),
+//      StaticCall(invF, invInstr, ctx),
+//    )
     EquivToOutput(v0) :- Equiv("slistlib.Main.main.OUTPUT_VAR", v0)
   }
 }

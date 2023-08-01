@@ -51,89 +51,89 @@ class tastyslistlibnegated() extends ExampleBenchmarkGenerator("tastyslistlibneg
 //  }
 
   // interpreted
-  @Benchmark def interpreted_default_unordered__ci(blackhole: Blackhole): Unit = {
-    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
-    if (!programs.contains(p))
-      throw new Exception(f"Error: program for '$p' not found")
-    blackhole.consume(run(programs(p), result))
-  }
-  // compiled
-  @Benchmark def compiled_default_unordered__(blackhole: Blackhole): Unit = {
-    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
-    if (!programs.contains(p))
-      throw new Exception(f"Error: program for '$p' not found")
-    blackhole.consume(run(programs(p), result))
-  }
-
-  @Benchmark def interpreted_default_bestsel13__(blackhole: Blackhole): Unit = {
-    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
-    if (!programs.contains(p))
-      throw new Exception(f"Error: program for '$p' not found")
-    blackhole.consume(run(programs(p), result))
-  }
-
-  @Benchmark def interpreted_default_worstsel13__(blackhole: Blackhole): Unit = {
-    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
-    if (!programs.contains(p))
-      throw new Exception(f"Error: program for '$p' not found")
-    blackhole.consume(run(programs(p), result))
-  }
-
-  @Benchmark def interpreted_default_bestsel1__(blackhole: Blackhole): Unit = {
-    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
-    if (!programs.contains(p))
-      throw new Exception(f"Error: program for '$p' not found")
-    blackhole.consume(run(programs(p), result))
-  }
-
-  @Benchmark def interpreted_default_worstsel1__(blackhole: Blackhole): Unit = {
-    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
-    if (!programs.contains(p))
-      throw new Exception(f"Error: program for '$p' not found")
-    blackhole.consume(run(programs(p), result))
-  }
-
-  @Benchmark def interpreted_default_bestsel3__(blackhole: Blackhole): Unit = {
-    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
-    if (!programs.contains(p))
-      throw new Exception(f"Error: program for '$p' not found")
-    blackhole.consume(run(programs(p), result))
-  }
-
-  @Benchmark def interpreted_default_worstsel3__(blackhole: Blackhole): Unit = {
-    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
-    if (!programs.contains(p))
-      throw new Exception(f"Error: program for '$p' not found")
-    blackhole.consume(run(programs(p), result))
-  }
-
-  @Benchmark def interpreted_default_bestcrd13__(blackhole: Blackhole): Unit = {
-    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
-    if (!programs.contains(p))
-      throw new Exception(f"Error: program for '$p' not found")
-    blackhole.consume(run(programs(p), result))
-  }
-
-  @Benchmark def interpreted_default_worstcrd13__(blackhole: Blackhole): Unit = {
-    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
-    if (!programs.contains(p))
-      throw new Exception(f"Error: program for '$p' not found")
-    blackhole.consume(run(programs(p), result))
-  }
-
-  @Benchmark def interpreted_default_bestcrd1__(blackhole: Blackhole): Unit = {
-    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
-    if (!programs.contains(p))
-      throw new Exception(f"Error: program for '$p' not found")
-    blackhole.consume(run(programs(p), result))
-  }
-
-  @Benchmark def interpreted_default_worstcrd1__(blackhole: Blackhole): Unit = {
-    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
-    if (!programs.contains(p))
-      throw new Exception(f"Error: program for '$p' not found")
-    blackhole.consume(run(programs(p), result))
-  }
+//  @Benchmark def interpreted_default_unordered__ci(blackhole: Blackhole): Unit = {
+//    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
+//    if (!programs.contains(p))
+//      throw new Exception(f"Error: program for '$p' not found")
+//    blackhole.consume(run(programs(p), result))
+//  }
+//  // compiled
+//  @Benchmark def compiled_default_unordered__(blackhole: Blackhole): Unit = {
+//    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
+//    if (!programs.contains(p))
+//      throw new Exception(f"Error: program for '$p' not found")
+//    blackhole.consume(run(programs(p), result))
+//  }
+//
+//  @Benchmark def interpreted_default_bestsel13__(blackhole: Blackhole): Unit = {
+//    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
+//    if (!programs.contains(p))
+//      throw new Exception(f"Error: program for '$p' not found")
+//    blackhole.consume(run(programs(p), result))
+//  }
+//
+//  @Benchmark def interpreted_default_worstsel13__(blackhole: Blackhole): Unit = {
+//    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
+//    if (!programs.contains(p))
+//      throw new Exception(f"Error: program for '$p' not found")
+//    blackhole.consume(run(programs(p), result))
+//  }
+//
+//  @Benchmark def interpreted_default_bestsel1__(blackhole: Blackhole): Unit = {
+//    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
+//    if (!programs.contains(p))
+//      throw new Exception(f"Error: program for '$p' not found")
+//    blackhole.consume(run(programs(p), result))
+//  }
+//
+//  @Benchmark def interpreted_default_worstsel1__(blackhole: Blackhole): Unit = {
+//    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
+//    if (!programs.contains(p))
+//      throw new Exception(f"Error: program for '$p' not found")
+//    blackhole.consume(run(programs(p), result))
+//  }
+//
+//  @Benchmark def interpreted_default_bestsel3__(blackhole: Blackhole): Unit = {
+//    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
+//    if (!programs.contains(p))
+//      throw new Exception(f"Error: program for '$p' not found")
+//    blackhole.consume(run(programs(p), result))
+//  }
+//
+//  @Benchmark def interpreted_default_worstsel3__(blackhole: Blackhole): Unit = {
+//    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
+//    if (!programs.contains(p))
+//      throw new Exception(f"Error: program for '$p' not found")
+//    blackhole.consume(run(programs(p), result))
+//  }
+//
+//  @Benchmark def interpreted_default_bestcrd13__(blackhole: Blackhole): Unit = {
+//    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
+//    if (!programs.contains(p))
+//      throw new Exception(f"Error: program for '$p' not found")
+//    blackhole.consume(run(programs(p), result))
+//  }
+//
+//  @Benchmark def interpreted_default_worstcrd13__(blackhole: Blackhole): Unit = {
+//    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
+//    if (!programs.contains(p))
+//      throw new Exception(f"Error: program for '$p' not found")
+//    blackhole.consume(run(programs(p), result))
+//  }
+//
+//  @Benchmark def interpreted_default_bestcrd1__(blackhole: Blackhole): Unit = {
+//    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
+//    if (!programs.contains(p))
+//      throw new Exception(f"Error: program for '$p' not found")
+//    blackhole.consume(run(programs(p), result))
+//  }
+//
+//  @Benchmark def interpreted_default_worstcrd1__(blackhole: Blackhole): Unit = {
+//    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
+//    if (!programs.contains(p))
+//      throw new Exception(f"Error: program for '$p' not found")
+//    blackhole.consume(run(programs(p), result))
+//  }
 
 //  // jit
 //  @Benchmark def jit_default_unordered_blocking_EVALRULEBODY__ci(blackhole: Blackhole): Unit = {

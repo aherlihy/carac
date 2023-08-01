@@ -1,11 +1,11 @@
-package test.examples.tastylistlib
+package test.examples.tastyslistlib_optimized
 
 import datalog.dsl.{Constant, Program}
 import test.ExampleTestGenerator
 
-class tastylistlib_test extends ExampleTestGenerator("tastylistlib") with tastylistlib
+class tastyslistlib_optimized_test extends ExampleTestGenerator("tastyslistlib_optimized") with tastyslistlib_optimized
 
-trait tastylistlib {
+trait tastyslistlib_optimized {
   val toSolve = "VarPointsTo"
 
   def pretest(program: Program): Unit = {
@@ -31,9 +31,9 @@ trait tastylistlib {
     val StaticLookUp = program.relation[String]("StaticLookUp")
 
     val VarPointsTo = program.relation[String]("VarPointsTo")
-    val CallGraph = program.relation[String]()
-    val FldPointsTo = program.relation[String]()
-    val InterProcAssign = program.relation[String]()
+    val CallGraph = program.relation[String]("CallGraph")
+    val FldPointsTo = program.relation[String]("FldPointsTo")
+    val InterProcAssign = program.relation[String]("InterProcAssign")
 
     val Delegate = program.relation[String]("Delegate")
     val SuperCall = program.relation[String]("SuperCall")

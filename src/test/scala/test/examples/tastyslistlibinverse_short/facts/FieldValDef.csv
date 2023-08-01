@@ -1,0 +1,5 @@
+String	String
+slistlib.StringWrap.s	slistlib.StringWrap.s
+slistlib.IntWrap.c	slistlib.IntWrap.c
+slistlib.Cons.first	slistlib.Cons.first
+slistlib.Cons.cons	slistlib.Cons.cons
