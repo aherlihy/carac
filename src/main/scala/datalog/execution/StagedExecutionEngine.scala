@@ -67,8 +67,20 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
       )
       rule = rule.head +: sortedBody.map(_._1)
       hash = newHash
+    else if (defaultJITOptions.sortOrder._1 == 5) // mimic "bad luck" program definition, so ingest rules in a bad order and then don't update them.
+      val (sortedBody, newHash) = JoinIndexes.presortSelectWorst(
+        a =>
+          if (storageManager.edbContains(a.rId))
+            (true, storageManager.getEDBResult(a.rId).size)
+          else
+            (true, Int.MaxValue),
+        k,
+        storageManager
+      )
+      rule = rule.head +: sortedBody.map(_._1)
+      hash = newHash
 
-//    println(s"${storageManager.printer.ruleToString(rule)}")
+    //    println(s"${storageManager.printer.ruleToString(rule)}")
 
     val allRules = ast.rules.getOrElseUpdate(rId, AllRulesNode(mutable.ArrayBuffer.empty, rId)).asInstanceOf[AllRulesNode]
     allRules.rules.append(
@@ -216,7 +228,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
         val shortC = if (jitOptions.sortOrder._1 != 0 && op.children.size < 3 && jitOptions.sortOrder._2 != 0) { // don't recompile query plans with <2 joins
 //          println("skip <3")
           Some(op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o))))
-        } else if (jitOptions.sortOrder._1 != 0 && jitOptions.sortOrder._2 == 2) { // sort child relations and see if change is above threshold
+        } else if (jitOptions.sortOrder._1 != 0 && jitOptions.sortOrder._1 != 5 && jitOptions.sortOrder._2 == 2) { // sort child relations and see if change is above threshold
           val sortFn =
             jitOptions.sortOrder._1 match
               case 3 =>

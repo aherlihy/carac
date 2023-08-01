@@ -36,13 +36,13 @@ abstract class DLBenchmark {
       "naive" -> (sm => new NaiveExecutionEngine(sm))
     )
     // ---> uncomment to bench shallow embedding
-//    executionEngines.keys.foreach(ee =>
-//      storageEngines.keys.foreach(sm =>
-//        programs(s"${ee}_$sm") = Program(executionEngines(ee)(storageEngines(sm)()))
-//      )
-//    )
+    executionEngines.keys.foreach(ee =>
+      storageEngines.keys.foreach(sm =>
+        programs(s"${ee}_$sm") = Program(executionEngines(ee)(storageEngines(sm)()))
+      )
+    )
     // ---> uncomment to bench compiled unordered
-//    programs("compiled_default_unordered") = Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(ir.OpCode.PROGRAM, dotty)))
+    programs("compiled_default_unordered") = Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(ir.OpCode.PROGRAM, dotty)))
     // Optimization modes
     def toS(s: Int*): String = s"${
       if (s.forall(_ == 0)) "unordered" else "" //if (s.forall(_ >= 0)) "best" else "worst"
@@ -53,6 +53,7 @@ abstract class DLBenchmark {
         case 1 => "sel"
         case 3 => "intmax"
         case 4 => "mixed"
+        case 5 => "badluck"
         case _ => throw new Exception(s"Unknown sort order $s")
     }${
       s(2).abs match
@@ -67,7 +68,7 @@ abstract class DLBenchmark {
         case _ => throw new Exception(s"Unknown sort order $s")
     }"
 
-    val mainSortOpts = Seq(0, 1, 3, 4) // add 1-4 to include sorted opts
+    val mainSortOpts = Seq(0, 1, 5)//, 3, 4) // add 1-4 to include sorted opts
     val fuzzySortOpts = Seq(0) // add 1, 2 to include fuzzy benchmarks
     val onlineSortOpts = Seq(0) // add 1 to bench online sort
     val sortCombos = mainSortOpts.flatMap(i1 => fuzzySortOpts.flatMap(i2 => onlineSortOpts.map(i3 => (i1, i2, i3))))
@@ -91,7 +92,7 @@ abstract class DLBenchmark {
 //      ir.OpCode.EVAL_RULE_BODY,
       ir.OpCode.EVAL_RULE_SN,
     )
-    val blocking = Seq(true /*false*/)
+    val blocking = Seq(true, false)
 
   // --> uncomment for JIT
     jitGranularities.foreach(gran =>

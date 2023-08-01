@@ -64,6 +64,20 @@ class ranpo() extends ExampleBenchmarkGenerator (
     blackhole.consume(run(programs(p), result))
   }
 
+  @Benchmark def interpreted_default_badluck__(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  @Benchmark def interpreted_default_sel__(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
   // compiled
   @Benchmark def compiled_default_unordered__(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
@@ -73,22 +87,14 @@ class ranpo() extends ExampleBenchmarkGenerator (
   }
 
   // jit
-  @Benchmark def jit_default_unordered_blocking_EVALRULEBODY__ci(blackhole: Blackhole): Unit = {
+  @Benchmark def jit_default_sel_blocking_EVALRULESN__ci(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
     blackhole.consume(run(programs(p), result))
   }
 
-  @Benchmark def jit_default_unordered_async_EVALRULEBODY__(blackhole: Blackhole): Unit = {
-    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
-    if (!programs.contains(p))
-      throw new Exception(f"Error: program for '$p' not found")
-    blackhole.consume(run(programs(p), result))
-  }
-
-  // jit
-  @Benchmark def jit_default_unordered_async_EVALRULEBODY_aot__(blackhole: Blackhole): Unit = {
+  @Benchmark def jit_default_sel_async_EVALRULESN__(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")

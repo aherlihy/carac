@@ -109,7 +109,7 @@ class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: J
 
       case UnionSPJOp(rId, hash, children: _*) =>
         val (sortedChildren, newHash) =
-          if (jitOptions.sortOrder._1 != 0)
+          if (jitOptions.sortOrder._1 != 0 && jitOptions.sortOrder._1 != 5)
 
             val sortFn =
               jitOptions.sortOrder._1 match
@@ -275,7 +275,7 @@ class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: J
         '{ ${Expr.ofSeq(uOp.children.toSeq.map(compileIRRelOp))}($i) }
       case uSPJOp: UnionSPJOp =>
         val (sortedChildren, newHash) =
-          if (jitOptions.sortOrder._1 != 0)
+          if (jitOptions.sortOrder._1 != 0 && jitOptions.sortOrder._1 != 5)
             val sortFn =
               jitOptions.sortOrder._1 match
                 case 3 =>

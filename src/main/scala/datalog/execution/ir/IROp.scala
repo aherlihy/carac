@@ -314,7 +314,7 @@ case class UnionSPJOp(rId: RelationId, var hash: String, override val children:P
 //      storageManager
 //    )
 
-    if (jitOptions.sortOrder._1 == 0 || children.length < 3 || jitOptions.granularity != OpCode.OTHER) // If not only interpreting, then don't optimize since we are waiting for the optimized version to compile
+    if (jitOptions.sortOrder._1 == 0 || jitOptions.sortOrder._1 == 5 || children.length < 3 || jitOptions.granularity != OpCode.OTHER) // If not only interpreting, then don't optimize since we are waiting for the optimized version to compile
       storageManager.union(children.map((s: ProjectJoinFilterOp) => s.run(storageManager)))
     else
       val sortFn =
