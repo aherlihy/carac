@@ -80,10 +80,10 @@ abstract class DLBenchmark {
         DefaultStorageManager(),
         JITOptions(ir.OpCode.OTHER, dotty, false, sortOrder = s)
       ))
-      programs(s"interpreted_default_${toS(-s._1, -s._2, -s._3)}") = Program(StagedExecutionEngine(
-        DefaultStorageManager(),
-        JITOptions(ir.OpCode.OTHER, dotty, false, sortOrder = (-s._1, -s._2, -s._3))
-      ))
+//      programs(s"interpreted_default_worst${toS(-s._1, -s._2, -s._3)}") = Program(StagedExecutionEngine(
+//        DefaultStorageManager(),
+//        JITOptions(ir.OpCode.OTHER, dotty, false, sortOrder = (-s._1, -s._2, -s._3))
+//      ))
     )
 
     // JIT options
