@@ -95,12 +95,12 @@ class StagedSnippetCompiler(val storageManager: StorageManager)(using val jitOpt
         else
           '{ $stagedSM.getEmptyEDB() }
 
-      case ProjectJoinFilterOp(rId, hash, children:_*) =>
+      case ProjectJoinFilterOp(rId, k, children:_*) =>
         val compiledOps = '{ $stagedFns.map(s => s($stagedSM)) }
         '{
           $stagedSM.joinProjectHelper(
             $compiledOps,
-            ${ Expr(storageManager.allRulesAllIndexes(rId)(hash)) },
+            ${ Expr(k) },
             ${ Expr(jitOptions.sortOrder) }
           )
         }
@@ -109,7 +109,7 @@ class StagedSnippetCompiler(val storageManager: StorageManager)(using val jitOpt
         val compiledOps = '{ $stagedFns.map(s => s($stagedSM)) }
         '{ $stagedSM.union($compiledOps) }
 
-      case UnionSPJOp(rId, hash, children: _*) =>
+      case UnionSPJOp(rId, k, children: _*) =>
         val compiledOps = '{ $stagedFns.map(s => s($stagedSM)) }
         '{ $stagedSM.union($compiledOps) }
 

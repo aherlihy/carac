@@ -57,7 +57,7 @@ case class JoinIndexes(varIndexes: Seq[Seq[Int]],
 }
 
 object JoinIndexes {
-  def apply(rule: Array[Atom]) = {
+  def apply(rule: Array[Atom], precalculatedCxns: Option[Map[String, Map[Int, Seq[String]]]]) = {
     val constants = mutable.Map[Int, Constant]() // position => constant
     val variables = mutable.Map[Variable, Int]() // v.oid => position
 
@@ -105,7 +105,7 @@ object JoinIndexes {
     }
 
     // produces (atom, { # repeated vars => atom } )
-    val cxns =
+    val cxns = precalculatedCxns.getOrElse(
       body.zipWithIndex.map((atom, idx) => (
         atom.hash,
         body.zipWithIndex
@@ -115,7 +115,7 @@ object JoinIndexes {
           .map(t => (t._2, t._3))
           .groupBy(_._2)
           .map((count, hashs) => (count, hashs.map((hash, count2) => hash).toSeq)))
-    ).toMap
+    ).toMap)
 
     new JoinIndexes(bodyVars, constants.toMap, projects, deps, rule, cxns)
   }
@@ -200,34 +200,24 @@ object JoinIndexes {
     (newBody, newHash)
   }
 
-  def getPresort(input: Array[ProjectJoinFilterOp], sortBy: Atom => (Boolean, Int), rId: Int, oldHash: String, sm: StorageManager)(using jitOptions: JITOptions): (Array[ProjectJoinFilterOp], String) = {
+  def getPresort(input: Array[ProjectJoinFilterOp], sortBy: Atom => (Boolean, Int), rId: Int, originalK: JoinIndexes, sm: StorageManager)(using jitOptions: JITOptions): (Array[ProjectJoinFilterOp], JoinIndexes) = {
     jitOptions.sortOrder._1 match
-      case 0 => (input, oldHash) // getBestPresortSelect(input, sortBy, rId, oldHash, sm) // sort anyway for benchmarking purposes
-      case 1|3|4 =>
-        val originalK = sm.allRulesAllIndexes(rId)(oldHash)
-        val (newBody, newHash) = presortSelect(sortBy, originalK, sm)
-        (input.map(c => ProjectJoinFilterOp(rId, newHash, newBody.map((_, oldP) => c.childrenSO(oldP)): _*)), newHash)
-      case -1 =>
-        val originalK = sm.allRulesAllIndexes(rId)(oldHash)
-        val (newBody, newHash) = presortSelectWorst(sortBy, originalK, sm)
-        (input.map(c => ProjectJoinFilterOp(rId, newHash, newBody.map((_, oldP) => c.childrenSO(oldP)): _*)), newHash)
-      case 2 => getPreSortCard(input, sortBy, rId, oldHash, sm, true)
-      case -2 => getPreSortCard(input, sortBy, rId, oldHash, sm, false)
+      case 0 => (input, originalK) // getBestPresortSelect(input, sortBy, rId, oldHash, sm) // sort anyway for benchmarking purposes
+      case -1|1|3|4 =>
+        val (newBody, newHash) =
+          if (jitOptions.sortOrder._1 == -1)
+            presortSelectWorst(sortBy, originalK, sm)
+          else
+            presortSelect(sortBy, originalK, sm)
+        val newK = sm.allRulesAllIndexes(rId).getOrElseUpdate(newHash, JoinIndexes(originalK.atoms.head +: newBody.map(_._1), Some(originalK.cxns)))
+        (input.map(c => ProjectJoinFilterOp(rId, newK, newBody.map((_, oldP) => c.childrenSO(oldP)): _*)), newK)
       case _ => throw new Exception(s"Unknown sort order ${jitOptions.sortOrder}")
   }
 
-  private def getPreSortCard(input: Array[ProjectJoinFilterOp], sortBy: Atom => (Boolean, Int), rId: Int, oldHash: String, sm: StorageManager, best: Boolean)(using JITOptions): (Array[ProjectJoinFilterOp], String) = {
-    val originalK = sm.allRulesAllIndexes(rId)(oldHash)
-
-    var newBody = originalK.atoms.drop(1).zipWithIndex.sortBy((a, _) => sortBy(a))
-    if (!best) newBody = newBody.reverse
-    val newAtoms = originalK.atoms.head +: newBody.map(_._1)
-    val newHash = JoinIndexes.getRuleHash(newAtoms)
-    (input.map(c => ProjectJoinFilterOp(rId, newHash, newBody.map((_, oldP) => c.childrenSO(oldP)): _*)), newHash)
-  }
   def allOrders(rule: Array[Atom]): AllIndexes = {
+    val idx = JoinIndexes(rule, None)
     mutable.Map[String, JoinIndexes](rule.drop(1).permutations.map(r =>
-      val toRet = JoinIndexes(rule.head +: r)
+      val toRet = JoinIndexes(rule.head +: r, Some(idx.cxns))
       toRet.hash -> toRet
     ).toSeq:_*)
   }

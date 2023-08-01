@@ -242,38 +242,24 @@ case class ScanEDBOp(rId: RelationId)(using JITOptions) extends IROp[EDB] {
  * @param joinIdx
  * @param children: [Scan*deps]
  */
-case class ProjectJoinFilterOp(rId: RelationId, var hash: String, override val children:IROp[EDB]*)(using jitOptions: JITOptions) extends IROp[EDB](children:_*) {
+case class ProjectJoinFilterOp(rId: RelationId, var k: JoinIndexes, override val children:IROp[EDB]*)(using jitOptions: JITOptions) extends IROp[EDB](children:_*) {
   val code: OpCode = OpCode.SPJ
   var childrenSO: Array[IROp[EDB]] = children.toArray
 
   override def run_continuation(storageManager: StorageManager, opFns: Seq[CompiledFn[EDB]]): EDB =
     val inputs = opFns.map(s => s(storageManager))
-//    val (sorted, newHash) = JoinIndexes.getSortAhead(
-//      inputs.toArray,
-//      edb => edb.length,
-//      rId,
-//      hash,
-//      storageManager
-//    )
     storageManager.joinProjectHelper_withHash(
       inputs,
       rId,
-      hash,
+      k,
       jitOptions.sortOrder
     )
   override def run(storageManager: StorageManager): EDB =
     val inputs = children.map(s => s.run(storageManager))
-//    val (sorted, newHash) = JoinIndexes.getSortAhead(
-//      inputs.toArray,
-//      edb => edb.length,
-//      rId,
-//      hash,
-//      storageManager
-//    )
     storageManager.joinProjectHelper_withHash(
         inputs,
         rId,
-        hash,
+        k,
         jitOptions.sortOrder
       )
 }
@@ -297,7 +283,7 @@ case class UnionOp(override val code: OpCode, override val children:IROp[EDB]*)(
  * @param code
  * @param children: [Scan*atoms]
  */
-case class UnionSPJOp(rId: RelationId, var hash: String, override val children:ProjectJoinFilterOp*)(using JITOptions) extends IROp[EDB](children:_*) {
+case class UnionSPJOp(rId: RelationId, var k: JoinIndexes, override val children:ProjectJoinFilterOp*)(using JITOptions) extends IROp[EDB](children:_*) {
   val code: OpCode = OpCode.EVAL_RULE_BODY
   var compiledFnIndexed: Future[CompiledFnIndexed[EDB]] = null
   // for now not filled out bc not planning on compiling higher than this
@@ -307,10 +293,9 @@ case class UnionSPJOp(rId: RelationId, var hash: String, override val children:P
   override def run(storageManager: StorageManager): EDB =
 
     // uncomment to print out "worst" order
-//    val originalK = storageManager.allRulesAllIndexes(rId)(hash)
 //    JoinIndexes.presortSelectWorst(
 //      a => storageManager.getKnownDerivedDB(a.rId).length,
-//      originalK,
+//      k,
 //      storageManager
 //    )
 
@@ -332,11 +317,11 @@ case class UnionSPJOp(rId: RelationId, var hash: String, override val children:P
           case _ => throw new Exception(s"Unknown sort order ${jitOptions.sortOrder}")
 
 
-      val (sortedChildren, newHash) = JoinIndexes.getPresort(
+      val (sortedChildren, newK) = JoinIndexes.getPresort(
         children.toArray,
         sortFn,
         rId,
-        hash,
+        k,
         storageManager
       )
       storageManager.union(sortedChildren.map((s: ProjectJoinFilterOp) => s.run(storageManager)))

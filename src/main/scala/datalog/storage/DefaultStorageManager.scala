@@ -79,9 +79,8 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
     )
   }
 
-  override def joinProjectHelper_withHash(inputsEDB: Seq[EDB], rId: Int, hash: String, sortOrder: (Int, Int, Int)): CollectionsEDB = {
+  override def joinProjectHelper_withHash(inputsEDB: Seq[EDB], rId: Int, originalK: JoinIndexes, sortOrder: (Int, Int, Int)): CollectionsEDB = {
     val inputs = asCollectionsSeqEDB(inputsEDB)
-    val originalK = allRulesAllIndexes(rId)(hash)
 //    var intermediateCardinalities = Seq[Int]()
     if (inputs.length == 1) // just filter
       inputs.head
@@ -96,10 +95,9 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
               case _ => throw new Exception("Internal error: projecting something that is not a constant nor a variable")
             })))
     else
-//      val (sorted, newHash) = JoinIndexes.getSorted(inputs.toArray, edb => edb.length, rId, hash, this, sortAhead) // NOTE: already sorted in staged compiler/ProjectJoinFilterOp.run
       val result = inputs
         .foldLeft(
-          (CollectionsEDB(), 0, allRulesAllIndexes(rId)(hash))
+          (CollectionsEDB(), 0, originalK)
         )((combo: (CollectionsEDB, Int, JoinIndexes), innerT: CollectionsEDB) =>
           val outerT = combo._1
           val atomI = combo._2
@@ -111,7 +109,7 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
               if (atomI > 1 && ((sortOrder._3 == 1 && outerT.length > innerT.length) || (sortOrder._3 == -1 && innerT.length > outerT.length)))
                 val body = k.atoms.drop(1)
                 val newerHash = JoinIndexes.getRuleHash(Array(k.atoms.head, body(atomI)) ++ body.dropRight(body.length - atomI) ++ body.drop(atomI + 1))
-                k = allRulesAllIndexes(rId)(newerHash)
+                k = allRulesAllIndexes(rId).getOrElse(newerHash, JoinIndexes(originalK.atoms.head +: body, Some(originalK.cxns)))
                 (outerT, innerT)
               else
                 (innerT, outerT)
@@ -182,7 +180,7 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
             val (inner, outer) =
               if (atomI > 1 && ((sortOrder._3 == 1 && outerT.length > innerT.length) || (sortOrder._3 == -1 && innerT.length > outerT.length)))
                 val body = k.atoms.drop(1)
-                k = JoinIndexes(Array(k.atoms.head, body(atomI)) ++ body.dropRight(body.length - atomI) ++ body.drop(atomI + 1))
+                k = JoinIndexes(Array(k.atoms.head, body(atomI)) ++ body.dropRight(body.length - atomI) ++ body.drop(atomI + 1), Some(originalK.cxns))
                 (outerT, innerT)
               else
                 (innerT, outerT)

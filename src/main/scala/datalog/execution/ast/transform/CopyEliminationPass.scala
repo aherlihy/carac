@@ -3,7 +3,7 @@ package datalog.execution.ast.transform
 import datalog.execution.ast.*
 import datalog.storage.StorageManager
 import datalog.dsl.Atom
-import datalog.execution.JoinIndexes
+import datalog.execution.{JoinIndexes, heuristics}
 
 import scala.collection.mutable
 import scala.collection.mutable.{ArrayBuffer, Map}
@@ -44,9 +44,9 @@ class CopyEliminationPass()(using ASTTransformerContext) extends Transformer {
           ) // delete aliased rules
         case AllRulesNode(rules, rId, edb) =>
           AllRulesNode(rules.map(transform), rId, edb)
-        case RuleNode(head, body, atoms, h) =>
+        case RuleNode(head, body, atoms, k) =>
           var aliased = false
-          var hash = h
+          var newK = k
           val transformedAtoms = atoms.head +: atoms.drop(1).map(a =>
             if (ctx.aliases.contains(a.rId))
               aliased = true
@@ -55,13 +55,15 @@ class CopyEliminationPass()(using ASTTransformerContext) extends Transformer {
               a
           )
           if (aliased)
-            val allK = JoinIndexes.allOrders(transformedAtoms)
-            ctx.sm.allRulesAllIndexes.getOrElseUpdate(transformedAtoms.head.rId, mutable.Map[String, JoinIndexes]()) ++= allK
-            hash = JoinIndexes.getRuleHash(transformedAtoms)
+            if (body.size < heuristics.max_length_cache)
+              val allK = JoinIndexes.allOrders(transformedAtoms)
+              ctx.sm.allRulesAllIndexes.getOrElseUpdate(transformedAtoms.head.rId, mutable.Map[String, JoinIndexes]()) ++= allK
+            newK = JoinIndexes(transformedAtoms, None)
+
             ctx.precedenceGraph.addNode(transformedAtoms)
             ctx.precedenceGraph.updateNodeAlias(ctx.aliases)
 
-          RuleNode(transform(head), body.map(transform), transformedAtoms, hash)
+          RuleNode(transform(head), body.map(transform), transformedAtoms, newK)
         case n: AtomNode => n match {
           case LogicAtom(relation, terms, neg) =>
             LogicAtom(ctx.aliases.getOrElse(relation, relation), terms, neg)

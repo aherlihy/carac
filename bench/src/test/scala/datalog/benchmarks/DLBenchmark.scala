@@ -67,9 +67,9 @@ abstract class DLBenchmark {
         case _ => throw new Exception(s"Unknown sort order $s")
     }"
 
-    val mainSortOpts = Seq(0, 1, 3, 4) // add 1-4 to include sorted opts
+    val mainSortOpts = Seq(0, 1)//, 3, 4) // add 1-4 to include sorted opts
     val fuzzySortOpts = Seq(0) // add 1, 2 to include fuzzy benchmarks
-    val onlineSortOpts = Seq(0) // add 1 to bench online sort
+    val onlineSortOpts = Seq(0,1) // add 1 to bench online sort
     val sortCombos = mainSortOpts.flatMap(i1 => fuzzySortOpts.flatMap(i2 => onlineSortOpts.map(i3 => (i1, i2, i3))))
 
 //    println(s"sortCombos=$sortCombos")
@@ -94,16 +94,16 @@ abstract class DLBenchmark {
     val blocking = Seq(true /*false*/)
 
   // --> uncomment for JIT
-    jitGranularities.foreach(gran =>
-      sortCombos.foreach(s =>
-        blocking.foreach(block =>
-          val jo = JITOptions(granularity = gran, dotty = dotty, aot = !block, block = block, sortOrder = s)
-          programs(s"jit_default_${toS(s._1, s._2, s._3)}_${if (!block) "async" else "blocking"}_${gran.toString.replace("_", "")}") = Program(
-            StagedExecutionEngine(DefaultStorageManager(), jo)
-          )
-        )
-      )
-    )
+//    jitGranularities.foreach(gran =>
+//      sortCombos.foreach(s =>
+//        blocking.foreach(block =>
+//          val jo = JITOptions(granularity = gran, dotty = dotty, aot = !block, block = block, sortOrder = s)
+//          programs(s"jit_default_${toS(s._1, s._2, s._3)}_${if (!block) "async" else "blocking"}_${gran.toString.replace("_", "")}") = Program(
+//            StagedExecutionEngine(DefaultStorageManager(), jo)
+//          )
+//        )
+//      )
+//    )
 //    println(s"programs: ${programs.keys}")
   }
 
