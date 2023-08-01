@@ -72,7 +72,7 @@ abstract class DLBenchmark {
     val onlineSortOpts = Seq(0) // add 1 to bench online sort
     val sortCombos = mainSortOpts.flatMap(i1 => fuzzySortOpts.flatMap(i2 => onlineSortOpts.map(i3 => (i1, i2, i3))))
 
-    println(s"sortCombos=$sortCombos")
+//    println(s"sortCombos=$sortCombos")
 
   // --> uncomment for interpreted
     sortCombos.foreach(s =>
@@ -104,7 +104,7 @@ abstract class DLBenchmark {
 //        )
 //      )
 //    )
-    println(s"programs: ${programs.keys}")
+//    println(s"programs: ${programs.keys}")
   }
 
 
