@@ -9,7 +9,6 @@ trait tastyslistlibinverse_short {
   val toSolve = "EquivToOutput"
 
   def pretest(program: Program): Unit = {
-    println("setup short")
     val ActualArg = program.namedRelation[String]("ActualArg")
     val ActualReturn = program.namedRelation[String]("ActualReturn")
     val Alloc = program.namedRelation[String]("Alloc")
