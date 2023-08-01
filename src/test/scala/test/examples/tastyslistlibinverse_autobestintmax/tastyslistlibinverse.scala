@@ -5,6 +5,7 @@ import test.{ExampleTestGenerator, Tags}
 
 class tastyslistlibinverse_autobestintmax_test extends ExampleTestGenerator(
   "tastyslistlibinverse_autobestintmax",
+  Set(Tags.Naive, Tags.Volcano),
   Set(Tags.Slow, Tags.CI)
 ) with tastyslistlibinverse_autobestintmax
 

@@ -1,9 +1,13 @@
 package test.examples.tastyslistlibnegated
 
 import datalog.dsl.{Constant, Program}
-import test.ExampleTestGenerator
+import test.{ExampleTestGenerator, Tags}
 
-class tastyslistlibnegated_test extends ExampleTestGenerator("tastyslistlibnegated") with tastyslistlibnegated
+class tastyslistlibnegated_test extends ExampleTestGenerator(
+  "tastyslistlibnegated",
+  Set(Tags.Naive, Tags.Volcano),
+  Set(Tags.Slow, Tags.CI)
+) with tastyslistlibnegated
 
 trait tastyslistlibnegated {
   val toSolve = "VarPointsTo"

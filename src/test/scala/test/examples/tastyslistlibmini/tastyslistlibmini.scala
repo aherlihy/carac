@@ -1,9 +1,13 @@
 package test.examples.tastyslistlibmini
 
 import datalog.dsl.{Constant, Program}
-import test.ExampleTestGenerator
+import test.{ExampleTestGenerator, Tags}
 
-class tastyslistlibmini_test extends ExampleTestGenerator("tastyslistlibmini") with tastyslistlibmini
+class tastyslistlibmini_test extends ExampleTestGenerator(
+  "tastyslistlibmini",
+  Set(Tags.Naive, Tags.Volcano),
+  Set(Tags.Slow, Tags.CI)
+) with tastyslistlibmini
 
 trait tastyslistlibmini {
   val toSolve = "Equiv"

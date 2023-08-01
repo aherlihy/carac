@@ -1,9 +1,13 @@
 package test.examples.tastyslistlibinverse
 
 import datalog.dsl.{Constant, Program}
-import test.ExampleTestGenerator
+import test.{ExampleTestGenerator, Tags}
 
-class tastyslistlibinverse_test extends ExampleTestGenerator("tastyslistlibinverse") with tastyslistlibinverse
+class tastyslistlibinverse_test extends ExampleTestGenerator(
+  "tastyslistlibinverse",
+  Set(Tags.Naive, Tags.Volcano),
+  Set(Tags.Slow, Tags.CI)
+) with tastyslistlibinverse
 
 trait tastyslistlibinverse {
   val toSolve = "EquivToOutput"
