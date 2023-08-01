@@ -302,7 +302,7 @@ trait tastyslistlibinverse {
           VarPointsTo(from, heap))
     }
 
-    unoptimizedPointsTo()
+    optimizedPointsTo()
 
     // Add inverse extension to points-to, for convenience store in a new relation
     val a0, a1, a2, a3 = program.variable()
@@ -348,30 +348,30 @@ trait tastyslistlibinverse {
 //    )
 
     // "optimized
-//    Equiv(output, input) :- (
-//      ActualReturn(instr, output),
-//      StaticCall(F, instr, ctx),
-//      Reachable(ctx),
-//      ActualArg(instr, a0, a1, arg),
-//      VarEquiv(arg, v1),
-//      ActualReturn(invInstr, v1),
-//      StaticCall(invF, invInstr, ctx),
-//      InverseFns(F, invF),
-//      ActualArg(invInstr, a2, a3, input),
-//    )
+    Equiv(output, input) :- (
+      ActualReturn(instr, output),
+      StaticCall(F, instr, ctx),
+      Reachable(ctx),
+      ActualArg(instr, a0, a1, arg),
+      VarEquiv(arg, v1),
+      ActualReturn(invInstr, v1),
+      StaticCall(invF, invInstr, ctx),
+      InverseFns(F, invF),
+      ActualArg(invInstr, a2, a3, input),
+    )
 
     // "unoptimized"
-        Equiv(output, input) :- (
-          VarEquiv(arg, v1),
-          ActualReturn(instr, output),
-          ActualReturn(invInstr, v1),
-          Reachable(ctx),
-          ActualArg(instr, a0, a1, arg),
-          ActualArg(invInstr, a2, a3, input),
-          InverseFns(F, invF),
-          StaticCall(F, instr, ctx),
-          StaticCall(invF, invInstr, ctx),
-        )
+//        Equiv(output, input) :- (
+//          VarEquiv(arg, v1),
+//          ActualReturn(instr, output),
+//          ActualReturn(invInstr, v1),
+//          Reachable(ctx),
+//          ActualArg(instr, a0, a1, arg),
+//          ActualArg(invInstr, a2, a3, input),
+//          InverseFns(F, invF),
+//          StaticCall(F, instr, ctx),
+//          StaticCall(invF, invInstr, ctx),
+//        )
     EquivToOutput(v0) :- Equiv("slistlib.Main.main.OUTPUT_VAR", v0)
   }
 }

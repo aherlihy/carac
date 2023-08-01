@@ -104,8 +104,12 @@ abstract class TestGenerator(directory: Path,
 
           case "InterpretedStagedDefault" =>
             Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(granularity = ir.OpCode.OTHER)))
-          case "InterpretedStagedB1Default" =>
+          case "InterpretedStaged_selDefault" =>
             Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(granularity = ir.OpCode.OTHER, sortOrder = (1, 0, 0))))
+          case "InterpretedStaged_intmaxDefault" =>
+            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(granularity = ir.OpCode.OTHER, sortOrder = (3, 0, 0))))
+          case "InterpretedStaged_mixedDefault" =>
+            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(granularity = ir.OpCode.OTHER, sortOrder = (4, 0, 0))))
           case "InterpretedStagedW1Default" =>
             Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(granularity = ir.OpCode.OTHER, sortOrder = (-1, 0, 0))))
 
@@ -141,10 +145,12 @@ abstract class TestGenerator(directory: Path,
       // "Naive",
 //      "SemiNaive",
       // "CompiledStaged",
-//      "InterpretedStaged",
-//      "InterpretedStagedB1",
+      "InterpretedStaged",
+//      "InterpretedStaged_intmax",
+//      "InterpretedStaged_mixed",
+//      "InterpretedStaged_sel",
 //      "InterpretedStagedW1",
-      "JITStagedB1_fuzzy_EVR_Block",
+//      "JITStagedB1_fuzzy_EVR_Block",
 //      "JITStagedB1_EVR_Async",
 //      "JITStagedB1_ESN_Block",
 //      "JITStagedB1_ESN_Async",

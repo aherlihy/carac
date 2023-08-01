@@ -195,6 +195,8 @@ object JoinIndexes {
     val newHash = JoinIndexes.getRuleHash(newAtoms)
 
 //    println(s"\tOrder: ${newBody.map((a, _) => s"${sm.ns(a.rId)}:|${sortBy(a)}|").mkString("", ", ", "")}")
+//    print(s"Rule: ${sm.printer.ruleToString(originalK.atoms)} => ")
+//    println(s"${sm.printer.ruleToString(originalK.atoms.head +: newBody.map(_._1))}")
     (newBody, newHash)
   }
 
