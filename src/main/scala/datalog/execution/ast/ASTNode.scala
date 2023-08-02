@@ -1,6 +1,7 @@
 package datalog.execution.ast
 
 import datalog.dsl.{Atom, Constant, Term, Variable}
+import datalog.execution.JoinIndexes
 import datalog.storage.RelationId
 
 import scala.collection.immutable
@@ -16,7 +17,7 @@ abstract class AtomNode() extends ASTNode {}
 
 case class LogicAtom(relation: RelationId, terms: Seq[ASTNode], negated: Boolean) extends AtomNode {}
 
-case class RuleNode(head: ASTNode, body: Seq[ASTNode], dslAtoms: Array[Atom], currentRuleHash: String) extends ASTNode {}
+case class RuleNode(head: ASTNode, body: Seq[ASTNode], dslAtoms: Array[Atom], currentK: JoinIndexes) extends ASTNode {}
 
 abstract class TermNode(value: Term) extends ASTNode {}
 

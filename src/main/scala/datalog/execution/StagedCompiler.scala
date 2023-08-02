@@ -44,7 +44,9 @@ class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: J
 
   given ToExpr[PredicateType] with {
     def apply(x: PredicateType)(using Quotes) = {
-      Expr(x)
+      x match
+        case PredicateType.POSITIVE => '{ PredicateType.POSITIVE }
+        case PredicateType.NEGATED => '{ PredicateType.NEGATED }
     }
   }
 
@@ -96,21 +98,20 @@ class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: J
         else
           '{ $stagedSM.getEmptyEDB() }
 
-      case ProjectJoinFilterOp(rId, hash, children: _*) =>
+      case ProjectJoinFilterOp(rId, k, children: _*) =>
         val compiledOps = Expr.ofSeq(children.map(compileIRRelOp))
         '{
           $stagedSM.joinProjectHelper_withHash(
             $compiledOps,
             ${ Expr(rId) },
-            ${ Expr(hash) },
+            ${ Expr(k) },
             ${ Expr(jitOptions.sortOrder) }
           )
         }
 
-      case UnionSPJOp(rId, hash, children: _*) =>
-        val (sortedChildren, newHash) =
+      case UnionSPJOp(rId, k, children: _*) =>
+        val (sortedChildren, newK) =
           if (jitOptions.sortOrder._1 != 0 && jitOptions.sortOrder._1 != 5)
-
             val sortFn =
               jitOptions.sortOrder._1 match
                 case 3 =>
@@ -133,11 +134,11 @@ class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: J
               children.toArray,
               sortFn,
               rId,
-              hash,
+              k,
               storageManager
             )
           else
-            (children.toArray, hash)
+            (children.toArray, k)
 
         val compiledOps = sortedChildren.map(compileIRRelOp)
         '{ $stagedSM.union(${ Expr.ofSeq(compiledOps) }) }
@@ -274,7 +275,7 @@ class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: J
       case uOp: UnionOp =>
         '{ ${Expr.ofSeq(uOp.children.toSeq.map(compileIRRelOp))}($i) }
       case uSPJOp: UnionSPJOp =>
-        val (sortedChildren, newHash) =
+        val (sortedChildren, newK) =
           if (jitOptions.sortOrder._1 != 0 && jitOptions.sortOrder._1 != 5)
             val sortFn =
               jitOptions.sortOrder._1 match
@@ -297,11 +298,11 @@ class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: J
               uSPJOp.children.toArray,
               sortFn,
               uSPJOp.rId,
-              uSPJOp.hash,
+              uSPJOp.k,
               storageManager
             )
           else
-            (uSPJOp.children.toArray, uSPJOp.hash)
+            (uSPJOp.children.toArray, uSPJOp.k)
         '{ ${ Expr.ofSeq(sortedChildren.toSeq.map(compileIRRelOp)) } ($i) }
       case _ => throw new Exception(s"Indexed compilation: Unhandled IROp ${irTree.code}")
   }

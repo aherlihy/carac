@@ -1,15 +1,15 @@
-package test.examples.tastyslistlibinverse
+package test.examples.tastyslistlibinverse_worst
 
 import datalog.dsl.{Constant, Program}
 import test.{ExampleTestGenerator, Tags}
 
-class tastyslistlibinverse_test extends ExampleTestGenerator(
-  "tastyslistlibinverse",
+class tastyslistlibinverse_worst_test extends ExampleTestGenerator(
+  "tastyslistlibinverse_worst",
   Set(Tags.Naive, Tags.Volcano),
   Set(Tags.Slow, Tags.CI)
-) with tastyslistlibinverse
+) with tastyslistlibinverse_worst
 
-trait tastyslistlibinverse {
+trait tastyslistlibinverse_worst {
   val toSolve = "EquivToOutput"
 
   def pretest(program: Program): Unit = {

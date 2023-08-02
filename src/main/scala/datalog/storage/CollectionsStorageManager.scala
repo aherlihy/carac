@@ -81,18 +81,19 @@ abstract class CollectionsStorageManager(override val ns: NS) extends StorageMan
    * constants in all IDB rules. Currently unused because we incrementally add elements to the domain but may
    * be useful if we want a domain containing only predicates from <= strata.
    */
-  def computeDomain(): Set[StorageTerm] = {
-    val constants = mutable.Set[StorageTerm]()
-    edbs.foreach((_, rows) => // avoid map or flatMap for CollectionsDatabase, CollectionRow
-      rows.foreach(row =>
-        constants.addAll(row.toSeq)
-      )
-    )
-    constants.addAll(allRulesAllIndexes.flatMap((_, allIndexes) =>
-      allIndexes.head._2.constIndexes.values
-    ))
-    constants.toSet
-  }
+// Comment out until we can track domain in something other than indexes
+//  def computeDomain(): Set[StorageTerm] = {
+//    val constants = mutable.Set[StorageTerm]()
+//    edbs.foreach((_, rows) => // avoid map or flatMap for CollectionsDatabase, CollectionRow
+//      rows.foreach(row =>
+//        constants.addAll(row.toSeq)
+//      )
+//    )
+//    constants.addAll(allRulesAllIndexes.flatMap((_, allIndexes) =>
+//      allIndexes.head._2.constIndexes.values
+//    ))
+//    constants.toSet
+//  }
 
   /**
    * Compute Dom * Dom * ... arity # times

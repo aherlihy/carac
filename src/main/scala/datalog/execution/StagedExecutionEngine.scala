@@ -51,10 +51,13 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
 //    println(s"${storageManager.printer.ruleToString(ruleSeq)}")
 
     var rule = ruleSeq.toArray
-    val allK = JoinIndexes.allOrders(rule)
-    storageManager.allRulesAllIndexes.getOrElseUpdate(rId, mutable.Map[String, JoinIndexes]()) ++= allK
-    var hash = JoinIndexes.getRuleHash(rule)
-    val k = storageManager.allRulesAllIndexes(rId)(hash)
+    var k = JoinIndexes(rule, None)
+    storageManager.allRulesAllIndexes.getOrElseUpdate(rId, mutable.Map[String, JoinIndexes]())
+
+    if (rule.length <= heuristics.max_length_cache)
+      val allK = JoinIndexes.allOrders(rule)
+      storageManager.allRulesAllIndexes.getOrElseUpdate(rId, mutable.Map[String, JoinIndexes]()) ++= allK
+
     if (defaultJITOptions.sortOrder._1 == 1) // sort before inserting, just in case EDBs are defined
       val (sortedBody, newHash) = JoinIndexes.presortSelect(
         a =>
@@ -66,7 +69,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
         storageManager
       )
       rule = rule.head +: sortedBody.map(_._1)
-      hash = newHash
+      k = JoinIndexes(rule, Some(k.cxns))
     else if (defaultJITOptions.sortOrder._1 == 5) // mimic "bad luck" program definition, so ingest rules in a bad order and then don't update them.
       val (sortedBody, newHash) = JoinIndexes.presortSelectWorst(
         a =>
@@ -78,7 +81,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
         storageManager
       )
       rule = rule.head +: sortedBody.map(_._1)
-      hash = newHash
+      k = JoinIndexes(rule, Some(k.cxns))
 
     //    println(s"${storageManager.printer.ruleToString(rule)}")
 
@@ -100,7 +103,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
           }, b.negated)
         ),
         rule,
-        hash
+        k
       ))
   }
 
@@ -245,9 +248,8 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
                 (a: Atom)
                 => (storageManager.allRulesAllIndexes.contains(a.rId), storageManager.getKnownDerivedDB(a.rId).length)
               case _ => throw new Exception(s"Unknown sort order ${jitOptions.sortOrder}")
-          val oldK = storageManager.allRulesAllIndexes(op.rId)(op.hash)
-          val (nb, _) = JoinIndexes.presortSelect(sortFn, oldK, storageManager)
-          val oldBody = oldK.atoms.drop(1).map(_.hash)
+          val (nb, _) = JoinIndexes.presortSelect(sortFn, op.k, storageManager)
+          val oldBody = op.k.atoms.drop(1).map(_.hash)
           val newBodyIdx = nb.map(h => oldBody.indexOf(h._1.hash))
 
           def levenshtein(s1: String, s2: String): Int = { // from wikipedia
