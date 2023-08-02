@@ -354,27 +354,28 @@ class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: J
         else
           emitSMCall(xb, "getEmptyEDB")
 
-      case ProjectJoinFilterOp(rId, hash, children: _*) =>
+      case ProjectJoinFilterOp(rId, k, children: _*) =>
         xb.aload(0)
         emitSeq(xb, children.map(c => xxb => traverse(xxb, c)))
         xb.constantInstruction(rId)
-          .constantInstruction(hash)
+//          .constantInstruction(k)
+        emitJoinIndex(xb, k)
         emitSortOrder(xb, jitOptions.sortOrder)
         emitSMCall(xb, "joinProjectHelper_withHash",
-          classOf[Seq[?]], classOf[Int], classOf[String], classOf[(Int, Int, Int)])
+          classOf[Seq[?]], classOf[Int], classOf[JoinIndexes], classOf[(Int, Int, Int)])
 
-      case UnionSPJOp(rId, hash, children: _*) =>
-        val (sortedChildren, newHash) =
+      case UnionSPJOp(rId, k, children: _*) =>
+        val (sortedChildren, newK) =
           if (jitOptions.sortOrder._1 != 0)
             JoinIndexes.getPresort(
               children.toArray,
               uSPJSortFn(jitOptions),
               rId,
-              hash,
+              k,
               storageManager
             )
           else
-            (children.toArray, hash)
+            (children.toArray, k)
         // Duplicate code with UnionSPJOp
         xb.aload(0)
         emitSeq(xb, sortedChildren.map(c => xxb => traverse(xxb, c)))
@@ -411,6 +412,9 @@ class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: J
     private def emitSortOrder(xb: CodeBuilder, sortOrder: (Int, Int, Int)): Unit =
       emitNew(xb, classOf[(Int, Int, Int)], xxb =>
         sortOrder.toList.foreach(elem => emitInteger(xxb, elem)))
+
+    // TODO: encode joinindex
+    private def emitJoinIndex(xb: CodeBuilder, k: JoinIndexes): Unit = ???
   }
 
   def getBytecodeGenerated[T](irTree: IROp[T]): CompiledFn[T] = {

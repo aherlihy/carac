@@ -2,20 +2,20 @@ package datalog.benchmarks.examples
 
 import datalog.benchmarks.ExampleBenchmarkGenerator
 import datalog.dsl.{Constant, Program}
-
-import java.util.concurrent.TimeUnit
 import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.Blackhole
-import test.examples.ackermann.{ackermann => ackermann_test}
+import test.examples.ranpo.ranpo as ranpo_test
+
+import java.util.concurrent.TimeUnit
 
 @Fork(examples_fork) // # of jvms that it will use
-@Warmup(iterations = examples_warmup_iterations, time = examples_warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = examples_xl_batchsize)
-@Measurement(iterations = examples_iterations, time = examples_xl_time, timeUnit = TimeUnit.SECONDS, batchSize = examples_xl_batchsize)
+@Warmup(iterations = examples_warmup_iterations, time = examples_warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = examples_batchsize)
+@Measurement(iterations = examples_iterations, time = examples_time, timeUnit = TimeUnit.SECONDS, batchSize = examples_batchsize)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
-class ackermann() extends ExampleBenchmarkGenerator(
-  "ackermann"
-) with ackermann_test {
+class ranpo() extends ExampleBenchmarkGenerator(
+  "ranpo"
+) with ranpo_test {
 
   @Setup
   def s(): Unit = setup() // can't add annotations to super, so just call
