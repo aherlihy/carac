@@ -6,7 +6,7 @@
 //import datalog.storage.DefaultStorageManager
 //import org.openjdk.jmh.annotations.*
 //import org.openjdk.jmh.infra.Blackhole
-//import test.examples.andersen.andersen
+//import test.examples.jit_default_sel_blocking_EVALRULEBODY__.jit_default_sel_blocking_EVALRULEBODY__
 //
 //import java.nio.file.{Files, Path, Paths}
 //import java.util.concurrent.TimeUnit
@@ -24,11 +24,11 @@
 //inline val staged_batchSize = 10
 //inline val staged_fork = 1
 //
-//trait OtherBench extends andersen {
+//trait OtherBench extends jit_default_sel_blocking_EVALRULEBODY__ {
 //  val inputFacts: mutable.Map[String, Seq[Seq[Term]]] = mutable.Map()
 //  val expectedFacts: mutable.Map[String, Set[Seq[Term]]] = mutable.Map()
 //  var result: mutable.Map[String, Set[Seq[Term]]] = mutable.Map()
-//  val directory = Paths.get("..", "src", "test", "scala", "test", "examples", "andersen")
+//  val directory = Paths.get("..", "src", "test", "scala", "test", "examples", "jit_default_sel_blocking_EVALRULEBODY__")
 //
 //  private val factdir = Paths.get(directory.toString, "facts")
 //  if (Files.exists(factdir))

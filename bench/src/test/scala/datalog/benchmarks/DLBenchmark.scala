@@ -41,6 +41,8 @@ abstract class DLBenchmark {
         programs(s"${ee}_$sm") = Program(shallowAlgo(ee)(storageEngines(sm)()))
       )
     )
+    // --> uncomment to bench compile
+    programs("compiled_default_unordered") = Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(ir.OpCode.PROGRAM, dotty)))
 
     // Optimization modes
     def toS(s: Int*): String = s"${
@@ -101,15 +103,15 @@ abstract class DLBenchmark {
       jitSortCombos.foreach(s =>
         blocking.foreach(block =>
           backends.foreach(bc =>
-            val jo = JITOptions(granularity = gran, dotty = dotty, aot = !block, block = block=="block", sortOrder = s, useBytecodeGenerator = bc)
-            programs(s"jit_default_${toS(s._1, s._2, s._3)}_$block_$bc$gran}") = Program(
+            val jo = JITOptions(granularity = gran, dotty = dotty, aot = block!="block", block = block=="block", sortOrder = s, useBytecodeGenerator = bc=="bytecode")
+            programs(s"jit_default_${toS(s._1, s._2, s._3)}_${block}_${gran.toString.replace("_", "")}_${bc}") = Program(
               StagedExecutionEngine(DefaultStorageManager(), jo)
             )
           )
         )
       )
     )
-    println(s"programs: ${programs.keys}")
+//    println(s"programs: ${programs.keys}")
   }
 
 

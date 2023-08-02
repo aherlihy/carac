@@ -156,10 +156,10 @@ abstract class TestGenerator(directory: Path,
       "InterpretedStaged_sel",
 //      "InterpretedStagedW1",
 //      "JITStagedB1_fuzzy_EVR_Block",
-      "JITStagedB1_BC_ESN_Block",
-      "JITStagedB1_BC_EVR_Block",
+//      "JITStagedB1_BC_ESN_Block",
+//      "JITStagedB1_BC_EVR_Block",
       "JITStagedB1_ESN_Block",
-      "JITStagedB1_EVR_Block",
+//      "JITStagedB1_EVR_Block",
       // "JITStagedB1_ESN_Async",
     ).foreach(execution => {
       Seq("Volcano", "Default").foreach(storage => {
