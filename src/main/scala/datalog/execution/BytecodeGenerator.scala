@@ -152,8 +152,17 @@ object BytecodeGenerator {
       .invokestatic(clsDesc(classOf[Integer]), "valueOf",
         MethodTypeDesc.of(clsDesc(classOf[Integer]), clsDesc(classOf[Int])))
 
+  def emitBool(xb: CodeBuilder, value: Boolean): Unit =
+    if (value)
+      xb.constantInstruction(1)
+    else
+      xb.constantInstruction(0)
+
   def emitSeqInt(xb: CodeBuilder, value: Seq[Int]): Unit =
     emitSeq(xb, value.map(v => xxb => emitInteger(xxb, v)))
+
+  def emitSeqString(xb: CodeBuilder, value: Seq[String]): Unit =
+    emitSeq(xb, value.map(v => xxb => xxb.constantInstruction(v)))
 
   def emitVarIndexes(xb: CodeBuilder, value: Seq[Seq[Int]]): Unit =
     emitSeq(xb, value.map(v => xxb => emitSeqInt(xxb, v)))
@@ -162,7 +171,6 @@ object BytecodeGenerator {
     c match
       case e: Int => emitInteger(xb, e)
       case s: String => xb.constantInstruction(s)
-      case _ => throw new Exception(s"Unknown constant ${c}")
 
    def emitStringConstantTuple2(xb: CodeBuilder, t: (String, Constant)): Unit =
      emitNew(xb, classOf[(String, Constant)], xxb =>
@@ -171,10 +179,25 @@ object BytecodeGenerator {
      )
 
   def emitVariable(xb: CodeBuilder, variable: Variable): Unit =
-    emitNew(xb, classOf[Variable], { xxb =>
+    emitNew(xb, classOf[Variable], xxb =>
       xxb.constantInstruction(variable.oid)
       xxb.constantInstruction(if (variable.anon) 1 else 0) // Assuming that anon can be represented as a boolean integer
-    })
+    )
+  def emitPredicateType(xb: CodeBuilder, pred: PredicateType): Unit =
+//    val enumCompanionCls = classOf[PredicateType.type]
+//    emitObject(xb, enumCompanionCls)
+//    emitCall(xb, enumCompanionCls, pt.toString)
+    val enumClassName = classOf[PredicateType.type].getName
+    val enumClassDesc = ClassDesc.of(enumClassName)
+//    val enumTypeDesc = classOf[PredicateType].getName.replace('.', '/')
+//    val enumValueDesc = s"L$enumTypeDesc$$Value;"
+
+    pred match {
+      case PredicateType.POSITIVE =>
+        xb.getstatic(enumClassDesc, "POSITIVE", enumClassDesc)
+      case PredicateType.NEGATED =>
+        xb.getstatic(enumClassDesc, "NEGATED", enumClassDesc)
+    }
 
   def emitTerm(xb: CodeBuilder, term: Term): Unit = term match {
     case const: Constant => emitConstant(xb, const)
@@ -189,51 +212,60 @@ object BytecodeGenerator {
     })
   }
 
+  def emitArrayAtoms(xb: CodeBuilder, atoms: Array[Atom]): Unit =
+    emitArray(xb, classOf[Atom], atoms.map(a => xxb => emitAtom(xxb, a)))
+
+  /**
+   * Put the singleton value corresponding to `cls` on the stack.
+   *
+   * @pre must be the singleton type `Foo.type` of an object `Foo`.`
+   */
+  def emitObject(xb: CodeBuilder, cls: Class[?]): Unit =
+    val cd = clsDesc(cls)
+    xb.getstatic(cd, "MODULE$", cd)
+
   def emitMap[K, V](xb: CodeBuilder, entries: Iterable[(K, V)], emitKey: (CodeBuilder, K) => Any, emitValue: (CodeBuilder, V) => Any): Unit = {
-//    xb.invokestatic(
-//      clsDesc(classOf[scala.collection.mutable.HashMap[K, V]]),
-//      "empty",
-//      MethodTypeDesc.of(clsDesc(classOf[scala.collection.mutable.HashMap[_, _]])))
-    emitNew(xb, classOf[scala.collection.mutable.Map[K, V]], xb => xb)
+    val hashMapCompanionCls = classOf[scala.collection.mutable.HashMap.type]
+    val hashMapCls = classOf[scala.collection.mutable.HashMap[?, ?]]
+    emitObject(xb, hashMapCompanionCls)
+    emitCall(xb, hashMapCompanionCls, "empty")
     entries.foreach { case (key, value) =>
       xb.dup()
       emitKey(xb, key)
       emitValue(xb, value)
-      xb.invokevirtual(
-        clsDesc(classOf[scala.collection.immutable.HashMap[_, _]]),
-        "put",
-        MethodTypeDesc.of(
-          clsDesc(classOf[scala.collection.immutable.HashMap[_, _]]),
-          clsDesc(classOf[Any]), clsDesc(classOf[Any]))
-      )
-      xb.pop() // Discard the return value of put()
+      emitCall(xb, hashMapCls, "update", classOf[Object], classOf[Object])
     }
   }
-
-//  def emitMap[K, V](xb: CodeBuilder, entries: Seq[(K, V)])(emitKey: (CodeBuilder, K) => Any, emitValue: (CodeBuilder, V) => Any): Unit = {
-//    emitNew(xb, classOf[collection.mutable.HashMap[K, V]], { xxb =>
-//      entries.foreach { case (key, value) =>
-//        xxb.dup() // Duplicate the reference to the HashMap
-//        emitKey(xxb, key)
-//        emitValue(xxb, value)
-//        xxb.invokevirtual(clsDesc(classOf[collection.mutable.HashMap[_, _]]), "put", methDesc(classOf[collection.mutable.HashMap[_, _]].getMethod("put", classOf[Object], classOf[Object])))
-//        xxb.pop() // Discard the return value of put()
-//      }
-//    })
-//  }
-
-
 
   def emitProjIndexes(xb: CodeBuilder, value: Seq[(String, Constant)]): Unit =
     emitSeq(xb, value.map(v => xxb => emitStringConstantTuple2(xxb, v)))
 
   def emitPredicateTypeRelationIdTuple2(xb: CodeBuilder, t: (PredicateType, RelationId)): Unit =
     emitNew(xb, classOf[(PredicateType, RelationId)], xxb =>
-      xxb.constantInstruction(t._1.toString)
+      emitPredicateType(xxb, t._1)
       emitInteger(xxb, t._2)
     )
   def emitDeps(xb: CodeBuilder, value: Seq[(PredicateType, RelationId)]): Unit =
     emitSeq(xb, value.map(v => xxb => emitPredicateTypeRelationIdTuple2(xxb, v)))
+
+  def emitConstIndexes(xb: CodeBuilder, value: collection.mutable.Map[Int, Constant]): Unit =
+    emitMap(xb, value.toSeq, emitInteger, emitConstant)
+
+  def emitCxnElement(xb: CodeBuilder, value: collection.mutable.Map[Int, Seq[String]]): Unit =
+    emitMap(xb, value.toSeq, emitInteger, emitSeqString)
+
+  def emitCxns(xb: CodeBuilder, value: collection.mutable.Map[String, collection.mutable.Map[Int, Seq[String]]]): Unit =
+    emitMap(xb, value.toSeq, (xxb, s) => xxb.constantInstruction(s), emitCxnElement)
+
+  def emitJoinIndexes(xb: CodeBuilder, value: JoinIndexes): Unit =
+    emitNew(xb, classOf[JoinIndexes], xxb =>
+      emitVarIndexes(xxb, value.varIndexes)
+      emitConstIndexes(xxb, value.constIndexes)
+      emitProjIndexes(xxb, value.projIndexes)
+      emitDeps(xxb, value.deps)
+      emitArrayAtoms(xxb, value.atoms)
+      emitCxns(xxb, value.cxns)
+      emitBool(xxb, value.edb))
 
   val CD_BoxedUnit = clsDesc(classOf[scala.runtime.BoxedUnit])
 

@@ -60,7 +60,7 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
     )
   }
 
-  private inline def prefilter(consts: Map[Int, Constant], skip: Int, row: CollectionsRow): Boolean = {
+  private inline def prefilter(consts: mutable.Map[Int, Constant], skip: Int, row: CollectionsRow): Boolean = {
     consts.isEmpty || consts.forall((idx, const) => // for each filter // TODO: make sure out of range fails
       row(idx - skip) == const
     )
@@ -79,8 +79,9 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
     )
   }
 
-  override def joinProjectHelper_withHash(inputsEDB: Seq[EDB], rId: Int, hash: String, sortOrder: (Int, Int, Int), extra: mutable.Map[Int, String]): CollectionsEDB = {
-    println(s"SM, extra=$extra")
+  override def joinProjectHelper_withHash(inputsEDB: Seq[EDB], rId: Int, hash: String, sortOrder: (Int, Int, Int), extra: JoinIndexes): CollectionsEDB = {
+
+    println(s"SM, extra=${extra.toStringWithNS(ns)}")
     val inputs = asCollectionsSeqEDB(inputsEDB)
     val originalK = allRulesAllIndexes(rId)(hash)
 //    var intermediateCardinalities = Seq[Int]()

@@ -1,15 +1,16 @@
 package datalog.execution
 
-import datalog.dsl.{Atom, Constant, Variable, Term}
+import datalog.dsl.{Atom, Constant, Term, Variable}
 import datalog.execution.ir.*
-import datalog.storage.{StorageManager, DB, KNOWLEDGE, EDB, RelationId}
+import datalog.storage.{DB, EDB, KNOWLEDGE, RelationId, StorageManager}
 import datalog.tools.Debug.debug
 
 import java.lang.invoke.MethodType
 import java.util.concurrent.atomic.AtomicInteger
 import scala.quoted.*
-
 import org.glavo.classfile.CodeBuilder
+
+import scala.collection.mutable
 
 /**
  * Separate out compile logic from StagedExecutionEngine
@@ -17,6 +18,11 @@ import org.glavo.classfile.CodeBuilder
 class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: JITOptions) {
   given staging.Compiler = jitOptions.dotty
   // TODO: move Exprs to where classes are defined?
+  given MutableMapToExpr[T: Type : ToExpr, U: Type : ToExpr]: ToExpr[mutable.Map[T, U]] with {
+    def apply(map: mutable.Map[T, U])(using Quotes): Expr[mutable.Map[T, U]] =
+      '{ mutable.Map(${ Expr(map.toSeq) }: _*) }
+  }
+
   given ToExpr[Constant] with {
     def apply(x: Constant)(using Quotes) = {
       x match {
@@ -115,6 +121,7 @@ class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: J
           '{ $stagedSM.getEmptyEDB() }
 
       case ProjectJoinFilterOp(rId, hash, children: _*) =>
+        val extra = storageManager.allRulesAllIndexes(rId)(hash)
         val compiledOps = Expr.ofSeq(children.map(compileIRRelOp))
         '{
           $stagedSM.joinProjectHelper_withHash(
@@ -123,7 +130,7 @@ class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: J
             ${ Expr(hash) },
             ${ Expr(jitOptions.sortOrder) },
 //            ${ Expr(collection.mutable.Map[Int, String]()) }
-            null
+            ${ Expr(extra) }
           )
         }
 
@@ -263,6 +270,7 @@ class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: J
   class IRBytecodeGenerator(methType: MethodType) extends BytecodeGenerator[IROp[?]](
     clsName = "datalog.execution.Generated$$Hidden", methType
   ) {
+
     import BytecodeGenerator.*
 
     // protected override val debug = true
@@ -271,10 +279,10 @@ class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: J
       case ProgramOp(c) =>
         traverse(xb, c)
 
-      case DoWhileOp(toCmp, children:_*) =>
+      case DoWhileOp(toCmp, children: _*) =>
         val compMeth = toCmp match
-           case DB.Derived => "compareDerivedDBs"
-           case DB.Delta => "compareNewDeltaDBs"
+          case DB.Derived => "compareDerivedDBs"
+          case DB.Delta => "compareNewDeltaDBs"
         xb.block: xxb =>
           // do
           discardResult(xxb, traverse(xxb, children.head)) // why is this a list if we only ever use the head?
@@ -283,7 +291,7 @@ class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: J
           emitCall(xxb, classOf[StorageManager], compMeth)
           toCmp match
             case DB.Derived => xxb.ifeq(xxb.startLabel)
-            case DB.Delta   => xxb.ifne(xxb.startLabel)
+            case DB.Delta => xxb.ifne(xxb.startLabel)
 
       case UpdateDiscoveredOp() =>
         xb.aload(0)
@@ -295,12 +303,12 @@ class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: J
         xb.aload(0)
         emitSMCall(xb, "clearNewDerived")
 
-      case SequenceOp(label, children:_*) =>
+      case SequenceOp(label, children: _*) =>
         // TODO: take into account heuristics.max_relations? We could create a
         // CodeBuilder for one or more new methods we would immediately call.
         children.foreach(c => discardResult(xb, traverse(xb, c)))
 
-      case InsertOp(rId, db, knowledge, children:_*) =>
+      case InsertOp(rId, db, knowledge, children: _*) =>
         xb.aload(0)
           .constantInstruction(rId)
         traverse(xb, children.head)
@@ -362,9 +370,11 @@ class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: J
           .constantInstruction(hash)
         emitSortOrder(xb, jitOptions.sortOrder)
 
-        emitExtra(xb, Map(1 -> "1"))
+        val extra = storageManager.allRulesAllIndexes(rId)(hash)
+
+        emitExtra(xb, extra)
         emitSMCall(xb, "joinProjectHelper_withHash",
-          classOf[Seq[?]], classOf[Int], classOf[String], classOf[(Int, Int, Int)], classOf[collection.mutable.Map[Int, String]])
+          classOf[Seq[?]], classOf[Int], classOf[String], classOf[(Int, Int, Int)], classOf[JoinIndexes])
 
       case UnionSPJOp(rId, hash, children: _*) =>
         val (sortedChildren, newHash) =
@@ -388,7 +398,7 @@ class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: J
         emitSeq(xb, children.map(c => xxb => traverse(xxb, c)))
         emitSMCall(xb, "union", classOf[Seq[?]])
 
-      case DiffOp(children:_*) =>
+      case DiffOp(children: _*) =>
         xb.aload(0)
         traverse(xb, children(0))
         traverse(xb, children(1))
@@ -402,12 +412,12 @@ class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: J
     }
 
     /**
-     *  Call `methName` on a `StorageManager`.
+     * Call `methName` on a `StorageManager`.
      *
-     *  @pre The stack has the shape [... storageManagerObj methArgs*]
+     * @pre The stack has the shape [... storageManagerObj methArgs*]
      */
     private def emitSMCall(xb: CodeBuilder, methName: String, methParameterTypes: Class[?]*): Unit =
-      emitCall(xb, classOf[StorageManager], methName, methParameterTypes*)
+      emitCall(xb, classOf[StorageManager], methName, methParameterTypes *)
 
     // TODO: Instead of regenerating the sortOrder at runtime, pass it as an
     // argument to the entry point since it's constant.
@@ -416,10 +426,9 @@ class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: J
         sortOrder.toList.foreach(elem => emitInteger(xxb, elem)))
 
 
-    private def emitExtra(xb: CodeBuilder, extra: Map[Int, String]): Unit =
-//      emitSeq(xb, extra.map(e => xxb => emitStringConstantTuple2(xxb, e)))
-//      emitMap(xb, extra.toSeq, emitInteger, (xxb, s) => xxb.constantInstruction(s))
-      emitMap(xb, extra.toSeq, (xxb, s) => xxb.constantInstruction(s), (xxb, value) => xxb.constantInstruction(value))
+    private def emitExtra(xb: CodeBuilder, extra: JoinIndexes): Unit = {
+      emitJoinIndexes(xb, extra)
+    }
   }
 
   def getBytecodeGenerated[T](irTree: IROp[T]): CompiledFn[T] = {

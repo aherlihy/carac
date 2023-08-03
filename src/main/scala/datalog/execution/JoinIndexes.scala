@@ -26,11 +26,11 @@ enum PredicateType:
  * @param cxns - convenience data structure tracking how many variables in common each atom has with every other atom.
  */
 case class JoinIndexes(varIndexes: Seq[Seq[Int]],
-                       constIndexes: Map[Int, Constant],
+                       constIndexes: mutable.Map[Int, Constant],
                        projIndexes: Seq[(String, Constant)],
                        deps: Seq[(PredicateType, RelationId)],
                        atoms: Array[Atom],
-                       cxns: Map[String, Map[Int, Seq[String]]],
+                       cxns: mutable.Map[String, mutable.Map[Int, Seq[String]]],
                        edb: Boolean = false
                       ) {
   override def toString(): String = toStringWithNS(null)
@@ -46,7 +46,7 @@ case class JoinIndexes(varIndexes: Seq[Seq[Int]],
   def varToString(): String = varIndexes.map(v => v.mkString("$", "==$", "")).mkString("[", ",", "]")
   def constToString(): String = constIndexes.map((k, v) => k + "==" + v).mkString("{", "&&", "}")
   def projToString(): String = projIndexes.map((typ, v) => s"$typ$v").mkString("[", " ", "]")
-  def depsToString(ns: NS): String = deps.map((typ, rId) => s"$typ${ns(rId)}").mkString("[", ", ", "]")
+  def depsToString(ns: NS): String = deps.map((typ, rId) => s"${typ.toString()}${ns(rId)}").mkString("[", ", ", "]")
   def cxnsToString(ns: NS): String =
     cxns.map((h, inCommon) =>
       s"{ ${ns.hashToAtom(h)} => ${
@@ -114,10 +114,12 @@ object JoinIndexes {
           .filter((idx2, rId, count) => idx != idx2 && count != 0)
           .map(t => (t._2, t._3))
           .groupBy(_._2)
-          .map((count, hashs) => (count, hashs.map((hash, count2) => hash).toSeq)))
-    ).toMap
+          .map((count, hashs) => (count, hashs.map((hash, count2) => hash).toSeq))
+          .to(mutable.Map)
+      )
+    ).to(mutable.Map)
 
-    new JoinIndexes(bodyVars, constants.toMap, projects, deps, rule, cxns)
+    new JoinIndexes(bodyVars, constants.to(mutable.Map), projects, deps, rule, cxns)
   }
 
   // used to approximate poor user-defined order

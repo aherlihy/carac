@@ -141,7 +141,7 @@ class VolcanoOperators[S <: StorageManager](val storageManager: S) {
 
   case class Join(inputs: Seq[VolOperator],
                   variables: Seq[Seq[Int]],
-                  constants: Map[Int, Constant]) extends VolOperator {
+                  constants: mutable.Map[Int, Constant]) extends VolOperator {
 
     private var outputRelation = CollectionsEDB()
     private var index = 0

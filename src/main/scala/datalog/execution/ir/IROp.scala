@@ -246,7 +246,6 @@ case class ScanEDBOp(rId: RelationId)(using JITOptions) extends IROp[EDB] {
 case class ProjectJoinFilterOp(rId: RelationId, var hash: String, override val children:IROp[EDB]*)(using jitOptions: JITOptions) extends IROp[EDB](children:_*) {
   val code: OpCode = OpCode.SPJ
   var childrenSO: Array[IROp[EDB]] = children.toArray
-  val extra = mutable.Map[Int, String]()
 
   override def run_continuation(storageManager: StorageManager, opFns: Seq[CompiledFn[EDB]]): EDB =
     val inputs = opFns.map(s => s(storageManager))
@@ -257,6 +256,7 @@ case class ProjectJoinFilterOp(rId: RelationId, var hash: String, override val c
 //      hash,
 //      storageManager
 //    )
+    val extra = storageManager.allRulesAllIndexes(rId)(hash)
     storageManager.joinProjectHelper_withHash(
       inputs,
       rId,
@@ -266,6 +266,7 @@ case class ProjectJoinFilterOp(rId: RelationId, var hash: String, override val c
     )
   override def run(storageManager: StorageManager): EDB =
     val inputs = children.map(s => s.run(storageManager))
+    val extra = storageManager.allRulesAllIndexes(rId)(hash)
 //    val (sorted, newHash) = JoinIndexes.getSortAhead(
 //      inputs.toArray,
 //      edb => edb.length,
