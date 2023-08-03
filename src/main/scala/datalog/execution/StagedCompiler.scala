@@ -2,7 +2,7 @@ package datalog.execution
 
 import datalog.dsl.{Atom, Constant, Variable, Term}
 import datalog.execution.ir.*
-import datalog.storage.{StorageManager, DB, KNOWLEDGE, EDB}
+import datalog.storage.{StorageManager, DB, KNOWLEDGE, EDB, RelationId}
 import datalog.tools.Debug.debug
 
 import java.lang.invoke.MethodType
@@ -121,7 +121,9 @@ class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: J
             $compiledOps,
             ${ Expr(rId) },
             ${ Expr(hash) },
-            ${ Expr(jitOptions.sortOrder) }
+            ${ Expr(jitOptions.sortOrder) },
+//            ${ Expr(collection.mutable.Map[Int, String]()) }
+            null
           )
         }
 
@@ -359,8 +361,10 @@ class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: J
         xb.constantInstruction(rId)
           .constantInstruction(hash)
         emitSortOrder(xb, jitOptions.sortOrder)
+
+        emitExtra(xb, Map(1 -> "1"))
         emitSMCall(xb, "joinProjectHelper_withHash",
-          classOf[Seq[?]], classOf[Int], classOf[String], classOf[(Int, Int, Int)])
+          classOf[Seq[?]], classOf[Int], classOf[String], classOf[(Int, Int, Int)], classOf[collection.mutable.Map[Int, String]])
 
       case UnionSPJOp(rId, hash, children: _*) =>
         val (sortedChildren, newHash) =
@@ -410,6 +414,12 @@ class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: J
     private def emitSortOrder(xb: CodeBuilder, sortOrder: (Int, Int, Int)): Unit =
       emitNew(xb, classOf[(Int, Int, Int)], xxb =>
         sortOrder.toList.foreach(elem => emitInteger(xxb, elem)))
+
+
+    private def emitExtra(xb: CodeBuilder, extra: Map[Int, String]): Unit =
+//      emitSeq(xb, extra.map(e => xxb => emitStringConstantTuple2(xxb, e)))
+//      emitMap(xb, extra.toSeq, emitInteger, (xxb, s) => xxb.constantInstruction(s))
+      emitMap(xb, extra.toSeq, (xxb, s) => xxb.constantInstruction(s), (xxb, value) => xxb.constantInstruction(value))
   }
 
   def getBytecodeGenerated[T](irTree: IROp[T]): CompiledFn[T] = {

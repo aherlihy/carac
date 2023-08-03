@@ -79,7 +79,8 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
     )
   }
 
-  override def joinProjectHelper_withHash(inputsEDB: Seq[EDB], rId: Int, hash: String, sortOrder: (Int, Int, Int)): CollectionsEDB = {
+  override def joinProjectHelper_withHash(inputsEDB: Seq[EDB], rId: Int, hash: String, sortOrder: (Int, Int, Int), extra: mutable.Map[Int, String]): CollectionsEDB = {
+    println(s"SM, extra=$extra")
     val inputs = asCollectionsSeqEDB(inputsEDB)
     val originalK = allRulesAllIndexes(rId)(hash)
 //    var intermediateCardinalities = Seq[Int]()

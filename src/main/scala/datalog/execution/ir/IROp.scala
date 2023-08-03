@@ -1,6 +1,6 @@
 package datalog.execution.ir
 
-import datalog.dsl.Atom
+import datalog.dsl.{Atom, Constant}
 import datalog.execution.{JITOptions, JoinIndexes, PrecedenceGraph, StagedCompiler, ir}
 import datalog.execution.ast.*
 import datalog.storage.{DB, EDB, KNOWLEDGE, RelationId, StorageManager}
@@ -246,6 +246,7 @@ case class ScanEDBOp(rId: RelationId)(using JITOptions) extends IROp[EDB] {
 case class ProjectJoinFilterOp(rId: RelationId, var hash: String, override val children:IROp[EDB]*)(using jitOptions: JITOptions) extends IROp[EDB](children:_*) {
   val code: OpCode = OpCode.SPJ
   var childrenSO: Array[IROp[EDB]] = children.toArray
+  val extra = mutable.Map[Int, String]()
 
   override def run_continuation(storageManager: StorageManager, opFns: Seq[CompiledFn[EDB]]): EDB =
     val inputs = opFns.map(s => s(storageManager))
@@ -260,7 +261,8 @@ case class ProjectJoinFilterOp(rId: RelationId, var hash: String, override val c
       inputs,
       rId,
       hash,
-      jitOptions.sortOrder
+      jitOptions.sortOrder,
+      extra
     )
   override def run(storageManager: StorageManager): EDB =
     val inputs = children.map(s => s.run(storageManager))
@@ -275,7 +277,8 @@ case class ProjectJoinFilterOp(rId: RelationId, var hash: String, override val c
         inputs,
         rId,
         hash,
-        jitOptions.sortOrder
+        jitOptions.sortOrder,
+        extra
       )
 }
 

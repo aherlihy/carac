@@ -1,7 +1,7 @@
 package datalog.storage
 
-import datalog.dsl.{Atom, Term, Variable, Constant}
-import datalog.execution.{JoinIndexes, AllIndexes}
+import datalog.dsl.{Atom, Constant, Term, Variable}
+import datalog.execution.{AllIndexes, JoinIndexes, PredicateType}
 
 import scala.collection.mutable
 import scala.collection.immutable
@@ -51,7 +51,7 @@ trait StorageManager(val ns: NS) {
   def joinHelper(inputs: Seq[EDB], k: JoinIndexes): EDB
   def projectHelper(input: EDB, k: JoinIndexes): EDB
   def joinProjectHelper(inputs: Seq[EDB], k: JoinIndexes, sortOrder: (Int, Int, Int)): EDB
-  def joinProjectHelper_withHash(inputs: Seq[EDB], rId: Int, hash: String, sortOrder: (Int, Int, Int)): EDB
+  def joinProjectHelper_withHash(inputs: Seq[EDB], rId: Int, hash: String, sortOrder: (Int, Int, Int), extra: mutable.Map[Int, String]): EDB
   def diff(lhs: EDB, rhs: EDB): EDB
   def union(edbs: Seq[EDB]): EDB
 

@@ -1,13 +1,15 @@
 package datalog.execution
 
+import datalog.dsl.{Atom, Constant, Variable, Term}
+import datalog.storage.RelationId
+
 import java.lang.constant.ConstantDescs.*
 import java.lang.constant.*
 import java.lang.invoke.*
 import MethodHandles.Lookup.ClassOption.NESTMATE
 import java.nio.file.{Files, Paths}
-
 import org.glavo.classfile.{java as _, *}
-import org.glavo.classfile.components.{CodeStackTracker, ClassPrinter}
+import org.glavo.classfile.components.{ClassPrinter, CodeStackTracker}
 
 import scala.jdk.CollectionConverters.*
 
@@ -149,6 +151,89 @@ object BytecodeGenerator {
     xb.constantInstruction(value)
       .invokestatic(clsDesc(classOf[Integer]), "valueOf",
         MethodTypeDesc.of(clsDesc(classOf[Integer]), clsDesc(classOf[Int])))
+
+  def emitSeqInt(xb: CodeBuilder, value: Seq[Int]): Unit =
+    emitSeq(xb, value.map(v => xxb => emitInteger(xxb, v)))
+
+  def emitVarIndexes(xb: CodeBuilder, value: Seq[Seq[Int]]): Unit =
+    emitSeq(xb, value.map(v => xxb => emitSeqInt(xxb, v)))
+
+  def emitConstant(xb: CodeBuilder, c: Constant): Unit =
+    c match
+      case e: Int => emitInteger(xb, e)
+      case s: String => xb.constantInstruction(s)
+      case _ => throw new Exception(s"Unknown constant ${c}")
+
+   def emitStringConstantTuple2(xb: CodeBuilder, t: (String, Constant)): Unit =
+     emitNew(xb, classOf[(String, Constant)], xxb =>
+       xxb.constantInstruction(t._1)
+       emitConstant(xxb, t._2)
+     )
+
+  def emitVariable(xb: CodeBuilder, variable: Variable): Unit =
+    emitNew(xb, classOf[Variable], { xxb =>
+      xxb.constantInstruction(variable.oid)
+      xxb.constantInstruction(if (variable.anon) 1 else 0) // Assuming that anon can be represented as a boolean integer
+    })
+
+  def emitTerm(xb: CodeBuilder, term: Term): Unit = term match {
+    case const: Constant => emitConstant(xb, const)
+    case variable: Variable => emitVariable(xb, variable)
+  }
+
+  def emitAtom(xb: CodeBuilder, atom: Atom): Unit = {
+    emitNew(xb, classOf[Atom], { xxb =>
+      xxb.constantInstruction(atom.rId)
+      emitSeq(xxb, atom.terms.map(t => xxxb => emitTerm(xxxb, t)))
+      xxb.constantInstruction(if (atom.negated) 1 else 0)
+    })
+  }
+
+  def emitMap[K, V](xb: CodeBuilder, entries: Iterable[(K, V)], emitKey: (CodeBuilder, K) => Any, emitValue: (CodeBuilder, V) => Any): Unit = {
+//    xb.invokestatic(
+//      clsDesc(classOf[scala.collection.mutable.HashMap[K, V]]),
+//      "empty",
+//      MethodTypeDesc.of(clsDesc(classOf[scala.collection.mutable.HashMap[_, _]])))
+    emitNew(xb, classOf[scala.collection.mutable.Map[K, V]], xb => xb)
+    entries.foreach { case (key, value) =>
+      xb.dup()
+      emitKey(xb, key)
+      emitValue(xb, value)
+      xb.invokevirtual(
+        clsDesc(classOf[scala.collection.immutable.HashMap[_, _]]),
+        "put",
+        MethodTypeDesc.of(
+          clsDesc(classOf[scala.collection.immutable.HashMap[_, _]]),
+          clsDesc(classOf[Any]), clsDesc(classOf[Any]))
+      )
+      xb.pop() // Discard the return value of put()
+    }
+  }
+
+//  def emitMap[K, V](xb: CodeBuilder, entries: Seq[(K, V)])(emitKey: (CodeBuilder, K) => Any, emitValue: (CodeBuilder, V) => Any): Unit = {
+//    emitNew(xb, classOf[collection.mutable.HashMap[K, V]], { xxb =>
+//      entries.foreach { case (key, value) =>
+//        xxb.dup() // Duplicate the reference to the HashMap
+//        emitKey(xxb, key)
+//        emitValue(xxb, value)
+//        xxb.invokevirtual(clsDesc(classOf[collection.mutable.HashMap[_, _]]), "put", methDesc(classOf[collection.mutable.HashMap[_, _]].getMethod("put", classOf[Object], classOf[Object])))
+//        xxb.pop() // Discard the return value of put()
+//      }
+//    })
+//  }
+
+
+
+  def emitProjIndexes(xb: CodeBuilder, value: Seq[(String, Constant)]): Unit =
+    emitSeq(xb, value.map(v => xxb => emitStringConstantTuple2(xxb, v)))
+
+  def emitPredicateTypeRelationIdTuple2(xb: CodeBuilder, t: (PredicateType, RelationId)): Unit =
+    emitNew(xb, classOf[(PredicateType, RelationId)], xxb =>
+      xxb.constantInstruction(t._1.toString)
+      emitInteger(xxb, t._2)
+    )
+  def emitDeps(xb: CodeBuilder, value: Seq[(PredicateType, RelationId)]): Unit =
+    emitSeq(xb, value.map(v => xxb => emitPredicateTypeRelationIdTuple2(xxb, v)))
 
   val CD_BoxedUnit = clsDesc(classOf[scala.runtime.BoxedUnit])
 
