@@ -22,104 +22,220 @@ class tastyslistlib_worst() extends ExampleBenchmarkGenerator("tastyslistlib_wor
   @TearDown(Level.Invocation)
   def f(): Unit = finish()
 
+  // Naming: every benchmark is called <engine>_<storage>_<sort-order>?_<async/blocking>?_<granularity>?_<backend>?_EOL<ci?>
+  // All benchmark bodies should be identical
+
   // volcano, naive
-  @Benchmark def naive_volcano__(blackhole: Blackhole): Unit = {
-    // this is rancid but otherwise have to copy the method name twice, which is typo prone. Put extra stuff for runnign with a regex after __
-    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
+  @Benchmark def shallowNaive_volcano_EOL(blackhole: Blackhole): Unit = {
+    // this is rancid but otherwise have to copy the method name twice, which is typo prone. Put extra stuff for runnign with a regex after _EOL
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
     blackhole.consume(run(programs(p), result))
   }
 
-  @Benchmark def seminaive_volcano__ci(blackhole: Blackhole): Unit = {
-    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
+  @Benchmark def shallowSeminaive_volcano_EOL_ci(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
     blackhole.consume(run(programs(p), result))
   }
 
-  @Benchmark def naive_default__(blackhole: Blackhole): Unit = {
-    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
+  @Benchmark def shallowNaive_default_EOL(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
     blackhole.consume(run(programs(p), result))
   }
 
-  @Benchmark def seminaive_default__ci(blackhole: Blackhole): Unit = {
-    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
+  @Benchmark def shallowSeminaive_default_EOL_ci(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
     blackhole.consume(run(programs(p), result))
   }
 
   // interpreted
-  @Benchmark def interpreted_default_unordered__ci(blackhole: Blackhole): Unit = {
-    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
+  @Benchmark def interpreted_default_sel__0___EOL(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
     blackhole.consume(run(programs(p), result))
   }
 
-  @Benchmark def interpreted_default_sel__(blackhole: Blackhole): Unit = {
-    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
+  @Benchmark def interpreted_default_badluck__0___EOL(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  @Benchmark def interpreted_default_unordered__0___EOL(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
     blackhole.consume(run(programs(p), result))
   }
 
   // compiled
-  @Benchmark def compiled_default_unordered__(blackhole: Blackhole): Unit = {
-    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
+  @Benchmark def compiled_default_unordered__0_quotes_EOL(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
     blackhole.consume(run(programs(p), result))
   }
+
+  @Benchmark def compiled_default_unordered__0_bytecode_EOL(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
 
   // jit
-  @Benchmark def jit_default_sel_blocking_EVALRULESN__ci(blackhole: Blackhole): Unit = {
-    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
+
+  // -> ALL
+
+  // ---> blocking
+  // ------> quotes & splices
+  // ---------> sorted
+  @Benchmark def jit_default_sel__0_blocking_ALL_quotes_EOL_ci(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
     blackhole.consume(run(programs(p), result))
   }
 
-  @Benchmark def jit_default_sel_blocking_bytecode_EVALRULESN__(blackhole: Blackhole): Unit = {
-    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
+  // ---------> unsorted
+  @Benchmark def jit_default_unordered__0_blocking_ALL_quotes_EOL(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
     blackhole.consume(run(programs(p), result))
   }
 
-  @Benchmark def jit_default_sel_blocking_EVALRULEBODY__(blackhole: Blackhole): Unit = {
-    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
+  // ------> bytecode gen
+  // ---------> sorted
+  @Benchmark def jit_default_sel__0_blocking_ALL_bytecode_EOL(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
     blackhole.consume(run(programs(p), result))
   }
 
-  @Benchmark def jit_default_sel_blocking_bytecode_EVALRULEBODY__(blackhole: Blackhole): Unit = {
-    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
+  // ---------> unsorted
+  @Benchmark def jit_default_unordered__0_blocking_ALL_bytecode_EOL(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
     blackhole.consume(run(programs(p), result))
   }
 
-  @Benchmark def jit_default_unordered_blocking_bytecode_EVALRULESN__(blackhole: Blackhole): Unit = {
-    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
+  // ---> async
+  // ------> quotes & splices
+  // ---------> sorted
+  @Benchmark def jit_default_sel__0_async_ALL_quotes_EOL_ci(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
     blackhole.consume(run(programs(p), result))
   }
 
-  @Benchmark def jit_default_unordered_blocking_bytecode_EVALRULEBODY__(blackhole: Blackhole): Unit = {
-    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
+  // For now skip most async
+  // ---------> unsorted
+  @Benchmark def jit_default_unordered__0_async_ALL_quotes_EOL(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
     blackhole.consume(run(programs(p), result))
   }
 
-  @Benchmark def jit_default_sel_async_EVALRULESN__(blackhole: Blackhole): Unit = {
-    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("__").head}"
+  // ------> bytecode gen
+  // ---------> sorted
+  @Benchmark def jit_default_sel__0_async_ALL_bytecode_EOL(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  // ---------> unsorted
+  @Benchmark def jit_default_unordered__0_async_ALL_bytecode_EOL(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  // -> 1RULE
+
+  // ---> blocking
+  // ------> quotes & splices
+  // ---------> sorted
+  @Benchmark def jit_default_sel__0_blocking_1RULE_quotes_EOL_ci(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  // ---------> unsorted
+  @Benchmark def jit_default_unordered__0_blocking_1RULE_quotes_EOL(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  // ------> bytecode gen
+  // ---------> sorted
+  @Benchmark def jit_default_sel__0_blocking_1RULE_bytecode_EOL(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  // ---------> unsorted
+  @Benchmark def jit_default_unordered__0_blocking_1RULE_bytecode_EOL(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  // ---> async
+  // ------> quotes & splices
+  // ---------> sorted
+  @Benchmark def jit_default_sel__0_async_1RULE_quotes_EOL_ci(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  // For now skip most async
+  // ---------> unsorted
+  @Benchmark def jit_default_unordered__0_async_1RULE_quotes_EOL(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  // ------> bytecode gen
+  // ---------> sorted
+  @Benchmark def jit_default_sel__0_async_1RULE_bytecode_EOL(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  // ---------> unsorted
+  @Benchmark def jit_default_unordered__0_async_1RULE_bytecode_EOL(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
     blackhole.consume(run(programs(p), result))
