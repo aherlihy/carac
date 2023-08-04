@@ -1,6 +1,6 @@
 package datalog
 
-import datalog.execution.{ExecutionEngine, JITOptions, SemiNaiveExecutionEngine, StagedExecutionEngine, StagedSnippetExecutionEngine, ir, NaiveExecutionEngine}
+import datalog.execution.{Backend, CompileSync, ExecutionEngine, JITOptions, NaiveExecutionEngine, SemiNaiveExecutionEngine, SortOrder, StagedExecutionEngine, StagedSnippetExecutionEngine, ir}
 import datalog.dsl.{Constant, Program, __}
 import datalog.execution.ast.transform.CopyEliminationPass
 import datalog.execution.ir.InterpreterContext
@@ -1181,7 +1181,7 @@ def select(program: Program): Unit = {
 //    pointstofun(program3a)
 //    println("\n\n_______________________\n\n")
 //
-  val jo3 = JITOptions(ir.OpCode.EVAL_RULE_SN, dotty, aot = false, block = true, sortOrder = (0, 0, 0), useBytecodeGenerator = true)
+  val jo3 = JITOptions(granularity = ir.OpCode.EVAL_RULE_SN, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Unordered, backend = Backend.Bytecode)
   println("JIT")
   given engine3: ExecutionEngine = new StagedExecutionEngine(new DefaultStorageManager(), jo3)
   val program3 = Program(engine3)

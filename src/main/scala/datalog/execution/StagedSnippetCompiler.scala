@@ -107,7 +107,7 @@ class StagedSnippetCompiler(val storageManager: StorageManager)(using val jitOpt
           $stagedSM.joinProjectHelper(
             $compiledOps,
             ${ Expr(k) },
-            ${ Expr(jitOptions.sortOrder) }
+            ${ Expr(jitOptions.onlineSort) }
           )
         }
 

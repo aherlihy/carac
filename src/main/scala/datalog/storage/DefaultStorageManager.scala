@@ -79,7 +79,7 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
     )
   }
 
-  override def joinProjectHelper_withHash(inputsEDB: Seq[EDB], rId: Int, originalK: JoinIndexes, sortOrder: (Int, Int, Int)): CollectionsEDB = {
+  override def joinProjectHelper_withHash(inputsEDB: Seq[EDB], rId: Int, originalK: JoinIndexes, onlineSort: Boolean): CollectionsEDB = {
     val inputs = asCollectionsSeqEDB(inputsEDB)
 //    var intermediateCardinalities = Seq[Int]()
     if (inputs.length == 1) // just filter
@@ -106,7 +106,7 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
             (innerT, atomI + 1, k)
           else
             val (inner, outer) = // on the fly swapping of join order
-              if (atomI > 1 && ((sortOrder._3 == 1 && outerT.length > innerT.length) || (sortOrder._3 == -1 && innerT.length > outerT.length)))
+              if (atomI > 1 && onlineSort && outerT.length > innerT.length)
                 val body = k.atoms.drop(1)
                 val newerHash = JoinIndexes.getRuleHash(Array(k.atoms.head, body(atomI)) ++ body.dropRight(body.length - atomI) ++ body.drop(atomI + 1))
                 k = allRulesAllIndexes(rId).getOrElse(newerHash, JoinIndexes(originalK.atoms.head +: body, Some(originalK.cxns)))
@@ -142,7 +142,7 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
         )
   }
 
-  override def joinProjectHelper(inputsEDB: Seq[EDB], originalK: JoinIndexes, sortOrder: (Int, Int, Int)): CollectionsEDB = { // OLD, only keep around for benchmarks
+  override def joinProjectHelper(inputsEDB: Seq[EDB], originalK: JoinIndexes, onlineSort: Boolean): CollectionsEDB = { // OLD, only keep around for benchmarks
     val inputs = asCollectionsSeqEDB(inputsEDB)
     if (inputs.length == 1) // just filter
       inputs.head
@@ -160,13 +160,6 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
     else
       var preSortedK = originalK // TODO: find better ways to reduce with 2 acc
       var sorted = inputs
-//      if (sortOrder._2 != 0)
-//        var edbToAtom = inputs.toArray.zipWithIndex.map((edb, i) => (edb, originalK.atoms(i + 1))).sortBy((edb, _) => edb.length)
-//        if (sortOrder._2 == -1) edbToAtom = edbToAtom.reverse
-//        val newAtoms = originalK.atoms.head +: edbToAtom.map(_._2)
-//        preSortedK = JoinIndexes(newAtoms)
-//        sorted = edbToAtom.map(_._1)
-
       val result = sorted
         .foldLeft(
           (CollectionsEDB(), 0, preSortedK)
@@ -178,7 +171,7 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
             (innerT, atomI + 1, k)
           else
             val (inner, outer) =
-              if (atomI > 1 && ((sortOrder._3 == 1 && outerT.length > innerT.length) || (sortOrder._3 == -1 && innerT.length > outerT.length)))
+              if (atomI > 1 && onlineSort && outerT.length > innerT.length)
                 val body = k.atoms.drop(1)
                 k = JoinIndexes(Array(k.atoms.head, body(atomI)) ++ body.dropRight(body.length - atomI) ++ body.drop(atomI + 1), Some(originalK.cxns))
                 (outerT, innerT)
@@ -247,7 +240,7 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
                     debug("found negated relation, rule=", () => s"${printer.ruleToString(k.atoms)}\n\tarity=$arity, compl=${printer.factToString(compl)}, Q=${printer.factToString(q)}, final res=${printer.factToString(res)}")
                     res
                   case _ => q
-            ), k, (0, 0, 0)).wrapped // don't sort when not staging
+            ), k, false).wrapped // don't sort in shallow embedding
           }).distinct
       ))
   }

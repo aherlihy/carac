@@ -1,7 +1,7 @@
 package datalog.execution.ir
 
 import datalog.dsl.{Atom, Constant}
-import datalog.execution.{JITOptions, JoinIndexes, PrecedenceGraph, StagedCompiler, ir}
+import datalog.execution.{JITOptions, JoinIndexes, PrecedenceGraph, SortOrder, StagedCompiler, ir}
 import datalog.execution.ast.*
 import datalog.storage.{DB, EDB, KNOWLEDGE, RelationId, StorageManager}
 import datalog.tools.Debug
@@ -253,7 +253,7 @@ case class ProjectJoinFilterOp(rId: RelationId, var k: JoinIndexes, override val
       inputs,
       rId,
       k,
-      jitOptions.sortOrder
+      jitOptions.onlineSort
     )
   override def run(storageManager: StorageManager): EDB =
     val inputs = children.map(s => s.run(storageManager))
@@ -261,7 +261,7 @@ case class ProjectJoinFilterOp(rId: RelationId, var k: JoinIndexes, override val
         inputs,
         rId,
         k,
-        jitOptions.sortOrder
+        jitOptions.onlineSort
       )
 }
 
@@ -300,20 +300,20 @@ case class UnionSPJOp(rId: RelationId, var k: JoinIndexes, override val children
 //      storageManager
 //    )
 
-    if (jitOptions.sortOrder._1 == 0 || jitOptions.sortOrder._1 == 5 || children.length < 3 || jitOptions.granularity != OpCode.OTHER) // If not only interpreting, then don't optimize since we are waiting for the optimized version to compile
+    if (jitOptions.sortOrder == SortOrder.Unordered || jitOptions.sortOrder == SortOrder.Badluck || children.length < 3 || jitOptions.granularity != OpCode.OTHER) // If not only interpreting, then don't optimize since we are waiting for the optimized version to compile
       storageManager.union(children.map((s: ProjectJoinFilterOp) => s.run(storageManager)))
     else
       val sortFn =
-        jitOptions.sortOrder._1 match
-          case 3 =>
+        jitOptions.sortOrder match
+          case SortOrder.IntMax =>
             (a: Atom) =>
               if (storageManager.edbContains(a.rId))
                 (true, storageManager.getEDBResult(a.rId).size)
               else
                 (true, Int.MaxValue)
-          case 1 =>
+          case SortOrder.Sel =>
             (a: Atom) => (true, storageManager.getKnownDerivedDB(a.rId).length)
-          case 4 =>
+          case SortOrder.Mixed =>
             (a: Atom) => (storageManager.allRulesAllIndexes.contains(a.rId), storageManager.getKnownDerivedDB(a.rId).length)
           case _ => throw new Exception(s"Unknown sort order ${jitOptions.sortOrder}")
 

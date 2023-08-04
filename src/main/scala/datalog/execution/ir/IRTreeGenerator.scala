@@ -167,12 +167,12 @@ class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
     )
   }
 
-  def generateTopLevelProgram(ast: ASTNode, naive: Boolean, stratified: Boolean = true): IROp[Any] = {
+  def generateTopLevelProgram(ast: ASTNode, naive: Boolean): IROp[Any] = {
     ast match {
       case ProgramNode(ruleMap) =>
         val scc = ctx.precedenceGraph.scc(ctx.toSolve)
         val innerProgram =
-          if (scc.length <= 1 || !stratified)
+          if (scc.length <= 1) // || !stratified)
             if (naive)
               generateNaive(ruleMap, scc.flatten)
             else

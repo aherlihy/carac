@@ -4,21 +4,37 @@ import datalog.execution.ir.OpCode
 
 import scala.quoted.staging
 
+enum CompileSync:
+  case Async, Blocking
+enum SortOrder:
+  case Sel, IntMax, Mixed, Badluck, Unordered, Worst
+enum Backend:
+  case Quotes, Bytecode
+
+// TODO: make JITOptions into an enum itself
 case class JITOptions(
-                       granularity: OpCode = OpCode.PROGRAM,
+                       granularity: OpCode = OpCode.OTHER, // default is unoptimized interpret
+                       compileSync: CompileSync = CompileSync.Blocking,
+                       sortOrder: SortOrder = SortOrder.Unordered,
+                       onlineSort: Boolean = false,
+                       backend: Backend = Backend.Quotes,
+                       fuzzy: Int = 0,
                        dotty: staging.Compiler = staging.Compiler.make(getClass.getClassLoader),
-                       aot: Boolean = true,
-                       block: Boolean = true,
-                       thresholdNum: Int = 0,
-                       thresholdVal: Float = 2,
-                       sortOrder: (Int, Int, Int) = (0, 0, 0),
-                       stratified: Boolean = true,
-                       // TODO: if this is set, some other options are ignored, JITOptions should be an enum to make meaningless states irrepresentable.
-                       useBytecodeGenerator: Boolean = false,
                      ) {
   private val unique = Seq(OpCode.DOWHILE, OpCode.EVAL_NAIVE, OpCode.LOOP_BODY)
-  if (!aot && !block && unique.contains(granularity))
-    throw new Exception(s"Cannot online, async compile singleton IR nodes: $granularity (theres no point)")
+  if (unique.contains(granularity))
+    throw new Exception(s"Cannot compile singleton IR nodes: $granularity (theres no point)")
 
-  override def toString: String = s"{ Gran: $granularity, AOT: $aot, blocking: $block, sortOrder: $sortOrder }"
+  override def toString: String = s"{ Gran: $granularity, blocking: $compileSync, sortOrder: $sortOrder, onlineSort: $onlineSort, backend: $backend }"
+  def toBenchmark: String =
+    val modeStr = if (granularity == OpCode.OTHER) "interpreted" else if (granularity == OpCode.PROGRAM) "compiled" else "jit"
+    val granStr = granularity match
+      case OpCode.PROGRAM | OpCode.OTHER => ""
+      case OpCode.EVAL_RULE_SN => "ALL"
+      case OpCode.EVAL_RULE_BODY => "1RULE"
+      case _ => ???
+    val onlineSortStr = if (onlineSort) "Online" else ""
+    val programStr = s"${modeStr}_default_${sortOrder}_${onlineSortStr}_${fuzzy}_${compileSync}".toLowerCase()
+    s"${programStr}_${granStr}_${backend.toString.toLowerCase()}"
+
 }

@@ -1,12 +1,13 @@
 package test
 
 import datalog.dsl.{Program, Relation}
-import datalog.execution.{ExecutionEngine, JITOptions, NaiveStagedExecutionEngine, StagedExecutionEngine, ir}
+import datalog.execution.ir.OpCode
+import datalog.execution.{Backend, CompileSync, ExecutionEngine, JITOptions, NaiveStagedExecutionEngine, SortOrder, StagedExecutionEngine, ir}
 import datalog.storage.{DefaultStorageManager, VolcanoStorageManager}
 import test.graphs.*
 
 class NaiveStagedCompiledTransitiveClosure extends munit.FunSuite {
-  val jo = JITOptions()
+  val jo = JITOptions(granularity = ir.OpCode.PROGRAM, compileSync = CompileSync.Blocking)
   List(
     Acyclic(new Program(new NaiveStagedExecutionEngine(new DefaultStorageManager(), jo))),
     MultiIsolatedCycle(new Program(new NaiveStagedExecutionEngine(new DefaultStorageManager(), jo))),
@@ -47,7 +48,7 @@ class NaiveStagedInterpretedTransitiveClosure extends munit.FunSuite {
 }
 
 class SemiNaiveStagedCompiledTransitiveClosure extends munit.FunSuite {
-  val jo = JITOptions()
+  val jo = JITOptions(granularity = OpCode.PROGRAM, compileSync = CompileSync.Blocking)
   List(
     Acyclic(new Program(new StagedExecutionEngine(new DefaultStorageManager(), jo))),
     MultiIsolatedCycle(new Program(new StagedExecutionEngine(new DefaultStorageManager(), jo))),
@@ -68,8 +69,7 @@ class SemiNaiveStagedCompiledTransitiveClosure extends munit.FunSuite {
 }
 
 class SemiNaiveBytecodeGeneratedTransitiveClosure extends munit.FunSuite {
-  val jo = JITOptions(granularity = ir.OpCode.PROGRAM, aot = true, block = true,
-    useBytecodeGenerator = true)
+  val jo = JITOptions(granularity = ir.OpCode.EVAL_RULE_SN, backend = Backend.Bytecode)
   List(
     Acyclic(new Program(new StagedExecutionEngine(new DefaultStorageManager(), jo))),
     MultiIsolatedCycle(new Program(new StagedExecutionEngine(new DefaultStorageManager(), jo))),
@@ -109,9 +109,9 @@ class SemiNaiveStagedInterpretedTransitiveClosure extends munit.FunSuite {
     }))
 }
 
-class SemiNaiveStagedJITSNEvalTransitiveClosure extends munit.FunSuite {
-  // ahead of time, blocking
-  val jitOptions = JITOptions(granularity = ir.OpCode.EVAL_SN)
+class SemiNaiveStagedJIT_TransitiveClosure extends munit.FunSuite {
+  // JIT async, SN
+  val jitOptions = JITOptions(granularity = ir.OpCode.EVAL_SN, compileSync = CompileSync.Async)
   List(
     Acyclic(new Program(new StagedExecutionEngine(new DefaultStorageManager(), jitOptions))),
     MultiIsolatedCycle(new Program(new StagedExecutionEngine(new DefaultStorageManager(), jitOptions))),
@@ -129,8 +129,8 @@ class SemiNaiveStagedJITSNEvalTransitiveClosure extends munit.FunSuite {
         )
       }
     }))
-  // online, blocking
-  val jitOptions2 = JITOptions(granularity = ir.OpCode.EVAL_SN, aot = false)
+  // JIT blocking, SN
+  val jitOptions2 = JITOptions(granularity = ir.OpCode.EVAL_SN, compileSync = CompileSync.Blocking)
   List(
     Acyclic(new Program(new StagedExecutionEngine(new DefaultStorageManager(), jitOptions2))),
     MultiIsolatedCycle(new Program(new StagedExecutionEngine(new DefaultStorageManager(), jitOptions2))),
@@ -148,8 +148,9 @@ class SemiNaiveStagedJITSNEvalTransitiveClosure extends munit.FunSuite {
         )
       }
     }))
-  // online, async
-  val jitOptions3 = JITOptions(granularity = ir.OpCode.EVAL_SN, aot = false, block = false)
+
+  // JIT async, Rule
+  val jitOptions3 = JITOptions(granularity = ir.OpCode.EVAL_RULE_BODY, compileSync = CompileSync.Async)
   List(
     Acyclic(new Program(new StagedExecutionEngine(new DefaultStorageManager(), jitOptions3))),
     MultiIsolatedCycle(new Program(new StagedExecutionEngine(new DefaultStorageManager(), jitOptions3))),
@@ -168,8 +169,8 @@ class SemiNaiveStagedJITSNEvalTransitiveClosure extends munit.FunSuite {
       }
     }))
 
-  // ahead of time, async
-  val jitOptions4 = JITOptions(granularity = ir.OpCode.EVAL_SN, block = false)
+  // JIT blocking, Rule
+  val jitOptions4 = JITOptions(granularity = ir.OpCode.EVAL_RULE_BODY, compileSync = CompileSync.Blocking)
   List(
     Acyclic(new Program(new StagedExecutionEngine(new DefaultStorageManager(), jitOptions4))),
     MultiIsolatedCycle(new Program(new StagedExecutionEngine(new DefaultStorageManager(), jitOptions4))),

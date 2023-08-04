@@ -153,6 +153,11 @@ object BytecodeGenerator {
       .invokestatic(clsDesc(classOf[Integer]), "valueOf",
         MethodTypeDesc.of(clsDesc(classOf[Integer]), clsDesc(classOf[Int])))
 
+  def emitEnum(xb: CodeBuilder, enumCompanionCls: Class[?], ordinal: Int) =
+    emitObject(xb, enumCompanionCls)
+    xb.constantInstruction(ordinal)
+    emitCall(xb, enumCompanionCls, "fromOrdinal", classOf[Int])
+
   // for consistency
   def emitString(xb: CodeBuilder, value: String): Unit =
     xb.constantInstruction(value)

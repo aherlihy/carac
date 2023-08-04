@@ -26,7 +26,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
   compiler.clearDottyThread()
   var stragglers: mutable.WeakHashMap[Int, Future[CompiledFn[?]]] = mutable.WeakHashMap.empty // should be ok since we are only removing by ref and then iterating on values only?
 
-  def createIR(ast: ASTNode)(using InterpreterContext): IROp[Any] = IRTreeGenerator().generateTopLevelProgram(ast, naive=false, stratified=defaultJITOptions.stratified)
+  def createIR(ast: ASTNode)(using InterpreterContext): IROp[Any] = IRTreeGenerator().generateTopLevelProgram(ast, naive=false)
 
   def initRelation(rId: Int, name: String): Unit = {
     storageManager.ns(rId) = name
@@ -58,7 +58,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
       val allK = JoinIndexes.allOrders(rule)
       storageManager.allRulesAllIndexes.getOrElseUpdate(rId, mutable.Map[String, JoinIndexes]()) ++= allK
 
-    if (defaultJITOptions.sortOrder._1 == 1) // sort before inserting, just in case EDBs are defined
+    if (defaultJITOptions.sortOrder == SortOrder.Sel) // sort before inserting, just in case EDBs are defined
       val (sortedBody, newHash) = JoinIndexes.presortSelect(
         a =>
           if (storageManager.edbContains(a.rId))
@@ -70,7 +70,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
       )
       rule = rule.head +: sortedBody.map(_._1)
       k = JoinIndexes(rule, Some(k.cxns))
-    else if (defaultJITOptions.sortOrder._1 == 5) // mimic "bad luck" program definition, so ingest rules in a bad order and then don't update them.
+    else if (defaultJITOptions.sortOrder == SortOrder.Badluck) // mimic "bad luck" program definition, so ingest rules in a bad order and then don't update them.
       val (sortedBody, newHash) = JoinIndexes.presortSelectWorst(
         a =>
           if (storageManager.edbContains(a.rId))
@@ -183,7 +183,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
         stragglers.remove(op.compiledFn.hashCode())
         throw Exception(s"Error compiling ${op.code} with: ${e.getCause}")
       case None =>
-        if (jitOptions.block)
+        if (jitOptions.compileSync == CompileSync.Blocking)
           debug(s"${op.code} compilation not ready yet, so blocking", () => "")
           val res = Await.result(op.compiledFn, Duration.Inf)(storageManager)
           stragglers.remove(op.compiledFn.hashCode())
@@ -196,12 +196,8 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
 
   inline def startCompileThread[T](op: IROp[T])(using jitOptions: JITOptions): Unit =
     debug(s"starting online compilation for code ${op.code}", () => "")
-//    if (jitOptions.block)
-//      given staging.Compiler = dotty
-//      op.blockingCompiledFn = compiler.getCompiled(op)
-//    else
     given scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
-    op.compiledFn = if (jitOptions.useBytecodeGenerator)
+    op.compiledFn = if (jitOptions.backend == Backend.Bytecode)
         Future {
         compiler.getBytecodeGenerated(op)
       }
@@ -241,26 +237,24 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
         op.run(storageManager)
 
       case op: UnionSPJOp if jitOptions.granularity == op.code =>
-        val shortC = if (jitOptions.sortOrder._1 != 0 && op.children.size < 3 && jitOptions.sortOrder._2 != 0) { // don't recompile query plans with <2 joins
+        val shortC = if (jitOptions.sortOrder != SortOrder.Unordered && op.children.size < 3 && jitOptions.fuzzy == 2) { // don't recompile query plans with <2 joins
 //          println("skip <3")
           Some(op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o))))
-        } else if (jitOptions.sortOrder._1 != 0 && jitOptions.sortOrder._1 != 5 && jitOptions.sortOrder._2 == 2) { // sort child relations and see if change is above threshold
+        } else if (jitOptions.sortOrder != SortOrder.Unordered && jitOptions.sortOrder != SortOrder.Badluck && jitOptions.fuzzy > 2) { // sort child relations and see if change is above threshold
           val sortFn =
-            jitOptions.sortOrder._1 match
-              case 3 =>
-                (a: Atom)
-                =>
-                if (storageManager.edbContains(a.rId))
-                  (true, storageManager.getEDBResult(a.rId).size)
-                else
-                  (true, Int.MaxValue)
-              case 1 =>
-                (a: Atom)
-                => (true, storageManager.getKnownDerivedDB(a.rId).length)
-              case 4 =>
-                (a: Atom)
-                => (storageManager.allRulesAllIndexes.contains(a.rId), storageManager.getKnownDerivedDB(a.rId).length)
+            jitOptions.sortOrder match
+              case SortOrder.IntMax =>
+                (a: Atom) =>
+                  if (storageManager.edbContains(a.rId))
+                    (true, storageManager.getEDBResult(a.rId).size)
+                  else
+                    (true, Int.MaxValue)
+              case SortOrder.Sel =>
+                (a: Atom) => (true, storageManager.getKnownDerivedDB(a.rId).length)
+              case SortOrder.Mixed =>
+                (a: Atom) => (storageManager.allRulesAllIndexes.contains(a.rId), storageManager.getKnownDerivedDB(a.rId).length)
               case _ => throw new Exception(s"Unknown sort order ${jitOptions.sortOrder}")
+
           val (nb, _) = JoinIndexes.presortSelect(sortFn, op.k, storageManager)
           val oldBody = op.k.atoms.drop(1).map(_.hash)
           val newBodyIdx = nb.map(h => oldBody.indexOf(h._1.hash))
@@ -283,25 +277,23 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
           }
 
           val distance = levenshtein(newBodyIdx.mkString("", "", ""), Array.range(0, newBodyIdx.length).mkString("", "", ""))
-
-//          println(s"newBodyIdxs: ${newBodyIdx.mkString("[", ", ", "]")} distance: $distance")
-          if (distance < 3)
+          if (distance < jitOptions.fuzzy)
             Some(op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o))))
           else
             None // TODO: fix this
         } else {
           None
         }
+
         if (shortC.isDefined)
           shortC.get
-        else if (jitOptions.block) { // not AOT therefore not async, so compile + block
+        else if (jitOptions.compileSync == CompileSync.Blocking) { // not AOT therefore not async, so compile + block
           startCompileThread(op)
           checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o))))
         } else {
           given scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
 
           op.compiledFnIndexed = Future {
-            //            given staging.Compiler = dedicatedDotty; // dedicatedDotty //staging.Compiler.make(getClass.getClassLoader) // TODO: new dotty per thread, maybe concat
             compiler.getCompiledIndexed(op)
           }
           //        Thread.sleep(1000)
@@ -315,14 +307,8 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
                 //              stragglers.remove(op.compiledFn.hashCode())
                 throw Exception(s"Error compiling ${op.code} with: ${e.getCause}")
               case None =>
-                if (jitOptions.block) // TODO: get rid of this since can't block + AOT anymore
-                  debug(s"${op.code} compilation not ready yet, so blocking", () => "")
-                  val res = Await.result(op.compiledFnIndexed, Duration.Inf)(storageManager, i)
-                  //                stragglers.remove(op.compiledFn.hashCode())
-                  res
-                else
-                  debug(s"${op.code} subsection compilation not ready yet, so defaulting", () => "")
-                  c.run(storageManager)
+                debug(s"${op.code} subsection compilation not ready yet, so defaulting to interpreter", () => "")
+                c.run(storageManager)
             }
           ))
         }
@@ -332,31 +318,8 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
         checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.childrenSO.map(o => (sm: StorageManager) => jit(o))))
 
       case op: UnionOp if jitOptions.granularity == op.code =>
-        //          println(s"TV: ${jitOptions.thresholdVal}; TN: ${jitOptions.thresholdNum}::${op.children.sliding(2).map {
-        //              case Seq(x, y, _*) =>
-        //                val l = x.run(storageManager).length
-        //                val r = y.run(storageManager).length
-        //                if (l != 0  && r != 0) l.toFloat / r else -1
-        //              case _ => -1
-        //          }.filter(f => f < 0).mkString("(", ", ", ")")}")
-        //          val recompile = op.children.sliding(2).map{
-        //            case Seq(x, y, _*) =>
-        //              val l = x.run(storageManager).length
-        //              val r = y.run(storageManager).length
-        //              l != 0 && r != 0 && l.toFloat / r > jitOptions.thresholdVal
-        //            case _ => false
-        //          }.count(b => b) > jitOptions.thresholdNum
-        //                  if (recompile)
-        //                    startCompileThread(op, newDotty)
-        //                checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o))))
-
-        //        if (!jitOptions.aot && op.compiledFn != null && storageManager.deltaDB(storageManager.knownDbId).values.map(_.length).exists(_ > jitOptions.thresholdNum)) {
-        //          op.compiledFn(storageManager)
-        //        } else if (jitOptions.aot && op.compiledFnIndexed != null && storageManager.deltaDB(storageManager.knownDbId).values.map(_.length).exists(_ > jitOptions.thresholdNum)) {
-        //          op.compiledFnIndexed(storageManager)
-        if (jitOptions.block) {
-          // HACK: this should only happen with useBytecodeGenerator enabled
-          op.blockingCompiledFn = if (jitOptions.useBytecodeGenerator)
+        if (jitOptions.compileSync == CompileSync.Blocking) {
+          op.blockingCompiledFn = if (jitOptions.backend == Backend.Bytecode)
             compiler.getBytecodeGenerated(op)
           else
             compiler.getCompiled(op)
@@ -368,25 +331,19 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
           op.compiledFnIndexed = Future {
             compiler.getCompiledIndexed(op)
           }
-          //                Thread.sleep(1000)
+          // Thread.sleep(1000)
           storageManager.union(op.children.zipWithIndex.map((c, i) =>
             op.compiledFnIndexed.value match {
               case Some(Success(run)) =>
                 debug(s"Compilation succeeded: ${op.code}", () => "")
-                //              stragglers.remove(op.compiledFn.hashCode()) // TODO: might not work, but jsut end up waiting for completed future
+                // stragglers.remove(op.compiledFn.hashCode()) // TODO: might not work, but jsut end up waiting for completed future
                 run(storageManager, i)
               case Some(Failure(e)) =>
-                //              stragglers.remove(op.compiledFn.hashCode())
+                // stragglers.remove(op.compiledFn.hashCode())
                 throw Exception(s"Error compiling ${op.code} with: ${e.getCause}")
               case None =>
-                if (jitOptions.block)
-                  debug(s"${op.code} compilation not ready yet, so blocking", () => "")
-                  val res = Await.result(op.compiledFnIndexed, Duration.Inf)(storageManager, i)
-                  //                stragglers.remove(op.compiledFn.hashCode())
-                  res
-                else
-                  debug(s"${op.code} subsection compilation not ready yet, so defaulting", () => "")
-                  c.run(storageManager)
+                debug(s"${op.code} subsection compilation not ready yet, so defaulting", () => "")
+                c.run(storageManager)
             }
           ))
         }
@@ -433,7 +390,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
 
   override def solve(rId: Int): Set[Seq[Term]] = {
     given JITOptions = defaultJITOptions
-//    println(s"jit opts==${defaultJITOptions}")
+//    println(s"jit opts==${defaultJITOptions.toBenchmark}")
     debug("", () => s"solve $rId with options $defaultJITOptions")
     // verify setup
     storageManager.verifyEDBs(precedenceGraph.idbs)
@@ -467,20 +424,12 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
     debug("IRTree: ", () => storageManager.printer.printIR(irTree))
     if (defaultJITOptions.granularity == OpCode.OTHER) // i.e. never compile
       solveInterpreted(irTree, irCtx)
-//    else if (defaultJITOptions.useBytecodeGenerator) {
-//      // TODO: generalize bytecode generation to relax these constraints?
-//      assert(
-//        defaultJITOptions.granularity == OpCode.PROGRAM && defaultJITOptions.aot && defaultJITOptions.block,
-//        s"unsupported configuration: $defaultJITOptions"
-//      )
-//      solveBytecodeGenerated(irTree, irCtx)
-//    }
-    else if (defaultJITOptions.granularity == OpCode.PROGRAM && defaultJITOptions.aot && defaultJITOptions.block) // i.e. compile asap and block
+    else if (defaultJITOptions.granularity == OpCode.PROGRAM && defaultJITOptions.compileSync == CompileSync.Blocking) // i.e. compile asap and block
       solveCompiled(irTree, irCtx)
     else
       solveJIT(irTree, irCtx)
   }
 }
 class NaiveStagedExecutionEngine(storageManager: StorageManager, defaultJITOptions: JITOptions = JITOptions()) extends StagedExecutionEngine(storageManager, defaultJITOptions) {
-  override def createIR(ast: ASTNode)(using InterpreterContext): IROp[Any] = IRTreeGenerator().generateTopLevelProgram(ast, naive=true, stratified=defaultJITOptions.stratified)
+  override def createIR(ast: ASTNode)(using InterpreterContext): IROp[Any] = IRTreeGenerator().generateTopLevelProgram(ast, naive=true)
 }

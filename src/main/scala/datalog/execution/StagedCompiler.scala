@@ -78,15 +78,15 @@ class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: J
   }
 
   def uSPJSortFn(jitOptions: JITOptions)(a: Atom): (Boolean, Int) =
-    jitOptions.sortOrder._1 match
-      case 3 =>
+    jitOptions.sortOrder match
+      case SortOrder.IntMax =>
         if (storageManager.edbContains(a.rId))
           (true, storageManager.getEDBResult(a.rId).size)
         else
           (true, Int.MaxValue)
-      case 1 =>
+      case SortOrder.Sel =>
         (true, storageManager.getKnownDerivedDB(a.rId).length)
-      case 4 =>
+      case SortOrder.Mixed =>
         (storageManager.allRulesAllIndexes.contains(a.rId), storageManager.getKnownDerivedDB(a.rId).length)
       case _ => throw new Exception(s"Unknown sort order ${jitOptions.sortOrder}")
 
@@ -129,28 +129,25 @@ class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: J
             $compiledOps,
             ${ Expr(rId) },
             ${ Expr(k) },
-            ${ Expr(jitOptions.sortOrder) }
+            ${ Expr(jitOptions.onlineSort) }
           )
         }
 
       case UnionSPJOp(rId, k, children: _*) =>
         val (sortedChildren, newK) =
-          if (jitOptions.sortOrder._1 != 0 && jitOptions.sortOrder._1 != 5)
+          if (jitOptions.sortOrder != SortOrder.Unordered && jitOptions.sortOrder != SortOrder.Badluck)
             val sortFn =
-              jitOptions.sortOrder._1 match
-                case 3 =>
-                  (a: Atom)
-                  =>
-                  if (storageManager.edbContains(a.rId))
-                    (true, storageManager.getEDBResult(a.rId).size)
-                  else
-                    (true, Int.MaxValue)
-                case 1 =>
-                  (a: Atom)
-                  => (true, storageManager.getKnownDerivedDB(a.rId).length)
-                case 4 =>
-                  (a: Atom)
-                  => (storageManager.allRulesAllIndexes.contains(a.rId), storageManager.getKnownDerivedDB(a.rId).length)
+              jitOptions.sortOrder match
+                case SortOrder.IntMax =>
+                  (a: Atom) =>
+                    if (storageManager.edbContains(a.rId))
+                      (true, storageManager.getEDBResult(a.rId).size)
+                    else
+                      (true, Int.MaxValue)
+                case SortOrder.Sel =>
+                  (a: Atom) => (true, storageManager.getKnownDerivedDB(a.rId).length)
+                case SortOrder.Mixed =>
+                  (a: Atom) => (storageManager.allRulesAllIndexes.contains(a.rId), storageManager.getKnownDerivedDB(a.rId).length)
                 case _ => throw new Exception(s"Unknown sort order ${jitOptions.sortOrder}")
 
 
@@ -365,13 +362,13 @@ class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: J
         emitSeq(xb, children.map(c => xxb => traverse(xxb, c)))
         xb.constantInstruction(rId)
         emitJoinIndexes(xb, k)
-        emitSortOrder(xb, jitOptions.sortOrder)
+        emitBool(xb, jitOptions.onlineSort)
         emitSMCall(xb, "joinProjectHelper_withHash",
-          classOf[Seq[?]], classOf[Int], classOf[JoinIndexes], classOf[(Int, Int, Int)])
+          classOf[Seq[?]], classOf[Int], classOf[JoinIndexes], classOf[Boolean])
 
       case UnionSPJOp(rId, k, children: _*) =>
         val (sortedChildren, newK) =
-          if (jitOptions.sortOrder._1 != 0)
+          if (jitOptions.sortOrder != SortOrder.Unordered)
             JoinIndexes.getPresort(
               children.toArray,
               uSPJSortFn(jitOptions),
@@ -411,12 +408,6 @@ class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: J
      */
     private def emitSMCall(xb: CodeBuilder, methName: String, methParameterTypes: Class[?]*): Unit =
       emitCall(xb, classOf[StorageManager], methName, methParameterTypes*)
-
-    // TODO: Instead of regenerating the sortOrder at runtime, pass it as an
-    // argument to the entry point since it's constant.
-    private def emitSortOrder(xb: CodeBuilder, sortOrder: (Int, Int, Int)): Unit =
-      emitNew(xb, classOf[(Int, Int, Int)], xxb =>
-        sortOrder.toList.foreach(elem => emitInteger(xxb, elem)))
   }
 
   def getBytecodeGenerated[T](irTree: IROp[T]): CompiledFn[T] = {
@@ -462,7 +453,7 @@ class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: J
         '{ ${Expr.ofSeq(uOp.children.toSeq.map(compileIRRelOp))}($i) }
       case uSPJOp: UnionSPJOp =>
         val (sortedChildren, newK) =
-          if (jitOptions.sortOrder._1 != 0 && jitOptions.sortOrder._1 != 5)
+          if (jitOptions.sortOrder != SortOrder.Unordered && jitOptions.sortOrder != SortOrder.Badluck)
             JoinIndexes.getPresort(
               uSPJOp.children.toArray,
               uSPJSortFn(jitOptions),

@@ -1,7 +1,7 @@
 package test
 
 import datalog.dsl.{Constant, Program, Relation, Term}
-import datalog.execution.{JITOptions, NaiveExecutionEngine, NaiveStagedExecutionEngine, SemiNaiveExecutionEngine, StagedExecutionEngine, ir}
+import datalog.execution.{Backend, CompileSync, JITOptions, NaiveExecutionEngine, NaiveStagedExecutionEngine, SemiNaiveExecutionEngine, SortOrder, StagedExecutionEngine, ir}
 import datalog.storage.{DefaultStorageManager, VolcanoStorageManager}
 
 import java.nio.file.{Files, Path, Paths}
@@ -100,36 +100,21 @@ abstract class TestGenerator(directory: Path,
           case "NaiveCompiledStagedDefault" =>
             Program(NaiveStagedExecutionEngine(DefaultStorageManager())) // default is compiled
           case "CompiledStagedDefault" =>
-            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(granularity = ir.OpCode.PROGRAM, dotty = dotty, aot = false, block = true))) // default is compiled
-
+            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(granularity = ir.OpCode.PROGRAM, compileSync = CompileSync.Blocking, dotty = dotty))) // default is compiled
           case "InterpretedStagedDefault" =>
             Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(granularity = ir.OpCode.OTHER)))
           case "InterpretedStaged_selDefault" =>
-            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(granularity = ir.OpCode.OTHER, sortOrder = (1, 0, 0))))
-          case "InterpretedStaged_intmaxDefault" =>
-            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(granularity = ir.OpCode.OTHER, sortOrder = (3, 0, 0))))
-          case "InterpretedStaged_mixedDefault" =>
-            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(granularity = ir.OpCode.OTHER, sortOrder = (4, 0, 0))))
-          case "InterpretedStagedW1Default" =>
-            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(granularity = ir.OpCode.OTHER, sortOrder = (-1, 0, 0))))
+            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(granularity = ir.OpCode.OTHER, sortOrder = SortOrder.Sel)))
 
-          case "JITStagedB1_EVR_BlockDefault" =>
-            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(ir.OpCode.EVAL_RULE_BODY, dotty = dotty, aot = false, block = true, sortOrder = (1, 0, 0))))
-          case "JITStagedB1_ESN_BlockDefault" =>
-            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(ir.OpCode.EVAL_RULE_SN, dotty = dotty, aot = false, block = true, sortOrder = (1, 0, 0))))
-          case "JITStagedB1_BC_EVR_BlockDefault" =>
-            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(ir.OpCode.EVAL_RULE_BODY, dotty = dotty, aot = false, block = true, sortOrder = (1, 0, 0), useBytecodeGenerator = true)))
-          case "JITStagedB1_BC_ESN_BlockDefault" =>
-            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(ir.OpCode.EVAL_RULE_SN, dotty = dotty, aot = false, block = true, sortOrder = (1, 0, 0), useBytecodeGenerator = true)))
+          case "JITStaged_Sel_RULE_Block_QuotesDefault" =>
+            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(granularity = ir.OpCode.EVAL_RULE_BODY, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Quotes)))
+          case "JITStaged_Sel_ALL_Block_QuotesDefault" =>
+            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(granularity = ir.OpCode.EVAL_RULE_SN, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Quotes)))
+          case "JITStaged_Sel_RULE_Block_BCDefault" =>
+            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(granularity = ir.OpCode.EVAL_RULE_BODY, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Bytecode)))
+          case "JITStaged_Sel_ALL_Block_BCDefault" =>
+            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(granularity = ir.OpCode.EVAL_RULE_SN, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Bytecode)))
 
-          case "JITStagedB1_fuzzy_EVR_BlockDefault" =>
-            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(ir.OpCode.EVAL_RULE_BODY, dotty = dotty, aot = false, block = true, sortOrder = (1, 1, 0))))
-          case "JITStagedB1_EVR_AsyncDefault" =>
-            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(ir.OpCode.EVAL_RULE_BODY, dotty = dotty, aot = false, block = false, sortOrder = (1, 0, 0))))
-          case "JITStagedB1_ESN_AsyncDefault" =>
-            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(ir.OpCode.EVAL_RULE_SN, dotty = dotty, aot = false, block = false, sortOrder = (1, 0, 0))))
-            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(ir.OpCode.EVAL_RULE_SN, dotty = dotty, aot = false, block = false, sortOrder = (-1, 0, 0))))
-            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(ir.OpCode.EVAL_RULE_SN, dotty = dotty, aot = true, block = false, sortOrder = (-1, 0, 0))))
           case _ => // WARNING: MUnit just returns null pointers everywhere if an error or assert is triggered in beforeEach
             throw new Exception(s"Unknown engine construction ${context.test.name}") // TODO: this is reported as passing
         }
@@ -147,20 +132,14 @@ abstract class TestGenerator(directory: Path,
     override def munitFixtures = List(program)
 
     Seq(
-      // "Naive",
+//      "Naive",
 //      "SemiNaive",
-      // "CompiledStaged",
-//      "InterpretedStaged",
-//      "InterpretedStaged_intmax",
-//      "InterpretedStaged_mixed",
-//      "InterpretedStaged_sel",
-//      "InterpretedStagedW1",
-//      "JITStagedB1_fuzzy_EVR_Block",
-//      "JITStagedB1_BC_ESN_Block",
-      "JITStagedB1_BC_EVR_Block",
-//      "JITStagedB1_ESN_Block",
-//      "JITStagedB1_EVR_Block",
-      // "JITStagedB1_ESN_Async",
+//      "CompiledStaged", // TODO: for longer tests, can throw MethodTooLarge
+      "InterpretedStaged",
+      "JITStaged_Sel_RULE_Block_BC",
+      "JITStaged_Sel_ALL_Block_BC",
+      "JITStaged_Sel_RULE_Block_Quotes",
+      "JITStaged_Sel_ALL_Block_Quotes",
     ).foreach(execution => {
       Seq("Volcano", "Default").foreach(storage => {
         if ((execution.contains("Staged") || execution.contains("BytecodeGenerated")) && storage == "Volcano") {} // skip and don't report as skipped

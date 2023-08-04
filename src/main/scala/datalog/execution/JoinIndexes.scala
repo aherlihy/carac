@@ -203,17 +203,16 @@ object JoinIndexes {
   }
 
   def getPresort(input: Array[ProjectJoinFilterOp], sortBy: Atom => (Boolean, Int), rId: Int, originalK: JoinIndexes, sm: StorageManager)(using jitOptions: JITOptions): (Array[ProjectJoinFilterOp], JoinIndexes) = {
-    jitOptions.sortOrder._1 match
-      case 0|5 => (input, originalK)
-      case -1|1|3|4 =>
+    jitOptions.sortOrder match
+      case SortOrder.Unordered | SortOrder.Badluck => (input, originalK)
+      case SortOrder.Sel | SortOrder.Mixed | SortOrder.IntMax | SortOrder.Worst =>
         val (newBody, newHash) =
-          if (jitOptions.sortOrder._1 == -1)
+          if (jitOptions.sortOrder == SortOrder.Worst)
             presortSelectWorst(sortBy, originalK, sm)
           else
             presortSelect(sortBy, originalK, sm)
         val newK = sm.allRulesAllIndexes(rId).getOrElseUpdate(newHash, JoinIndexes(originalK.atoms.head +: newBody.map(_._1), Some(originalK.cxns)))
         (input.map(c => ProjectJoinFilterOp(rId, newK, newBody.map((_, oldP) => c.childrenSO(oldP)): _*)), newK)
-      case _ => throw new Exception(s"Unknown sort order ${jitOptions.sortOrder}")
   }
 
   def allOrders(rule: Array[Atom]): AllIndexes = {
