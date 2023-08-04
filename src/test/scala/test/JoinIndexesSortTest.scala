@@ -120,24 +120,24 @@ class JoinIndexesSortTest extends munit.FunSuite {
 
     assertEquals(
       jIdx.cxns,
-      Map(
-        atom1.hash -> Map(
+      mutable.Map(
+        atom1.hash -> mutable.Map(
           1-> Seq(atom2.hash)),
-        atom2.hash -> Map(
+        atom2.hash -> mutable.Map(
           1 -> Seq(atom1.hash)),
-        atom3.hash -> Map(
+        atom3.hash -> mutable.Map(
           2 -> Seq(atom4.hash)),
-//        atom4.hash -> Map(
+//        atom4.hash -> mutable.Map(
 //          2 -> Seq(atom3.hash, atom5.hash)),
-        atom4.hash -> Map(
+        atom4.hash -> mutable.Map(
           2 -> Seq(atom3.hash)),
-        atom6.hash -> Map(
+        atom6.hash -> mutable.Map(
           3 -> Seq(atom9.hash, atom8.hash, atom7.hash)),
-        atom7.hash -> Map(
+        atom7.hash -> mutable.Map(
           3 -> Seq(atom6.hash, atom9.hash, atom8.hash)),
-        atom8.hash -> Map(
+        atom8.hash -> mutable.Map(
           3 -> Seq(atom6.hash, atom9.hash, atom7.hash)),
-        atom9.hash -> Map(
+        atom9.hash -> mutable.Map(
           3 -> Seq(atom6.hash, atom8.hash, atom7.hash)),
       )
     )
@@ -264,30 +264,30 @@ class JoinIndexesSortTest extends munit.FunSuite {
 
     assertEquals(
       jIdx.cxns.map((k, v) => (sm.ns.hashToAtom(k), v.map((c, hs) => (c, hs.map(h => sm.ns.hashToAtom(h)).toList.sorted)))),
-      Map(
-        atom1.hash -> Map(
+      mutable.Map(
+        atom1.hash -> mutable.Map(
           1 -> Seq(atom2.hash, atom12.hash)),
-        atom2.hash -> Map(
+        atom2.hash -> mutable.Map(
           1 -> Seq(atom1.hash, atom12.hash)),
-        atom3.hash -> Map(
+        atom3.hash -> mutable.Map(
           2 -> Seq(atom4.hash, atom5.hash)),
-        atom4.hash -> Map(
+        atom4.hash -> mutable.Map(
           2 -> Seq(atom5.hash, atom3.hash)),
-        atom5.hash -> Map(
+        atom5.hash -> mutable.Map(
           2 -> Seq(atom3.hash, atom4.hash)),
-        atom6.hash -> Map(
+        atom6.hash -> mutable.Map(
           3 -> Seq(atom9.hash, atom8.hash, atom7.hash)),
-        atom7.hash -> Map(
+        atom7.hash -> mutable.Map(
           3 -> Seq(atom6.hash, atom9.hash, atom8.hash)),
-        atom8.hash -> Map(
+        atom8.hash -> mutable.Map(
           3 -> Seq(atom6.hash, atom9.hash, atom7.hash)),
-        atom9.hash -> Map(
+        atom9.hash -> mutable.Map(
           3 -> Seq(atom6.hash, atom8.hash, atom7.hash)),
-        atom10.hash -> Map(
+        atom10.hash -> mutable.Map(
           3 -> Seq(atom11.hash), 4 -> Seq(atom12.hash)),
-        atom11.hash -> Map(
+        atom11.hash -> mutable.Map(
           3 -> Seq(atom10.hash, atom12.hash)),
-        atom12.hash -> Map(
+        atom12.hash -> mutable.Map(
           1 -> Seq(atom1.hash, atom2.hash), 3 -> Seq(atom11.hash), 4 -> Seq(atom10.hash))
       ).map((k, v) => (sm.ns.hashToAtom(k), v.map((c, hs) => (c, hs.map(h => sm.ns.hashToAtom(h)).toList.sorted))))
     )

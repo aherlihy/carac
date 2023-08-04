@@ -26,11 +26,11 @@ enum PredicateType:
  * @param cxns - convenience data structure tracking how many variables in common each atom has with every other atom.
  */
 case class JoinIndexes(varIndexes: Seq[Seq[Int]],
-                       constIndexes: Map[Int, Constant],
+                       constIndexes: mutable.Map[Int, Constant],
                        projIndexes: Seq[(String, Constant)],
                        deps: Seq[(PredicateType, RelationId)],
                        atoms: Array[Atom],
-                       cxns: Map[String, Map[Int, Seq[String]]],
+                       cxns: mutable.Map[String, mutable.Map[Int, Seq[String]]],
                        edb: Boolean = false
                       ) {
   override def toString(): String = toStringWithNS(null)
@@ -57,7 +57,7 @@ case class JoinIndexes(varIndexes: Seq[Seq[Int]],
 }
 
 object JoinIndexes {
-  def apply(rule: Array[Atom], precalculatedCxns: Option[Map[String, Map[Int, Seq[String]]]]) = {
+  def apply(rule: Array[Atom], precalculatedCxns: Option[mutable.Map[String, mutable.Map[Int, Seq[String]]]]) = {
     val constants = mutable.Map[Int, Constant]() // position => constant
     val variables = mutable.Map[Variable, Int]() // v.oid => position
 
@@ -114,10 +114,12 @@ object JoinIndexes {
           .filter((idx2, rId, count) => idx != idx2 && count != 0)
           .map(t => (t._2, t._3))
           .groupBy(_._2)
-          .map((count, hashs) => (count, hashs.map((hash, count2) => hash).toSeq)))
-    ).toMap)
+          .map((count, hashs) => (count, hashs.map((hash, count2) => hash).toSeq))
+          .to(mutable.Map)
+      )).to(mutable.Map)
+    )
 
-    new JoinIndexes(bodyVars, constants.toMap, projects, deps, rule, cxns)
+    new JoinIndexes(bodyVars, constants.to(mutable.Map), projects, deps, rule, cxns)
   }
 
   // used to approximate poor user-defined order
