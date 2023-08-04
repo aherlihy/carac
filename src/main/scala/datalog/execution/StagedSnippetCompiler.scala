@@ -46,7 +46,9 @@ class StagedSnippetCompiler(val storageManager: StorageManager)(using val jitOpt
 
   given ToExpr[PredicateType] with {
     def apply(x: PredicateType)(using Quotes) = {
-      Expr(x)
+      x match
+        case PredicateType.POSITIVE => '{ PredicateType.POSITIVE }
+        case PredicateType.NEGATED => '{ PredicateType.NEGATED }
     }
   }
 

@@ -259,7 +259,8 @@ case class ProjectJoinFilterOp(rId: RelationId, var hash: String, override val c
       inputs,
       rId,
       hash,
-      jitOptions.sortOrder
+      jitOptions.sortOrder,
+      storageManager.allRulesAllIndexes(rId)(hash)
     )
   override def run(storageManager: StorageManager): EDB =
     val inputs = children.map(s => s.run(storageManager))
@@ -274,7 +275,8 @@ case class ProjectJoinFilterOp(rId: RelationId, var hash: String, override val c
         inputs,
         rId,
         hash,
-        jitOptions.sortOrder
+        jitOptions.sortOrder,
+        storageManager.allRulesAllIndexes(rId)(hash)
       )
 }
 

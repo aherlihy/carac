@@ -44,7 +44,9 @@ class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: J
 
   given ToExpr[PredicateType] with {
     def apply(x: PredicateType)(using Quotes) = {
-      Expr(x)
+      x match
+        case PredicateType.POSITIVE => '{ PredicateType.POSITIVE }
+        case PredicateType.NEGATED => '{ PredicateType.NEGATED }
     }
   }
 
@@ -97,13 +99,15 @@ class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: J
           '{ $stagedSM.getEmptyEDB() }
 
       case ProjectJoinFilterOp(rId, hash, children: _*) =>
+        val k = storageManager.allRulesAllIndexes(rId)(hash)
         val compiledOps = Expr.ofSeq(children.map(compileIRRelOp))
         '{
           $stagedSM.joinProjectHelper_withHash(
             $compiledOps,
             ${ Expr(rId) },
             ${ Expr(hash) },
-            ${ Expr(jitOptions.sortOrder) }
+            ${ Expr(jitOptions.sortOrder) },
+            ${ Expr(k) }
           )
         }
 
