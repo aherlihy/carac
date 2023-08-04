@@ -1,6 +1,6 @@
 package datalog.execution.ir
 
-import datalog.dsl.Atom
+import datalog.dsl.{Atom, Constant}
 import datalog.execution.{JITOptions, JoinIndexes, PrecedenceGraph, StagedCompiler, ir}
 import datalog.execution.ast.*
 import datalog.storage.{DB, EDB, KNOWLEDGE, RelationId, StorageManager}

@@ -1,10 +1,11 @@
 package datalog.execution
 
-import datalog.dsl.{Atom, Constant, Variable, Term}
+import datalog.dsl.{Atom, Constant, Term, Variable}
 import datalog.execution.ir.*
-import datalog.storage.{StorageManager, DB, KNOWLEDGE, EDB}
+import datalog.storage.{DB, EDB, KNOWLEDGE, StorageManager}
 import datalog.tools.Debug.debug
 
+import scala.collection.mutable
 import scala.quoted.*
 
 /**
@@ -14,6 +15,11 @@ import scala.quoted.*
  * that it's possible.
  */
 class StagedSnippetCompiler(val storageManager: StorageManager)(using val jitOptions: JITOptions) {
+  given MutableMapToExpr[T: Type : ToExpr, U: Type : ToExpr]: ToExpr[mutable.Map[T, U]] with {
+    def apply(map: mutable.Map[T, U])(using Quotes): Expr[mutable.Map[T, U]] =
+      '{ mutable.Map(${ Expr(map.toSeq) }: _*) }
+  }
+
   given ToExpr[Constant] with {
     def apply(x: Constant)(using Quotes) = {
       x match {

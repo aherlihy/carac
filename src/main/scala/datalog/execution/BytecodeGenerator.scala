@@ -1,5 +1,8 @@
 package datalog.execution
 
+import datalog.dsl.{Atom, Constant, Variable, Term}
+import datalog.storage.RelationId
+
 import java.lang.constant.ConstantDescs.*
 import java.lang.constant.*
 import java.lang.invoke.*
@@ -149,6 +152,115 @@ object BytecodeGenerator {
     xb.constantInstruction(value)
       .invokestatic(clsDesc(classOf[Integer]), "valueOf",
         MethodTypeDesc.of(clsDesc(classOf[Integer]), clsDesc(classOf[Int])))
+
+  // for consistency
+  def emitString(xb: CodeBuilder, value: String): Unit =
+    xb.constantInstruction(value)
+
+  def emitBool(xb: CodeBuilder, value: Boolean): Unit =
+    if (value)
+      xb.constantInstruction(1)
+    else
+      xb.constantInstruction(0)
+
+  def emitSeqInt(xb: CodeBuilder, value: Seq[Int]): Unit =
+    emitSeq(xb, value.map(v => xxb => emitInteger(xxb, v)))
+
+  def emitSeqString(xb: CodeBuilder, value: Seq[String]): Unit =
+    emitSeq(xb, value.map(v => xxb => emitString(xxb, v)))
+
+  def emitVarIndexes(xb: CodeBuilder, value: Seq[Seq[Int]]): Unit =
+    emitSeq(xb, value.map(v => xxb => emitSeqInt(xxb, v)))
+
+  def emitConstant(xb: CodeBuilder, c: Constant): Unit =
+    c match
+      case e: Int => emitInteger(xb, e)
+      case s: String => emitString(xb, s)
+
+   def emitStringConstantTuple2(xb: CodeBuilder, t: (String, Constant)): Unit =
+     emitNew(xb, classOf[(String, Constant)], xxb =>
+       emitString(xxb, t._1)
+       emitConstant(xxb, t._2)
+     )
+
+  def emitVariable(xb: CodeBuilder, variable: Variable): Unit =
+    emitNew(xb, classOf[Variable], xxb =>
+      xxb.constantInstruction(variable.oid)
+      emitBool(xxb, variable.anon)
+    )
+  def emitPredicateType(xb: CodeBuilder, pred: PredicateType): Unit =
+    val enumCompanionCls = classOf[PredicateType.type]
+    emitObject(xb, enumCompanionCls)
+    xb.constantInstruction(pred.ordinal)
+    emitCall(xb, enumCompanionCls, "fromOrdinal", classOf[Int])
+
+  def emitTerm(xb: CodeBuilder, term: Term): Unit = term match {
+    case const: Constant => emitConstant(xb, const)
+    case variable: Variable => emitVariable(xb, variable)
+  }
+
+  def emitAtom(xb: CodeBuilder, atom: Atom): Unit = {
+    emitNew(xb, classOf[Atom], { xxb =>
+      xxb.constantInstruction(atom.rId)
+      emitSeq(xxb, atom.terms.map(t => xxxb => emitTerm(xxxb, t)))
+      emitBool(xxb, atom.negated)
+    })
+  }
+
+  def emitArrayAtoms(xb: CodeBuilder, atoms: Array[Atom]): Unit =
+    emitArray(xb, classOf[Atom], atoms.map(a => xxb => emitAtom(xxb, a)))
+
+  /**
+   * Put the singleton value corresponding to `cls` on the stack.
+   *
+   * @pre must be the singleton type `Foo.type` of an object `Foo`.`
+   */
+  def emitObject(xb: CodeBuilder, cls: Class[?]): Unit =
+    val cd = clsDesc(cls)
+    xb.getstatic(cd, "MODULE$", cd)
+
+  def emitMap[K, V](xb: CodeBuilder, entries: Iterable[(K, V)], emitKey: (CodeBuilder, K) => Any, emitValue: (CodeBuilder, V) => Any): Unit = {
+    val hashMapCompanionCls = classOf[scala.collection.mutable.HashMap.type]
+    val hashMapCls = classOf[scala.collection.mutable.HashMap[?, ?]]
+    emitObject(xb, hashMapCompanionCls)
+    emitCall(xb, hashMapCompanionCls, "empty")
+    entries.foreach { case (key, value) =>
+      xb.dup()
+      emitKey(xb, key)
+      emitValue(xb, value)
+      emitCall(xb, hashMapCls, "update", classOf[Object], classOf[Object])
+    }
+  }
+
+  def emitProjIndexes(xb: CodeBuilder, value: Seq[(String, Constant)]): Unit =
+    emitSeq(xb, value.map(v => xxb => emitStringConstantTuple2(xxb, v)))
+
+  def emitPredicateTypeRelationIdTuple2(xb: CodeBuilder, t: (PredicateType, RelationId)): Unit =
+    emitNew(xb, classOf[(PredicateType, RelationId)], xxb =>
+      emitPredicateType(xxb, t._1)
+      emitInteger(xxb, t._2)
+    )
+  def emitDeps(xb: CodeBuilder, value: Seq[(PredicateType, RelationId)]): Unit =
+    emitSeq(xb, value.map(v => xxb => emitPredicateTypeRelationIdTuple2(xxb, v)))
+
+  def emitConstIndexes(xb: CodeBuilder, value: collection.mutable.Map[Int, Constant]): Unit =
+    emitMap(xb, value.toSeq, emitInteger, emitConstant)
+
+  def emitCxnElement(xb: CodeBuilder, value: collection.mutable.Map[Int, Seq[String]]): Unit =
+    emitMap(xb, value.toSeq, emitInteger, emitSeqString)
+
+  def emitCxns(xb: CodeBuilder, value: collection.mutable.Map[String, collection.mutable.Map[Int, Seq[String]]]): Unit =
+    emitMap(xb, value.toSeq, emitString, emitCxnElement)
+
+  def emitJoinIndexes(xb: CodeBuilder, value: JoinIndexes): Unit =
+    emitNew(xb, classOf[JoinIndexes], xxb =>
+      emitVarIndexes(xxb, value.varIndexes)
+      emitConstIndexes(xxb, value.constIndexes)
+      emitProjIndexes(xxb, value.projIndexes)
+      emitDeps(xxb, value.deps)
+      emitArrayAtoms(xxb, value.atoms)
+      emitCxns(xxb, value.cxns)
+      emitBool(xxb, value.edb))
 
   val CD_BoxedUnit = clsDesc(classOf[scala.runtime.BoxedUnit])
 

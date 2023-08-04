@@ -60,7 +60,7 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
     )
   }
 
-  private inline def prefilter(consts: Map[Int, Constant], skip: Int, row: CollectionsRow): Boolean = {
+  private inline def prefilter(consts: mutable.Map[Int, Constant], skip: Int, row: CollectionsRow): Boolean = {
     consts.isEmpty || consts.forall((idx, const) => // for each filter // TODO: make sure out of range fails
       row(idx - skip) == const
     )

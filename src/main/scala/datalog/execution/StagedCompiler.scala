@@ -1,15 +1,16 @@
 package datalog.execution
 
-import datalog.dsl.{Atom, Constant, Variable, Term}
+import datalog.dsl.{Atom, Constant, Term, Variable}
 import datalog.execution.ir.*
-import datalog.storage.{StorageManager, DB, KNOWLEDGE, EDB}
+import datalog.storage.{DB, EDB, KNOWLEDGE, RelationId, StorageManager}
 import datalog.tools.Debug.debug
 
 import java.lang.invoke.MethodType
 import java.util.concurrent.atomic.AtomicInteger
 import scala.quoted.*
-
 import org.glavo.classfile.CodeBuilder
+
+import scala.collection.mutable
 
 /**
  * Separate out compile logic from StagedExecutionEngine
@@ -17,6 +18,11 @@ import org.glavo.classfile.CodeBuilder
 class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: JITOptions) {
   given staging.Compiler = jitOptions.dotty
   // TODO: move Exprs to where classes are defined?
+  given MutableMapToExpr[T: Type : ToExpr, U: Type : ToExpr]: ToExpr[mutable.Map[T, U]] with {
+    def apply(map: mutable.Map[T, U])(using Quotes): Expr[mutable.Map[T, U]] =
+      '{ mutable.Map(${ Expr(map.toSeq) }: _*) }
+  }
+
   given ToExpr[Constant] with {
     def apply(x: Constant)(using Quotes) = {
       x match {
@@ -358,8 +364,7 @@ class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: J
         xb.aload(0)
         emitSeq(xb, children.map(c => xxb => traverse(xxb, c)))
         xb.constantInstruction(rId)
-//          .constantInstruction(k)
-        emitJoinIndex(xb, k)
+        emitJoinIndexes(xb, k)
         emitSortOrder(xb, jitOptions.sortOrder)
         emitSMCall(xb, "joinProjectHelper_withHash",
           classOf[Seq[?]], classOf[Int], classOf[JoinIndexes], classOf[(Int, Int, Int)])
@@ -412,9 +417,6 @@ class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: J
     private def emitSortOrder(xb: CodeBuilder, sortOrder: (Int, Int, Int)): Unit =
       emitNew(xb, classOf[(Int, Int, Int)], xxb =>
         sortOrder.toList.foreach(elem => emitInteger(xxb, elem)))
-
-    // TODO: encode joinindex
-    private def emitJoinIndex(xb: CodeBuilder, k: JoinIndexes): Unit = ???
   }
 
   def getBytecodeGenerated[T](irTree: IROp[T]): CompiledFn[T] = {
