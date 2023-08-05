@@ -11,7 +11,7 @@ enum CompileSync:
 enum SortOrder:
   case Sel, IntMax, Mixed, Badluck, Unordered, Worst
 enum Backend:
-  case Quotes, Bytecode
+  case Quotes, Bytecode, Lambda
 
 // TODO: make JITOptions into an enum itself
 case class JITOptions(

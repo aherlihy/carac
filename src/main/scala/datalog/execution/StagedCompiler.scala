@@ -10,7 +10,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import scala.quoted.*
 import org.glavo.classfile.CodeBuilder
 
-import scala.collection.mutable
+import scala.collection.{immutable, mutable}
 
 /**
  * Separate out compile logic from StagedExecutionEngine
@@ -233,6 +233,158 @@ class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: J
       case _ => compileIRRelOp(irTree.asInstanceOf[IROp[EDB]]) // unfortunate but necessary to avoid 2x methods
     }
   }
+
+
+  /** Convert a Seq of lambdas into a lambda returning a Seq. */
+  def seqToLambda[T](seq: Seq[StorageManager => T]): StorageManager => Seq[T] =
+    // This could be optimized for specific Seq subclasses such as `ArraySeq.ofRef`.
+    sm =>
+      seq.map(lambda => lambda(sm))
+
+  /** Convert an Array of lambdas into a lambda returning an Array. */
+  def arrayToLambda[T](arr: Array[StorageManager => T]): StorageManager => Array[T] =
+    // TODO: unroll based on arr.length?
+    sm =>
+      // This cast will break if T is a primitive, but right now the T in IROp[T]
+      // is always a reference type, so we can be more efficient
+      // TODO: Change "class IROp[T]" to "class IROp[T <: AnyRef]" so we can construct
+      // an Array[T] efficiently without casts, or support primitives too.
+      val out = (new Array[AnyRef](arr.length)).asInstanceOf[Array[T]]
+      var i = 0
+      while (i < arr.length)
+        out(i) = arr(i)(sm)
+        i += 1
+      out
+
+  /** "Compile" an IRTree into nested lambda calls. */
+  def compileToLambda[T](irTree: IROp[T]): CompiledFn[T] = irTree match
+    case ProgramOp(children:_*) =>
+      compileToLambda(children.head)
+
+    case DoWhileOp(toCmp, children:_*) =>
+      val cond: CompiledFn[Boolean] = toCmp match {
+        case DB.Derived =>
+          !_.compareDerivedDBs()
+        case DB.Delta =>
+          _.compareNewDeltaDBs()
+      }
+      val body = compileToLambda(children.head)
+      sm =>
+        while {
+          body(sm)
+          cond(sm)
+        } do ()
+
+    case UpdateDiscoveredOp() =>
+      _.updateDiscovered()
+
+    case SwapAndClearOp() =>
+      sm =>
+        sm.swapKnowledge()
+        sm.clearNewDerived()
+
+    case SequenceOp(label, children:_*) =>
+      val cOps: Array[CompiledFn[Any]] = children.map(compileToLambda).toArray
+      cOps.length match
+        case 1 =>
+          cOps(0)
+        case 2 =>
+          sm => { cOps(0)(sm); cOps(1)(sm) }
+        case 3 =>
+          sm => { cOps(0)(sm); cOps(1)(sm); cOps(2)(sm) }
+        case _ =>
+          sm => {
+            var i = 0
+            while (i < cOps.length) {
+              cOps(i)(sm)
+              i += 1
+            }
+          }
+
+    case InsertOp(rId, db, knowledge, children:_*) =>
+      val res = compileToLambda(children.head.asInstanceOf[IROp[EDB]])
+      db match {
+        case DB.Derived =>
+          val res2: CompiledFn[EDB] =
+            if (children.length > 1)
+              compileToLambda(children(1).asInstanceOf[IROp[EDB]])
+            else
+              _.getEmptyEDB()
+          knowledge match {
+            case KNOWLEDGE.New =>
+              sm => sm.resetNewDerived(rId, res(sm), res2(sm))
+            case KNOWLEDGE.Known =>
+              sm => sm.resetKnownDerived(rId, res(sm), res2(sm))
+          }
+        case DB.Delta =>
+          knowledge match {
+            case KNOWLEDGE.New =>
+              sm => sm.resetNewDelta(rId, res(sm))
+            case KNOWLEDGE.Known =>
+              sm => sm.resetKnownDelta(rId, res(sm))
+          }
+      }
+
+    case ScanOp(rId, db, knowledge) =>
+      db match {
+        case DB.Derived =>
+          knowledge match {
+            case KNOWLEDGE.New =>
+              _.getNewDerivedDB(rId)
+            case KNOWLEDGE.Known =>
+              _.getKnownDerivedDB(rId)
+          }
+        case DB.Delta =>
+          knowledge match {
+            case KNOWLEDGE.New =>
+              _.getNewDeltaDB(rId)
+            case KNOWLEDGE.Known =>
+              _.getKnownDeltaDB(rId)
+          }
+      }
+
+    case ComplementOp(arity) =>
+      _.getComplement(arity)
+
+    case ScanEDBOp(rId) =>
+      if (storageManager.edbContains(rId))
+        _.getEDB(rId)
+      else
+        _.getEmptyEDB()
+
+    case ProjectJoinFilterOp(rId, k, children: _*) =>
+      val compiledOps = seqToLambda(children.map(compileToLambda))
+      sm => sm.joinProjectHelper_withHash(
+        compiledOps(sm),
+        rId,
+        k.hash,
+        jitOptions.onlineSort
+      )
+
+    case UnionSPJOp(rId, k, children: _*) =>
+      val (sortedChildren, _) =
+        if (jitOptions.sortOrder != SortOrder.Unordered && jitOptions.sortOrder != SortOrder.Badluck)
+          JoinIndexes.getPresort(
+            children.toArray,
+            jitOptions.getSortFn(storageManager),
+            rId,
+            k,
+            storageManager
+          )
+        else
+          (children.toArray, k)
+
+      val compiledOps = arrayToLambda(sortedChildren.map(compileToLambda))
+      sm => sm.union(compiledOps(sm))
+
+    case UnionOp(label, children: _*) =>
+      val compiledOps = seqToLambda(children.map(compileToLambda))
+      sm => sm.union(compiledOps(sm))
+
+    case DiffOp(children: _*) =>
+      val clhs = compileToLambda(children.head)
+      val crhs = compileToLambda(children(1))
+      sm => sm.diff(clhs(sm), crhs(sm))
 
   class IRBytecodeGenerator(methType: MethodType) extends BytecodeGenerator[IROp[?]](
     clsName = "datalog.execution.Generated$$Hidden", methType

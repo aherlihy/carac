@@ -156,6 +156,13 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
     storageManager.getNewIDBResult(ctx.toSolve)
   }
 
+  def solveLambda(irTree: IROp[Any], ctx: InterpreterContext): Set[Seq[Term]] = {
+    debug("", () => "lambda mode")
+    val compiled = compiler.compileToLambda(irTree)
+    compiled(storageManager)
+    storageManager.getNewIDBResult(ctx.toSolve)
+  }
+
   def solveCompiled(irTree: IROp[Any], ctx: InterpreterContext): Set[Seq[Term]] = {
     debug("", () => "compile-only mode")
     val compiled = compiler.getCompiled(irTree)
@@ -199,14 +206,19 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
   inline def startCompileThread[T](op: IROp[T])(using jitOptions: JITOptions): Unit =
     debug(s"starting online compilation for code ${op.code}", () => "")
     given scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
-    op.compiledFn = if (jitOptions.backend == Backend.Bytecode)
+    op.compiledFn = jitOptions.backend match
+      case Backend.Lambda =>
         Future {
-        compiler.getBytecodeGenerated(op)
-      }
-    else
-      Future {
-         compiler.getCompiled(op)
-      }
+          compiler.compileToLambda(op)
+        }
+      case Backend.Bytecode =>
+        Future {
+          compiler.getBytecodeGenerated(op)
+        }
+      case Backend.Quotes =>
+        Future {
+          compiler.getCompiled(op)
+        }
 
     stragglers.addOne(op.compiledFn.hashCode(), op.compiledFn)
 
@@ -321,10 +333,13 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
 
       case op: UnionOp if jitOptions.granularity == op.code =>
         if (jitOptions.compileSync == CompileSync.Blocking) {
-          op.blockingCompiledFn = if (jitOptions.backend == Backend.Bytecode)
-            compiler.getBytecodeGenerated(op)
-          else
-            compiler.getCompiled(op)
+          op.blockingCompiledFn = jitOptions.backend match
+            case Backend.Lambda =>
+              compiler.compileToLambda(op)
+            case Backend.Bytecode =>
+              compiler.getBytecodeGenerated(op)
+            case Backend.Quotes =>
+              compiler.getCompiled(op)
 
           op.blockingCompiledFn(storageManager)
         } else {
@@ -427,10 +442,13 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
     if (defaultJITOptions.granularity == OpCode.OTHER) // i.e. never compile
       solveInterpreted(irTree, irCtx)
     else if (defaultJITOptions.granularity == OpCode.PROGRAM && defaultJITOptions.compileSync == CompileSync.Blocking) // i.e. compile asap and block
-      if (defaultJITOptions.backend == Backend.Bytecode)
-        solveBytecodeGenerated(irTree, irCtx)
-      else
-        solveCompiled(irTree, irCtx)
+      defaultJITOptions.backend match
+        case Backend.Lambda =>
+          solveLambda(irTree, irCtx)
+        case Backend.Bytecode =>
+          solveBytecodeGenerated(irTree, irCtx)
+        case Backend.Quotes =>
+          solveCompiled(irTree, irCtx)
     else
       solveJIT(irTree, irCtx)
   }
