@@ -1,6 +1,8 @@
 package datalog.execution
 
+import datalog.dsl.Atom
 import datalog.execution.ir.OpCode
+import datalog.storage.StorageManager
 
 import scala.quoted.staging
 
@@ -37,4 +39,17 @@ case class JITOptions(
     val programStr = s"${modeStr}_default_${sortOrder}_${onlineSortStr}_${fuzzy}_${compileSync}".toLowerCase()
     s"${programStr}_${granStr}_${backend.toString.toLowerCase()}"
 
+  def getSortFn(storageManager: StorageManager): Atom => (Boolean, Int) =
+    (a: Atom) =>
+      sortOrder match
+        case SortOrder.IntMax =>
+          if (storageManager.edbContains(a.rId))
+            (true, storageManager.getEDBResult(a.rId).size)
+          else
+            (true, Int.MaxValue)
+        case SortOrder.Sel =>
+          (true, storageManager.getKnownDerivedDB(a.rId).length)
+        case SortOrder.Mixed =>
+          (storageManager.allRulesAllIndexes.contains(a.rId), storageManager.getKnownDerivedDB(a.rId).length)
+        case _ => throw new Exception(s"Unknown sort order ${sortOrder}")
 }

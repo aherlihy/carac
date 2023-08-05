@@ -211,7 +211,10 @@ object JoinIndexes {
             presortSelectWorst(sortBy, originalK, sm)
           else
             presortSelect(sortBy, originalK, sm)
-        val newK = sm.allRulesAllIndexes(rId).getOrElseUpdate(newHash, JoinIndexes(originalK.atoms.head +: newBody.map(_._1), Some(originalK.cxns)))
+        val newK = sm.allRulesAllIndexes(rId).getOrElseUpdate(
+          newHash,
+          JoinIndexes(originalK.atoms.head +: newBody.map(_._1), Some(originalK.cxns))
+        )
         (input.map(c => ProjectJoinFilterOp(rId, newK, newBody.map((_, oldP) => c.childrenSO(oldP)): _*)), newK)
   }
 

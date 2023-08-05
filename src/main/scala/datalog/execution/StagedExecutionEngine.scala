@@ -52,14 +52,14 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
 
     var rule = ruleSeq.toArray
     var k = JoinIndexes(rule, None)
-    storageManager.allRulesAllIndexes.getOrElseUpdate(rId, mutable.Map[String, JoinIndexes]())
+    storageManager.allRulesAllIndexes.getOrElseUpdate(rId, mutable.Map[String, JoinIndexes]()).addOne(k.hash, k)
 
     if (rule.length <= heuristics.max_length_cache)
       val allK = JoinIndexes.allOrders(rule)
-      storageManager.allRulesAllIndexes.getOrElseUpdate(rId, mutable.Map[String, JoinIndexes]()) ++= allK
+      storageManager.allRulesAllIndexes(rId) ++= allK
 
     if (defaultJITOptions.sortOrder == SortOrder.Sel) // sort before inserting, just in case EDBs are defined
-      val (sortedBody, newHash) = JoinIndexes.presortSelect(
+      val (sortedBody, newHash) = JoinIndexes.presortSelect( // use preSort bc no child nodes to rearrange
         a =>
           if (storageManager.edbContains(a.rId))
             (true, storageManager.getEDBResult(a.rId).size)
@@ -70,6 +70,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
       )
       rule = rule.head +: sortedBody.map(_._1)
       k = JoinIndexes(rule, Some(k.cxns))
+      storageManager.allRulesAllIndexes(rId).addOne(k.hash, k)
     else if (defaultJITOptions.sortOrder == SortOrder.Badluck) // mimic "bad luck" program definition, so ingest rules in a bad order and then don't update them.
       val (sortedBody, newHash) = JoinIndexes.presortSelectWorst(
         a =>
@@ -82,6 +83,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
       )
       rule = rule.head +: sortedBody.map(_._1)
       k = JoinIndexes(rule, Some(k.cxns))
+      storageManager.allRulesAllIndexes(rId).addOne(k.hash, k)
 
     //    println(s"${storageManager.printer.ruleToString(rule)}")
 

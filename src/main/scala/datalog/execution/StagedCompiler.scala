@@ -77,19 +77,6 @@ class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: J
     }
   }
 
-  def uSPJSortFn(jitOptions: JITOptions)(a: Atom): (Boolean, Int) =
-    jitOptions.sortOrder match
-      case SortOrder.IntMax =>
-        if (storageManager.edbContains(a.rId))
-          (true, storageManager.getEDBResult(a.rId).size)
-        else
-          (true, Int.MaxValue)
-      case SortOrder.Sel =>
-        (true, storageManager.getKnownDerivedDB(a.rId).length)
-      case SortOrder.Mixed =>
-        (storageManager.allRulesAllIndexes.contains(a.rId), storageManager.getKnownDerivedDB(a.rId).length)
-      case _ => throw new Exception(s"Unknown sort order ${jitOptions.sortOrder}")
-
   /**
    * Compiles a relational operator into a quote that returns an EDB. Future TODO: merge with compileIR when dotty supports.
    */
@@ -128,32 +115,17 @@ class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: J
           $stagedSM.joinProjectHelper_withHash(
             $compiledOps,
             ${ Expr(rId) },
-            ${ Expr(k) },
+            ${ Expr(k.hash) },
             ${ Expr(jitOptions.onlineSort) }
           )
         }
 
       case UnionSPJOp(rId, k, children: _*) =>
-        val (sortedChildren, newK) =
+        val (sortedChildren, _) =
           if (jitOptions.sortOrder != SortOrder.Unordered && jitOptions.sortOrder != SortOrder.Badluck)
-            val sortFn =
-              jitOptions.sortOrder match
-                case SortOrder.IntMax =>
-                  (a: Atom) =>
-                    if (storageManager.edbContains(a.rId))
-                      (true, storageManager.getEDBResult(a.rId).size)
-                    else
-                      (true, Int.MaxValue)
-                case SortOrder.Sel =>
-                  (a: Atom) => (true, storageManager.getKnownDerivedDB(a.rId).length)
-                case SortOrder.Mixed =>
-                  (a: Atom) => (storageManager.allRulesAllIndexes.contains(a.rId), storageManager.getKnownDerivedDB(a.rId).length)
-                case _ => throw new Exception(s"Unknown sort order ${jitOptions.sortOrder}")
-
-
             JoinIndexes.getPresort(
               children.toArray,
-              sortFn,
+              jitOptions.getSortFn(storageManager),
               rId,
               k,
               storageManager
@@ -361,17 +333,17 @@ class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: J
         xb.aload(0)
         emitSeq(xb, children.map(c => xxb => traverse(xxb, c)))
         xb.constantInstruction(rId)
-        emitJoinIndexes(xb, k)
+        emitString(xb, k.hash)
         emitBool(xb, jitOptions.onlineSort)
         emitSMCall(xb, "joinProjectHelper_withHash",
-          classOf[Seq[?]], classOf[Int], classOf[JoinIndexes], classOf[Boolean])
+          classOf[Seq[?]], classOf[Int], classOf[String], classOf[Boolean])
 
       case UnionSPJOp(rId, k, children: _*) =>
-        val (sortedChildren, newK) =
+        val (sortedChildren, _) =
           if (jitOptions.sortOrder != SortOrder.Unordered)
             JoinIndexes.getPresort(
               children.toArray,
-              uSPJSortFn(jitOptions),
+              jitOptions.getSortFn(storageManager),
               rId,
               k,
               storageManager
@@ -452,11 +424,11 @@ class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: J
       case uOp: UnionOp =>
         '{ ${Expr.ofSeq(uOp.children.toSeq.map(compileIRRelOp))}($i) }
       case uSPJOp: UnionSPJOp =>
-        val (sortedChildren, newK) =
+        val (sortedChildren, _) =
           if (jitOptions.sortOrder != SortOrder.Unordered && jitOptions.sortOrder != SortOrder.Badluck)
             JoinIndexes.getPresort(
               uSPJOp.children.toArray,
-              uSPJSortFn(jitOptions),
+              jitOptions.getSortFn(storageManager),
               uSPJOp.rId,
               uSPJOp.k,
               storageManager
