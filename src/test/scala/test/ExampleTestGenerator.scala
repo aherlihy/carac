@@ -114,6 +114,10 @@ abstract class TestGenerator(directory: Path,
             Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(granularity = ir.OpCode.EVAL_RULE_BODY, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Bytecode)))
           case "JITStaged_Sel_ALL_Block_BCDefault" =>
             Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(granularity = ir.OpCode.EVAL_RULE_SN, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Bytecode)))
+          case "JITStaged_Sel_RULE_Block_LambdaDefault" =>
+            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(granularity = ir.OpCode.EVAL_RULE_BODY, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)))
+          case "JITStaged_Sel_ALL_Block_LambdaDefault" =>
+            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(granularity = ir.OpCode.EVAL_RULE_SN, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)))
 
           case _ => // WARNING: MUnit just returns null pointers everywhere if an error or assert is triggered in beforeEach
             throw new Exception(s"Unknown engine construction ${context.test.name}") // TODO: this is reported as passing
@@ -140,9 +144,11 @@ abstract class TestGenerator(directory: Path,
       "JITStaged_Sel_ALL_Block_BC",
       "JITStaged_Sel_RULE_Block_Quotes",
       "JITStaged_Sel_ALL_Block_Quotes",
+      "JITStaged_Sel_RULE_Block_Lambda",
+      "JITStaged_Sel_ALL_Block_Lambda",
     ).foreach(execution => {
       Seq("Volcano", "Default").foreach(storage => {
-        if ((execution.contains("Staged") || execution.contains("BytecodeGenerated")) && storage == "Volcano") {} // skip and don't report as skipped
+        if ((execution.contains("Staged") || execution.contains("BytecodeGenerated") || execution.contains("Lambda")) && storage == "Volcano") {} // skip and don't report as skipped
         else if (
             skip.contains(execution) || skip.contains(storage) ||
               (tags ++ Set(execution, storage)).flatMap(t => Properties.envOrNone(t.toUpperCase())).nonEmpty// manually implement --exclude for intellij
