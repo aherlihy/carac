@@ -237,22 +237,24 @@ class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: J
 
   /** Convert a Seq of lambdas into a lambda returning a Seq. */
   def seqToLambda[T](seq: Seq[StorageManager => T]): StorageManager => Seq[T] =
-    // This could be optimized for specific Seq subclasses such as `ArraySeq.ofRef`.
-    sm =>
-      seq.map(lambda => lambda(sm))
+    seq match
+      case seq: immutable.ArraySeq.ofRef[_] =>
+        val arr = unsafeArrayToLambda(seq.unsafeArray)
+        sm => new immutable.ArraySeq.ofRef(arr(sm).asInstanceOf[Array[AnyRef & T]])
+      case _ =>
+        sm =>
+          seq.map(lambda => lambda(sm))
 
   /** Convert an Array of lambdas into a lambda returning an Array. */
   def arrayToLambda[T](arr: Array[StorageManager => T]): StorageManager => Array[T] =
-    // TODO: unroll based on arr.length?
+    unsafeArrayToLambda(arr).asInstanceOf[StorageManager => Array[T]]
+
+  def unsafeArrayToLambda(arr: Array[? <: AnyRef]): StorageManager => Array[AnyRef] =
     sm =>
-      // This cast will break if T is a primitive, but right now the T in IROp[T]
-      // is always a reference type, so we can be more efficient
-      // TODO: Change "class IROp[T]" to "class IROp[T <: AnyRef]" so we can construct
-      // an Array[T] efficiently without casts, or support primitives too.
-      val out = (new Array[AnyRef](arr.length)).asInstanceOf[Array[T]]
+      val out = (new Array[AnyRef](arr.length))
       var i = 0
       while (i < arr.length)
-        out(i) = arr(i)(sm)
+        out(i) = arr(i).asInstanceOf[StorageManager => AnyRef](sm)
         i += 1
       out
 
