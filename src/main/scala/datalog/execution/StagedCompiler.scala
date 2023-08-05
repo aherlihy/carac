@@ -250,13 +250,34 @@ class StagedCompiler(val storageManager: StorageManager)(using val jitOptions: J
     unsafeArrayToLambda(arr).asInstanceOf[StorageManager => Array[T]]
 
   def unsafeArrayToLambda(arr: Array[? <: AnyRef]): StorageManager => Array[AnyRef] =
-    sm =>
-      val out = (new Array[AnyRef](arr.length))
-      var i = 0
-      while (i < arr.length)
-        out(i) = arr(i).asInstanceOf[StorageManager => AnyRef](sm)
-        i += 1
-      out
+    // TODO: Instead of unrolling by hand, we could use a macro.
+    arr.length match
+      case 1 =>
+        sm =>
+          val out = (new Array[AnyRef](1))
+          out(0) = arr(0).asInstanceOf[StorageManager => AnyRef](sm)
+          out
+      case 2 =>
+        sm =>
+          val out = (new Array[AnyRef](2))
+          out(0) = arr(0).asInstanceOf[StorageManager => AnyRef](sm)
+          out(1) = arr(1).asInstanceOf[StorageManager => AnyRef](sm)
+          out
+      case 3 =>
+        sm =>
+          val out = (new Array[AnyRef](3))
+          out(0) = arr(0).asInstanceOf[StorageManager => AnyRef](sm)
+          out(1) = arr(1).asInstanceOf[StorageManager => AnyRef](sm)
+          out(2) = arr(2).asInstanceOf[StorageManager => AnyRef](sm)
+          out
+      case _ =>
+        sm =>
+          val out = (new Array[AnyRef](arr.length))
+          var i = 0
+          while (i < arr.length)
+            out(i) = arr(i).asInstanceOf[StorageManager => AnyRef](sm)
+            i += 1
+          out
 
   /** "Compile" an IRTree into nested lambda calls. */
   def compileToLambda[T](irTree: IROp[T]): CompiledFn[T] = irTree match
