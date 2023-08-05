@@ -427,7 +427,10 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
     if (defaultJITOptions.granularity == OpCode.OTHER) // i.e. never compile
       solveInterpreted(irTree, irCtx)
     else if (defaultJITOptions.granularity == OpCode.PROGRAM && defaultJITOptions.compileSync == CompileSync.Blocking) // i.e. compile asap and block
-      solveCompiled(irTree, irCtx)
+      if (defaultJITOptions.backend == Backend.Bytecode)
+        solveBytecodeGenerated(irTree, irCtx)
+      else
+        solveCompiled(irTree, irCtx)
     else
       solveJIT(irTree, irCtx)
   }
