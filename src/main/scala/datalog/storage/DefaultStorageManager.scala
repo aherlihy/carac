@@ -79,7 +79,8 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
     )
   }
 
-  override def joinProjectHelper_withHash(inputsEDB: Seq[EDB], rId: Int, originalK: JoinIndexes, onlineSort: Boolean): CollectionsEDB = {
+  override def joinProjectHelper_withHash(inputsEDB: Seq[EDB], rId: Int, hash: String, onlineSort: Boolean): CollectionsEDB = {
+    val originalK = allRulesAllIndexes(rId)(hash)
     val inputs = asCollectionsSeqEDB(inputsEDB)
 //    var intermediateCardinalities = Seq[Int]()
     if (inputs.length == 1) // just filter
@@ -109,7 +110,7 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
               if (atomI > 1 && onlineSort && outerT.length > innerT.length)
                 val body = k.atoms.drop(1)
                 val newerHash = JoinIndexes.getRuleHash(Array(k.atoms.head, body(atomI)) ++ body.dropRight(body.length - atomI) ++ body.drop(atomI + 1))
-                k = allRulesAllIndexes(rId).getOrElse(newerHash, JoinIndexes(originalK.atoms.head +: body, Some(originalK.cxns)))
+                k = allRulesAllIndexes(rId).getOrElseUpdate(newerHash, JoinIndexes(originalK.atoms.head +: body, Some(originalK.cxns)))
                 (outerT, innerT)
               else
                 (innerT, outerT)

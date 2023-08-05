@@ -55,10 +55,11 @@ class CopyEliminationPass()(using ASTTransformerContext) extends Transformer {
               a
           )
           if (aliased)
+            newK = JoinIndexes(transformedAtoms, None)
+            ctx.sm.allRulesAllIndexes.getOrElseUpdate(transformedAtoms.head.rId, mutable.Map[String, JoinIndexes]()).addOne(newK.hash, newK)
             if (body.size < heuristics.max_length_cache)
               val allK = JoinIndexes.allOrders(transformedAtoms)
-              ctx.sm.allRulesAllIndexes.getOrElseUpdate(transformedAtoms.head.rId, mutable.Map[String, JoinIndexes]()) ++= allK
-            newK = JoinIndexes(transformedAtoms, None)
+              ctx.sm.allRulesAllIndexes(transformedAtoms.head.rId) ++= allK
 
             ctx.precedenceGraph.addNode(transformedAtoms)
             ctx.precedenceGraph.updateNodeAlias(ctx.aliases)

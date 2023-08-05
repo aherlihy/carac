@@ -252,7 +252,7 @@ case class ProjectJoinFilterOp(rId: RelationId, var k: JoinIndexes, override val
     storageManager.joinProjectHelper_withHash(
       inputs,
       rId,
-      k,
+      k.hash,
       jitOptions.onlineSort
     )
   override def run(storageManager: StorageManager): EDB =
@@ -260,7 +260,7 @@ case class ProjectJoinFilterOp(rId: RelationId, var k: JoinIndexes, override val
     storageManager.joinProjectHelper_withHash(
         inputs,
         rId,
-        k,
+        k.hash,
         jitOptions.onlineSort
       )
 }
@@ -303,24 +303,9 @@ case class UnionSPJOp(rId: RelationId, var k: JoinIndexes, override val children
     if (jitOptions.sortOrder == SortOrder.Unordered || jitOptions.sortOrder == SortOrder.Badluck || children.length < 3 || jitOptions.granularity != OpCode.OTHER) // If not only interpreting, then don't optimize since we are waiting for the optimized version to compile
       storageManager.union(children.map((s: ProjectJoinFilterOp) => s.run(storageManager)))
     else
-      val sortFn =
-        jitOptions.sortOrder match
-          case SortOrder.IntMax =>
-            (a: Atom) =>
-              if (storageManager.edbContains(a.rId))
-                (true, storageManager.getEDBResult(a.rId).size)
-              else
-                (true, Int.MaxValue)
-          case SortOrder.Sel =>
-            (a: Atom) => (true, storageManager.getKnownDerivedDB(a.rId).length)
-          case SortOrder.Mixed =>
-            (a: Atom) => (storageManager.allRulesAllIndexes.contains(a.rId), storageManager.getKnownDerivedDB(a.rId).length)
-          case _ => throw new Exception(s"Unknown sort order ${jitOptions.sortOrder}")
-
-
       val (sortedChildren, newK) = JoinIndexes.getPresort(
         children.toArray,
-        sortFn,
+        jitOptions.getSortFn(storageManager),
         rId,
         k,
         storageManager
