@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1691358146993,
+  "lastUpdate": 1691359553337,
   "repoUrl": "https://github.com/aherlihy/carac",
   "entries": {
     "Benchmark": [
@@ -20944,6 +20944,888 @@ window.BENCHMARK_DATA = {
           {
             "name": "datalog.benchmarks.examples.tree.shallow_default_seminaive______EOL_ci",
             "value": 1.1064065856767573,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "herlihyap@gmail.com",
+            "name": "aherlihy",
+            "username": "aherlihy"
+          },
+          "committer": {
+            "email": "herlihyap@gmail.com",
+            "name": "aherlihy",
+            "username": "aherlihy"
+          },
+          "distinct": true,
+          "id": "5a42b56cf60fa76eaea4a3eba39c9efca4f639db",
+          "message": "Separate out compiler backends; add lamdba to bench",
+          "timestamp": "2023-08-06T22:21:34+02:00",
+          "tree_id": "c33a21ce4ee009076c76c115ded618bf4f121cb1",
+          "url": "https://github.com/aherlihy/carac/commit/5a42b56cf60fa76eaea4a3eba39c9efca4f639db"
+        },
+        "date": 1691359552422,
+        "tool": "jmh",
+        "benches": [
+          {
+            "name": "datalog.benchmarks.examples.ackermann.jit_default_sel__0_async_1RULE_quotes_EOL_ci",
+            "value": 6.305446866134912,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.ackermann.jit_default_sel__0_async_ALL_quotes_EOL_ci",
+            "value": 4.803215726385121,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.ackermann.jit_default_sel__0_blocking_1RULE_quotes_EOL_ci",
+            "value": 44.574987126389615,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.ackermann.jit_default_sel__0_blocking_ALL_quotes_EOL_ci",
+            "value": 21.76597270339221,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.ackermann.shallow_default_seminaive______EOL_ci",
+            "value": 27.611936150526315,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.andersen.jit_default_sel__0_async_1RULE_quotes_EOL_ci",
+            "value": 2.6164335542746864,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.andersen.jit_default_sel__0_async_ALL_quotes_EOL_ci",
+            "value": 2.8274945578910744,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.andersen.jit_default_sel__0_blocking_1RULE_quotes_EOL_ci",
+            "value": 716.3368288167567,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.andersen.jit_default_sel__0_blocking_ALL_quotes_EOL_ci",
+            "value": 250.78052034187158,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.andersen.shallow_default_seminaive______EOL_ci",
+            "value": 0.5706503894442218,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.anonvar.jit_default_sel__0_async_1RULE_quotes_EOL_ci",
+            "value": 73352.98150200001,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.anonvar.jit_default_sel__0_async_ALL_quotes_EOL_ci",
+            "value": 85838.855234,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.anonvar.jit_default_sel__0_blocking_1RULE_quotes_EOL_ci",
+            "value": 83499.37430200001,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.anonvar.jit_default_sel__0_blocking_ALL_quotes_EOL_ci",
+            "value": 84606.16408,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.anonvar.shallow_default_seminaive______EOL_ci",
+            "value": 71554.625882,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.cbaexprvalue.jit_default_sel__0_async_1RULE_quotes_EOL_ci",
+            "value": 22.81293549515876,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.cbaexprvalue.jit_default_sel__0_async_ALL_quotes_EOL_ci",
+            "value": 18.976279712552113,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.cbaexprvalue.jit_default_sel__0_blocking_1RULE_quotes_EOL_ci",
+            "value": 1890.1841122933333,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.cbaexprvalue.jit_default_sel__0_blocking_ALL_quotes_EOL_ci",
+            "value": 1110.4772855603635,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.cbaexprvalue.shallow_default_seminaive______EOL_ci",
+            "value": 6.303742370353414,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.clique.jit_default_sel__0_async_1RULE_quotes_EOL_ci",
+            "value": 75.5677942989989,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.clique.jit_default_sel__0_async_ALL_quotes_EOL_ci",
+            "value": 74.18338230238568,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.clique.jit_default_sel__0_blocking_1RULE_quotes_EOL_ci",
+            "value": 415.9284424419353,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.clique.jit_default_sel__0_blocking_ALL_quotes_EOL_ci",
+            "value": 299.0525439167806,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.clique.shallow_default_seminaive______EOL_ci",
+            "value": 35.57758005834408,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.cliquer.jit_default_sel__0_async_1RULE_quotes_EOL_ci",
+            "value": 6.335168884979666,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.cliquer.jit_default_sel__0_async_ALL_quotes_EOL_ci",
+            "value": 5.974284827420862,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.cliquer.jit_default_sel__0_blocking_1RULE_quotes_EOL_ci",
+            "value": 1104.2927008067077,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.cliquer.jit_default_sel__0_blocking_ALL_quotes_EOL_ci",
+            "value": 678.3203576596694,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.cliquer.shallow_default_seminaive______EOL_ci",
+            "value": 1.6859331539560078,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.equal.jit_default_sel__0_async_1RULE_quotes_EOL_ci",
+            "value": 51.58558986497909,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.equal.jit_default_sel__0_async_ALL_quotes_EOL_ci",
+            "value": 43.834974278470995,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.equal.jit_default_sel__0_blocking_1RULE_quotes_EOL_ci",
+            "value": 2588.724835544893,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.equal.jit_default_sel__0_blocking_ALL_quotes_EOL_ci",
+            "value": 2612.196158459903,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.equal.shallow_default_seminaive______EOL_ci",
+            "value": 80.10370399108554,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.fib.jit_default_sel__0_async_1RULE_quotes_EOL_ci",
+            "value": 380.2546197427538,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.fib.jit_default_sel__0_async_ALL_quotes_EOL_ci",
+            "value": 382.62378636439917,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.fib.jit_default_sel__0_blocking_1RULE_quotes_EOL_ci",
+            "value": 1613.4198139304087,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.fib.jit_default_sel__0_blocking_ALL_quotes_EOL_ci",
+            "value": 1544.8665159169627,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.fib.shallow_default_seminaive______EOL_ci",
+            "value": 70.70352437201643,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.func.jit_default_sel__0_async_1RULE_quotes_EOL_ci",
+            "value": 3.8524169312988668,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.func.jit_default_sel__0_async_ALL_quotes_EOL_ci",
+            "value": 4.148571839279251,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.func.jit_default_sel__0_blocking_1RULE_quotes_EOL_ci",
+            "value": 259.1317226229362,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.func.jit_default_sel__0_blocking_ALL_quotes_EOL_ci",
+            "value": 211.70394439041024,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.func.shallow_default_seminaive______EOL_ci",
+            "value": 1.0646918396325387,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.grad.jit_default_sel__0_async_1RULE_quotes_EOL_ci",
+            "value": 0.9713357853538354,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.grad.jit_default_sel__0_async_ALL_quotes_EOL_ci",
+            "value": 1.1307170422678885,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.grad.jit_default_sel__0_blocking_1RULE_quotes_EOL_ci",
+            "value": 70.45796597674739,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.grad.jit_default_sel__0_blocking_ALL_quotes_EOL_ci",
+            "value": 71.15350638295634,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.grad.shallow_default_seminaive______EOL_ci",
+            "value": 0.31098388709303165,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.inputoutput.jit_default_sel__0_async_1RULE_quotes_EOL_ci",
+            "value": 17.755772333523794,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.inputoutput.jit_default_sel__0_async_ALL_quotes_EOL_ci",
+            "value": 17.541309841567205,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.inputoutput.jit_default_sel__0_blocking_1RULE_quotes_EOL_ci",
+            "value": 2552.854670279762,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.inputoutput.jit_default_sel__0_blocking_ALL_quotes_EOL_ci",
+            "value": 1374.4615799825945,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.inputoutput.shallow_default_seminaive______EOL_ci",
+            "value": 4.581134594205848,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.isafter.jit_default_sel__0_async_1RULE_quotes_EOL_ci",
+            "value": 110.1367647046217,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.isafter.jit_default_sel__0_async_ALL_quotes_EOL_ci",
+            "value": 108.72447437010185,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.isafter.jit_default_sel__0_blocking_1RULE_quotes_EOL_ci",
+            "value": 669.158992378615,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.isafter.jit_default_sel__0_blocking_ALL_quotes_EOL_ci",
+            "value": 407.9972318770117,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.isafter.shallow_default_seminaive______EOL_ci",
+            "value": 45.75097456855947,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.isbefore.jit_default_sel__0_async_1RULE_quotes_EOL_ci",
+            "value": 20.57065862565161,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.isbefore.jit_default_sel__0_async_ALL_quotes_EOL_ci",
+            "value": 19.753629452752865,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.isbefore.jit_default_sel__0_blocking_1RULE_quotes_EOL_ci",
+            "value": 490.07064772479714,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.isbefore.jit_default_sel__0_blocking_ALL_quotes_EOL_ci",
+            "value": 287.3979797849753,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.isbefore.shallow_default_seminaive______EOL_ci",
+            "value": 7.366648384496315,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.javapointsto.jit_default_sel__0_async_1RULE_quotes_EOL_ci",
+            "value": 92.74104432158997,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.javapointsto.jit_default_sel__0_async_ALL_quotes_EOL_ci",
+            "value": 99.63097673831224,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.javapointsto.jit_default_sel__0_blocking_1RULE_quotes_EOL_ci",
+            "value": 5143.805788506605,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.javapointsto.jit_default_sel__0_blocking_ALL_quotes_EOL_ci",
+            "value": 2772.0080533306623,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.javapointsto.shallow_default_seminaive______EOL_ci",
+            "value": 25.003189594065017,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.metro.jit_default_sel__0_async_1RULE_quotes_EOL_ci",
+            "value": 3.5750566328785482,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.metro.jit_default_sel__0_async_ALL_quotes_EOL_ci",
+            "value": 3.6675336167811046,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.metro.jit_default_sel__0_blocking_1RULE_quotes_EOL_ci",
+            "value": 263.74902472488674,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.metro.jit_default_sel__0_blocking_ALL_quotes_EOL_ci",
+            "value": 203.46932004202597,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.metro.shallow_default_seminaive______EOL_ci",
+            "value": 1.2901156116229764,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.palindrome.jit_default_sel__0_async_1RULE_quotes_EOL_ci",
+            "value": 88.72836336198895,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.palindrome.jit_default_sel__0_async_ALL_quotes_EOL_ci",
+            "value": 79.51076818187576,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.palindrome.jit_default_sel__0_blocking_1RULE_quotes_EOL_ci",
+            "value": 595.7894365851811,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.palindrome.jit_default_sel__0_blocking_ALL_quotes_EOL_ci",
+            "value": 383.253459863638,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.palindrome.shallow_default_seminaive______EOL_ci",
+            "value": 34.062790859681115,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.pointsto.jit_default_sel__0_blocking_1RULE_quotes_EOL_ci",
+            "value": 10737.2714576,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.pointsto.jit_default_sel__0_blocking_ALL_quotes_EOL_ci",
+            "value": 9729.194943400002,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.pointsto.shallow_default_seminaive______EOL_ci",
+            "value": 8730.746053,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.prime.jit_default_sel__0_async_1RULE_quotes_EOL_ci",
+            "value": 31.963730259756943,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.prime.jit_default_sel__0_async_ALL_quotes_EOL_ci",
+            "value": 30.803037919885185,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.prime.jit_default_sel__0_blocking_1RULE_quotes_EOL_ci",
+            "value": 2064.2796348608695,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.prime.jit_default_sel__0_blocking_ALL_quotes_EOL_ci",
+            "value": 2215.3677629732565,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.prime.shallow_default_seminaive______EOL_ci",
+            "value": 42.43371580189629,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.puzzle.jit_default_sel__0_async_1RULE_quotes_EOL_ci",
+            "value": 25.935812326939732,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.puzzle.jit_default_sel__0_async_ALL_quotes_EOL_ci",
+            "value": 24.662429394204974,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.puzzle.jit_default_sel__0_blocking_1RULE_quotes_EOL_ci",
+            "value": 2036.6914731316767,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.puzzle.jit_default_sel__0_blocking_ALL_quotes_EOL_ci",
+            "value": 844.9132173280681,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.puzzle.shallow_default_seminaive______EOL_ci",
+            "value": 11.144539780441482,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.ranpo.jit_default_sel__0_async_1RULE_quotes_EOL_ci",
+            "value": 8493.899102666666,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.ranpo.jit_default_sel__0_async_ALL_quotes_EOL_ci",
+            "value": 9337.651306333333,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.ranpo.jit_default_sel__0_blocking_1RULE_quotes_EOL_ci",
+            "value": 9514.492189666667,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.ranpo.jit_default_sel__0_blocking_ALL_quotes_EOL_ci",
+            "value": 8507.864748333333,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.ranpo.shallow_default_seminaive______EOL_ci",
+            "value": 7694.284318571428,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.rsg.jit_default_sel__0_async_1RULE_quotes_EOL_ci",
+            "value": 3.2049062385218043,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.rsg.jit_default_sel__0_async_ALL_quotes_EOL_ci",
+            "value": 2.8806463039422794,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.rsg.jit_default_sel__0_blocking_1RULE_quotes_EOL_ci",
+            "value": 377.50341914886496,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.rsg.jit_default_sel__0_blocking_ALL_quotes_EOL_ci",
+            "value": 231.44714682993987,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.rsg.shallow_default_seminaive______EOL_ci",
+            "value": 0.9406586200495572,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.ship.jit_default_sel__0_async_1RULE_quotes_EOL_ci",
+            "value": 1.5182320665615028,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.ship.jit_default_sel__0_async_ALL_quotes_EOL_ci",
+            "value": 1.3766267261543994,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.ship.jit_default_sel__0_blocking_1RULE_quotes_EOL_ci",
+            "value": 67.21077942255947,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.ship.jit_default_sel__0_blocking_ALL_quotes_EOL_ci",
+            "value": 69.51246214650907,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.ship.shallow_default_seminaive______EOL_ci",
+            "value": 0.4150493617880535,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.small.jit_default_sel__0_async_1RULE_quotes_EOL_ci",
+            "value": 4.681318332585806,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.small.jit_default_sel__0_async_ALL_quotes_EOL_ci",
+            "value": 4.510282776905005,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.small.jit_default_sel__0_blocking_1RULE_quotes_EOL_ci",
+            "value": 774.9974011557758,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.small.jit_default_sel__0_blocking_ALL_quotes_EOL_ci",
+            "value": 397.60649057705353,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.small.shallow_default_seminaive______EOL_ci",
+            "value": 1.3588875032969345,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.strata.jit_default_sel__0_async_1RULE_quotes_EOL_ci",
+            "value": 5.056512986833089,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.strata.jit_default_sel__0_async_ALL_quotes_EOL_ci",
+            "value": 4.574355169059872,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.strata.jit_default_sel__0_blocking_1RULE_quotes_EOL_ci",
+            "value": 484.13860622149343,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.strata.jit_default_sel__0_blocking_ALL_quotes_EOL_ci",
+            "value": 338.9334415852635,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.strata.shallow_default_seminaive______EOL_ci",
+            "value": 2.2013949409255718,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.tc.jit_default_sel__0_async_1RULE_quotes_EOL_ci",
+            "value": 4.153433718942831,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.tc.jit_default_sel__0_async_ALL_quotes_EOL_ci",
+            "value": 4.014602921252057,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.tc.jit_default_sel__0_blocking_1RULE_quotes_EOL_ci",
+            "value": 471.6307697676301,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.tc.jit_default_sel__0_blocking_ALL_quotes_EOL_ci",
+            "value": 269.43849035578506,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.tc.shallow_default_seminaive______EOL_ci",
+            "value": 1.291007782217243,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.traffic.jit_default_sel__0_async_1RULE_quotes_EOL_ci",
+            "value": 3.4234598834520766,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.traffic.jit_default_sel__0_async_ALL_quotes_EOL_ci",
+            "value": 3.4570882540541747,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.traffic.jit_default_sel__0_blocking_1RULE_quotes_EOL_ci",
+            "value": 395.87509355250813,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.traffic.jit_default_sel__0_blocking_ALL_quotes_EOL_ci",
+            "value": 283.7972377143505,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.traffic.shallow_default_seminaive______EOL_ci",
+            "value": 0.7428747218686506,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.trains.jit_default_sel__0_async_1RULE_quotes_EOL_ci",
+            "value": 3826.423378659341,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.trains.jit_default_sel__0_async_ALL_quotes_EOL_ci",
+            "value": 3903.9237435384616,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.trains.jit_default_sel__0_blocking_1RULE_quotes_EOL_ci",
+            "value": 4281.2546686666665,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.trains.jit_default_sel__0_blocking_ALL_quotes_EOL_ci",
+            "value": 4022.374455846154,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.trains.shallow_default_seminaive______EOL_ci",
+            "value": 2983.5157176470584,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.trans.jit_default_sel__0_async_1RULE_quotes_EOL_ci",
+            "value": 2.203879488767182,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.trans.jit_default_sel__0_async_ALL_quotes_EOL_ci",
+            "value": 2.1898543410621034,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.trans.jit_default_sel__0_blocking_1RULE_quotes_EOL_ci",
+            "value": 139.63125889504934,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.trans.jit_default_sel__0_blocking_ALL_quotes_EOL_ci",
+            "value": 145.71592205233276,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.trans.shallow_default_seminaive______EOL_ci",
+            "value": 0.565212032103122,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.tree.jit_default_sel__0_async_1RULE_quotes_EOL_ci",
+            "value": 3.7869583899559265,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.tree.jit_default_sel__0_async_ALL_quotes_EOL_ci",
+            "value": 3.650989437234151,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.tree.jit_default_sel__0_blocking_1RULE_quotes_EOL_ci",
+            "value": 411.1174717334937,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.tree.jit_default_sel__0_blocking_ALL_quotes_EOL_ci",
+            "value": 287.65085582572846,
+            "unit": "s/op",
+            "extra": "iterations: 5\nforks: 1\nthreads: 1"
+          },
+          {
+            "name": "datalog.benchmarks.examples.tree.shallow_default_seminaive______EOL_ci",
+            "value": 0.8653448644582555,
             "unit": "s/op",
             "extra": "iterations: 5\nforks: 1\nthreads: 1"
           }
