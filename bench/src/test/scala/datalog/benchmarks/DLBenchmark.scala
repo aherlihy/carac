@@ -32,19 +32,19 @@ abstract class DLBenchmark {
       "default" -> (() => new DefaultStorageManager())
     )
     val shallowAlgo = immutable.Map[String, StorageManager => ExecutionEngine](
-      "shallowSeminaive" -> (sm => new SemiNaiveExecutionEngine(sm)),
-      "shallowNaive" -> (sm => new NaiveExecutionEngine(sm))
+      "seminaive" -> (sm => new SemiNaiveExecutionEngine(sm)),
+      "naive" -> (sm => new NaiveExecutionEngine(sm))
     )
     // ---> uncomment to bench shallow embedding
     shallowAlgo.keys.foreach(ee =>
       storageEngines.keys.foreach(sm =>
-        programs(s"${ee}_$sm") = Program(shallowAlgo(ee)(storageEngines(sm)()))
+        programs(s"shallow_${sm}_${ee}_____") = Program(shallowAlgo(ee)(storageEngines(sm)()))
       )
     )
     val backends = Seq(Backend.Quotes, Backend.Bytecode)
     // --> uncomment to bench compile
     backends.foreach(bc =>
-      programs(s"compiled_default_${SortOrder.Unordered}__0_${bc}".toLowerCase()) = Program(
+      programs(s"compiled_default_${SortOrder.Unordered}__0___${bc}".toLowerCase()) = Program(
         StagedExecutionEngine(
           DefaultStorageManager(),
           JITOptions(
@@ -66,7 +66,7 @@ abstract class DLBenchmark {
     interpSortOpts.foreach(sort =>
         onlineSortOpts.foreach(onlineSort =>
           val onlineSortStr = if (onlineSort) "Online" else ""
-          val programStr = s"interpreted_default_${sort}_${onlineSortStr}_0__"
+          val programStr = s"interpreted_default_${sort}_${onlineSortStr}_0___"
           programs(programStr.toLowerCase()) = Program(StagedExecutionEngine(
             DefaultStorageManager(),
             JITOptions(

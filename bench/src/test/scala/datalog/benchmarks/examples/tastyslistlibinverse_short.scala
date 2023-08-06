@@ -27,7 +27,7 @@ class tastyslistlibinverse_short() extends ExampleBenchmarkGenerator(
   // All benchmark bodies should be identical
 
   // volcano, naive
-  @Benchmark def shallowNaive_volcano_EOL(blackhole: Blackhole): Unit = {
+  @Benchmark def shallow_volcano_naive______EOL(blackhole: Blackhole): Unit = {
     // this is rancid but otherwise have to copy the method name twice, which is typo prone. Put extra stuff for runnign with a regex after _EOL
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
     if (!programs.contains(p))
@@ -35,21 +35,21 @@ class tastyslistlibinverse_short() extends ExampleBenchmarkGenerator(
     blackhole.consume(run(programs(p), result))
   }
 
-  @Benchmark def shallowSeminaive_volcano_EOL_ci(blackhole: Blackhole): Unit = {
+  @Benchmark def shallow_volcano_seminaive______EOL(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
     blackhole.consume(run(programs(p), result))
   }
 
-  @Benchmark def shallowNaive_default_EOL(blackhole: Blackhole): Unit = {
+  @Benchmark def shallow_default_naive______EOL(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
     blackhole.consume(run(programs(p), result))
   }
 
-  @Benchmark def shallowSeminaive_default_EOL_ci(blackhole: Blackhole): Unit = {
+  @Benchmark def shallow_default_seminaive______EOL_ci(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
@@ -57,21 +57,21 @@ class tastyslistlibinverse_short() extends ExampleBenchmarkGenerator(
   }
 
   // interpreted
-  @Benchmark def interpreted_default_sel__0___EOL(blackhole: Blackhole): Unit = {
+  @Benchmark def interpreted_default_sel__0____EOL(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
     blackhole.consume(run(programs(p), result))
   }
 
-  @Benchmark def interpreted_default_badluck__0___EOL(blackhole: Blackhole): Unit = {
+  @Benchmark def interpreted_default_badluck__0____EOL(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
     blackhole.consume(run(programs(p), result))
   }
 
-  @Benchmark def interpreted_default_unordered__0___EOL(blackhole: Blackhole): Unit = {
+  @Benchmark def interpreted_default_unordered__0____EOL(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
@@ -79,14 +79,14 @@ class tastyslistlibinverse_short() extends ExampleBenchmarkGenerator(
   }
 
   // compiled
-  @Benchmark def compiled_default_unordered__0_quotes_EOL(blackhole: Blackhole): Unit = {
+  @Benchmark def compiled_default_unordered__0___quotes_EOL(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
     blackhole.consume(run(programs(p), result))
   }
 
-  @Benchmark def compiled_default_unordered__0_bytecode_EOL(blackhole: Blackhole): Unit = {
+  @Benchmark def compiled_default_unordered__0___bytecode_EOL(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
