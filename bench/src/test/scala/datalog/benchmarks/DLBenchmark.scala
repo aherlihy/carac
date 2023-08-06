@@ -41,7 +41,7 @@ abstract class DLBenchmark {
         programs(s"shallow_${sm}_${ee}_____") = Program(shallowAlgo(ee)(storageEngines(sm)()))
       )
     )
-    val backends = Seq(Backend.Quotes, Backend.Bytecode, Backend.Lambda)
+    val backends = Seq(Backend.Quotes, Backend.Bytecode)
     // --> uncomment to bench compile
     backends.foreach(bc =>
       val jo = JITOptions(

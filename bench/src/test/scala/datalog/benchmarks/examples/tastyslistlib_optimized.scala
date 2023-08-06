@@ -93,12 +93,6 @@ class tastyslistlib_optimized() extends ExampleBenchmarkGenerator(
     blackhole.consume(run(programs(p), result))
   }
 
-  @Benchmark def compiled_default_unordered__0_lambda_EOL(blackhole: Blackhole): Unit = {
-    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
-    if (!programs.contains(p))
-      throw new Exception(f"Error: program for '$p' not found")
-    blackhole.consume(run(programs(p), result))
-  }
 
   // jit
 
