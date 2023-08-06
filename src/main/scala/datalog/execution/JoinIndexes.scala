@@ -33,7 +33,7 @@ case class JoinIndexes(varIndexes: Seq[Seq[Int]],
                        cxns: mutable.Map[String, mutable.Map[Int, Seq[String]]],
                        edb: Boolean = false
                       ) {
-  override def toString(): String = toStringWithNS(null)
+  override def toString(): String = ""//toStringWithNS(null)
 
   def toStringWithNS(ns: NS): String = "{ vars:" + varToString() +
       ", consts:" + constToString() +
