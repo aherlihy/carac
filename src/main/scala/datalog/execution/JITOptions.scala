@@ -36,8 +36,10 @@ case class JITOptions(
       case OpCode.EVAL_RULE_BODY => "1RULE"
       case _ => ???
     val onlineSortStr = if (onlineSort) "Online" else ""
-    val programStr = s"${modeStr}_default_${sortOrder}_${onlineSortStr}_${fuzzy}_${compileSync}".toLowerCase()
-    s"${programStr}_${granStr}_${backend.toString.toLowerCase()}"
+    val blockingStr = if (granularity == OpCode.OTHER || granularity == OpCode.PROGRAM) "" else compileSync
+    val programStr = s"${modeStr}_default_${sortOrder}_${onlineSortStr}_${fuzzy}_${blockingStr}".toLowerCase()
+    val backendStr = if (granularity == OpCode.OTHER) "" else backend.toString.toLowerCase()
+    s"${programStr}_${granStr}_$backendStr"
 
   def getSortFn(storageManager: StorageManager): Atom => (Boolean, Int) =
     (a: Atom) =>

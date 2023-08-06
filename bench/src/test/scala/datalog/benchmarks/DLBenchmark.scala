@@ -44,16 +44,14 @@ abstract class DLBenchmark {
     val backends = Seq(Backend.Quotes, Backend.Bytecode)
     // --> uncomment to bench compile
     backends.foreach(bc =>
-      programs(s"compiled_default_${SortOrder.Unordered}__0___${bc}".toLowerCase()) = Program(
-        StagedExecutionEngine(
-          DefaultStorageManager(),
-          JITOptions(
-            granularity = ir.OpCode.PROGRAM,
-            sortOrder = SortOrder.Unordered,
-            compileSync = CompileSync.Blocking,
-            backend = bc,
-            dotty = dotty
-          )))
+      val jo = JITOptions(
+        granularity = ir.OpCode.PROGRAM,
+        sortOrder = SortOrder.Unordered,
+        compileSync = CompileSync.Blocking,
+        backend = bc,
+        dotty = dotty
+      )
+      programs(jo.toBenchmark) = Program(StagedExecutionEngine(DefaultStorageManager(), jo))
     )
 
     val jitSortOpts = Seq(SortOrder.Unordered, SortOrder.Sel)
@@ -65,15 +63,12 @@ abstract class DLBenchmark {
   // --> uncomment for interpreted
     interpSortOpts.foreach(sort =>
         onlineSortOpts.foreach(onlineSort =>
-          val onlineSortStr = if (onlineSort) "Online" else ""
-          val programStr = s"interpreted_default_${sort}_${onlineSortStr}_0___"
-          programs(programStr.toLowerCase()) = Program(StagedExecutionEngine(
-            DefaultStorageManager(),
-            JITOptions(
-              sortOrder = sort,
-              onlineSort = onlineSort,
-              dotty = dotty
-          )))))
+          val jo = JITOptions(
+            sortOrder = sort,
+            onlineSort = onlineSort,
+            dotty = dotty)
+          programs(jo.toBenchmark) = Program(StagedExecutionEngine(DefaultStorageManager(), jo))
+        ))
 
     // JIT options
     val jitGranularities = Seq(
@@ -97,10 +92,7 @@ abstract class DLBenchmark {
                   fuzzy = fuzzy,
                   dotty = dotty,
                 )
-                val granStr = if (gran == ir.OpCode.EVAL_RULE_BODY) "1RULE" else "ALL"
-                val onlineSortStr = if (onlineSort) "Online" else ""
-                val programStr = s"jit_default_${sort}_${onlineSortStr}_${fuzzy}_${block}".toLowerCase()
-                programs(s"${programStr}_${granStr}_${bc.toString.toLowerCase()}") = Program(
+                programs(jo.toBenchmark) = Program(
                   StagedExecutionEngine(DefaultStorageManager(), jo)
                 )
               )
