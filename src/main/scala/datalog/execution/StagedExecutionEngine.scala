@@ -22,8 +22,12 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
   private val tCtx = ASTTransformerContext(using precedenceGraph)(using storageManager)
   given JITOptions = defaultJITOptions
   val transforms: Seq[Transformer] = Seq(CopyEliminationPass(using tCtx))
-  val compiler: StagedCompiler = StagedCompiler(storageManager)
-  compiler.clearDottyThread()
+
+  val compiler: StagedCompiler = defaultJITOptions.backend match
+    case Backend.Quotes => QuoteCompiler(storageManager)
+    case Backend.Bytecode => BytecodeCompiler(storageManager)
+    case Backend.Lambda => LambdaCompiler(storageManager)
+
   var stragglers: mutable.WeakHashMap[Int, Future[CompiledFn[?]]] = mutable.WeakHashMap.empty // should be ok since we are only removing by ref and then iterating on values only?
 
   def createIR(ast: ASTNode)(using InterpreterContext): IROp[Any] = IRTreeGenerator().generateTopLevelProgram(ast, naive=false)
@@ -139,33 +143,9 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
     (irTree, irCtx)
   }
 
-  // Separate these out for easier benchmarking
-
-  def preCompile(irTree: IROp[Any]): CompiledFn[Any] = {
-    compiler.getCompiled(irTree)
-  }
-  def solvePreCompiled(compiled: CompiledFn[Any], ctx: InterpreterContext): Set[Seq[Term]] = {
-    compiled(storageManager)
-    storageManager.getNewIDBResult(ctx.toSolve)
-  }
-
-  def solveBytecodeGenerated(irTree: IROp[Any], ctx: InterpreterContext): Set[Seq[Term]] = {
-    debug("", () => "bytecode generated mode")
-    val compiled = compiler.getBytecodeGenerated(irTree)
-    compiled(storageManager)
-    storageManager.getNewIDBResult(ctx.toSolve)
-  }
-
-  def solveLambda(irTree: IROp[Any], ctx: InterpreterContext): Set[Seq[Term]] = {
-    debug("", () => "lambda mode")
-    val compiled = compiler.compileToLambda(irTree)
-    compiled(storageManager)
-    storageManager.getNewIDBResult(ctx.toSolve)
-  }
-
+  // Separate out for easier benchmarking tree stuff vs. compilation
   def solveCompiled(irTree: IROp[Any], ctx: InterpreterContext): Set[Seq[Term]] = {
-    debug("", () => "compile-only mode")
-    val compiled = compiler.getCompiled(irTree)
+    val compiled = compiler.compile(irTree)
     compiled(storageManager)
     storageManager.getNewIDBResult(ctx.toSolve)
   }
@@ -190,7 +170,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
         run(storageManager)
       case Some(Failure(e)) =>
         stragglers.remove(op.compiledFn.hashCode())
-        throw Exception(s"Error compiling ${op.code} with: ${e.getCause}")
+        throw Exception(s"Error compiling ${op.code} with: $e")
       case None =>
         if (jitOptions.compileSync == CompileSync.Blocking)
           debug(s"${op.code} compilation not ready yet, so blocking", () => "")
@@ -202,25 +182,6 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
           default()
     }
   }
-
-  inline def startCompileThread[T](op: IROp[T])(using jitOptions: JITOptions): Unit =
-    debug(s"starting online compilation for code ${op.code}", () => "")
-    given scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
-    op.compiledFn = jitOptions.backend match
-      case Backend.Lambda =>
-        Future {
-          compiler.compileToLambda(op)
-        }
-      case Backend.Bytecode =>
-        Future {
-          compiler.getBytecodeGenerated(op)
-        }
-      case Backend.Quotes =>
-        Future {
-          compiler.getCompiled(op)
-        }
-
-    stragglers.addOne(op.compiledFn.hashCode(), op.compiledFn)
 
   def jit[T](irTree: IROp[T])(using jitOptions: JITOptions): T = {
 //    debug("", () => s"IN STAGED JIT IR, code=${irTree.code}, gran=${jitOptions.granularity}")
@@ -255,21 +216,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
 //          println("skip <3")
           Some(op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o))))
         } else if (jitOptions.sortOrder != SortOrder.Unordered && jitOptions.sortOrder != SortOrder.Badluck && jitOptions.fuzzy > 2) { // sort child relations and see if change is above threshold
-          val sortFn =
-            jitOptions.sortOrder match
-              case SortOrder.IntMax =>
-                (a: Atom) =>
-                  if (storageManager.edbContains(a.rId))
-                    (true, storageManager.getEDBResult(a.rId).size)
-                  else
-                    (true, Int.MaxValue)
-              case SortOrder.Sel =>
-                (a: Atom) => (true, storageManager.getKnownDerivedDB(a.rId).length)
-              case SortOrder.Mixed =>
-                (a: Atom) => (storageManager.allRulesAllIndexes.contains(a.rId), storageManager.getKnownDerivedDB(a.rId).length)
-              case _ => throw new Exception(s"Unknown sort order ${jitOptions.sortOrder}")
-
-          val (nb, _) = JoinIndexes.presortSelect(sortFn, op.k, storageManager)
+          val (nb, _) = JoinIndexes.presortSelect(jitOptions.getSortFn(storageManager), op.k, storageManager)
           val oldBody = op.k.atoms.drop(1).map(_.hash)
           val newBodyIdx = nb.map(h => oldBody.indexOf(h._1.hash))
 
@@ -301,25 +248,25 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
 
         if (shortC.isDefined)
           shortC.get
-        else if (jitOptions.compileSync == CompileSync.Blocking) { // not AOT therefore not async, so compile + block
-          startCompileThread(op)
-          checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o))))
+        else if (jitOptions.compileSync == CompileSync.Blocking) {
+          op.blockingCompiledFn = compiler.compile(op)
+          op.blockingCompiledFn(storageManager)
         } else {
           given scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
 
           op.compiledFnIndexed = Future {
-            compiler.getCompiledIndexed(op)
+            compiler.compileIndexed(op)
           }
           //        Thread.sleep(1000)
           storageManager.union(op.children.zipWithIndex.map((c, i) =>
             op.compiledFnIndexed.value match {
               case Some(Success(run)) =>
                 debug(s"Compilation succeeded: ${op.code}", () => "")
-                //              stragglers.remove(op.compiledFn.hashCode()) // TODO: might not work, but jsut end up waiting for completed future
+                // stragglers.remove(op.compiledFn.hashCode()) // TODO: might not work, but jsut end up waiting for completed future
                 run(storageManager, i)
               case Some(Failure(e)) =>
-                //              stragglers.remove(op.compiledFn.hashCode())
-                throw Exception(s"Error compiling ${op.code} with: ${e.getCause}")
+                // stragglers.remove(op.compiledFn.hashCode())
+                throw Exception(s"Error compiling ${op.code} with: $e")
               case None =>
                 debug(s"${op.code} subsection compilation not ready yet, so defaulting to interpreter", () => "")
                 c.run(storageManager)
@@ -327,26 +274,15 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
           ))
         }
 
-      case op: ProjectJoinFilterOp if jitOptions.granularity == op.code => // check if aot compile is ready
-        startCompileThread(op)
-        checkResult(op.compiledFn, op, () => op.run_continuation(storageManager, op.childrenSO.map(o => (sm: StorageManager) => jit(o))))
-
       case op: UnionOp if jitOptions.granularity == op.code =>
         if (jitOptions.compileSync == CompileSync.Blocking) {
-          op.blockingCompiledFn = jitOptions.backend match
-            case Backend.Lambda =>
-              compiler.compileToLambda(op)
-            case Backend.Bytecode =>
-              compiler.getBytecodeGenerated(op)
-            case Backend.Quotes =>
-              compiler.getCompiled(op)
-
+          op.blockingCompiledFn = compiler.compile(op)
           op.blockingCompiledFn(storageManager)
         } else {
           given scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
 
-          op.compiledFnIndexed = Future {
-            compiler.getCompiledIndexed(op)
+          op.compiledFnIndexed =  Future {
+            compiler.compileIndexed(op)
           }
           // Thread.sleep(1000)
           storageManager.union(op.children.zipWithIndex.map((c, i) =>
@@ -357,7 +293,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
                 run(storageManager, i)
               case Some(Failure(e)) =>
                 // stragglers.remove(op.compiledFn.hashCode())
-                throw Exception(s"Error compiling ${op.code} with: ${e.getCause}")
+                throw Exception(s"Error compiling ${op.code} with: ${e}")
               case None =>
                 debug(s"${op.code} subsection compilation not ready yet, so defaulting", () => "")
                 c.run(storageManager)
@@ -442,13 +378,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
     if (defaultJITOptions.granularity == OpCode.OTHER) // i.e. never compile
       solveInterpreted(irTree, irCtx)
     else if (defaultJITOptions.granularity == OpCode.PROGRAM && defaultJITOptions.compileSync == CompileSync.Blocking) // i.e. compile asap and block
-      defaultJITOptions.backend match
-        case Backend.Lambda =>
-          solveLambda(irTree, irCtx)
-        case Backend.Bytecode =>
-          solveBytecodeGenerated(irTree, irCtx)
-        case Backend.Quotes =>
-          solveCompiled(irTree, irCtx)
+      solveCompiled(irTree, irCtx)
     else
       solveJIT(irTree, irCtx)
   }

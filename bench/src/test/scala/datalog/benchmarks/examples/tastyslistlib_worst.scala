@@ -92,6 +92,13 @@ class tastyslistlib_worst() extends ExampleBenchmarkGenerator("tastyslistlib_wor
     blackhole.consume(run(programs(p), result))
   }
 
+  @Benchmark def compiled_default_unordered__0___lambda_EOL(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
 
   // jit
 
@@ -123,9 +130,25 @@ class tastyslistlib_worst() extends ExampleBenchmarkGenerator("tastyslistlib_wor
       throw new Exception(f"Error: program for '$p' not found")
     blackhole.consume(run(programs(p), result))
   }
-
   // ---------> unsorted
   @Benchmark def jit_default_unordered__0_blocking_ALL_bytecode_EOL(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  // ------> lambda
+  // ---------> sorted
+  @Benchmark def jit_default_sel__0_blocking_ALL_lambda_EOL(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  // ---------> unsorted
+  @Benchmark def jit_default_unordered__0_blocking_ALL_lambda_EOL(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
@@ -141,7 +164,6 @@ class tastyslistlib_worst() extends ExampleBenchmarkGenerator("tastyslistlib_wor
       throw new Exception(f"Error: program for '$p' not found")
     blackhole.consume(run(programs(p), result))
   }
-
   // For now skip most async
   // ---------> unsorted
   @Benchmark def jit_default_unordered__0_async_ALL_quotes_EOL(blackhole: Blackhole): Unit = {
@@ -162,6 +184,23 @@ class tastyslistlib_worst() extends ExampleBenchmarkGenerator("tastyslistlib_wor
 
   // ---------> unsorted
   @Benchmark def jit_default_unordered__0_async_ALL_bytecode_EOL(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  // ------> lambda
+  // ---------> sorted
+  @Benchmark def jit_default_sel__0_async_ALL_lambda_EOL(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  // ---------> unsorted
+  @Benchmark def jit_default_unordered__0_async_ALL_lambda_EOL(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
@@ -205,6 +244,23 @@ class tastyslistlib_worst() extends ExampleBenchmarkGenerator("tastyslistlib_wor
     blackhole.consume(run(programs(p), result))
   }
 
+  // ------> lambda
+  // ---------> sorted
+  @Benchmark def jit_default_sel__0_blocking_1RULE_lambda_EOL(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  // ---------> unsorted
+  @Benchmark def jit_default_unordered__0_blocking_1RULE_lambda_EOL(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
   // ---> async
   // ------> quotes & splices
   // ---------> sorted
@@ -214,8 +270,6 @@ class tastyslistlib_worst() extends ExampleBenchmarkGenerator("tastyslistlib_wor
       throw new Exception(f"Error: program for '$p' not found")
     blackhole.consume(run(programs(p), result))
   }
-
-  // For now skip most async
   // ---------> unsorted
   @Benchmark def jit_default_unordered__0_async_1RULE_quotes_EOL(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
@@ -235,6 +289,23 @@ class tastyslistlib_worst() extends ExampleBenchmarkGenerator("tastyslistlib_wor
 
   // ---------> unsorted
   @Benchmark def jit_default_unordered__0_async_1RULE_bytecode_EOL(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  // ------> lambda
+  // ---------> sorted
+  @Benchmark def jit_default_sel__0_async_1RULE_lambda_EOL(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  // ---------> unsorted
+  @Benchmark def jit_default_unordered__0_async_1RULE_lambda_EOL(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
