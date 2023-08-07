@@ -262,10 +262,8 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
             op.compiledFnIndexed.value match {
               case Some(Success(run)) =>
                 debug(s"Compilation succeeded: ${op.code}", () => "")
-                // stragglers.remove(op.compiledFn.hashCode()) // TODO: might not work, but jsut end up waiting for completed future
                 run(storageManager, i)
               case Some(Failure(e)) =>
-                // stragglers.remove(op.compiledFn.hashCode())
                 throw Exception(s"Error compiling ${op.code} with: $e")
               case None =>
                 debug(s"${op.code} subsection compilation not ready yet, so defaulting to interpreter", () => "")
@@ -284,15 +282,13 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
           op.compiledFnIndexed =  Future {
             compiler.compileIndexed(op)
           }
-          // Thread.sleep(1000)
+//           Thread.sleep(1000)
           storageManager.union(op.children.zipWithIndex.map((c, i) =>
             op.compiledFnIndexed.value match {
               case Some(Success(run)) =>
                 debug(s"Compilation succeeded: ${op.code}", () => "")
-                // stragglers.remove(op.compiledFn.hashCode()) // TODO: might not work, but jsut end up waiting for completed future
                 run(storageManager, i)
               case Some(Failure(e)) =>
-                // stragglers.remove(op.compiledFn.hashCode())
                 throw Exception(s"Error compiling ${op.code} with: ${e}")
               case None =>
                 debug(s"${op.code} subsection compilation not ready yet, so defaulting", () => "")

@@ -17,7 +17,7 @@ import scala.jdk.CollectionConverters.*
 /**
  * Generate a class containing a single static method.
  *
- * Implementors of this class should implement `traverse` to perform the code generation
+ * Implementors of this class should implement `enterTraverse` to perform the code generation
  * inside the method using the `CodeBuilder` argument.
  */
 trait BytecodeGenerator[A](clsName: String, methType: MethodType) {
@@ -32,7 +32,7 @@ trait BytecodeGenerator[A](clsName: String, methType: MethodType) {
    * This method will be called from `generate` to generate the body
    * of the class static method.
    */
-  protected def traverse(xb: CodeBuilder, input: A): Unit
+  protected def enterTraverse(xb: CodeBuilder, input: A): Unit
 
   private val resolver = ClassHierarchyResolver.ofCached(cd =>
     this.getClass.getClassLoader.getResourceAsStream(impl.Util.toInternalName(cd) + ".class"))
@@ -58,7 +58,7 @@ trait BytecodeGenerator[A](clsName: String, methType: MethodType) {
       cb.withMethod(methName,  methType.describeConstable.get(),
         Classfile.ACC_PUBLIC | Classfile.ACC_STATIC, mb => mb.withCode(xb =>
           xb.transforming(stackTracker, xxb =>
-            traverse(xxb, input)
+            enterTraverse(xxb, input)
 
             // If we need to return something but nothing is left on the stack,
             // return BoxedUnit like the Scala compiler.
