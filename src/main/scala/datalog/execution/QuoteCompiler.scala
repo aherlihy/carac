@@ -265,7 +265,7 @@ class QuoteCompiler(val storageManager: StorageManager)(using val jitOptions: JI
 
   def compileIRRelOpIndexed(irTree: IROp[EDB])(using stagedSM: Expr[StorageManager])(using i: Expr[Int])(using Quotes): Expr[EDB] = {
     irTree match
-      case uOp: UnionOp =>
+      case uOp: UnionOp => // instead of returning union, return a fn that takes the child index + returns the compiled child
         '{ ${Expr.ofSeq(uOp.children.toSeq.map(compileIRRelOp))}($i) }
       case uSPJOp: UnionSPJOp =>
         val (sortedChildren, _) =

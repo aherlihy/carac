@@ -30,7 +30,7 @@ class LambdaCompiler(val storageManager: StorageManager)(using val jitOptions: J
   def arrayToLambda[T](arr: Array[StorageManager => T]): StorageManager => Array[T] =
     unsafeArrayToLambda(arr).asInstanceOf[StorageManager => Array[T]]
 
-  def unsafeArrayToLambda(arr: Array[? <: AnyRef]): StorageManager => Array[AnyRef] =
+  def unsafeArrayToLambda(arr: Array[? <: AnyRef]): StorageManager => Array[AnyRef] = {
     // TODO: Instead of unrolling by hand, we could use a macro.
     arr.length match
       case 1 =>
@@ -59,6 +59,7 @@ class LambdaCompiler(val storageManager: StorageManager)(using val jitOptions: J
             out(i) = arr(i).asInstanceOf[StorageManager => AnyRef](sm)
             i += 1
           out
+  }
 
   /** "Compile" an IRTree into nested lambda calls. */
   def compile[T](irTree: IROp[T]): CompiledFn[T] = irTree match
@@ -190,5 +191,25 @@ class LambdaCompiler(val storageManager: StorageManager)(using val jitOptions: J
       val crhs = compile(children(1))
       sm => sm.diff(clhs(sm), crhs(sm))
 
-  override def compileIndexed[T](irTree: IROp[T]): CompiledFnIndexed[T] = throw new Exception("Async compilation unimplemented for bytecode")
+
+  override def compileIndexed[T](irTree: IROp[T]): CompiledFnIndexed[T] = {
+    irTree match
+      case UnionOp(label, children: _*) =>
+        (sm, i) => children.map(compile)(i)(sm)
+      case UnionSPJOp(rId, k, children: _*) =>
+        val (sortedChildren, _) =
+          if (jitOptions.sortOrder != SortOrder.Unordered && jitOptions.sortOrder != SortOrder.Badluck)
+            JoinIndexes.getPresort(
+              children.toArray,
+              jitOptions.getSortFn(storageManager),
+              rId,
+              k,
+              storageManager
+            )
+          else
+            (children.toArray, k)
+        (sm, i) => sortedChildren.toSeq.map(compile)(i)(sm)
+
+      case _ => throw new Exception(s"Indexed compilation: Unhandled IROp ${irTree.code}")
+  }
 }
