@@ -262,6 +262,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
             op.compiledFnIndexed.value match {
               case Some(Success(run)) =>
                 debug(s"Compilation succeeded: ${op.code}", () => "")
+//                println(s"indexing into compiled fn at $i")
                 run(storageManager, i)
               case Some(Failure(e)) =>
                 throw Exception(s"Error compiling ${op.code} with: $e")

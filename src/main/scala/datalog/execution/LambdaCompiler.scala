@@ -14,7 +14,7 @@ import scala.quoted.*
 /**
  * Separate out compile logic from StagedExecutionEngine
  */
-class LambdaCompiler(val storageManager: StorageManager)(using val jitOptions: JITOptions) extends StagedCompiler(storageManager) {
+class LambdaCompiler(val storageManager: StorageManager)(using JITOptions) extends StagedCompiler(storageManager) {
   given staging.Compiler = jitOptions.dotty
   /** Convert a Seq of lambdas into a lambda returning a Seq. */
   def seqToLambda[T](seq: Seq[StorageManager => T]): StorageManager => Seq[T] =
@@ -190,26 +190,4 @@ class LambdaCompiler(val storageManager: StorageManager)(using val jitOptions: J
       val clhs = compile(children.head)
       val crhs = compile(children(1))
       sm => sm.diff(clhs(sm), crhs(sm))
-
-
-  override def compileIndexed[T](irTree: IROp[T]): CompiledFnIndexed[T] = {
-    irTree match
-      case UnionOp(label, children: _*) =>
-        (sm, i) => children.map(compile)(i)(sm)
-      case UnionSPJOp(rId, k, children: _*) =>
-        val (sortedChildren, _) =
-          if (jitOptions.sortOrder != SortOrder.Unordered && jitOptions.sortOrder != SortOrder.Badluck)
-            JoinIndexes.getPresort(
-              children.toArray,
-              jitOptions.getSortFn(storageManager),
-              rId,
-              k,
-              storageManager
-            )
-          else
-            (children.toArray, k)
-        (sm, i) => sortedChildren.toSeq.map(compile)(i)(sm)
-
-      case _ => throw new Exception(s"Indexed compilation: Unhandled IROp ${irTree.code}")
-  }
 }

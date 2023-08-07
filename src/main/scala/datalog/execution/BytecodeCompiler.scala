@@ -15,7 +15,7 @@ import scala.quoted.*
 /**
  * Separate out compile logic from StagedExecutionEngine
  */
-class BytecodeCompiler(val storageManager: StorageManager)(using val jitOptions: JITOptions) extends StagedCompiler(storageManager) {
+class BytecodeCompiler(val storageManager: StorageManager)(using JITOptions) extends StagedCompiler(storageManager) {
   given staging.Compiler = jitOptions.dotty
   class IRBytecodeGenerator(methType: MethodType) extends BytecodeGenerator[IROp[?]](
     clsName = "datalog.execution.Generated$$Hidden", methType
@@ -169,49 +169,11 @@ class BytecodeCompiler(val storageManager: StorageManager)(using val jitOptions:
       emitCall(xb, classOf[StorageManager], methName, methParameterTypes*)
   }
 
-  class IndexedIRBytecodeGenerator(methType: MethodType) extends IRBytecodeGenerator(methType) {
-    import BytecodeGenerator.*
-    override protected def enterTraverse(xb: CodeBuilder, irTree: IROp[?]): Unit = {
-      irTree match {
-        case UnionSPJOp(rId, k, children: _*) =>
-          val (sortedChildren, _) =
-            if (jitOptions.sortOrder != SortOrder.Unordered)
-              JoinIndexes.getPresort(
-                children.toArray,
-                jitOptions.getSortFn(storageManager),
-                rId,
-                k,
-                storageManager
-              )
-            else
-              (children.toArray, k)
-          emitSeq(xb, sortedChildren.map(c => xxb => traverse(xxb, c)))
-          xb.iload(1)
-          emitCall(xb, classOf[Seq[Object]], "apply", classOf[Int])
-
-        case UnionOp(label, children: _*) =>
-          emitSeq(xb, children.map(c => xxb => traverse(xxb, c)))
-          xb.iload(1)
-          emitCall(xb, classOf[Seq[Object]], "apply", classOf[Int])
-
-        case _ => throw new Exception(s"Indexed compilation: Unhandled IROp ${irTree.code}")
-      }
-    }
-  }
-
   override def compile[T](irTree: IROp[T]): CompiledFn[T] = {
     val methType = MethodType.methodType(irTree.classTag.runtimeClass, classOf[StorageManager])
     val generator = IRBytecodeGenerator(methType)
     val entryPoint = generator.generateAndLoad(irTree)
     val compiledFn = (sm: StorageManager) => entryPoint.invoke(sm): T
-    compiledFn
-  }
-
-  override def compileIndexed[T](irTree: IROp[T]): CompiledFnIndexed[T] = {
-    val methType = MethodType.methodType(irTree.classTag.runtimeClass, classOf[StorageManager], classOf[Int])
-    val generator = IndexedIRBytecodeGenerator(methType)
-    val entryPoint = generator.generateAndLoad(irTree)
-    val compiledFn = (sm: StorageManager, i: Int) => entryPoint.invoke(sm, i): T
     compiledFn
   }
 }

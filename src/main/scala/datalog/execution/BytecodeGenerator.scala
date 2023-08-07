@@ -1,6 +1,6 @@
 package datalog.execution
 
-import datalog.dsl.{Atom, Constant, Variable, Term}
+import datalog.dsl.{Atom, Constant, Term, Variable}
 import datalog.storage.RelationId
 
 import java.lang.constant.ConstantDescs.*
@@ -10,8 +10,9 @@ import MethodHandles.Lookup.ClassOption.NESTMATE
 import java.nio.file.{Files, Paths}
 
 import org.glavo.classfile.{java as _, *}
-import org.glavo.classfile.components.{CodeStackTracker, ClassPrinter}
+import org.glavo.classfile.components.{ClassPrinter, CodeStackTracker}
 
+import java.io.PrintStream
 import scala.jdk.CollectionConverters.*
 
 /**
@@ -100,6 +101,15 @@ trait BytecodeGenerator[A](clsName: String, methType: MethodType) {
 }
 
 object BytecodeGenerator {
+  /** Emit bytecode to print a string to System.out.println */
+  def emitPrintln(xb: CodeBuilder, value: String): Unit = {
+    val printStreamType = classOf[PrintStream]
+    val printlnMethodType = MethodTypeDesc.of(CD_void, clsDesc(classOf[String]))
+
+    xb.getstatic(clsDesc(classOf[System]), "out", clsDesc(printStreamType))
+    emitString(xb, value)
+    xb.invokevirtual(clsDesc(printStreamType), "println", printlnMethodType)
+  }
   def clsDesc(cls: Class[?]): ClassDesc =
     ClassDesc.ofDescriptor(cls.descriptorString)
 

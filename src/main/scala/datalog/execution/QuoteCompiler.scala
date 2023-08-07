@@ -14,7 +14,7 @@ import scala.quoted.*
 /**
  * Separate out compile logic from StagedExecutionEngine
  */
-class QuoteCompiler(val storageManager: StorageManager)(using val jitOptions: JITOptions) extends StagedCompiler(storageManager) {
+class QuoteCompiler(val storageManager: StorageManager)(using JITOptions) extends StagedCompiler(storageManager) {
   given staging.Compiler = jitOptions.dotty
   clearDottyThread()
 
@@ -250,7 +250,7 @@ class QuoteCompiler(val storageManager: StorageManager)(using val jitOptions: JI
    * The following compile methods are for compiling with entry points for longer-running operations, so they return an
    * indexed compile fn so execution can begin from the correct index. Currently only for union ops.
    */
-  def compileIndexed[T](irTree: IROp[T]): CompiledFnIndexed[T] = {
+  override def compileIndexed[T](irTree: IROp[T]): CompiledFnIndexed[T] = {
     val casted = irTree.asInstanceOf[IROp[EDB]] // this will go away when compileIRIndexed exists or compileIR can take a type param
     val result =
       staging.run {

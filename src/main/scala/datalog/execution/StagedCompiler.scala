@@ -5,7 +5,7 @@ import datalog.storage.StorageManager
 /**
  * Separate out compile logic from StagedExecutionEngine
  */
-abstract class StagedCompiler(storageManager: StorageManager) {
+abstract class StagedCompiler(storageManager: StorageManager)(using val jitOptions: JITOptions) {
   /**
    * Compile a program starting from irTree
    */
@@ -14,5 +14,27 @@ abstract class StagedCompiler(storageManager: StorageManager) {
    * The following compile methods are for compiling with entry points for longer-running operations, so they return an
    * indexed compile fn so execution can begin from the correct index. Currently only for union ops.
    */
-  def compileIndexed[T](irTree: IROp[T]): CompiledFnIndexed[T]
+//  def compileIndexed[T](irTree: IROp[T]): CompiledFnIndexed[T]
+
+  def compileIndexed[T](irTree: IROp[T]): CompiledFnIndexed[T] = {
+    irTree match {
+      case UnionSPJOp(rId, k, children: _*) =>
+        val (sortedChildren, _) =
+          if (jitOptions.sortOrder != SortOrder.Unordered)
+            JoinIndexes.getPresort(
+              children.toArray,
+              jitOptions.getSortFn(storageManager),
+              rId,
+              k,
+              storageManager
+            )
+          else
+            (children.toArray, k)
+        (sm, i) => sortedChildren.toSeq.map(compile)(i)(sm)
+
+      case UnionOp(label, children: _*) =>
+        (sm, i) => children.map(compile)(i)(sm)
+    }
+  }
+
 }
