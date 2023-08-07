@@ -6,16 +6,16 @@ import datalog.dsl.{Constant, Program}
 import java.util.concurrent.TimeUnit
 import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.Blackhole
-import test.examples.tastyslistlibinverse.{tastyslistlibinverse_autoworstsel => tastyslistlibinverse_autoworstsel_test}
+import test.examples.ackermann.{ackermann_optimized => ackermann_optimized_test}
 
 @Fork(examples_fork) // # of jvms that it will use
 @Warmup(iterations = examples_warmup_iterations, time = examples_warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = examples_xl_batchsize)
 @Measurement(iterations = examples_iterations, time = examples_xl_time, timeUnit = TimeUnit.SECONDS, batchSize = examples_xl_batchsize)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
-class tastyslistlibinverse_autoworstsel() extends ExampleBenchmarkGenerator(
-  "tastyslistlibinverse"
-) with tastyslistlibinverse_autoworstsel_test {
+class XXackermann_optimized() extends ExampleBenchmarkGenerator(
+  "ackermann"
+) with ackermann_optimized_test {
 
   @Setup
   def s(): Unit = setup() // can't add annotations to super, so just call

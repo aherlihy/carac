@@ -6,7 +6,7 @@ import datalog.dsl.{Constant, Program}
 import java.util.concurrent.TimeUnit
 import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.Blackhole
-import test.examples.tastyslistlib_optimized.{tastyslistlib_optimized => tastyslistlib_optimized_test}
+import test.examples.tastyslistlib.{tastyslistlib_optimized => tastyslistlib_optimized_test}
 
 @Fork(examples_fork) // # of jvms that it will use
 @Warmup(iterations = examples_warmup_iterations, time = examples_warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = examples_xl_batchsize)
@@ -14,7 +14,7 @@ import test.examples.tastyslistlib_optimized.{tastyslistlib_optimized => tastysl
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class tastyslistlib_optimized() extends ExampleBenchmarkGenerator(
-  "tastyslistlib_optimized"
+  "tastyslistlib"
 ) with tastyslistlib_optimized_test {
 
   @Setup

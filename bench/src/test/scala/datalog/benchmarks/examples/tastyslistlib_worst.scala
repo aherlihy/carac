@@ -2,19 +2,18 @@ package datalog.benchmarks.examples
 
 import datalog.benchmarks.ExampleBenchmarkGenerator
 import datalog.dsl.{Constant, Program}
+
+import java.util.concurrent.TimeUnit
 import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.Blackhole
-import test.examples.tastyslistlib_worst.tastyslistlib_worst as tastyslistlib_worst_test
-
-import java.nio.file.Paths
-import java.util.concurrent.TimeUnit
+import test.examples.tastyslistlib.{tastyslistlib_worst => tastyslistlib_worst_test}
 
 @Fork(examples_fork) // # of jvms that it will use
 @Warmup(iterations = examples_warmup_iterations, time = examples_warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = examples_xl_batchsize)
 @Measurement(iterations = examples_iterations, time = examples_time, timeUnit = TimeUnit.SECONDS, batchSize = examples_xl_batchsize)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
-class tastyslistlib_worst() extends ExampleBenchmarkGenerator("tastyslistlib_worst") with tastyslistlib_worst_test {
+class tastyslistlib_worst() extends ExampleBenchmarkGenerator("tastyslistlib") with tastyslistlib_worst_test {
 
   @Setup
   def s(): Unit = setup() // can't add annotations to super, so just call

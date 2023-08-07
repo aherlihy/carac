@@ -6,7 +6,7 @@ import datalog.dsl.{Constant, Program}
 import java.util.concurrent.TimeUnit
 import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.Blackhole
-import test.examples.tastyslistlibinverse_worst.{tastyslistlibinverse_worst => tastyslistlibinverse_worst_test}
+import test.examples.tastyslistlibinverse.tastyslistlibinverse_worst as tastyslistlibinverse_worst_test
 
 @Fork(examples_fork) // # of jvms that it will use
 @Warmup(iterations = examples_warmup_iterations, time = examples_warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = examples_xl_batchsize)
@@ -14,7 +14,7 @@ import test.examples.tastyslistlibinverse_worst.{tastyslistlibinverse_worst => t
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class tastyslistlibinverse_worst() extends ExampleBenchmarkGenerator(
-  "tastyslistlibinverse_worst"
+  "tastyslistlibinverse"
 ) with tastyslistlibinverse_worst_test {
 
   @Setup

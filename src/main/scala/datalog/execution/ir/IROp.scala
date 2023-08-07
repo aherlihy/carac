@@ -295,7 +295,12 @@ case class UnionSPJOp(rId: RelationId, var k: JoinIndexes, override val children
 
     // uncomment to print out "worst" order
 //    JoinIndexes.presortSelectWorst(
-//      a => storageManager.getKnownDerivedDB(a.rId).length,
+//      a => (true, storageManager.getKnownDerivedDB(a.rId).length),
+//      k,
+//      storageManager
+//    )
+//    JoinIndexes.presortSelect(
+//      a => (true, storageManager.getKnownDerivedDB(a.rId).length),
 //      k,
 //      storageManager
 //    )
