@@ -6,7 +6,7 @@ import datalog.dsl.{Constant, Program}
 import java.util.concurrent.TimeUnit
 import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.Blackhole
-import test.examples.old_listlib.{old_listlib => old_listlib_test}
+import test.examples.oldlistlib.{oldlistlib => oldlistlib_test}
 
 @Fork(examples_fork) // # of jvms that it will use
 @Warmup(iterations = examples_warmup_iterations, time = examples_warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = examples_batchsize)
@@ -15,7 +15,7 @@ import test.examples.old_listlib.{old_listlib => old_listlib_test}
 @BenchmarkMode(Array(Mode.AverageTime))
 class oldlistlib() extends ExampleBenchmarkGenerator(
   "oldlistlib"
-) with old_listlib_test {
+) with oldlistlib_test {
 
   @Setup
   def s(): Unit = setup() // can't add annotations to super, so just call

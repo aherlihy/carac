@@ -1,11 +1,11 @@
-package test.examples.old_listlib
+package test.examples.oldlistlib
 
 import datalog.dsl.{Constant, Program}
 import test.ExampleTestGenerator
 
-class old_listlib_test extends ExampleTestGenerator("old_listlib") with old_listlib
+class oldlistlib_test extends ExampleTestGenerator("oldlistlib") with oldlistlib
 
-trait old_listlib {
+trait oldlistlib {
   val toSolve = "VarPointsTo"
 
   def pretest(program: Program): Unit = {
