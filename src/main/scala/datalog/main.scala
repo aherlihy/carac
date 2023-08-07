@@ -1181,7 +1181,7 @@ def select(program: Program): Unit = {
 //    pointstofun(program3a)
 //    println("\n\n_______________________\n\n")
 //
-  val jo3 = JITOptions(granularity = ir.OpCode.EVAL_RULE_SN, dotty = dotty, compileSync = CompileSync.Async, sortOrder = SortOrder.Unordered, backend = Backend.Lambda)
+  val jo3 = JITOptions(granularity = ir.OpCode.EVAL_RULE_SN, dotty = dotty, compileSync = CompileSync.Async, sortOrder = SortOrder.Unordered, backend = Backend.Bytecode)
   println("JIT")
   given engine3: ExecutionEngine = new StagedExecutionEngine(new DefaultStorageManager(), jo3)
   val program3 = Program(engine3)

@@ -22,8 +22,11 @@ class BytecodeCompiler(val storageManager: StorageManager)(using val jitOptions:
     import BytecodeGenerator.*
 
     // protected override val debug = true
+    protected def enterTraverse(xb: CodeBuilder, irTree: IROp[?]): Unit =
+      traverse(xb, irTree)
 
-    protected def traverse(xb: CodeBuilder, irTree: IROp[?]): Unit = irTree match {
+    protected def traverse(xb: CodeBuilder, irTree: IROp[?]): Unit =
+      irTree match {
       case ProgramOp(c) =>
         traverse(xb, c)
 
@@ -164,6 +167,36 @@ class BytecodeCompiler(val storageManager: StorageManager)(using val jitOptions:
       emitCall(xb, classOf[StorageManager], methName, methParameterTypes*)
   }
 
+  class IndexedIRBytecodeGenerator(methType: MethodType) extends IRBytecodeGenerator(methType) {
+    import BytecodeGenerator.*
+    override protected def enterTraverse(xb: CodeBuilder, irTree: IROp[?]): Unit =
+      irTree match {
+      case UnionSPJOp(rId, k, children: _*) =>
+        val (sortedChildren, _) =
+          if (jitOptions.sortOrder != SortOrder.Unordered)
+            JoinIndexes.getPresort(
+              children.toArray,
+              jitOptions.getSortFn(storageManager),
+              rId,
+              k,
+              storageManager
+            )
+          else
+            (children.toArray, k)
+        // Duplicate code with UnionSPJOp
+        xb.aload(0)
+        emitSeq(xb, sortedChildren.map(c => xxb => traverse(xxb, c)))
+//        emitSMCall(xb, "union", classOf[Seq[?]])
+
+      case UnionOp(label, children: _*) =>
+        xb.aload(0)
+        emitSeq(xb, children.map(c => xxb => traverse(xxb, c)))
+//        emitSMCall(xb, "union", classOf[Seq[?]])
+
+      case _ => throw new Exception(s"Indexed compilation: Unhandled IROp ${irTree.code}")
+    }
+  }
+
   override def compile[T](irTree: IROp[T]): CompiledFn[T] = {
     val methType = MethodType.methodType(irTree.classTag.runtimeClass, classOf[StorageManager])
     val generator = IRBytecodeGenerator(methType)
@@ -172,5 +205,11 @@ class BytecodeCompiler(val storageManager: StorageManager)(using val jitOptions:
     compiledFn
   }
 
-  override def compileIndexed[T](irTree: IROp[T]): CompiledFnIndexed[T] = throw new Exception("Async compilation unimplemented for bytecode")
+  override def compileIndexed[T](irTree: IROp[T]): CompiledFnIndexed[T] = {
+    val methType = MethodType.methodType(irTree.classTag.runtimeClass, classOf[StorageManager], classOf[Int])
+    val generator = IndexedIRBytecodeGenerator(methType)
+    val entryPoint = generator.generateAndLoad(irTree)
+    val compiledFn = (sm: StorageManager, i: Int) => entryPoint.invoke(sm, i): T
+    compiledFn
+  }
 }
