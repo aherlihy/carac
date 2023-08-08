@@ -1181,11 +1181,13 @@ def select(program: Program): Unit = {
 //    pointstofun(program3a)
 //    println("\n\n_______________________\n\n")
 //
-  val jo3 = JITOptions(granularity = ir.OpCode.EVAL_RULE_BODY, dotty = dotty, compileSync = CompileSync.Async, sortOrder = SortOrder.Unordered, backend = Backend.Quotes)
+  val jo3 = JITOptions(granularity = ir.OpCode.EVAL_RULE_BODY, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Unordered, backend = Backend.Quotes)
   println("JIT")
   given engine3: ExecutionEngine = new StagedExecutionEngine(new DefaultStorageManager(), jo3)
   val program3 = Program(engine3)
-  pointstofun(program3)
+  program3.loadFromFactDir("/Users/anna/lamp/datalog/src/test/examples/tastyslistlibinverse/facts")
+//  println(engine3.storageManager.getAllEDBS())
+  //  pointstofun(program3)
   println("\n\n_______________________\n\n")
 //
 //  println("JIT Snippet")
