@@ -43,7 +43,7 @@ class BenchCLI {
     val jo = JITOptions(granularity = ir.OpCode.EVAL_RULE_BODY, dotty = dotty, compileSync = CompileSync.Async, sortOrder = SortOrder.Sel, backend = Backend.Quotes)
     val engine = new StagedExecutionEngine(new DefaultStorageManager(), jo)
     val program = Program(engine)
-    program.loadFromFactDir("/Users/anna/lamp/datalog/run-souffle/tastyslistlibinverse/facts")
+    program.loadFromFactDir("../src/test/scala/test/examples/tastyslistlibinverse/facts")
     val toSolve = pretest(program)
     blackhole.consume(
       program.solve(toSolve)
@@ -55,7 +55,7 @@ class BenchCLI {
     val jo = JITOptions(granularity = ir.OpCode.EVAL_RULE_BODY, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Quotes)
     val engine = new StagedExecutionEngine(new DefaultStorageManager(), jo)
     val program = Program(engine)
-    program.loadFromFactDir("/Users/anna/lamp/datalog/run-souffle/tastyslistlibinverse/facts")
+    program.loadFromFactDir("../src/test/scala/test/examples/tastyslistlibinverse/facts")
     val toSolve = pretest(program)
     blackhole.consume(
       program.solve(toSolve)
@@ -67,7 +67,7 @@ class BenchCLI {
     val jo = JITOptions(granularity = ir.OpCode.EVAL_RULE_BODY, dotty = dotty, compileSync = CompileSync.Async, sortOrder = SortOrder.Sel, backend = Backend.Bytecode)
     val engine = new StagedExecutionEngine(new DefaultStorageManager(), jo)
     val program = Program(engine)
-    program.loadFromFactDir("/Users/anna/lamp/datalog/run-souffle/tastyslistlibinverse/facts")
+    program.loadFromFactDir("../src/test/scala/test/examples/tastyslistlibinverse/facts")
     val toSolve = pretest(program)
     blackhole.consume(
       program.solve(toSolve)
