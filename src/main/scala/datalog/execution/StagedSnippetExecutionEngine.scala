@@ -6,6 +6,7 @@ import datalog.execution.ir.*
 import datalog.storage.{DB, EDB, KNOWLEDGE, StorageManager}
 import datalog.tools.Debug.debug
 
+import java.util.concurrent.ExecutorService
 import scala.collection.mutable
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
