@@ -1185,7 +1185,7 @@ def select(program: Program): Unit = {
   println("JIT")
   given engine3: ExecutionEngine = new StagedExecutionEngine(new DefaultStorageManager(), jo3)
   val program3 = Program(engine3)
-  program3.loadFromFactDir("/Users/anna/lamp/datalog/src/test/examples/tastyslistlibinverse/facts")
+  program3.loadFromFactDir("src/test/scala/test/examples/tastyslistlibinverse/facts")
 //  println(engine3.storageManager.getAllEDBS())
   //  pointstofun(program3)
   println("\n\n_______________________\n\n")

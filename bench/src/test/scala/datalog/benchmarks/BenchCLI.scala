@@ -9,6 +9,7 @@ import datalog.execution.{Backend, CompileSync, ExecutionEngine, JITOptions, Nai
 import datalog.storage.{DefaultStorageManager, NS, VolcanoStorageManager}
 
 import scala.collection.immutable.Map
+import scala.concurrent.duration.Duration
 import scala.quoted.staging
 import scala.util.Random
 /**
@@ -17,32 +18,41 @@ import scala.util.Random
 @Fork(1) // # of jvms that it will use
 @Warmup(iterations = 10, time = 10, timeUnit = TimeUnit.SECONDS, batchSize = 100)
 @Measurement(iterations = 10, time = 10, timeUnit = TimeUnit.SECONDS, batchSize = 100)
-//@State(Scope.Thread)
+@State(Scope.Thread)
+//@TearDown(Level.Invocation)
 @BenchmarkMode(Array(Mode.AverageTime))
 class BenchCLI {
 //  val dotty = staging.Compiler.make(getClass.getClassLoader)
 //  val jo = JITOptions(granularity = ir.OpCode.EVAL_RULE_SN, dotty = dotty, compileSync = CompileSync.Async, sortOrder = SortOrder.Sel, backend = Backend.Quotes)
-//  val engine = new StagedExecutionEngine(new DefaultStorageManager(), jo)
-//  val program = Program(engine)
 //
+  var engine: StagedExecutionEngine = null
+  var program: Program = null
+
 //  @Setup
 //  def s(): Unit = {
-//
+//    println("startup")
+//    engine = new StagedExecutionEngine(new DefaultStorageManager(), jo)
+//    program = Program(engine)
 //  }
-//
-//  @TearDown
-//  def f(): Unit = {
-//  }
-//
+
+  @TearDown(Level.Invocation)
+  def f(): Unit = {
+    if (engine != null)
+//      println("teardown method called")
+      engine.threadpool.shutdownNow()
+      engine.threadpool.awaitTermination(999999999L, TimeUnit.SECONDS)
+  }
+
 //  @Benchmark def runSouffle(blackhole: Blackhole): Unit = {
 //
 //  }
 
   @Benchmark def runCaracMemLeak(blackhole: Blackhole): Unit = {
+//    println("runbench")
     val dotty = staging.Compiler.make(getClass.getClassLoader)
-    val jo = JITOptions(granularity = ir.OpCode.EVAL_RULE_BODY, dotty = dotty, compileSync = CompileSync.Async, sortOrder = SortOrder.Sel, backend = Backend.Quotes)
-    val engine = new StagedExecutionEngine(new DefaultStorageManager(), jo)
-    val program = Program(engine)
+    val jo = JITOptions(granularity = ir.OpCode.EVAL_RULE_SN, dotty = dotty, compileSync = CompileSync.Async, sortOrder = SortOrder.Sel, backend = Backend.Quotes)
+    engine = new StagedExecutionEngine(new DefaultStorageManager(), jo)
+    program = Program(engine)
     program.loadFromFactDir("../src/test/scala/test/examples/tastyslistlibinverse/facts")
     val toSolve = pretest(program)
     blackhole.consume(

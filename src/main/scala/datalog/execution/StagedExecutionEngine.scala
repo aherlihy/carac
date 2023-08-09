@@ -8,10 +8,11 @@ import datalog.execution.ir.*
 import datalog.storage.{DB, EDB, KNOWLEDGE, StorageManager}
 import datalog.tools.Debug.debug
 
+import java.util.concurrent.{ExecutorService, Executors, ForkJoinPool}
 import scala.collection.mutable
 import scala.collection.immutable
 import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, Future, blocking}
+import scala.concurrent.{Await, ExecutionContext, Future, blocking}
 import scala.util.{Failure, Success}
 import scala.quoted.*
 
@@ -22,6 +23,8 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
   private val tCtx = ASTTransformerContext(using precedenceGraph)(using storageManager)
   given JITOptions = defaultJITOptions
   val transforms: Seq[Transformer] = Seq(CopyEliminationPass(using tCtx))
+  var threadpool: ForkJoinPool = null
+//  var threadpool: ExecutorService = null
 
   val compiler: StagedCompiler = defaultJITOptions.backend match
     case Backend.Quotes => QuoteCompiler(storageManager)
@@ -158,6 +161,13 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
 
   def solveJIT(irTree: IROp[Any], ctx: InterpreterContext)(using jitOptions: JITOptions): Set[Seq[Term]] = {
     debug("", () => s"JIT with options $jitOptions")
+    val executionContext = if (jitOptions.compileSync == CompileSync.Async)
+//      threadpool = Executors.newFixedThreadPool(Runtime.getRuntime.availableProcessors())
+      threadpool = new ForkJoinPool(Runtime.getRuntime.availableProcessors)
+      ExecutionContext.fromExecutor(threadpool)
+    else
+      scala.concurrent.ExecutionContext.global
+    given ExecutionContext = executionContext
     jit(irTree)
     storageManager.getNewIDBResult(ctx.toSolve)
   }
@@ -183,7 +193,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
     }
   }
 
-  def jit[T](irTree: IROp[T])(using jitOptions: JITOptions): T = {
+  def jit[T](irTree: IROp[T])(using jitOptions: JITOptions)(using ec: ExecutionContext): T = {
 //    debug("", () => s"IN STAGED JIT IR, code=${irTree.code}, gran=${jitOptions.granularity}")
     irTree match {
       case op: ProgramOp =>
@@ -252,8 +262,12 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
           op.blockingCompiledFn = compiler.compile(op)
           op.blockingCompiledFn(storageManager)
         } else {
-          given scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
-
+//          threadpool = Executors.newFixedThreadPool(Runtime.getRuntime.availableProcessors())
+//          val threadpool = new ForkJoinPool(Runtime.getRuntime.availableProcessors)
+//          val executionContext = ExecutionContext.fromExecutor(
+//            threadpool
+//          )
+          given ExecutionContext = ec
           op.compiledFnIndexed = Future {
             compiler.compileIndexed(op)
           }
@@ -278,8 +292,12 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
           op.blockingCompiledFn = compiler.compile(op)
           op.blockingCompiledFn(storageManager)
         } else {
-          given scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
+//          threadpool = Executors.newFixedThreadPool(Runtime.getRuntime.availableProcessors())
+//          val threadpool = new ForkJoinPool(Runtime.getRuntime.availableProcessors)
+//          val executionContext = ExecutionContext.fromExecutor(threadpool)
+//          given scala.concurrent.ExecutionContext = executionContext // scala.concurrent.ExecutionContext.global
 
+          given ExecutionContext = ec
           op.compiledFnIndexed =  Future {
             compiler.compileIndexed(op)
           }
