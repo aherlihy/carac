@@ -208,12 +208,12 @@ class XXackermann_optimized() extends ExampleBenchmarkGenerator(
     blackhole.consume(run(programs(p), result))
   }
 
-  // -> 1RULE
+  // -> RULE
 
   // ---> blocking
   // ------> quotes & splices
   // ---------> sorted
-  @Benchmark def jit_default_sel__0_blocking_1RULE_quotes_EOL_ci(blackhole: Blackhole): Unit = {
+  @Benchmark def jit_default_sel__0_blocking_RULE_quotes_EOL_ci(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
@@ -221,7 +221,7 @@ class XXackermann_optimized() extends ExampleBenchmarkGenerator(
   }
 
   // ---------> unsorted
-  @Benchmark def jit_default_unordered__0_blocking_1RULE_quotes_EOL(blackhole: Blackhole): Unit = {
+  @Benchmark def jit_default_unordered__0_blocking_RULE_quotes_EOL(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
@@ -230,7 +230,7 @@ class XXackermann_optimized() extends ExampleBenchmarkGenerator(
 
   // ------> bytecode gen
   // ---------> sorted
-  @Benchmark def jit_default_sel__0_blocking_1RULE_bytecode_EOL(blackhole: Blackhole): Unit = {
+  @Benchmark def jit_default_sel__0_blocking_RULE_bytecode_EOL(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
@@ -238,7 +238,7 @@ class XXackermann_optimized() extends ExampleBenchmarkGenerator(
   }
 
   // ---------> unsorted
-  @Benchmark def jit_default_unordered__0_blocking_1RULE_bytecode_EOL(blackhole: Blackhole): Unit = {
+  @Benchmark def jit_default_unordered__0_blocking_RULE_bytecode_EOL(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
@@ -247,7 +247,7 @@ class XXackermann_optimized() extends ExampleBenchmarkGenerator(
 
   // ------> lambda
   // ---------> sorted
-  @Benchmark def jit_default_sel__0_blocking_1RULE_lambda_EOL(blackhole: Blackhole): Unit = {
+  @Benchmark def jit_default_sel__0_blocking_RULE_lambda_EOL(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
@@ -255,7 +255,7 @@ class XXackermann_optimized() extends ExampleBenchmarkGenerator(
   }
 
   // ---------> unsorted
-  @Benchmark def jit_default_unordered__0_blocking_1RULE_lambda_EOL(blackhole: Blackhole): Unit = {
+  @Benchmark def jit_default_unordered__0_blocking_RULE_lambda_EOL(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
@@ -265,14 +265,14 @@ class XXackermann_optimized() extends ExampleBenchmarkGenerator(
   // ---> async
   // ------> quotes & splices
   // ---------> sorted
-  @Benchmark def jit_default_sel__0_async_1RULE_quotes_EOL_ci(blackhole: Blackhole): Unit = {
+  @Benchmark def jit_default_sel__0_async_RULE_quotes_EOL_ci(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
     blackhole.consume(run(programs(p), result))
   }
   // ---------> unsorted
-  @Benchmark def jit_default_unordered__0_async_1RULE_quotes_EOL(blackhole: Blackhole): Unit = {
+  @Benchmark def jit_default_unordered__0_async_RULE_quotes_EOL(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
@@ -281,7 +281,7 @@ class XXackermann_optimized() extends ExampleBenchmarkGenerator(
 
   // ------> bytecode gen
   // ---------> sorted
-  @Benchmark def jit_default_sel__0_async_1RULE_bytecode_EOL(blackhole: Blackhole): Unit = {
+  @Benchmark def jit_default_sel__0_async_RULE_bytecode_EOL(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
@@ -289,7 +289,7 @@ class XXackermann_optimized() extends ExampleBenchmarkGenerator(
   }
 
   // ---------> unsorted
-  @Benchmark def jit_default_unordered__0_async_1RULE_bytecode_EOL(blackhole: Blackhole): Unit = {
+  @Benchmark def jit_default_unordered__0_async_RULE_bytecode_EOL(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
@@ -298,7 +298,7 @@ class XXackermann_optimized() extends ExampleBenchmarkGenerator(
 
   // ------> lambda
   // ---------> sorted
-  @Benchmark def jit_default_sel__0_async_1RULE_lambda_EOL(blackhole: Blackhole): Unit = {
+  @Benchmark def jit_default_sel__0_async_RULE_lambda_EOL(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
@@ -306,7 +306,7 @@ class XXackermann_optimized() extends ExampleBenchmarkGenerator(
   }
 
   // ---------> unsorted
-  @Benchmark def jit_default_unordered__0_async_1RULE_lambda_EOL(blackhole: Blackhole): Unit = {
+  @Benchmark def jit_default_unordered__0_async_RULE_lambda_EOL(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
