@@ -35,6 +35,7 @@ case class JITOptions(
                        backend: Backend = Backend.Quotes,
                        fuzzy: Int = DEFAULT_FUZZY,
                        dotty: staging.Compiler = staging.Compiler.make(getClass.getClassLoader),
+                       useGlobalContext: Boolean = true
                      ) {
   if ((mode == Mode.Compiled || mode == Mode.Interpreted) &&
     (compileSync != CompileSync.Blocking || granularity != Granularity.NEVER || fuzzy != 0))
@@ -42,8 +43,9 @@ case class JITOptions(
   if (
     (mode == Mode.Interpreted && backend != Backend.Quotes) ||
       (mode == Mode.Compiled && sortOrder != SortOrder.Unordered) ||
-      (fuzzy != DEFAULT_FUZZY && compileSync == CompileSync.Blocking))
-    throw new Exception(s"Weird options for mode $mode ($backend, $sortOrder, or $compileSync)")
+      (fuzzy != DEFAULT_FUZZY && compileSync == CompileSync.Blocking) ||
+      (compileSync != CompileSync.Async && !useGlobalContext))
+    throw new Exception(s"Weird options for mode $mode ($backend, $sortOrder, or $compileSync), are you sure?")
 
   override def toString: String = s"{ Mode $mode Gran: $granularity, blocking: $compileSync, sortOrder: $sortOrder, onlineSort: $onlineSort, backend: $backend }"
   def toBenchmark: String =

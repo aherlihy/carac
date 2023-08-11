@@ -8,10 +8,11 @@ import datalog.execution.ir.*
 import datalog.storage.{DB, EDB, KNOWLEDGE, StorageManager}
 import datalog.tools.Debug.debug
 
+import java.util.concurrent.{Executors, ForkJoinPool}
 import scala.collection.mutable
 import scala.collection.immutable
 import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, Future, blocking}
+import scala.concurrent.{Await, ExecutionContext, Future, blocking}
 import scala.util.{Failure, Success}
 import scala.quoted.*
 
@@ -22,6 +23,8 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
   private val tCtx = ASTTransformerContext(using precedenceGraph)(using storageManager)
   given JITOptions = defaultJITOptions
   val transforms: Seq[Transformer] = Seq(CopyEliminationPass(using tCtx))
+  var threadpool: ForkJoinPool = null
+//  var threadpool: ExecutorService = null
 
   val compiler: StagedCompiler = defaultJITOptions.backend match
     case Backend.Quotes => QuoteCompiler(storageManager)
@@ -158,6 +161,15 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
 
   def solveJIT(irTree: IROp[Any], ctx: InterpreterContext)(using jitOptions: JITOptions): Set[Seq[Term]] = {
     debug("", () => s"JIT with options $jitOptions")
+    val executionContext = if (jitOptions.compileSync == CompileSync.Async && !jitOptions.useGlobalContext)
+//      threadpool = Executors.newFixedThreadPool(Runtime.getRuntime.availableProcessors())
+      threadpool = new ForkJoinPool(Runtime.getRuntime.availableProcessors)
+      ExecutionContext.fromExecutor(threadpool)
+    else
+      scala.concurrent.ExecutionContext.global
+
+    given ExecutionContext = executionContext
+
     jit(irTree)
     storageManager.getNewIDBResult(ctx.toSolve)
   }
@@ -183,7 +195,54 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
     }
   }
 
-  def jit[T](irTree: IROp[T])(using jitOptions: JITOptions): T = {
+  /**
+   * For loop operations can compile asynchronously and then pick up compiled code at the current loop iteration.
+   */
+  inline def compileAsync(op: (UnionOp | UnionSPJOp), ec: ExecutionContext)(using jitOptions: JITOptions): EDB = {
+    // threadpool = Executors.newFixedThreadPool(Runtime.getRuntime.availableProcessors())
+    // threadpool = new ForkJoinPool(Runtime.getRuntime.availableProcessors)
+    // val executionContext = ExecutionContext.fromExecutor(threadpool)
+    // given scala.concurrent.ExecutionContext = executionContext // scala.concurrent.ExecutionContext.global
+
+    given ExecutionContext = ec
+
+    val future = Future {
+      compiler.compileIndexed(op)
+    }
+
+    // Thread.sleep(1000)
+    storageManager.union(op.children.zipWithIndex.map((c, i) =>
+      future.value match {
+        case Some(Success(run)) =>
+          debug(s"Compilation succeeded: ${op.code}", () => "")
+          run(storageManager, i)
+        case Some(Failure(e)) =>
+          throw Exception(s"Error compiling ${op.code} with: ${e.getCause}")
+        case None =>
+          debug(s"${op.code} subsection compilation not ready yet, so defaulting", () => "")
+          c.run(storageManager)
+      }
+    ))
+//    val future = ec.submit(() => compiler.compileIndexed(op))
+//    Thread.sleep(1000)
+//    storageManager.union(op.children.zipWithIndex.map((c, i) =>
+//      if (future.isDone)
+//        try {
+//          val run = future.get()
+//          //                println(s"Compilation succeeded: ${op.code}")
+//          run(storageManager, i)
+//        } catch {
+//          case e: Throwable => throw new Exception(s"Error compiling ${op.code} with: $e")
+//        }
+//      else
+//      println(s"${op.code} subsection compilation not ready yet, so defaulting to interpreter")
+//      if (i >= op.children.length - 1)
+//        future.cancel(true)
+//        c.run(storageManager)
+//    ))
+  }
+
+  def jit[T](irTree: IROp[T])(using jitOptions: JITOptions)(using ec: ExecutionContext): T = {
 //    debug("", () => s"IN STAGED JIT IR, code=${irTree.code}, gran=${jitOptions.granularity}")
     irTree match {
       case op: ProgramOp =>
@@ -212,16 +271,18 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
         op.run(storageManager)
 
       case op: UnionSPJOp if jitOptions.granularity.flag == op.code =>
-        val shortC = if (jitOptions.sortOrder != SortOrder.Unordered && op.children.size < 3 && jitOptions.fuzzy == 2) { // don't recompile query plans with <2 joins
+        if (jitOptions.sortOrder != SortOrder.Unordered && op.children.size < 3 && jitOptions.fuzzy == 2) // don't recompile query plans with <2 joins
 //          println("skip <3")
-          Some(op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o))))
-        } else if (jitOptions.sortOrder != SortOrder.Unordered && jitOptions.sortOrder != SortOrder.Badluck && jitOptions.fuzzy > 2) { // sort child relations and see if change is above threshold
+          return op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o)))
+
+        if (jitOptions.sortOrder != SortOrder.Unordered && jitOptions.sortOrder != SortOrder.Badluck && jitOptions.fuzzy > 2) // sort child relations and see if change is above threshold
           val (nb, _) = JoinIndexes.presortSelect(jitOptions.getSortFn(storageManager), op.k, storageManager)
           val oldBody = op.k.atoms.drop(1).map(_.hash)
           val newBodyIdx = nb.map(h => oldBody.indexOf(h._1.hash))
 
-          def levenshtein(s1: String, s2: String): Int = { // from wikipedia
+          def levenstein(s1: String, s2: String): Int = { // from wikipedia
             val memorizedCosts = mutable.Map[(Int, Int), Int]()
+
             def lev: ((Int, Int)) => Int = {
               case (k1, k2) =>
                 memorizedCosts.getOrElseUpdate((k1, k2), (k1, k2) match {
@@ -234,43 +295,19 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
                         + (if (s1(i - 1) != s2(j - 1)) 1 else 0)).min
                 })
             }
+
             lev((s1.length, s2.length))
           }
 
-          val distance = levenshtein(newBodyIdx.mkString("", "", ""), Array.range(0, newBodyIdx.length).mkString("", "", ""))
+          val distance = levenstein(newBodyIdx.mkString("", "", ""), Array.range(0, newBodyIdx.length).mkString("", "", ""))
           if (distance < jitOptions.fuzzy)
-            Some(op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o))))
-          else
-            None // TODO: fix this
-        } else {
-          None
-        }
+            return op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o)))
 
-        if (shortC.isDefined)
-          shortC.get
-        else if (jitOptions.compileSync == CompileSync.Blocking) {
+        if (jitOptions.compileSync == CompileSync.Blocking) {
           op.blockingCompiledFn = compiler.compile(op)
           op.blockingCompiledFn(storageManager)
         } else {
-          given scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
-
-          op.compiledFnIndexed = Future {
-            compiler.compileIndexed(op)
-          }
-          //        Thread.sleep(1000)
-          storageManager.union(op.children.zipWithIndex.map((c, i) =>
-            op.compiledFnIndexed.value match {
-              case Some(Success(run)) =>
-                debug(s"Compilation succeeded: ${op.code}", () => "")
-//                println(s"indexing into compiled fn at $i")
-                run(storageManager, i)
-              case Some(Failure(e)) =>
-                throw Exception(s"Error compiling ${op.code} with: $e")
-              case None =>
-                debug(s"${op.code} subsection compilation not ready yet, so defaulting to interpreter", () => "")
-                c.run(storageManager)
-            }
-          ))
+          compileAsync(op, ec)
         }
 
       case op: UnionOp if jitOptions.granularity.flag == op.code =>
@@ -278,24 +315,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
           op.blockingCompiledFn = compiler.compile(op)
           op.blockingCompiledFn(storageManager)
         } else {
-          given scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
-
-          op.compiledFnIndexed =  Future {
-            compiler.compileIndexed(op)
-          }
-//           Thread.sleep(1000)
-          storageManager.union(op.children.zipWithIndex.map((c, i) =>
-            op.compiledFnIndexed.value match {
-              case Some(Success(run)) =>
-                debug(s"Compilation succeeded: ${op.code}", () => "")
-                run(storageManager, i)
-              case Some(Failure(e)) =>
-                throw Exception(s"Error compiling ${op.code} with: ${e}")
-              case None =>
-                debug(s"${op.code} subsection compilation not ready yet, so defaulting", () => "")
-                c.run(storageManager)
-            }
-          ))
+          compileAsync(op, ec)
         }
 
       case op: ScanOp =>

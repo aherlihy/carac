@@ -3,12 +3,13 @@ package datalog.execution
 import datalog.dsl.Term
 import datalog.execution.ast.ASTNode
 import datalog.execution.ir.*
-import datalog.storage.{StorageManager, DB, KNOWLEDGE, EDB}
+import datalog.storage.{DB, EDB, KNOWLEDGE, StorageManager}
 import datalog.tools.Debug.debug
 
+import java.util.concurrent.ExecutorService
 import scala.collection.mutable
 import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.quoted.{Type, staging}
 import scala.util.{Failure, Success}
 
@@ -27,7 +28,7 @@ class StagedSnippetExecutionEngine(override val storageManager: StorageManager,
   val snippetCompiler: StagedSnippetCompiler = StagedSnippetCompiler(storageManager)(using defaultJITOptions)
   given staging.Compiler = defaultJITOptions.dotty
 
-  override def jit[T](irTree: IROp[T])(using jitOptions: JITOptions): T = {
+  override def jit[T](irTree: IROp[T])(using jitOptions: JITOptions)(using ec: ExecutionContext): T = {
 //    debug("", () => s"IN SNIPPET IR, code=${irTree.code}")
     irTree match {
       case op: ProgramOp if jitOptions.granularity.flag == op.code =>
