@@ -204,7 +204,6 @@ object JoinIndexes {
   }
 
   def getPresort(input: Seq[ProjectJoinFilterOp], sortBy: (Atom, Boolean) => (Boolean, Int), rId: Int, originalK: JoinIndexes, sm: StorageManager)(using jitOptions: JITOptions): (Seq[ProjectJoinFilterOp], JoinIndexes) = {
-    println("applying union sort")
     jitOptions.sortOrder match
       case SortOrder.Unordered | SortOrder.Badluck => (input, originalK)
       case SortOrder.Sel | SortOrder.Mixed | SortOrder.IntMax | SortOrder.Worst =>
@@ -221,7 +220,6 @@ object JoinIndexes {
   }
 
   def getOnlineSort(input: Seq[IROp[EDB]], sortBy: (Atom, Boolean) => (Boolean, Int), rId: Int, originalK: JoinIndexes, sm: StorageManager)(using jitOptions: JITOptions): (Seq[IROp[EDB]], JoinIndexes) = {
-    println("applying FPJ sort")
     val deltaIdx = input.indexWhere(op => // will return -1 if delta is negated relation, which is OK just ignore for now
       op match
         case o: ScanOp => o.db == DB.Delta

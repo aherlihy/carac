@@ -73,7 +73,8 @@ abstract class DLBenchmark {
     // JIT options
     val jitGranularities = Seq(
       Granularity.ALL,
-      Granularity.RULE
+      Granularity.RULE,
+      Granularity.DELTA
     )
 
   // --> uncomment for JIT
