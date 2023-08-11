@@ -1,8 +1,8 @@
 package datalog.execution
 
 import datalog.dsl.{Atom, Constant, Variable}
-import datalog.execution.ir.ProjectJoinFilterOp
-import datalog.storage.{NS, RelationId, StorageManager}
+import datalog.execution.ir.{IROp, ProjectJoinFilterOp, ScanOp}
+import datalog.storage.{DB, EDB, NS, RelationId, StorageManager}
 import datalog.tools.Debug.debug
 
 import scala.collection.mutable
@@ -123,8 +123,8 @@ object JoinIndexes {
   }
 
   // used to approximate poor user-defined order
-  def presortSelectWorst(sortBy: Atom => (Boolean, Int), originalK: JoinIndexes, sm: StorageManager): (Seq[(Atom, Int)], String) = {
-    val sortedBody = originalK.atoms.drop(1).zipWithIndex.sortBy((a, _) => sortBy(a)).reverse
+  def presortSelectWorst(sortBy: (Atom, Boolean) => (Boolean, Int), originalK: JoinIndexes, sm: StorageManager, deltaIdx: Int): (Seq[(Atom, Int)], String) = {
+    val sortedBody = originalK.atoms.drop(1).zipWithIndex.sortBy((a, idx) => sortBy(a, idx == deltaIdx)).reverse
 
     val rStack = sortedBody.to(mutable.ListBuffer)
     var newBody = Seq[(Atom, Int)]()
@@ -160,10 +160,10 @@ object JoinIndexes {
     (newBody, newHash)
   }
 
-  def presortSelect(sortBy: Atom => (Boolean, Int), originalK: JoinIndexes, sm: StorageManager): (Seq[(Atom, Int)], String) = {
+  def presortSelect(sortBy: (Atom, Boolean) => (Boolean, Int), originalK: JoinIndexes, sm: StorageManager, deltaIdx: Int): (Seq[(Atom, Int)], String) = {
 
 //    val sortedBody = originalK.atoms.drop(1).zipWithIndex.sortBy((a, _) => (sm.allRulesAllIndexes.contains(a.rId), sortBy(a)))
-    val sortedBody = originalK.atoms.drop(1).zipWithIndex.sortBy((a, _) => sortBy(a))
+    val sortedBody = originalK.atoms.drop(1).zipWithIndex.sortBy((a, idx) => sortBy(a, idx == deltaIdx))
 //    println(s"\tOrder: ${sortedBody.map((a, _) => s"${sm.ns.hashToAtom(a.hash)}:|${sortBy(a)}|${if (sm.edbContains(a.rId)) "edb" else "idb"}").mkString("", ", ", "")}")
     //    if (input.length > 2)
 //    println(s"Rule: ${sm.printer.ruleToString(originalK.atoms)}\n")
@@ -203,20 +203,43 @@ object JoinIndexes {
     (newBody, newHash)
   }
 
-  def getPresort(input: Seq[ProjectJoinFilterOp], sortBy: Atom => (Boolean, Int), rId: Int, originalK: JoinIndexes, sm: StorageManager)(using jitOptions: JITOptions): (Seq[ProjectJoinFilterOp], JoinIndexes) = {
+  def getPresort(input: Seq[ProjectJoinFilterOp], sortBy: (Atom, Boolean) => (Boolean, Int), rId: Int, originalK: JoinIndexes, sm: StorageManager)(using jitOptions: JITOptions): (Seq[ProjectJoinFilterOp], JoinIndexes) = {
+    println("applying union sort")
     jitOptions.sortOrder match
       case SortOrder.Unordered | SortOrder.Badluck => (input, originalK)
       case SortOrder.Sel | SortOrder.Mixed | SortOrder.IntMax | SortOrder.Worst =>
         val (newBody, newHash) =
           if (jitOptions.sortOrder == SortOrder.Worst)
-            presortSelectWorst(sortBy, originalK, sm)
+            presortSelectWorst(sortBy, originalK, sm, -1)
           else
-            presortSelect(sortBy, originalK, sm)
+            presortSelect(sortBy, originalK, sm, -1)
         val newK = sm.allRulesAllIndexes(rId).getOrElseUpdate(
           newHash,
           JoinIndexes(originalK.atoms.head +: newBody.map(_._1), Some(originalK.cxns))
         )
         (input.map(c => ProjectJoinFilterOp(rId, newK, newBody.map((_, oldP) => c.childrenSO(oldP)): _*)), newK)
+  }
+
+  def getOnlineSort(input: Seq[IROp[EDB]], sortBy: (Atom, Boolean) => (Boolean, Int), rId: Int, originalK: JoinIndexes, sm: StorageManager)(using jitOptions: JITOptions): (Seq[IROp[EDB]], JoinIndexes) = {
+    println("applying FPJ sort")
+    val deltaIdx = input.indexWhere(op => // will return -1 if delta is negated relation, which is OK just ignore for now
+      op match
+        case o: ScanOp => o.db == DB.Delta
+        case _ => false
+    )
+    jitOptions.sortOrder match
+      case SortOrder.Unordered | SortOrder.Badluck => (input, originalK)
+      case SortOrder.Sel | SortOrder.Mixed | SortOrder.IntMax | SortOrder.Worst =>
+        val (newBody, newHash) =
+          if (jitOptions.sortOrder == SortOrder.Worst)
+            presortSelectWorst(sortBy, originalK, sm, deltaIdx)
+          else
+            presortSelect(sortBy, originalK, sm, deltaIdx)
+        val newK = sm.allRulesAllIndexes(rId).getOrElseUpdate(
+          newHash,
+          JoinIndexes(originalK.atoms.head +: newBody.map(_._1), Some(originalK.cxns))
+        )
+        (newK.atoms.drop(1).map(a => input(originalK.atoms.drop(1).indexOf(a))), newK)
   }
 
   def allOrders(rule: Seq[Atom]): AllIndexes = {

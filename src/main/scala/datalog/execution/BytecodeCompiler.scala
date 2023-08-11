@@ -116,17 +116,29 @@ class BytecodeCompiler(val storageManager: StorageManager)(using JITOptions) ext
             emitSMCall(xb, "getEmptyEDB")
 
         case ProjectJoinFilterOp(rId, k, children: _*) =>
+          val (sortedChildren, newK) =
+            if (jitOptions.sortOrder != SortOrder.Unordered && jitOptions.sortOrder != SortOrder.Badluck && jitOptions.granularity.flag == irTree.code)
+              JoinIndexes.getOnlineSort(
+                children,
+                jitOptions.getSortFn(storageManager),
+                rId,
+                k,
+                storageManager
+              )
+            else
+              (children, k)
+
           xb.aload(0)
-          emitSeq(xb, children.map(c => xxb => traverse(xxb, c)))
+          emitSeq(xb, sortedChildren.map(c => xxb => traverse(xxb, c)))
           xb.constantInstruction(rId)
-          emitString(xb, k.hash)
+          emitString(xb, newK.hash)
           emitBool(xb, jitOptions.onlineSort)
           emitSMCall(xb, "joinProjectHelper_withHash",
             classOf[Seq[?]], classOf[Int], classOf[String], classOf[Boolean])
 
         case UnionSPJOp(rId, k, children: _*) =>
           val (sortedChildren, _) =
-            if (jitOptions.sortOrder != SortOrder.Unordered)
+            if (jitOptions.sortOrder != SortOrder.Unordered && jitOptions.sortOrder != SortOrder.Badluck)
               JoinIndexes.getPresort(
                 children,
                 jitOptions.getSortFn(storageManager),

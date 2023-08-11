@@ -56,17 +56,24 @@ case class JITOptions(
     val backendStr = if (mode == Mode.Interpreted) "" else backend.toString.toLowerCase()
     s"${programStr}_${granStr}_$backendStr"
 
-  def getSortFn(storageManager: StorageManager): Atom => (Boolean, Int) =
-    (a: Atom) =>
+  def getSortFn(storageManager: StorageManager): (Atom, Boolean) => (Boolean, Int) =
       sortOrder match
         case SortOrder.IntMax =>
-          if (storageManager.edbContains(a.rId))
+          (a: Atom, isDelta: Boolean) => if (storageManager.edbContains(a.rId))
             (true, storageManager.getEDBResult(a.rId).size)
           else
             (true, Int.MaxValue)
         case SortOrder.Sel =>
-          (true, storageManager.getKnownDerivedDB(a.rId).length)
+          (a: Atom, isDelta: Boolean) =>
+            if (isDelta)
+              (true, storageManager.getKnownDeltaDB(a.rId).length)
+            else
+              (true, storageManager.getKnownDerivedDB(a.rId).length)
         case SortOrder.Mixed =>
-          (storageManager.allRulesAllIndexes.contains(a.rId), storageManager.getKnownDerivedDB(a.rId).length)
+          (a: Atom, isDelta: Boolean) =>
+            if (isDelta)
+              (storageManager.allRulesAllIndexes.contains(a.rId), storageManager.getKnownDeltaDB(a.rId).length)
+            else
+              (storageManager.allRulesAllIndexes.contains(a.rId), storageManager.getKnownDerivedDB(a.rId).length)
         case _ => throw new Exception(s"Unknown sort order ${sortOrder}")
 }
