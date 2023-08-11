@@ -15,7 +15,7 @@ import scala.concurrent.{Await, Future, blocking}
 import scala.util.{Failure, Success}
 import scala.quoted.*
 
-class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOptions: JITOptions = JITOptions()) extends ExecutionEngine {
+class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOptions: JITOptions = JITOptions(mode = Mode.Interpreted)) extends ExecutionEngine {
   val precedenceGraph = new PrecedenceGraph(using storageManager.ns)
   val prebuiltOpKeys: mutable.Map[Int, mutable.ArrayBuffer[JoinIndexes]] = mutable.Map[Int, mutable.ArrayBuffer[JoinIndexes]]() // TODO: currently unused, mb remove from EE
   val ast: ProgramNode = ProgramNode()
@@ -211,7 +211,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
       case op: DebugNode =>
         op.run(storageManager)
 
-      case op: UnionSPJOp if jitOptions.granularity == op.code =>
+      case op: UnionSPJOp if jitOptions.granularity.flag == op.code =>
         val shortC = if (jitOptions.sortOrder != SortOrder.Unordered && op.children.size < 3 && jitOptions.fuzzy == 2) { // don't recompile query plans with <2 joins
 //          println("skip <3")
           Some(op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o))))
@@ -273,7 +273,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
           ))
         }
 
-      case op: UnionOp if jitOptions.granularity == op.code =>
+      case op: UnionOp if jitOptions.granularity.flag == op.code =>
         if (jitOptions.compileSync == CompileSync.Blocking) {
           op.blockingCompiledFn = compiler.compile(op)
           op.blockingCompiledFn(storageManager)
@@ -372,14 +372,12 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
     val irTree = createIR(transformedAST)
 
     debug("IRTree: ", () => storageManager.printer.printIR(irTree))
-    if (defaultJITOptions.granularity == OpCode.OTHER) // i.e. never compile
-      solveInterpreted(irTree, irCtx)
-    else if (defaultJITOptions.granularity == OpCode.PROGRAM && defaultJITOptions.compileSync == CompileSync.Blocking) // i.e. compile asap and block
-      solveCompiled(irTree, irCtx)
-    else
-      solveJIT(irTree, irCtx)
+    defaultJITOptions.mode match
+      case Mode.Interpreted => solveInterpreted(irTree, irCtx)
+      case Mode.Compiled => solveCompiled(irTree, irCtx)
+      case Mode.JIT => solveJIT(irTree, irCtx)
   }
 }
-class NaiveStagedExecutionEngine(storageManager: StorageManager, defaultJITOptions: JITOptions = JITOptions()) extends StagedExecutionEngine(storageManager, defaultJITOptions) {
+class NaiveStagedExecutionEngine(storageManager: StorageManager, defaultJITOptions: JITOptions = JITOptions(mode = Mode.Interpreted)) extends StagedExecutionEngine(storageManager, defaultJITOptions) {
   override def createIR(ast: ASTNode)(using InterpreterContext): IROp[Any] = IRTreeGenerator().generateTopLevelProgram(ast, naive=true)
 }

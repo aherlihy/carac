@@ -2,12 +2,12 @@ package test
 
 import datalog.dsl.{Program, Relation}
 import datalog.execution.ir.OpCode
-import datalog.execution.{Backend, CompileSync, ExecutionEngine, JITOptions, NaiveStagedExecutionEngine, SortOrder, StagedExecutionEngine, ir}
+import datalog.execution.{Backend, CompileSync, ExecutionEngine, Granularity, JITOptions, Mode, NaiveStagedExecutionEngine, SortOrder, StagedExecutionEngine, ir}
 import datalog.storage.{DefaultStorageManager, VolcanoStorageManager}
 import test.graphs.*
 
 class NaiveStagedCompiledTransitiveClosure extends munit.FunSuite {
-  val jo = JITOptions(granularity = ir.OpCode.PROGRAM, compileSync = CompileSync.Blocking)
+  val jo = JITOptions(mode = Mode.Compiled)
   List(
     Acyclic(new Program(new NaiveStagedExecutionEngine(new DefaultStorageManager(), jo))),
     MultiIsolatedCycle(new Program(new NaiveStagedExecutionEngine(new DefaultStorageManager(), jo))),
@@ -27,7 +27,7 @@ class NaiveStagedCompiledTransitiveClosure extends munit.FunSuite {
     }))
 }
 class NaiveStagedInterpretedTransitiveClosure extends munit.FunSuite {
-  val jitOptions = JITOptions(granularity = ir.OpCode.OTHER)
+  val jitOptions = JITOptions(mode = Mode.Interpreted)
   List(
     Acyclic(new Program(new NaiveStagedExecutionEngine(new DefaultStorageManager(), jitOptions))),
     MultiIsolatedCycle(new Program(new NaiveStagedExecutionEngine(new DefaultStorageManager(), jitOptions))),
@@ -48,7 +48,7 @@ class NaiveStagedInterpretedTransitiveClosure extends munit.FunSuite {
 }
 
 class SemiNaiveStagedCompiledTransitiveClosure extends munit.FunSuite {
-  val jo = JITOptions(granularity = OpCode.PROGRAM, compileSync = CompileSync.Blocking)
+  val jo = JITOptions(mode = Mode.Compiled)
   List(
     Acyclic(new Program(new StagedExecutionEngine(new DefaultStorageManager(), jo))),
     MultiIsolatedCycle(new Program(new StagedExecutionEngine(new DefaultStorageManager(), jo))),
@@ -69,7 +69,7 @@ class SemiNaiveStagedCompiledTransitiveClosure extends munit.FunSuite {
 }
 
 class SemiNaiveBytecodeGeneratedTransitiveClosure extends munit.FunSuite {
-  val jo = JITOptions(granularity = ir.OpCode.EVAL_RULE_SN, backend = Backend.Bytecode)
+  val jo = JITOptions(mode = Mode.JIT, granularity = Granularity.ALL, backend = Backend.Bytecode)
   List(
     Acyclic(new Program(new StagedExecutionEngine(new DefaultStorageManager(), jo))),
     MultiIsolatedCycle(new Program(new StagedExecutionEngine(new DefaultStorageManager(), jo))),
@@ -89,7 +89,7 @@ class SemiNaiveBytecodeGeneratedTransitiveClosure extends munit.FunSuite {
     }))
 }
 class SemiNaiveStagedInterpretedTransitiveClosure extends munit.FunSuite {
-  val jitOptions = JITOptions(granularity = ir.OpCode.OTHER)
+  val jitOptions = JITOptions(mode = Mode.Interpreted)
   List(
     Acyclic(new Program(new StagedExecutionEngine(new DefaultStorageManager(), jitOptions))),
     MultiIsolatedCycle(new Program(new StagedExecutionEngine(new DefaultStorageManager(), jitOptions))),
@@ -111,7 +111,7 @@ class SemiNaiveStagedInterpretedTransitiveClosure extends munit.FunSuite {
 
 class SemiNaiveStagedJIT_TransitiveClosure extends munit.FunSuite {
   // JIT async, SN
-  val jitOptions = JITOptions(granularity = ir.OpCode.EVAL_SN, compileSync = CompileSync.Async)
+  val jitOptions = JITOptions(mode = Mode.JIT, granularity = Granularity.ALL, compileSync = CompileSync.Async)
   List(
     Acyclic(new Program(new StagedExecutionEngine(new DefaultStorageManager(), jitOptions))),
     MultiIsolatedCycle(new Program(new StagedExecutionEngine(new DefaultStorageManager(), jitOptions))),
@@ -130,7 +130,7 @@ class SemiNaiveStagedJIT_TransitiveClosure extends munit.FunSuite {
       }
     }))
   // JIT blocking, SN
-  val jitOptions2 = JITOptions(granularity = ir.OpCode.EVAL_SN, compileSync = CompileSync.Blocking)
+  val jitOptions2 = JITOptions(mode = Mode.JIT, granularity = Granularity.ALL, compileSync = CompileSync.Blocking)
   List(
     Acyclic(new Program(new StagedExecutionEngine(new DefaultStorageManager(), jitOptions2))),
     MultiIsolatedCycle(new Program(new StagedExecutionEngine(new DefaultStorageManager(), jitOptions2))),
@@ -150,7 +150,7 @@ class SemiNaiveStagedJIT_TransitiveClosure extends munit.FunSuite {
     }))
 
   // JIT async, Rule
-  val jitOptions3 = JITOptions(granularity = ir.OpCode.EVAL_RULE_BODY, compileSync = CompileSync.Async)
+  val jitOptions3 = JITOptions(mode = Mode.JIT, granularity = Granularity.RULE, compileSync = CompileSync.Async)
   List(
     Acyclic(new Program(new StagedExecutionEngine(new DefaultStorageManager(), jitOptions3))),
     MultiIsolatedCycle(new Program(new StagedExecutionEngine(new DefaultStorageManager(), jitOptions3))),
@@ -170,7 +170,7 @@ class SemiNaiveStagedJIT_TransitiveClosure extends munit.FunSuite {
     }))
 
   // JIT blocking, Rule
-  val jitOptions4 = JITOptions(granularity = ir.OpCode.EVAL_RULE_BODY, compileSync = CompileSync.Blocking)
+  val jitOptions4 = JITOptions(mode = Mode.JIT, granularity = Granularity.RULE, compileSync = CompileSync.Blocking)
   List(
     Acyclic(new Program(new StagedExecutionEngine(new DefaultStorageManager(), jitOptions4))),
     MultiIsolatedCycle(new Program(new StagedExecutionEngine(new DefaultStorageManager(), jitOptions4))),

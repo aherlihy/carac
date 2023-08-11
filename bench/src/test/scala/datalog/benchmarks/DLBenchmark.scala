@@ -45,9 +45,7 @@ abstract class DLBenchmark {
     // --> uncomment to bench compile
     backends.foreach(bc =>
       val jo = JITOptions(
-        granularity = ir.OpCode.PROGRAM,
-        sortOrder = SortOrder.Unordered,
-        compileSync = CompileSync.Blocking,
+        mode = Mode.Compiled,
         backend = bc,
         dotty = dotty
       )
@@ -64,6 +62,8 @@ abstract class DLBenchmark {
     interpSortOpts.foreach(sort =>
         onlineSortOpts.foreach(onlineSort =>
           val jo = JITOptions(
+            mode = Mode.Interpreted,
+//            granularity = if (sort == SortOrder.Sel) Granularity.RULE else Granularity.NEVER, // TODO: eventually sort at other grans
             sortOrder = sort,
             onlineSort = onlineSort,
             dotty = dotty)
@@ -72,8 +72,8 @@ abstract class DLBenchmark {
 
     // JIT options
     val jitGranularities = Seq(
-      ir.OpCode.EVAL_RULE_BODY,
-      ir.OpCode.EVAL_RULE_SN,
+      Granularity.ALL,
+      Granularity.RULE
     )
 
   // --> uncomment for JIT
@@ -84,6 +84,7 @@ abstract class DLBenchmark {
             blocking.foreach(block =>
               backends.foreach(bc =>
                 val jo = JITOptions(
+                  mode = Mode.JIT,
                   granularity = gran,
                   compileSync = block,
                   sortOrder = sort,

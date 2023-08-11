@@ -12,33 +12,46 @@ enum SortOrder:
   case Sel, IntMax, Mixed, Badluck, Unordered, Worst
 enum Backend:
   case Quotes, Bytecode, Lambda
+enum Granularity(val flag: OpCode):
+  case ALL extends Granularity(OpCode.EVAL_RULE_SN)
+  case RULE extends Granularity(OpCode.EVAL_RULE_BODY)
+  case DELTA extends Granularity(OpCode.SPJ)
+  case NEVER extends Granularity(OpCode.OTHER)
+
+enum Mode:
+  case Interpreted
+  case Compiled
+  case JIT
+
+val DEFAULT_FUZZY = 0
 
 // TODO: make JITOptions into an enum itself
 case class JITOptions(
-                       granularity: OpCode = OpCode.OTHER, // default is unoptimized interpret
+                       mode: Mode = Mode.Interpreted,
+                       granularity: Granularity = Granularity.NEVER,
                        compileSync: CompileSync = CompileSync.Blocking,
                        sortOrder: SortOrder = SortOrder.Unordered,
                        onlineSort: Boolean = false,
                        backend: Backend = Backend.Quotes,
-                       fuzzy: Int = 0,
+                       fuzzy: Int = DEFAULT_FUZZY,
                        dotty: staging.Compiler = staging.Compiler.make(getClass.getClassLoader),
                      ) {
-  private val unique = Seq(OpCode.DOWHILE, OpCode.EVAL_NAIVE, OpCode.LOOP_BODY)
-  if (unique.contains(granularity))
-    throw new Exception(s"Cannot compile singleton IR nodes: $granularity (theres no point)")
+  if ((mode == Mode.Compiled || mode == Mode.Interpreted) &&
+    (compileSync != CompileSync.Blocking || granularity != Granularity.NEVER || fuzzy != 0))
+    throw new Exception(s"Do you really want to set JIT options with $mode?")
+  if (
+    (mode == Mode.Interpreted && backend != Backend.Quotes) ||
+      (mode == Mode.Compiled && sortOrder != SortOrder.Unordered) ||
+      (fuzzy != DEFAULT_FUZZY && compileSync == CompileSync.Blocking))
+    throw new Exception(s"Weird options for mode $mode ($backend, $sortOrder, or $compileSync)")
 
-  override def toString: String = s"{ Gran: $granularity, blocking: $compileSync, sortOrder: $sortOrder, onlineSort: $onlineSort, backend: $backend }"
+  override def toString: String = s"{ Mode $mode Gran: $granularity, blocking: $compileSync, sortOrder: $sortOrder, onlineSort: $onlineSort, backend: $backend }"
   def toBenchmark: String =
-    val modeStr = if (granularity == OpCode.OTHER) "interpreted" else if (granularity == OpCode.PROGRAM) "compiled" else "jit"
-    val granStr = granularity match
-      case OpCode.PROGRAM | OpCode.OTHER => ""
-      case OpCode.EVAL_RULE_SN => "ALL"
-      case OpCode.EVAL_RULE_BODY => "1RULE"
-      case _ => ???
+    val granStr = if (granularity == Granularity.NEVER) "" else granularity.toString
     val onlineSortStr = if (onlineSort) "Online" else ""
-    val blockingStr = if (granularity == OpCode.OTHER || granularity == OpCode.PROGRAM) "" else compileSync
-    val programStr = s"${modeStr}_default_${sortOrder}_${onlineSortStr}_${fuzzy}_${blockingStr}".toLowerCase()
-    val backendStr = if (granularity == OpCode.OTHER) "" else backend.toString.toLowerCase()
+    val blockingStr = if (mode == Mode.JIT) compileSync else ""
+    val programStr = s"${mode}_default_${sortOrder}_${onlineSortStr}_${fuzzy}_${blockingStr}".toLowerCase()
+    val backendStr = if (mode == Mode.Interpreted) "" else backend.toString.toLowerCase()
     s"${programStr}_${granStr}_$backendStr"
 
   def getSortFn(storageManager: StorageManager): Atom => (Boolean, Int) =

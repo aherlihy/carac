@@ -22,14 +22,15 @@ import scala.util.{Failure, Success}
  * so they can be cached and reused.
  */
 class StagedSnippetExecutionEngine(override val storageManager: StorageManager,
-                                   defaultJITOptions: JITOptions = JITOptions()) extends StagedExecutionEngine(storageManager, defaultJITOptions) {
+                                   defaultJITOptions: JITOptions = JITOptions(mode = Mode.Interpreted)) extends StagedExecutionEngine(storageManager, defaultJITOptions) {
+
   val snippetCompiler: StagedSnippetCompiler = StagedSnippetCompiler(storageManager)(using defaultJITOptions)
   given staging.Compiler = defaultJITOptions.dotty
 
   override def jit[T](irTree: IROp[T])(using jitOptions: JITOptions): T = {
 //    debug("", () => s"IN SNIPPET IR, code=${irTree.code}")
     irTree match {
-      case op: ProgramOp if jitOptions.granularity == op.code =>
+      case op: ProgramOp if jitOptions.granularity.flag == op.code =>
         if (op.compiledSnippetContinuationFn == null)
           op.compiledSnippetContinuationFn = snippetCompiler.getCompiledSnippet(op)
         op.compiledSnippetContinuationFn(
@@ -39,7 +40,7 @@ class StagedSnippetExecutionEngine(override val storageManager: StorageManager,
       case op: ProgramOp =>
         op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o)))
 
-      case op: DoWhileOp if jitOptions.granularity == op.code =>
+      case op: DoWhileOp if jitOptions.granularity.flag == op.code =>
         if (op.compiledSnippetContinuationFn == null)
           op.compiledSnippetContinuationFn = snippetCompiler.getCompiledSnippet(op)
         op.compiledSnippetContinuationFn(storageManager, op.children.map(o => (sm: StorageManager) => jit(o)))
@@ -49,7 +50,7 @@ class StagedSnippetExecutionEngine(override val storageManager: StorageManager,
 
       case op: SequenceOp =>
         op.code match
-          case OpCode.EVAL_SN | OpCode.EVAL_NAIVE | OpCode.LOOP_BODY if jitOptions.granularity == op.code =>
+          case OpCode.EVAL_SN | OpCode.EVAL_NAIVE | OpCode.LOOP_BODY if jitOptions.granularity.flag == op.code =>
             if (op.compiledSnippetContinuationFn == null)
               op.compiledSnippetContinuationFn = snippetCompiler.getCompiledSnippet(op)
             op.compiledSnippetContinuationFn(
@@ -64,7 +65,7 @@ class StagedSnippetExecutionEngine(override val storageManager: StorageManager,
       case op: SwapAndClearOp =>
         op.run(storageManager)
 
-      case op: InsertOp if jitOptions.granularity == op.code =>
+      case op: InsertOp if jitOptions.granularity.flag == op.code =>
         if (op.compiledSnippetContinuationFn == null)
           op.compiledSnippetContinuationFn = snippetCompiler.getCompiledSnippet(op)
         op.compiledSnippetContinuationFn(storageManager, op.children.map(o => (sm: StorageManager) => jit(o.asInstanceOf[IROp[EDB]])))
@@ -74,7 +75,7 @@ class StagedSnippetExecutionEngine(override val storageManager: StorageManager,
       case op: DebugNode =>
         op.run(storageManager)
 
-      case op: ScanOp if jitOptions.granularity == op.code =>
+      case op: ScanOp if jitOptions.granularity.flag == op.code =>
         if (op.compiledSnippetContinuationFn == null)
           op.compiledSnippetContinuationFn = snippetCompiler.getCompiledSnippet(op)
         op.compiledSnippetContinuationFn(storageManager, Seq.empty) // TODO: weird
@@ -85,7 +86,7 @@ class StagedSnippetExecutionEngine(override val storageManager: StorageManager,
       case op: ScanEDBOp =>
         op.run(storageManager)
 
-      case op: ProjectJoinFilterOp if jitOptions.granularity == op.code =>
+      case op: ProjectJoinFilterOp if jitOptions.granularity.flag == op.code =>
         if (op.compiledSnippetContinuationFn == null)
           op.compiledSnippetContinuationFn = snippetCompiler.getCompiledSnippet(op)
         op.compiledSnippetContinuationFn(storageManager, op.children.map(o => (sm: StorageManager) => jit(o)))
@@ -99,7 +100,7 @@ class StagedSnippetExecutionEngine(override val storageManager: StorageManager,
       case op: UnionSPJOp =>
         op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o)))
 
-      case op: DiffOp if jitOptions.granularity == op.code =>
+      case op: DiffOp if jitOptions.granularity.flag == op.code =>
         if (op.compiledSnippetContinuationFn == null)
           op.compiledSnippetContinuationFn = snippetCompiler.getCompiledSnippet(op)
         op.compiledSnippetContinuationFn(storageManager, op.children.map(o => (sm: StorageManager) => jit(o)))
