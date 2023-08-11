@@ -141,7 +141,7 @@ class JoinIndexesSortTest extends munit.FunSuite {
           3 -> Seq(atom6.hash, atom8.hash, atom7.hash)),
       )
     )
-    val (newBody, hash) = JoinIndexes.presortSelect(a => (true, sm.getEDBResult(a.rId).size), jIdx, sm)
+    val (newBody, hash) = JoinIndexes.presortSelect((a, d) => (true, sm.getEDBResult(a.rId).size), jIdx, sm, -1)
     val expected = Array(atom1.hash, atom2.hash, atom3.hash, atom4.hash, atom6.hash, atom7.hash, atom8.hash, atom9.hash)
 
     assertEquals(
@@ -291,7 +291,7 @@ class JoinIndexesSortTest extends munit.FunSuite {
           1 -> Seq(atom1.hash, atom2.hash), 3 -> Seq(atom11.hash), 4 -> Seq(atom10.hash))
       ).map((k, v) => (sm.ns.hashToAtom(k), v.map((c, hs) => (c, hs.map(h => sm.ns.hashToAtom(h)).toList.sorted))))
     )
-    val (newBody, hash) = JoinIndexes.presortSelect(a => (true, sm.getEDBResult(a.rId).size), jIdx, sm)
+    val (newBody, hash) = JoinIndexes.presortSelect((a, _) => (true, sm.getEDBResult(a.rId).size), jIdx, sm, -1)
     val expected = Array(atom1.hash, atom2.hash, atom12.hash, atom10.hash, atom11.hash, atom3.hash, atom4.hash, atom5.hash, atom6.hash, atom7.hash, atom8.hash, atom9.hash)
 
     assertEquals(
@@ -329,7 +329,7 @@ class JoinIndexesSortTest extends munit.FunSuite {
 
     val jIdx = engine.prebuiltOpKeys(rule.id).head
 
-    val (newBody, hash) = JoinIndexes.presortSelect(a => (true, sm.getEDBResult(a.rId).size), jIdx, sm)
+    val (newBody, hash) = JoinIndexes.presortSelect((a, d) => (true, sm.getEDBResult(a.rId).size), jIdx, sm, -1)
     val expected = Array(a0.hash, a2.hash, a3.hash, a6.hash, a5.hash, a1.hash, a4.hash)
 
     assertEquals(
@@ -371,7 +371,7 @@ class JoinIndexesSortTest extends munit.FunSuite {
 
     val jIdx = engine.prebuiltOpKeys(rule.id).head
 
-    val (newBody, hash) = JoinIndexes.presortSelectWorst(a => (true, sm.getEDBResult(a.rId).size), jIdx, sm)
+    val (newBody, hash) = JoinIndexes.presortSelectWorst((a, d) => (true, sm.getEDBResult(a.rId).size), jIdx, sm, -1)
     val expected = Array(a0.hash, a4.hash, a2.hash, a3.hash, a2.hash, a5.hash, a1.hash)
 
     assertEquals(

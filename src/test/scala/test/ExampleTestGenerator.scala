@@ -111,14 +111,20 @@ abstract class TestGenerator(directory: Path,
             Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.RULE, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Quotes)))
           case "JITStaged_Sel_ALL_Block_QuotesDefault" =>
             Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.ALL, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Quotes)))
+          case "JITStaged_Sel_DELTA_Block_QuotesDefault" =>
+            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.DELTA, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Quotes)))
           case "JITStaged_Sel_RULE_Block_BCDefault" =>
             Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.RULE, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Bytecode)))
           case "JITStaged_Sel_ALL_Block_BCDefault" =>
             Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.ALL, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Bytecode)))
+          case "JITStaged_Sel_DELTA_Block_BCDefault" =>
+            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.DELTA, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Bytecode)))
           case "JITStaged_Sel_RULE_Block_LambdaDefault" =>
             Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.RULE, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)))
           case "JITStaged_Sel_ALL_Block_LambdaDefault" =>
             Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.ALL, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)))
+          case "JITStaged_Sel_DELTA_Block_LambdaDefault" =>
+            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.DELTA, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)))
 
           // async
           case "JITStaged_Sel_RULE_Async_QuotesDefault" =>
@@ -156,12 +162,15 @@ abstract class TestGenerator(directory: Path,
 //      "CompiledStaged", // TODO: for longer tests, can throw MethodTooLarge
       "InterpretedStaged",
       "JITStaged_Sel_RULE_Block_BC",
+      "JITStaged_Sel_DELTA_Block_BC",
       "JITStaged_Sel_ALL_Block_BC",
       "JITStaged_Sel_RULE_Block_Quotes",
+      "JITStaged_Sel_DELTA_Block_Quotes",
       "JITStaged_Sel_ALL_Block_Quotes",
 //      "JITStaged_Sel_RULE_Async_Quotes",
 //      "JITStaged_Sel_ALL_Async_Quotes",
       "JITStaged_Sel_ALL_Block_Lambda",
+      "JITStaged_Sel_DELTA_Block_Lambda",
       "JITStaged_Sel_RULE_Block_Lambda",
       "JITStaged_Sel_ALL_Async_Lambda",
       "JITStaged_Sel_RULE_Async_Lambda",

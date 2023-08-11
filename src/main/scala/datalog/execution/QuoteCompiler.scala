@@ -110,12 +110,24 @@ class QuoteCompiler(val storageManager: StorageManager)(using JITOptions) extend
           '{ $stagedSM.getEmptyEDB() }
 
       case ProjectJoinFilterOp(rId, k, children: _*) =>
-        val compiledOps = Expr.ofSeq(children.map(compileIRRelOp))
+        val (sortedChildren, newK) =
+          if (jitOptions.sortOrder != SortOrder.Unordered && jitOptions.sortOrder != SortOrder.Badluck && jitOptions.granularity.flag == irTree.code)
+            JoinIndexes.getOnlineSort(
+              children,
+              jitOptions.getSortFn(storageManager),
+              rId,
+              k,
+              storageManager
+            )
+          else
+            (children, k)
+
+        val compiledOps = Expr.ofSeq(sortedChildren.map(compileIRRelOp))
         '{
           $stagedSM.joinProjectHelper_withHash(
             $compiledOps,
             ${ Expr(rId) },
-            ${ Expr(k.hash) },
+            ${ Expr(newK.hash) },
             ${ Expr(jitOptions.onlineSort) }
           )
         }

@@ -158,11 +158,22 @@ class LambdaCompiler(val storageManager: StorageManager)(using JITOptions) exten
         _.getEmptyEDB()
 
     case ProjectJoinFilterOp(rId, k, children: _*) =>
-      val compiledOps = seqToLambda(children.map(compile))
+      val (sortedChildren, newK) =
+        if (jitOptions.sortOrder != SortOrder.Unordered && jitOptions.sortOrder != SortOrder.Badluck && jitOptions.granularity.flag == irTree.code)
+          JoinIndexes.getOnlineSort(
+            children,
+            jitOptions.getSortFn(storageManager),
+            rId,
+            k,
+            storageManager
+          )
+        else
+          (children, k)
+      val compiledOps = seqToLambda(sortedChildren.map(compile))
       sm => sm.joinProjectHelper_withHash(
         compiledOps(sm),
         rId,
-        k.hash,
+        newK.hash,
         jitOptions.onlineSort
       )
 

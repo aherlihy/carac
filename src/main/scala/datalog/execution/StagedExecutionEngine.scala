@@ -67,26 +67,28 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
 
     if (defaultJITOptions.sortOrder == SortOrder.Sel) // sort before inserting, just in case EDBs are defined
       val (sortedBody, newHash) = JoinIndexes.presortSelect( // use preSort bc no child nodes to rearrange
-        a =>
+        (a, _) =>
           if (storageManager.edbContains(a.rId))
             (true, storageManager.getEDBResult(a.rId).size)
           else
             (true, Int.MaxValue),
         k,
-        storageManager
+        storageManager,
+        -1
       )
       rule = rule.head +: sortedBody.map(_._1)
       k = JoinIndexes(rule, Some(k.cxns))
       storageManager.allRulesAllIndexes(rId).addOne(k.hash, k)
     else if (defaultJITOptions.sortOrder == SortOrder.Badluck) // mimic "bad luck" program definition, so ingest rules in a bad order and then don't update them.
       val (sortedBody, newHash) = JoinIndexes.presortSelectWorst(
-        a =>
+        (a, _) =>
           if (storageManager.edbContains(a.rId))
             (true, storageManager.getEDBResult(a.rId).size)
           else
             (true, Int.MaxValue),
         k,
-        storageManager
+        storageManager,
+        -1
       )
       rule = rule.head +: sortedBody.map(_._1)
       k = JoinIndexes(rule, Some(k.cxns))
@@ -210,7 +212,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
       compiler.compileIndexed(op)
     }
 
-    // Thread.sleep(1000)
+//    Thread.sleep(1000)
     storageManager.union(op.children.zipWithIndex.map((c, i) =>
       future.value match {
         case Some(Success(run)) =>
@@ -270,13 +272,9 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
       case op: DebugNode =>
         op.run(storageManager)
 
-      case op: UnionSPJOp if jitOptions.granularity.flag == op.code =>
-        if (jitOptions.sortOrder != SortOrder.Unordered && op.children.size < 3 && jitOptions.fuzzy == 2) // don't compile query plans with <2 joins
-//          println("skip <3")
-          return op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o)))
-
-        if (jitOptions.sortOrder != SortOrder.Unordered && jitOptions.sortOrder != SortOrder.Badluck && jitOptions.fuzzy > 2) // sort child relations and see if change is above threshold
-          val (nb, _) = JoinIndexes.presortSelect(jitOptions.getSortFn(storageManager), op.k, storageManager)
+      case op: UnionSPJOp if jitOptions.granularity.flag == op.code && op.children.length > 2=>
+        if (jitOptions.sortOrder != SortOrder.Unordered && jitOptions.sortOrder != SortOrder.Badluck && jitOptions.fuzzy != 0) // sort child relations and see if change is above threshold
+          val (nb, _) = JoinIndexes.presortSelect(jitOptions.getSortFn(storageManager), op.k, storageManager, -1)
           val oldBody = op.k.atoms.drop(1).map(_.hash)
           val newBodyIdx = nb.map(h => oldBody.indexOf(h._1.hash))
 
@@ -313,13 +311,16 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
           compileAsync(op, ec)
         }
 
-      case op: UnionOp if jitOptions.granularity.flag == op.code =>
+      case op: UnionOp if jitOptions.granularity.flag == op.code && op.children.length > 2 =>
         if (jitOptions.compileSync == CompileSync.Blocking) {
           op.blockingCompiledFn = compiler.compile(op)
           op.blockingCompiledFn(storageManager)
         } else {
           compileAsync(op, ec)
         }
+      case op: ProjectJoinFilterOp if jitOptions.granularity.flag == op.code  && op.children.length > 2 =>
+        op.blockingCompiledFn = compiler.compile(op)
+        op.blockingCompiledFn(storageManager)
 
       case op: ScanOp =>
         op.run(storageManager)
