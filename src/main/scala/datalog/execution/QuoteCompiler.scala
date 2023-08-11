@@ -16,7 +16,9 @@ import scala.quoted.*
  */
 class QuoteCompiler(val storageManager: StorageManager)(using JITOptions) extends StagedCompiler(storageManager) {
   given staging.Compiler = jitOptions.dotty
-  clearDottyThread()
+  // FIXME: Make dotty an optional parameter, this is null in MacroCompiler.
+  if (jitOptions.dotty != null)
+    clearDottyThread()
 
   given MutableMapToExpr[T: Type : ToExpr, U: Type : ToExpr]: ToExpr[mutable.Map[T, U]] with {
     def apply(map: mutable.Map[T, U])(using Quotes): Expr[mutable.Map[T, U]] =
