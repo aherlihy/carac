@@ -271,7 +271,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
         op.run(storageManager)
 
       case op: UnionSPJOp if jitOptions.granularity.flag == op.code =>
-        if (jitOptions.sortOrder != SortOrder.Unordered && op.children.size < 3 && jitOptions.fuzzy == 2) // don't recompile query plans with <2 joins
+        if (jitOptions.sortOrder != SortOrder.Unordered && op.children.size < 3 && jitOptions.fuzzy == 2) // don't compile query plans with <2 joins
 //          println("skip <3")
           return op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o)))
 
@@ -301,7 +301,10 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
 
           val distance = levenstein(newBodyIdx.mkString("", "", ""), Array.range(0, newBodyIdx.length).mkString("", "", ""))
           if (distance < jitOptions.fuzzy)
-            return op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o)))
+            return if (op.blockingCompiledFn != null)
+              op.blockingCompiledFn(storageManager)
+            else
+              op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o)))
 
         if (jitOptions.compileSync == CompileSync.Blocking) {
           op.blockingCompiledFn = compiler.compile(op)
