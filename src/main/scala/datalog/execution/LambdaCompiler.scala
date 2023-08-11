@@ -170,16 +170,16 @@ class LambdaCompiler(val storageManager: StorageManager)(using JITOptions) exten
       val (sortedChildren, _) =
         if (jitOptions.sortOrder != SortOrder.Unordered && jitOptions.sortOrder != SortOrder.Badluck)
           JoinIndexes.getPresort(
-            children.toArray,
+            children,
             jitOptions.getSortFn(storageManager),
             rId,
             k,
             storageManager
           )
         else
-          (children.toArray, k)
+          (children, k)
 
-      val compiledOps = arrayToLambda(sortedChildren.map(compile))
+      val compiledOps = seqToLambda(sortedChildren.map(compile))
       sm => sm.union(compiledOps(sm))
 
     case UnionOp(label, children: _*) =>

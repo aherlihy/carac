@@ -68,7 +68,7 @@ class Printer[S <: StorageManager](val sm: S) {
                "PROJECT" + k.projIndexes.map((typ, v) => f"$typ$v").mkString("[", " ", "]") + "( " +
                 "JOIN" +
                 k.varIndexes.map(v => v.mkString("$", "==$", "")).mkString("[", ",", "]") +
-                k.constIndexes.map((k, v) => k + "==" + v).mkString("{", "&&", "}") +
+                k.constIndexes.map((k, v) => s"$k==$v").mkString("{", "&&", "}") +
                 k.deps.zipWithIndex.map((tup, i) => {
                   val n = tup._2
                   if (n == d && !found && i > idx)

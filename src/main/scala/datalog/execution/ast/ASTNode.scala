@@ -17,7 +17,7 @@ abstract class AtomNode() extends ASTNode {}
 
 case class LogicAtom(relation: RelationId, terms: Seq[ASTNode], negated: Boolean) extends AtomNode {}
 
-case class RuleNode(head: ASTNode, body: Seq[ASTNode], dslAtoms: Array[Atom], currentK: JoinIndexes) extends ASTNode {}
+case class RuleNode(head: ASTNode, body: Seq[ASTNode], dslAtoms: Seq[Atom], currentK: JoinIndexes) extends ASTNode {}
 
 abstract class TermNode(value: Term) extends ASTNode {}
 

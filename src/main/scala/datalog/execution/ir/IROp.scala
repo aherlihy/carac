@@ -309,7 +309,7 @@ case class UnionSPJOp(rId: RelationId, var k: JoinIndexes, override val children
       storageManager.union(children.map((s: ProjectJoinFilterOp) => s.run(storageManager)))
     else
       val (sortedChildren, newK) = JoinIndexes.getPresort(
-        children.toArray,
+        children,
         jitOptions.getSortFn(storageManager),
         rId,
         k,

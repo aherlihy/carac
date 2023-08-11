@@ -54,7 +54,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
     precedenceGraph.addNode(ruleSeq)
 //    println(s"${storageManager.printer.ruleToString(ruleSeq)}")
 
-    var rule = ruleSeq.toArray
+    var rule = ruleSeq
     var k = JoinIndexes(rule, None)
     storageManager.allRulesAllIndexes.getOrElseUpdate(rId, mutable.Map[String, JoinIndexes]()).addOne(k.hash, k)
 

@@ -29,7 +29,7 @@ case class JoinIndexes(varIndexes: Seq[Seq[Int]],
                        constIndexes: mutable.Map[Int, Constant],
                        projIndexes: Seq[(String, Constant)],
                        deps: Seq[(PredicateType, RelationId)],
-                       atoms: Array[Atom],
+                       atoms: Seq[Atom],
                        cxns: mutable.Map[String, mutable.Map[Int, Seq[String]]],
                        edb: Boolean = false
                       ) {
@@ -44,20 +44,20 @@ case class JoinIndexes(varIndexes: Seq[Seq[Int]],
       " }"
 
   def varToString(): String = varIndexes.map(v => v.mkString("$", "==$", "")).mkString("[", ",", "]")
-  def constToString(): String = constIndexes.map((k, v) => k + "==" + v).mkString("{", "&&", "}")
+  def constToString(): String = constIndexes.map((k, v) => s"$k==$v").mkString("{", "&&", "}")
   def projToString(): String = projIndexes.map((typ, v) => s"$typ$v").mkString("[", " ", "]")
   def depsToString(ns: NS): String = deps.map((typ, rId) => s"$typ${ns(rId)}").mkString("[", ", ", "]")
   def cxnsToString(ns: NS): String =
     cxns.map((h, inCommon) =>
       s"{ ${ns.hashToAtom(h)} => ${
         inCommon.map((count, hashs) =>
-          count + ": " + hashs.map(h => ns.hashToAtom(h)).mkString("", "|", "")
+          count.toString + ": " + hashs.map(h => ns.hashToAtom(h)).mkString("", "|", "")
         ).mkString("", ", ", "")} }").mkString("[", ",\n", "]")
   val hash: String = atoms.map(a => a.hash).mkString("", "", "")
 }
 
 object JoinIndexes {
-  def apply(rule: Array[Atom], precalculatedCxns: Option[mutable.Map[String, mutable.Map[Int, Seq[String]]]]) = {
+  def apply(rule: Seq[Atom], precalculatedCxns: Option[mutable.Map[String, mutable.Map[Int, Seq[String]]]]) = {
     val constants = mutable.Map[Int, Constant]() // position => constant
     val variables = mutable.Map[Variable, Int]() // v.oid => position
 
@@ -123,11 +123,11 @@ object JoinIndexes {
   }
 
   // used to approximate poor user-defined order
-  def presortSelectWorst(sortBy: Atom => (Boolean, Int), originalK: JoinIndexes, sm: StorageManager): (Array[(Atom, Int)], String) = {
+  def presortSelectWorst(sortBy: Atom => (Boolean, Int), originalK: JoinIndexes, sm: StorageManager): (Seq[(Atom, Int)], String) = {
     val sortedBody = originalK.atoms.drop(1).zipWithIndex.sortBy((a, _) => sortBy(a)).reverse
 
     val rStack = sortedBody.to(mutable.ListBuffer)
-    var newBody = Array[(Atom, Int)]()
+    var newBody = Seq[(Atom, Int)]()
     while (rStack.nonEmpty)
       var nextOpt = rStack.headOption
       while (nextOpt.nonEmpty)
@@ -160,7 +160,7 @@ object JoinIndexes {
     (newBody, newHash)
   }
 
-  def presortSelect(sortBy: Atom => (Boolean, Int), originalK: JoinIndexes, sm: StorageManager): (Array[(Atom, Int)], String) = {
+  def presortSelect(sortBy: Atom => (Boolean, Int), originalK: JoinIndexes, sm: StorageManager): (Seq[(Atom, Int)], String) = {
 
 //    val sortedBody = originalK.atoms.drop(1).zipWithIndex.sortBy((a, _) => (sm.allRulesAllIndexes.contains(a.rId), sortBy(a)))
     val sortedBody = originalK.atoms.drop(1).zipWithIndex.sortBy((a, _) => sortBy(a))
@@ -170,7 +170,7 @@ object JoinIndexes {
 //    println(s"Rule cxn: ${originalK.cxnsToString(sm.ns)}\n")
 
     val rStack = sortedBody.to(mutable.ListBuffer)
-    var newBody = Array[(Atom, Int)]()
+    var newBody = Seq[(Atom, Int)]()
 //    println("START, stack=" + rStack.map(_._1).mkString("[", ", ", "]"))
     while (rStack.nonEmpty)
       var nextOpt = rStack.headOption
@@ -203,7 +203,7 @@ object JoinIndexes {
     (newBody, newHash)
   }
 
-  def getPresort(input: Array[ProjectJoinFilterOp], sortBy: Atom => (Boolean, Int), rId: Int, originalK: JoinIndexes, sm: StorageManager)(using jitOptions: JITOptions): (Array[ProjectJoinFilterOp], JoinIndexes) = {
+  def getPresort(input: Seq[ProjectJoinFilterOp], sortBy: Atom => (Boolean, Int), rId: Int, originalK: JoinIndexes, sm: StorageManager)(using jitOptions: JITOptions): (Seq[ProjectJoinFilterOp], JoinIndexes) = {
     jitOptions.sortOrder match
       case SortOrder.Unordered | SortOrder.Badluck => (input, originalK)
       case SortOrder.Sel | SortOrder.Mixed | SortOrder.IntMax | SortOrder.Worst =>
@@ -219,7 +219,7 @@ object JoinIndexes {
         (input.map(c => ProjectJoinFilterOp(rId, newK, newBody.map((_, oldP) => c.childrenSO(oldP)): _*)), newK)
   }
 
-  def allOrders(rule: Array[Atom]): AllIndexes = {
+  def allOrders(rule: Seq[Atom]): AllIndexes = {
     val idx = JoinIndexes(rule, None)
     mutable.Map[String, JoinIndexes](rule.drop(1).permutations.map(r =>
       val toRet = JoinIndexes(rule.head +: r, Some(idx.cxns))
@@ -227,5 +227,5 @@ object JoinIndexes {
     ).toSeq:_*)
   }
 
-  def getRuleHash(rule: Array[Atom]): String = rule.map(r => r.hash).mkString("", "", "")
+  def getRuleHash(rule: Seq[Atom]): String = rule.map(r => r.hash).mkString("", "", "")
 }

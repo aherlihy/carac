@@ -128,14 +128,14 @@ class BytecodeCompiler(val storageManager: StorageManager)(using JITOptions) ext
           val (sortedChildren, _) =
             if (jitOptions.sortOrder != SortOrder.Unordered)
               JoinIndexes.getPresort(
-                children.toArray,
+                children,
                 jitOptions.getSortFn(storageManager),
                 rId,
                 k,
                 storageManager
               )
             else
-              (children.toArray, k)
+              (children, k)
           // Duplicate code with UnionSPJOp
           xb.aload(0)
           emitSeq(xb, sortedChildren.map(c => xxb => traverse(xxb, c)))

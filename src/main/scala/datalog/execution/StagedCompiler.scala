@@ -22,15 +22,15 @@ abstract class StagedCompiler(storageManager: StorageManager)(using val jitOptio
         val (sortedChildren, _) =
           if (jitOptions.sortOrder != SortOrder.Unordered)
             JoinIndexes.getPresort(
-              children.toArray,
+              children,
               jitOptions.getSortFn(storageManager),
               rId,
               k,
               storageManager
             )
           else
-            (children.toArray, k)
-        (sm, i) => sortedChildren.toSeq.map(compile)(i)(sm)
+            (children, k)
+        (sm, i) => sortedChildren.map(compile)(i)(sm)
 
       case UnionOp(label, children: _*) =>
         (sm, i) => children.map(compile)(i)(sm)

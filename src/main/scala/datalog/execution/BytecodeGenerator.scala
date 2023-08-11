@@ -223,7 +223,7 @@ object BytecodeGenerator {
   }
 
   def emitArrayAtoms(xb: CodeBuilder, atoms: Array[Atom]): Unit =
-    emitArray(xb, classOf[Atom], atoms.map(a => xxb => emitAtom(xxb, a)))
+    emitArray(xb, classOf[Atom], atoms.map(a => xxb => emitAtom(xxb, a)).toSeq)
 
   /**
    * Put the singleton value corresponding to `cls` on the stack.
@@ -273,7 +273,8 @@ object BytecodeGenerator {
       emitConstIndexes(xxb, value.constIndexes)
       emitProjIndexes(xxb, value.projIndexes)
       emitDeps(xxb, value.deps)
-      emitArrayAtoms(xxb, value.atoms)
+//      emitArrayAtoms(xxb, value.atoms)
+      emitSeq(xb, value.atoms.map(a => xxb => emitAtom(xxb, a)))
       emitCxns(xxb, value.cxns)
       emitBool(xxb, value.edb))
 

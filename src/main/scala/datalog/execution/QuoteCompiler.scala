@@ -124,14 +124,14 @@ class QuoteCompiler(val storageManager: StorageManager)(using JITOptions) extend
         val (sortedChildren, _) =
           if (jitOptions.sortOrder != SortOrder.Unordered && jitOptions.sortOrder != SortOrder.Badluck)
             JoinIndexes.getPresort(
-              children.toArray,
+              children,
               jitOptions.getSortFn(storageManager),
               rId,
               k,
               storageManager
             )
           else
-            (children.toArray, k)
+            (children, k)
 
         val compiledOps = sortedChildren.map(compileIRRelOp)
         '{ $stagedSM.union(${ Expr.ofSeq(compiledOps) }) }
@@ -271,15 +271,15 @@ class QuoteCompiler(val storageManager: StorageManager)(using JITOptions) extend
         val (sortedChildren, _) =
           if (jitOptions.sortOrder != SortOrder.Unordered && jitOptions.sortOrder != SortOrder.Badluck)
             JoinIndexes.getPresort(
-              uSPJOp.children.toArray,
+              uSPJOp.children,
               jitOptions.getSortFn(storageManager),
               uSPJOp.rId,
               uSPJOp.k,
               storageManager
             )
           else
-            (uSPJOp.children.toArray, uSPJOp.k)
-        '{ ${ Expr.ofSeq(sortedChildren.toSeq.map(compileIRRelOp)) } ($i) }
+            (uSPJOp.children, uSPJOp.k)
+        '{ ${ Expr.ofSeq(sortedChildren.map(compileIRRelOp)) } ($i) }
       case _ => throw new Exception(s"Indexed compilation: Unhandled IROp ${irTree.code}")
   }
 

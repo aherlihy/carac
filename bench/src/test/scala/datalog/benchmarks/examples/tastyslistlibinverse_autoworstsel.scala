@@ -13,7 +13,7 @@ import test.examples.tastyslistlibinverse.{tastyslistlibinverse_autoworstsel => 
 @Measurement(iterations = examples_iterations, time = examples_xl_time, timeUnit = TimeUnit.SECONDS, batchSize = examples_xl_batchsize)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
-class tastyslistlibinverse_autoworstsel() extends ExampleBenchmarkGenerator(
+class XXtastyslistlibinverse_autoworstsel() extends ExampleBenchmarkGenerator(
   "tastyslistlibinverse"
 ) with tastyslistlibinverse_autoworstsel_test {
 

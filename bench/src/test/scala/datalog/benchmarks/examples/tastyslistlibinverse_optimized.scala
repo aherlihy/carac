@@ -13,7 +13,7 @@ import test.examples.tastyslistlibinverse.tastyslistlibinverse_optimized as tast
 @Measurement(iterations = examples_iterations, time = examples_xl_time, timeUnit = TimeUnit.SECONDS, batchSize = examples_xl_batchsize)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
-class tastyslistlibinverse_optimized() extends ExampleBenchmarkGenerator(
+class XXtastyslistlibinverse_optimized() extends ExampleBenchmarkGenerator(
   "tastyslistlibinverse"
 ) with tastyslistlibinverse_optimized_test {
 

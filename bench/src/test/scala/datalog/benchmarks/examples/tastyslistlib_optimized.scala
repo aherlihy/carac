@@ -13,7 +13,7 @@ import test.examples.tastyslistlib.{tastyslistlib_optimized => tastyslistlib_opt
 @Measurement(iterations = examples_iterations, time = examples_xl_time, timeUnit = TimeUnit.SECONDS, batchSize = examples_xl_batchsize)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
-class tastyslistlib_optimized() extends ExampleBenchmarkGenerator(
+class XXtastyslistlib_optimized() extends ExampleBenchmarkGenerator(
   "tastyslistlib"
 ) with tastyslistlib_optimized_test {
 

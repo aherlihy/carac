@@ -5,6 +5,8 @@ inThisBuild(Seq(
   version := "0.1",
 ))
 
+scalacOptions ++= Seq("-deprecation", "-feature")
+
 lazy val root = project.in(file("."))
   .enablePlugins(PackPlugin)
   .settings(

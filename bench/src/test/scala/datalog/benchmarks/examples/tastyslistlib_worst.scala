@@ -13,7 +13,7 @@ import test.examples.tastyslistlib.{tastyslistlib_worst => tastyslistlib_worst_t
 @Measurement(iterations = examples_iterations, time = examples_time, timeUnit = TimeUnit.SECONDS, batchSize = examples_xl_batchsize)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
-class tastyslistlib_worst() extends ExampleBenchmarkGenerator("tastyslistlib") with tastyslistlib_worst_test {
+class XXtastyslistlib_worst() extends ExampleBenchmarkGenerator("tastyslistlib") with tastyslistlib_worst_test {
 
   @Setup
   def s(): Unit = setup() // can't add annotations to super, so just call
