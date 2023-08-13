@@ -4,7 +4,7 @@ import java.util.concurrent.TimeUnit
 import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.Blackhole
 
-import test.{SimpleProgram, SimpleMacroCompiler as simple}
+import datalog.{SimpleProgram, SimpleMacroCompiler as simple}
 
 import scala.compiletime.uninitialized
 

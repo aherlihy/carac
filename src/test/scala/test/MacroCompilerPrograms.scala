@@ -1,4 +1,5 @@
-package test
+// if this is in package test, macro execution fails with a ClassNotFoundException
+package datalog
 
 import datalog.execution.{ExecutionEngine, SolvableProgram, MacroCompiler}
 import datalog.dsl.*
