@@ -16,6 +16,7 @@ lazy val root = project.in(file("."))
   .enablePlugins(NativeImagePlugin)
   .settings(
     name := "datalog",
+    buildInfoKeys := Seq[BuildInfoKey](baseDirectory),
 
     // By default, the plugin will fetch graalvm from the Internet itself, but
     // it only supports the Community Edition. Here we customize it to look up

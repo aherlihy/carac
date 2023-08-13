@@ -4,7 +4,7 @@ import datalog.execution.{ExecutionEngine, MacroCompiler, SolvableProgram}
 import datalog.dsl.*
 import datalog.execution.ir.*
 import datalog.storage.{StorageManager}
-import test.{SimpleMacroCompiler, AckermannOptimizedMacroCompiler}
+import datalog.{SimpleMacroCompiler, AckermannOptimizedMacroCompiler}
 
 object MacroCompilerTest {
   val simpleCompiled = SimpleMacroCompiler.compile()

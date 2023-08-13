@@ -3,7 +3,7 @@ package datalog.benchmarks
 import java.util.concurrent.TimeUnit
 import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.Blackhole
-import test.{
+import datalog.{
   AckermannWorstMacroCompiler, AckermannOptimizedMacroCompiler,
   SimpleMacroCompiler, SimpleProgram
 }
@@ -52,7 +52,6 @@ class BenchMacro {
     val res = AckermannOptimizedMacroCompiler.runCompiled(ackermannOptCompiled)(
       program => program.loadFromFactDir(facts.toString)
     )
-    // println(res)
   }
 
   @Benchmark
