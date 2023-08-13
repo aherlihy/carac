@@ -3,17 +3,22 @@ package datalog.benchmarks
 import java.util.concurrent.TimeUnit
 import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.Blackhole
-
-import datalog.{SimpleProgram, SimpleMacroCompiler as simple}
+import datalog.{
+  AckermannWorstMacroCompiler, AckermannOptimizedMacroCompiler,
+  SimpleMacroCompiler, SimpleProgram
+}
 
 import scala.compiletime.uninitialized
-
 import datalog.execution.ir.InterpreterContext
 import datalog.execution.{Backend, Granularity, Mode, StagedExecutionEngine}
 import datalog.storage.DefaultStorageManager
 
+import java.nio.file.Paths
+
 object BenchMacro {
-  val simpleCompiled = simple.compile()
+  val simpleCompiled = SimpleMacroCompiler.compile()
+  val ackermannOptCompiled = AckermannOptimizedMacroCompiler.compile()
+  val ackermannWorstCompiled = AckermannWorstMacroCompiler.compile()
 }
 import BenchMacro.*
 
@@ -38,23 +43,41 @@ class BenchMacro {
 
   @Benchmark
   def simple_macro = {
-    simple.runCompiled(simpleCompiled)(addExtraFacts)
+    SimpleMacroCompiler.runCompiled(simpleCompiled)(addExtraFacts)
+  }
+
+  @Benchmark
+  def ackermann_opt_macro = {
+    val facts = Paths.get(AckermannOptimizedMacroCompiler.factDir)
+    val res = AckermannOptimizedMacroCompiler.runCompiled(ackermannOptCompiled)(
+      program => program.loadFromFactDir(facts.toString)
+    )
+    println(res)
+  }
+
+  @Benchmark
+  def ackermann_worst_macro = {
+    val facts = Paths.get(AckermannWorstMacroCompiler.factDir)
+    val res = AckermannWorstMacroCompiler.runCompiled(ackermannWorstCompiled)(
+      program => program.loadFromFactDir(facts.toString)
+    )
+    println(res)
   }
 
   @Benchmark
   def simple_interpreter = {
-    val engine = StagedExecutionEngine(DefaultStorageManager(), simple.jitOptions.copy(
+    val engine = StagedExecutionEngine(DefaultStorageManager(), SimpleMacroCompiler.jitOptions.copy(
       mode = Mode.Interpreted, granularity = Granularity.NEVER))
-    val program = simple.makeProgram(engine)
+    val program = SimpleMacroCompiler.makeProgram(engine)
     addExtraFacts(program)
-    program.toSolve.solve()
+    program.namedRelation(program.toSolve).solve()
   }
 
   @Benchmark
   def simple_lambda = {
-    val engine = StagedExecutionEngine(DefaultStorageManager(), simple.jitOptions.copy(backend = Backend.Lambda))
-    val program = simple.makeProgram(engine)
+    val engine = StagedExecutionEngine(DefaultStorageManager(), SimpleMacroCompiler.jitOptions.copy(backend = Backend.Lambda))
+    val program = SimpleMacroCompiler.makeProgram(engine)
     addExtraFacts(program)
-    program.toSolve.solve()
+    program.namedRelation(program.toSolve).solve()
   }
 }
