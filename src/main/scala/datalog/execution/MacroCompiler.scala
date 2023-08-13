@@ -12,7 +12,7 @@ import scala.compiletime.uninitialized
 /** A program that specifies a relation `toSolve` to be solved. */
 abstract class SolvableProgram(engine: ExecutionEngine) extends Program(engine) {
   /** The relation to be solved when running the program. */
-  val toSolve: Relation[?]
+  val toSolve: String
 }
 
 /**
@@ -59,7 +59,7 @@ abstract class MacroCompiler[T <: SolvableProgram](val makeProgram: ExecutionEng
   private val program: T = makeProgram(engine)
 
   protected def compileImpl()(using Quotes): Expr[StorageManager => Any] = {
-    val irTree = engine.generateProgramTree(program.toSolve.id)._1
+    val irTree = engine.generateProgramTree(program.namedRelation(program.toSolve).id)._1
     // TODO: more precise type for engine.compiler to avoid the cast.
     val compiler = engine.compiler.asInstanceOf[QuoteCompiler]
     val x = '{ (sm: StorageManager) =>
@@ -95,7 +95,7 @@ abstract class MacroCompiler[T <: SolvableProgram](val makeProgram: ExecutionEng
     // Even though we don't use the generated tree at runtime,
     // we still need to generate it to find the de-aliased irCtx.toSolve
     // and to populate runtimeEngine.storageManager.allRulesAllIndexes
-    val (_, irCtx) = runtimeEngine.generateProgramTree(program.toSolve.id)
+    val (_, irCtx) = runtimeEngine.generateProgramTree(program.namedRelation(program.toSolve).id)
 
     op(runtimeProgram)
 
