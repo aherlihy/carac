@@ -5,6 +5,8 @@ import datalog.dsl.*
 import datalog.execution.ir.*
 import datalog.storage.{DefaultStorageManager, StorageManager}
 
+import datalog.SimpleMacroCompiler
+
 object MacroCompilerTest {
   val simpleCompiled = SimpleMacroCompiler.compile()
 }
