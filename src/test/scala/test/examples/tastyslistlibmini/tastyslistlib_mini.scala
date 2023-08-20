@@ -1,5 +1,6 @@
 package test.examples.tastyslistlibmini
 
+import buildinfo.BuildInfo
 import datalog.dsl.{Constant, Program}
 import test.{ExampleTestGenerator, Tags}
 
@@ -10,6 +11,7 @@ class tastyslistlibmini_test extends ExampleTestGenerator(
 ) with tastyslistlibmini
 
 trait tastyslistlibmini {
+  val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/tastyslistlibmini/facts"
   val toSolve = "Equiv"
 
   def pretest(program: Program): Unit = {

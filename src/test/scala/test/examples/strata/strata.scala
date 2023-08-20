@@ -1,11 +1,13 @@
 package test.examples.strata
 
+import buildinfo.BuildInfo
 import datalog.dsl.{Constant, Program}
 import test.ExampleTestGenerator
 
 class strata_test extends ExampleTestGenerator("strata") with strata
 
 trait strata {
+  val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/strata/facts"
   val toSolve = "_"
 
   def pretest(program: Program): Unit = {

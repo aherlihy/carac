@@ -1,5 +1,6 @@
 package test.examples.small
 
+import buildinfo.BuildInfo
 import datalog.dsl.{Constant, Program}
 import test.ExampleTestGenerator
 
@@ -7,6 +8,7 @@ import java.nio.file.Paths
 
 class small_test extends ExampleTestGenerator("small") with small
 trait small {
+  val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/small/facts"
   val toSolve = "ancestor"
   def pretest(program: Program): Unit = {
     val ancestor = program.relation[Constant]("ancestor")

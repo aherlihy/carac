@@ -1,5 +1,6 @@
 package test.examples.tastyslistlibinverse
 
+import buildinfo.BuildInfo
 import datalog.dsl.{Constant, Program}
 import test.{ExampleTestGenerator, Tags}
 
@@ -10,6 +11,7 @@ class tastyslistlibinverse_autoworstsel_test extends ExampleTestGenerator(
 ) with tastyslistlibinverse_autoworstsel
 
 trait tastyslistlibinverse_autoworstsel {
+  val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/tastyslistlibinverse/facts"
   val toSolve = "EquivToOutput"
 
   def pretest(program: Program): Unit = {

@@ -1,11 +1,13 @@
 package test.examples.tastyslistlibinverse
 
+import buildinfo.BuildInfo
 import datalog.dsl.{Constant, Program}
 import test.ExampleTestGenerator
 
 class tastyslistlibinverse_optimized_test extends ExampleTestGenerator("tastyslistlibinverse") with tastyslistlibinverse_optimized
 
 trait tastyslistlibinverse_optimized {
+  val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/tastyslistlibinverse/facts"
   val toSolve = "EquivToOutput"
 
   def pretest(program: Program): Unit = {

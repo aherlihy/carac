@@ -1,11 +1,13 @@
 package test.examples.palindrome
 
+import buildinfo.BuildInfo
 import datalog.dsl.{Constant, Program}
 import test.ExampleTestGenerator
 
 import java.nio.file.Paths
 class palindrome_test extends ExampleTestGenerator("palindrome") with palindrome
 trait palindrome {
+  val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/palindrome/facts"
   val toSolve = "palindrome"
   def pretest(program: Program): Unit = {
     val palindrome = program.relation[Constant]("palindrome")

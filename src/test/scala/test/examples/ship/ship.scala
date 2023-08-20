@@ -1,11 +1,13 @@
 package test.examples.ship
 
+import buildinfo.BuildInfo
 import datalog.dsl.{Constant, Program}
 import test.ExampleTestGenerator
 
 import java.nio.file.Paths
 class ship_test extends ExampleTestGenerator("ship") with ship
 trait ship {
+  val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/ship/facts"
   val toSolve: String = "ship_to"
   def pretest(program: Program): Unit = {
     val customer_city = program.relation[Constant]("customer_city")

@@ -10,7 +10,7 @@ import scala.util.Random
 import scala.collection.mutable
 import scala.quoted.*
 
-def ackermann(program: Program) = {
+def xackermann(program: Program) = {
   val succ = program.relation[Constant]("succ")
   val greaterThanZ = program.relation[Constant]("greaterThanZ")
   val ack = program.relation[Constant]("ack")
@@ -1158,7 +1158,7 @@ def select(program: Program): Unit = {
   println("about to solvee")
   rule.solve()
 }
-@main def main = {
+/*@main*/ def mainOld = {
 //  val stratifiedA = false
 //  println("NAIVE")
 //  given engine0: ExecutionEngine = new NaiveExecutionEngine(new DefaultStorageManager(), stratified = stratifiedA)

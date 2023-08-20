@@ -1,8 +1,11 @@
 package test.examples.dfa_live_vars
+
+import buildinfo.BuildInfo
 import datalog.dsl.{Constant, Program}
 import test.{ExampleTestGenerator, Tags}
 class dfa_live_vars_test extends ExampleTestGenerator("dfa_live_vars", tags = Set(Tags.Negated)) with dfa_live_vars
 trait dfa_live_vars {
+  val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/dfa_live/facts"
   val toSolve: String = "live_vars_out"
   def pretest(program: Program): Unit = {
     val x, y, v = program.variable()

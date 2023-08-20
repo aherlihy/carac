@@ -1,11 +1,13 @@
 package test.examples.traffic
 
+import buildinfo.BuildInfo
 import datalog.dsl.{Constant, Program}
 import test.ExampleTestGenerator
 
 import java.nio.file.Paths
 class traffic_test extends ExampleTestGenerator("traffic") with traffic
 trait traffic {
+  val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/traffic/facts"
   val toSolve: String = "crashes"
   def pretest(program: Program): Unit = {
     val crashable = program.relation[Constant]("crashable")

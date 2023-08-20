@@ -1,5 +1,6 @@
 package test.examples.anonvar
 
+import buildinfo.BuildInfo
 import datalog.dsl.{Constant, Program, __}
 import test.{ExampleTestGenerator, Tags}
 
@@ -11,6 +12,7 @@ class anonvar_test extends ExampleTestGenerator(
 ) with anonvar
 
 trait anonvar {
+  val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/anonvar/facts"
   val toSolve = "_"
   def pretest(program: Program): Unit = {
     val Check = program.namedRelation[Constant]("Check")

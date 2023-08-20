@@ -1,10 +1,11 @@
 package test.examples.ackermann
 
+import buildinfo.BuildInfo
 import datalog.dsl.{Constant, Program}
 import test.{ExampleTestGenerator, Tags}
 
 trait ackermann_optimized {
-
+  val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/ackermann/facts"
   val toSolve = "ack"
   def pretest(program: Program): Unit = {
     val succ = program.namedRelation("succ")

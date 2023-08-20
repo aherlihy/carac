@@ -1,10 +1,12 @@
 package test.examples.livevariables
 
+import buildinfo.BuildInfo
 import datalog.dsl.{Constant, Program, not}
 import test.{ExampleTestGenerator, Tags}
 
 class livevariables_test extends ExampleTestGenerator("livevariables", tags = Set(Tags.Negated)) with livevariables
 trait livevariables {
+  val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/livevariables/facts"
   val toSolve = "i"
   def pretest(program: Program): Unit = {
     val v = program.relation[Constant]("v")

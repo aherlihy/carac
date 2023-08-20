@@ -1,11 +1,13 @@
 package test.examples.javapointsto
 
+import buildinfo.BuildInfo
 import datalog.dsl.{Constant, Program}
 import test.{ExampleTestGenerator, Tags}
 
 import java.nio.file.Paths
 class javapointsto_test extends ExampleTestGenerator("javapointsto") with javapointsto
 trait javapointsto {
+  val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/javapointsto/facts"
   val toSolve = "VarPointsTo"
   def pretest(program: Program): Unit = {
     val ActualParam = program.namedRelation[Constant]("ActualParam")

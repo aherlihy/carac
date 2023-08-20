@@ -1,11 +1,13 @@
 package test.examples.trains
 
+import buildinfo.BuildInfo
 import datalog.dsl.{Constant, Program, __}
 import test.ExampleTestGenerator
 
 import java.nio.file.Paths
 class trains_test extends ExampleTestGenerator("trains") with trains
 trait trains {
+  val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/trains/facts"
   val toSolve = "ReachableStops"
   def pretest(program: Program): Unit = {
     val ReachableStops = program.relation[Constant]("ReachableStops")

@@ -1,11 +1,13 @@
 package test.examples.inputoutput
 
+import buildinfo.BuildInfo
 import datalog.dsl.{Constant, Program}
 import test.{ExampleTestGenerator, Tags}
 
 import java.nio.file.Paths
 class inputoutput_test extends ExampleTestGenerator("inputoutput") with inputoutput
 trait inputoutput {
+  val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/inputoutput/facts"
   val toSolve = "_"
   def pretest(program: Program): Unit = {
     // input, i.e. defined in facts+here, i.e. named

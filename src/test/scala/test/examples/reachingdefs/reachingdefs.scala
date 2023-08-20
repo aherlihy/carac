@@ -1,10 +1,12 @@
 package test.examples.reachingdefs
 
+import buildinfo.BuildInfo
 import datalog.dsl.{Constant, Program, not}
 import test.{ExampleTestGenerator, Tags}
 
 class reachingdefs_test extends ExampleTestGenerator("reachingdefs", tags = Set(Tags.Negated)) with reachingdefs
 trait reachingdefs {
+  val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/reachingdefs/facts"
   val toSolve = "o"
   def pretest(program: Program): Unit = {
     val o = program.relation[Constant]("o")

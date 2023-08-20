@@ -1,11 +1,13 @@
 package test.examples.prime
 
+import buildinfo.BuildInfo
 import datalog.dsl.{Constant, Program}
 import test.ExampleTestGenerator
 
 import java.nio.file.Paths
 class prime_test_worst extends ExampleTestGenerator("prime") with prime_worst
 trait prime_worst {
+  val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/prime/facts"
 
   val toSolve: String = "count_all"
   def pretest(program: Program): Unit = {

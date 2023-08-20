@@ -1,8 +1,11 @@
 package test.examples.disconnected
 import datalog.dsl.{Constant, Program, __}
+
+import buildinfo.BuildInfo
 import test.{ExampleTestGenerator, Tags}
 class disconnected_test extends ExampleTestGenerator("disconnected", tags = Set(Tags.Negated)) with disconnected
 trait disconnected {
+  val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/disconnected/facts"
   val toSolve: String = "DisConnected"
   def pretest(program: Program): Unit = {
     val Edge = program.namedRelation[Constant]("Edge")

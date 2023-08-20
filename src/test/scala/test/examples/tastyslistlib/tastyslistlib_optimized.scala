@@ -1,5 +1,6 @@
 package test.examples.tastyslistlib
 
+import buildinfo.BuildInfo
 import datalog.dsl.{Constant, Program}
 import test.{ExampleTestGenerator, Tags}
 
@@ -8,6 +9,7 @@ class tastyslistlib_optimized_test extends ExampleTestGenerator(
 ) with tastyslistlib_optimized
 
 trait tastyslistlib_optimized {
+  val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/tastyslistlib/facts"
   val toSolve = "VarPointsTo"
 
   def pretest(program: Program): Unit = {

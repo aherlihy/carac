@@ -1,11 +1,13 @@
 package test.examples.tcr
 
+import buildinfo.BuildInfo
 import datalog.dsl.{Constant, Program}
 import test.ExampleTestGenerator
 
 import java.nio.file.Paths
 class tcr_test extends ExampleTestGenerator("tcr") with tcr
 trait tcr {
+  val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/tcr/facts"
   val toSolve = "tcr"
   def pretest(program: Program): Unit = {
     val base = program.namedRelation[Constant]("base")

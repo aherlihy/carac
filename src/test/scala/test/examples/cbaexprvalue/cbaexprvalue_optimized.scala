@@ -1,11 +1,13 @@
 package test.examples.cbaexprvalue
 
+import buildinfo.BuildInfo
 import datalog.dsl.{Constant, Program}
 import test.ExampleTestGenerator
 
 import java.nio.file.Paths
 class cbaexprvalue_optimized_test extends ExampleTestGenerator("cbaexprvalue") with cbaexprvalue_optimized
 trait cbaexprvalue_optimized {
+  val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/cbaexprvalue/facts"
   val toSolve = "data_term"
   def pretest(program: Program): Unit = {
     val kind = program.relation[Constant]("kind")

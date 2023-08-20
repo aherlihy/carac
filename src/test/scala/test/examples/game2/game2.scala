@@ -1,8 +1,11 @@
 package test.examples.game2
+
+import buildinfo.BuildInfo
 import datalog.dsl.{Constant, Program, __}
 import test.{ExampleTestGenerator, Tags}
 class game2_test extends ExampleTestGenerator("game2", tags = Set(Tags.Negated)) with game2
 trait game2 {
+  val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/game2/facts"
   val toSolve: String = "winning"
   def pretest(program: Program): Unit = {
     val X, Y, Z1, Z2 = program.variable()

@@ -1,5 +1,6 @@
 package test.examples.tastyslistlibnegated
 
+import buildinfo.BuildInfo
 import datalog.dsl.{Constant, Program}
 import test.{ExampleTestGenerator, Tags}
 
@@ -10,6 +11,7 @@ class tastyslistlibnegated_test extends ExampleTestGenerator(
 ) with tastyslistlibnegated
 
 trait tastyslistlibnegated {
+  val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/tastyslistlibnegated/facts"
   val toSolve = "VarPointsTo"
 
   def pretest(program: Program): Unit = {

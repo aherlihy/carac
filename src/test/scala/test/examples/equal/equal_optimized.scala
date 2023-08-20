@@ -1,11 +1,13 @@
 package test.examples.equal
 
+import buildinfo.BuildInfo
 import datalog.dsl.{Constant, Program}
 import test.ExampleTestGenerator
 
 import java.nio.file.Paths
 class equal_test_optimized extends ExampleTestGenerator("equal") with equal_optimized
 trait equal_optimized {
+  val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/equal/facts"
   val toSolve: String = "isEqual"
   
   def pretest(program: Program): Unit = {
