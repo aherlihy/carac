@@ -9,6 +9,7 @@ scalacOptions ++= Seq("-deprecation", "-feature")
 
 lazy val root = project.in(file("."))
   .enablePlugins(PackPlugin)
+  .enablePlugins(BuildInfoPlugin)
   .settings(
     name := "datalog",
 
@@ -17,6 +18,9 @@ lazy val root = project.in(file("."))
       "org.glavo" % "classfile" % "0.4.0", // Copy of jdk.internal.classfile, won't be necessary when https://openjdk.org/jeps/8280389 is done.
       "org.scalameta" %% "munit" % "0.7.29" % Test,
     ),
+
+    buildInfoKeys := Seq[BuildInfoKey](baseDirectory),
+    buildInfoPackage := "buildinfo",
   )
 
 lazy val bench = project.in(file("bench"))
