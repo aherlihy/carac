@@ -173,4 +173,20 @@ class BenchCLI_tastyslistlibinverse extends tastyslistlibinverse_worst {
     if (exitCode != 0) throw new Exception(s"Carac $benchmark and $b exited with code $exitCode")
     blackhole.consume(exitCode) // prob unnecessary
   }
+
+  @Benchmark def carac_jar_bytecode(blackhole: Blackhole): Unit = {
+    val b = "bytecode"
+    val pb = Process(Seq(s"../target/pack/bin/main", benchmark, b))
+    val exitCode = pb.!
+    if (exitCode != 0) throw new Exception(s"Carac $benchmark and $b exited with code $exitCode")
+    blackhole.consume(exitCode) // prob unnecessary
+  }
+
+  @Benchmark def carac_jar_quotes(blackhole: Blackhole): Unit = {
+    val b = "quotes"
+    val pb = Process(Seq(s"../target/pack/bin/main", benchmark, b))
+    val exitCode = pb.!
+    if (exitCode != 0) throw new Exception(s"Carac $benchmark and $b exited with code $exitCode")
+    blackhole.consume(exitCode) // prob unnecessary
+  }
 }
