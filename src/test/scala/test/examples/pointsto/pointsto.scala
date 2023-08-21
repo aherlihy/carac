@@ -1,11 +1,13 @@
 package test.examples.pointsto
 
+import buildinfo.BuildInfo
 import datalog.dsl.{Constant, Program}
 import test.ExampleTestGenerator
 
 import java.nio.file.Paths
 class pointsto_test extends ExampleTestGenerator("pointsto") with pointsto
 trait pointsto {
+  val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/pointsto/facts"
 
   val toSolve: String = "VarPointsTo"
   def pretest(program: Program): Unit = {

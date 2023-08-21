@@ -1,10 +1,12 @@
 package test.examples.neg
 
+import buildinfo.BuildInfo
 import datalog.dsl.{Constant, Program, not}
 import test.{ExampleTestGenerator, Tags}
 
 class neg_test extends ExampleTestGenerator("neg", tags = Set(Tags.Negated)) with neg
 trait neg {
+  val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/neg/facts"
   val toSolve = "c"
   def pretest(program: Program): Unit = {
     val a = program.relation[Constant]("a")

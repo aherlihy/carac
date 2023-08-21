@@ -1,11 +1,13 @@
 package test.examples.tree
 
+import buildinfo.BuildInfo
 import datalog.dsl.{Constant, Program, __}
 import test.ExampleTestGenerator
 
 import java.nio.file.Paths
 class tree_test extends ExampleTestGenerator("tree") with tree
 trait tree {
+  val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/tree/facts"
   val toSolve: String = "S"
   def pretest(program: Program): Unit = {
     val S = program.relation[Constant]("S")

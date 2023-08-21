@@ -3,6 +3,7 @@
 //import test.ExampleTestGenerator
 //class hmmer_test extends ExampleTestGenerator("hmmer") with hmmer
 //trait hmmer {
+//  val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/hmmer/facts"
 //  val toSolve: String = "CPtrLoad"
 //  def pretest(program: Program): Unit = {
 //    val DirectFlow = program.namedRelation[Constant]("DirectFlow")

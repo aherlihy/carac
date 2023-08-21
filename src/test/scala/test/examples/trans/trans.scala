@@ -1,11 +1,13 @@
 package test.examples.trans
 
+import buildinfo.BuildInfo
 import datalog.dsl.{Constant, Program}
 import test.ExampleTestGenerator
 
 import java.nio.file.Paths
 class trans_test extends ExampleTestGenerator("trans") with trans
 trait trans {
+  val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/trans/facts"
   val toSolve = "A"
   def pretest(program: Program): Unit = {
     val A = program.relation[Constant]("A")

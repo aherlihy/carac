@@ -1,8 +1,11 @@
 package test.examples.flights
+
+import buildinfo.BuildInfo
 import datalog.dsl.{Constant, Program}
 import test.{ExampleTestGenerator, Tags}
 class flights_test extends ExampleTestGenerator("flights", tags = Set(Tags.Negated)) with flights
 trait flights {
+  val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/flights/facts"
   val toSolve: String = "QAonly"
   def pretest(program: Program): Unit = {
     val X, Y, Z = program.variable()

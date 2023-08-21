@@ -1,11 +1,13 @@
 package test.examples.tcl
 
+import buildinfo.BuildInfo
 import datalog.dsl.{Constant, Program}
 import test.ExampleTestGenerator
 
 import java.nio.file.Paths
 class tcl_test extends ExampleTestGenerator("tcl") with tcl
 trait tcl {
+  val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/tcl/facts"
   val toSolve = "tcl"
   def pretest(program: Program): Unit = {
     val base = program.namedRelation[Constant]("base")

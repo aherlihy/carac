@@ -1,5 +1,6 @@
 package test.examples.tastyslistlib
 
+import buildinfo.BuildInfo
 import datalog.dsl.{Constant, Program}
 import test.{ExampleTestGenerator, Tags}
 
@@ -10,6 +11,7 @@ class tastyslistlib_worst_test extends ExampleTestGenerator(
 ) with tastyslistlib_worst
 
 trait tastyslistlib_worst {
+  val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/tastyslistlib/facts"
   val toSolve = "VarPointsTo"
 
   def pretest(program: Program): Unit = {

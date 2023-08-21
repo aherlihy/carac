@@ -1,11 +1,13 @@
 package test.examples.gradpre
 
+import buildinfo.BuildInfo
 import datalog.dsl.{Constant, Program}
 import test.ExampleTestGenerator
 
 import java.nio.file.Paths
 class grad_test extends ExampleTestGenerator("grad") with grad
 trait grad {
+  val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/grad/facts"
   val toSolve: String = "grad"
   def pretest(program: Program): Unit = {
     val course = program.relation[Constant]("course")

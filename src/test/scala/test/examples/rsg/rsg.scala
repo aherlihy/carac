@@ -1,11 +1,13 @@
 package test.examples.rsg
 
+import buildinfo.BuildInfo
 import datalog.dsl.{Constant, Program}
 import test.ExampleTestGenerator
 
 import java.nio.file.Paths
 class rsg_test extends ExampleTestGenerator("rsg") with rsg
 trait rsg {
+  val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/rsg/facts"
   val toSolve: String = "RSG"
   def pretest(program: Program): Unit = {
     val DOWN = program.relation[Constant]("DOWN")

@@ -1,11 +1,13 @@
 package test.examples.andersen
 
+import buildinfo.BuildInfo
 import datalog.dsl.{Constant, Program}
 import test.ExampleTestGenerator
 
 import java.nio.file.Paths
 
 trait andersen {
+ val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/andersen/facts"
  val toSolve = "pointsTo"
  def pretest(program: Program): Unit = {
   val addressOf = program.namedRelation("addressOf")

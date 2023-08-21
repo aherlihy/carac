@@ -26,7 +26,7 @@ abstract class ExampleBenchmarkGenerator(testname: String,
  * @param skip
  * @param tags
  */
-abstract class BenchmarkGenerator(directory: Path,
+abstract class BenchmarkGenerator(val directory: Path,
                              skip: Set[String] = Set(),
                              val tags: Set[String] = Set()) extends DLBenchmark {
   def pretest(program: Program): Unit

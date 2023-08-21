@@ -1,5 +1,6 @@
 package test.examples.ranpo
 
+import buildinfo.BuildInfo
 import datalog.dsl.{Constant, Program, __}
 import test.{ExampleTestGenerator, Tags}
 
@@ -10,6 +11,7 @@ class ranpo_test extends ExampleTestGenerator(
   Set(Tags.CI)
 ) with ranpo
 trait ranpo {
+  val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/ranpo/facts"
 
   val toSolve = "A"
   def pretest(program: Program): Unit = {

@@ -1,8 +1,11 @@
 package test.examples.orbits
+
+import buildinfo.BuildInfo
 import datalog.dsl.{Constant, Program}
 import test.{ExampleTestGenerator, Tags}
 class orbits_test extends ExampleTestGenerator("orbits", tags = Set(Tags.Negated)) with orbits
 trait orbits {
+  val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/orbits/facts"
   val toSolve: String = "_"
   def pretest(program: Program): Unit = {
     val X, Y, Z = program.variable()

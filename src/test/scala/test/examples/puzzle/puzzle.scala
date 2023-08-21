@@ -1,11 +1,13 @@
 package test.examples.puzzle
 
-import datalog.dsl.{Constant, Program, __}
+import buildinfo.BuildInfo
+import datalog.dsl.{Constant, Program}
 import test.ExampleTestGenerator
 
 import java.nio.file.Paths
 class puzzle_test extends ExampleTestGenerator("puzzle") with puzzle
 trait puzzle {
+  val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/puzzle/facts"
   val toSolve = "state"
   def pretest(program: Program): Unit = {
     val opp = program.relation[Constant]("opp")

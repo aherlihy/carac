@@ -1,5 +1,6 @@
 package test.examples.fib
 
+import buildinfo.BuildInfo
 import datalog.dsl.{Constant, Program}
 import test.{ExampleTestGenerator, Tags}
 
@@ -10,6 +11,7 @@ class fib_test_worst extends ExampleTestGenerator(
   Set(Tags.CI)
 ) with fib_worst
 trait fib_worst {
+  val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/fib/facts"
 
   val toSolve = "f"
   def pretest(program: Program): Unit = {

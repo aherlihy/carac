@@ -1,11 +1,13 @@
 package test.examples.tastypointstofun
 
+import buildinfo.BuildInfo
 import datalog.dsl.{Constant, Program}
 import test.ExampleTestGenerator
 
 class tastypointstofun_test extends ExampleTestGenerator("tastypointstofun") with tastypointstofun
 
 trait tastypointstofun {
+  val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/tastypointstofun/facts"
   val toSolve = "VarPointsTo"
 
   def pretest(program: Program): Unit = {

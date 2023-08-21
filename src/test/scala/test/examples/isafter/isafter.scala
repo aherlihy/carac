@@ -1,5 +1,6 @@
 package test.examples.isafter
 
+import buildinfo.BuildInfo
 import datalog.dsl.{Constant, Program}
 import test.ExampleTestGenerator
 
@@ -7,6 +8,7 @@ import java.nio.file.Paths
 
 class isafter_test extends ExampleTestGenerator("isafter") with isafter
 trait isafter {
+  val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/isafter/facts"
   val toSolve = "is_after"
   def pretest(program: Program): Unit = {
     val edge = program.namedRelation("edge")

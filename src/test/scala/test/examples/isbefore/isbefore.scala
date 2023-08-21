@@ -1,5 +1,6 @@
 package test.examples.isbefore
 
+import buildinfo.BuildInfo
 import datalog.dsl.{Constant, Program}
 import test.ExampleTestGenerator
 
@@ -7,6 +8,7 @@ import java.nio.file.Paths
 
 class isbefore_test extends ExampleTestGenerator("isbefore") with isbefore
 trait isbefore {
+  val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/isbefore/facts"
   val toSolve = "is_before"
   def pretest(program: Program): Unit = {
     val edge = program.namedRelation("edge")

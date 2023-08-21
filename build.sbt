@@ -1,3 +1,7 @@
+import java.util.regex.Pattern
+import java.io.File.pathSeparator
+import java.nio.file.{Files, Paths}
+
 inThisBuild(Seq(
   organization := "ch.epfl.lamp",
   scalaVersion := "3.3.1-RC4",
@@ -9,14 +13,42 @@ scalacOptions ++= Seq("-deprecation", "-feature")
 
 lazy val root = project.in(file("."))
   .enablePlugins(PackPlugin)
+  .enablePlugins(BuildInfoPlugin)
+  .enablePlugins(NativeImagePlugin)
   .settings(
     name := "datalog",
+
+    // By default, the plugin will fetch graalvm from the Internet itself, but
+    // it only supports the Community Edition. Here we customize it to look up
+    // graalvm's `native-image` on the PATH which lets us setup whatever version
+    // we want.
+    nativeImageInstalled := true,
+    nativeImageGraalHome := {
+      val executable = "native-image"
+      val paths = System.getenv("PATH").split(Pattern.quote(pathSeparator))
+      paths.map(Paths.get(_)).find(p => Files.isExecutable(p.resolve(executable))) match {
+        case Some(binDir) =>
+          binDir.getParent
+        case None =>
+          throw new MessageOnlyException(s"Could not find binary `$executable` in PATH.")
+      }
+    },
+    nativeImageCommand := nativeImageCommand.value ++ Seq(
+      // Do not generate an image containing a JVM in case of issues with native generation
+      "--no-fallback",
+      // Some of our backends use runtime reflection and classloading, just
+      // ignore them (and crash at runtime if we end up calling them).
+      "--report-unsupported-elements-at-runtime"
+    ),
 
     libraryDependencies ++= Seq(
       "org.scala-lang" %% "scala3-staging" % scalaVersion.value,
       "org.glavo" % "classfile" % "0.4.0", // Copy of jdk.internal.classfile, won't be necessary when https://openjdk.org/jeps/8280389 is done.
       "org.scalameta" %% "munit" % "0.7.29" % Test,
     ),
+
+    buildInfoKeys := Seq[BuildInfoKey](baseDirectory),
+    buildInfoPackage := "buildinfo",
   )
 
 lazy val bench = project.in(file("bench"))

@@ -1,11 +1,13 @@
 package test.examples.metro
 
+import buildinfo.BuildInfo
 import datalog.dsl.{Constant, Program}
 import test.ExampleTestGenerator
 
 import java.nio.file.Paths
 class metro_test extends ExampleTestGenerator("metro") with metro
 trait metro {
+  val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/metro/facts"
   val toSolve = "platform2_reach"
   def pretest(program: Program): Unit = {
     val platform2_reach = program.relation[Constant]("platform2_reach")

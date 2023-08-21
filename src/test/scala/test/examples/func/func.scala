@@ -1,11 +1,13 @@
 package test.examples.func
 
+import buildinfo.BuildInfo
 import datalog.dsl.{Constant, Program}
 import test.ExampleTestGenerator
 
 import java.nio.file.Paths
 class func_test extends ExampleTestGenerator("func") with func
 trait func {
+  val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/func/facts"
   val toSolve = "eq"
   def pretest(program: Program): Unit = {
     val eq = program.relation[Constant]("eq")

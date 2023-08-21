@@ -1,11 +1,13 @@
 package test.examples.oldlistlib
 
+import buildinfo.BuildInfo
 import datalog.dsl.{Constant, Program}
 import test.ExampleTestGenerator
 
 class oldlistlib_test extends ExampleTestGenerator("oldlistlib") with oldlistlib
 
 trait oldlistlib {
+  val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/oldlistlib/facts"
   val toSolve = "VarPointsTo"
 
   def pretest(program: Program): Unit = {
