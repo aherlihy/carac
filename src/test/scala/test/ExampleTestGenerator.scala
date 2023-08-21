@@ -156,62 +156,62 @@ abstract class TestGenerator(directory: Path,
 
     override def munitFixtures = List(program)
 
-//    Seq(
-////      "Naive",
-////      "SemiNaive",
-////      "CompiledStaged", // TODO: for longer tests, can throw MethodTooLarge
-////      "InterpretedStaged",
-////      "JITStaged_Sel_RULE_Block_BC",
-////      "JITStaged_Sel_DELTA_Block_BC",
-////      "JITStaged_Sel_ALL_Block_BC",
-////      "JITStaged_Sel_RULE_Block_Quotes",
-////      "JITStaged_Sel_DELTA_Block_Quotes",
-////      "JITStaged_Sel_ALL_Block_Quotes",
-////      "JITStaged_Sel_RULE_Async_Quotes",
-////      "JITStaged_Sel_ALL_Async_Quotes",
-////      "JITStaged_Sel_ALL_Block_Lambda",
-////      "JITStaged_Sel_DELTA_Block_Lambda",
-////      "JITStaged_Sel_RULE_Block_Lambda",
-////      "JITStaged_Sel_ALL_Async_Lambda",
-////      "JITStaged_Sel_RULE_Async_Lambda",
-////      "JITStaged_Sel_RULE_Async_BC",
-////      "JITStaged_Sel_ALL_Async_BC",
-//    ).foreach(execution => {
-//      Seq("Volcano", "Default").foreach(storage => {
-//        if ((execution.contains("Staged") || execution.contains("BytecodeGenerated") || execution.contains("Lambda")) && storage == "Volcano") {} // skip and don't report as skipped
-//        else if (
-//            skip.contains(execution) || skip.contains(storage) ||
-//              (tags ++ Set(execution, storage)).flatMap(t => Properties.envOrNone(t.toUpperCase())).nonEmpty// manually implement --exclude for intellij
-//        ) {
-//            test(s"$execution$storage".ignore) {}
-//          } else {
-//            val tags = mTags ++ Set(new munit.Tag(execution), new munit.Tag(storage))
-//            test(s"$execution$storage".withTags(tags)) {
-//              val p = program()
-//              if (toSolve != "_") { // solve for one relation, check all expected
-//                assertEquals(
-//                  p.namedRelation(toSolve).solve(),
-//                  expectedFacts(toSolve),
-//                  s"$toSolve did not match expected results"
-//                )
-//                expectedFacts.foreach((fact, expected) => {
-//                  assertEquals(
-//                    p.namedRelation(fact).get(),
-//                    expected,
-//                    s"$fact did not match expected results"
-//                  )
-//                })
-//              } else { // solve all relations for their expected
-//                expectedFacts.foreach((fact, expected) => {
-//                  assertEquals(
-//                    p.namedRelation(fact).solve(),
-//                    expected,
-//                    s"$fact did not match expected results"
-//                  )
-//                })
-//              }
-//            }
-//          }
-//      })
-//    })
+    Seq(
+//      "Naive",
+//      "SemiNaive",
+//      "CompiledStaged", // TODO: for longer tests, can throw MethodTooLarge
+      "InterpretedStaged",
+      "JITStaged_Sel_RULE_Block_BC",
+      "JITStaged_Sel_DELTA_Block_BC",
+      "JITStaged_Sel_ALL_Block_BC",
+      "JITStaged_Sel_RULE_Block_Quotes",
+      "JITStaged_Sel_DELTA_Block_Quotes",
+      "JITStaged_Sel_ALL_Block_Quotes",
+//      "JITStaged_Sel_RULE_Async_Quotes",
+//      "JITStaged_Sel_ALL_Async_Quotes",
+      "JITStaged_Sel_ALL_Block_Lambda",
+      "JITStaged_Sel_DELTA_Block_Lambda",
+      "JITStaged_Sel_RULE_Block_Lambda",
+      "JITStaged_Sel_ALL_Async_Lambda",
+      "JITStaged_Sel_RULE_Async_Lambda",
+      "JITStaged_Sel_RULE_Async_BC",
+      "JITStaged_Sel_ALL_Async_BC",
+    ).foreach(execution => {
+      Seq("Volcano", "Default").foreach(storage => {
+        if ((execution.contains("Staged") || execution.contains("BytecodeGenerated") || execution.contains("Lambda")) && storage == "Volcano") {} // skip and don't report as skipped
+        else if (
+            skip.contains(execution) || skip.contains(storage) ||
+              (tags ++ Set(execution, storage)).flatMap(t => Properties.envOrNone(t.toUpperCase())).nonEmpty// manually implement --exclude for intellij
+        ) {
+            test(s"$execution$storage".ignore) {}
+          } else {
+            val tags = mTags ++ Set(new munit.Tag(execution), new munit.Tag(storage))
+            test(s"$execution$storage".withTags(tags)) {
+              val p = program()
+              if (toSolve != "_") { // solve for one relation, check all expected
+                assertEquals(
+                  p.namedRelation(toSolve).solve(),
+                  expectedFacts(toSolve),
+                  s"$toSolve did not match expected results"
+                )
+                expectedFacts.foreach((fact, expected) => {
+                  assertEquals(
+                    p.namedRelation(fact).get(),
+                    expected,
+                    s"$fact did not match expected results"
+                  )
+                })
+              } else { // solve all relations for their expected
+                expectedFacts.foreach((fact, expected) => {
+                  assertEquals(
+                    p.namedRelation(fact).solve(),
+                    expected,
+                    s"$fact did not match expected results"
+                  )
+                })
+              }
+            }
+          }
+      })
+    })
 }
