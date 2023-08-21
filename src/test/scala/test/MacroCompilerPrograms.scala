@@ -1,5 +1,4 @@
-// if this is in package test, macro execution fails with a ClassNotFoundException
-package datalog
+package test
 
 import buildinfo.BuildInfo
 import datalog.execution.{ExecutionEngine, MacroCompiler, SolvableProgram}
@@ -38,10 +37,11 @@ class SimpleProgram(engine: ExecutionEngine) extends SolvableProgram(engine) {
 }
 
 object SimpleMacroCompiler extends MacroCompiler(SimpleProgram(_)) {
-  inline def compile(): StorageManager => Any = ${compileImpl()}
+  // Currently crashes without the `this.` prefix: https://github.com/lampepfl/dotty/issues/18434
+  inline def compile(): StorageManager => Any = ${this.compileImpl()}
 }
 
-// TODO: when https://github.com/lampepfl/dotty/issues/18393 is fixed can move these into the test files
+// TODO: move these into the test files
 
 // Ackermann
 class AckermannOptimizedProgram(engine: ExecutionEngine) extends SolvableProgram(engine) with ackermann_optimized {
@@ -50,7 +50,7 @@ class AckermannOptimizedProgram(engine: ExecutionEngine) extends SolvableProgram
   pretest(this)
 }
 object AckermannOptimizedMacroCompiler extends MacroCompiler(AckermannOptimizedProgram(_)) {
-  inline def compile(): StorageManager => Any = ${compileImpl()}
+  inline def compile(): StorageManager => Any = ${this.compileImpl()}
   val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/ackermann/facts"
 }
 
@@ -60,7 +60,7 @@ class AckermannWorstProgram(engine: ExecutionEngine) extends SolvableProgram(eng
   pretest(this)
 }
 object AckermannWorstMacroCompiler extends MacroCompiler(AckermannWorstProgram(_)) {
-  inline def compile(): StorageManager => Any = ${compileImpl()}
+  inline def compile(): StorageManager => Any = ${this.compileImpl()}
   val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/ackermann/facts"
 }
 
@@ -71,7 +71,7 @@ class CbaexprvalueOptimizedProgram(engine: ExecutionEngine) extends SolvableProg
   pretest(this)
 }
 object CbaexprvalueOptimizedMacroCompiler extends MacroCompiler(CbaexprvalueOptimizedProgram(_)) {
-  inline def compile(): StorageManager => Any = ${compileImpl()}
+  inline def compile(): StorageManager => Any = ${this.compileImpl()}
   val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/cbaexprvalue/facts"
 }
 
@@ -81,7 +81,7 @@ class CbaexprvalueWorstProgram(engine: ExecutionEngine) extends SolvableProgram(
   pretest(this)
 }
 object CbaexprvalueWorstMacroCompiler extends MacroCompiler(CbaexprvalueWorstProgram(_)) {
-  inline def compile(): StorageManager => Any = ${compileImpl()}
+  inline def compile(): StorageManager => Any = ${this.compileImpl()}
   val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/cbaexprvalue/facts"
 }
 
@@ -92,7 +92,7 @@ class EqualOptimizedProgram(engine: ExecutionEngine) extends SolvableProgram(eng
   pretest(this)
 }
 object EqualOptimizedMacroCompiler extends MacroCompiler(EqualOptimizedProgram(_)) {
-  inline def compile(): StorageManager => Any = ${compileImpl()}
+  inline def compile(): StorageManager => Any = ${this.compileImpl()}
   val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/equal/facts"
 }
 
@@ -102,7 +102,7 @@ class EqualWorstProgram(engine: ExecutionEngine) extends SolvableProgram(engine)
   pretest(this)
 }
 object EqualWorstMacroCompiler extends MacroCompiler(EqualWorstProgram(_)) {
-  inline def compile(): StorageManager => Any = ${compileImpl()}
+  inline def compile(): StorageManager => Any = ${this.compileImpl()}
   val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/equal/facts"
 }
 
@@ -113,7 +113,7 @@ class FibOptimizedProgram(engine: ExecutionEngine) extends SolvableProgram(engin
   pretest(this)
 }
 object FibOptimizedMacroCompiler extends MacroCompiler(FibOptimizedProgram(_)) {
-  inline def compile(): StorageManager => Any = ${compileImpl()}
+  inline def compile(): StorageManager => Any = ${this.compileImpl()}
   val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/fib/facts"
 }
 
@@ -123,7 +123,7 @@ class FibWorstProgram(engine: ExecutionEngine) extends SolvableProgram(engine) w
   pretest(this)
 }
 object FibWorstMacroCompiler extends MacroCompiler(FibWorstProgram(_)) {
-  inline def compile(): StorageManager => Any = ${compileImpl()}
+  inline def compile(): StorageManager => Any = ${this.compileImpl()}
   val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/fib/facts"
 }
 
@@ -134,7 +134,7 @@ class PrimeOptimizedProgram(engine: ExecutionEngine) extends SolvableProgram(eng
   pretest(this)
 }
 object PrimeOptimizedMacroCompiler extends MacroCompiler(PrimeOptimizedProgram(_)) {
-  inline def compile(): StorageManager => Any = ${compileImpl()}
+  inline def compile(): StorageManager => Any = ${this.compileImpl()}
   val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/prime/facts"
 }
 
@@ -144,7 +144,7 @@ class PrimeWorstProgram(engine: ExecutionEngine) extends SolvableProgram(engine)
   pretest(this)
 }
 object PrimeWorstMacroCompiler extends MacroCompiler(PrimeWorstProgram(_)) {
-  inline def compile(): StorageManager => Any = ${compileImpl()}
+  inline def compile(): StorageManager => Any = ${this.compileImpl()}
   val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/prime/facts"
 }
 
@@ -155,7 +155,7 @@ class TastyslistlibOptimizedProgram(engine: ExecutionEngine) extends SolvablePro
   pretest(this)
 }
 object TastyslistlibOptimizedMacroCompiler extends MacroCompiler(TastyslistlibOptimizedProgram(_)) {
-  inline def compile(): StorageManager => Any = ${compileImpl()}
+  inline def compile(): StorageManager => Any = ${this.compileImpl()}
   val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/tastyslistlib/facts"
 }
 
@@ -165,7 +165,7 @@ class TastyslistlibWorstProgram(engine: ExecutionEngine) extends SolvableProgram
   pretest(this)
 }
 object TastyslistlibWorstMacroCompiler extends MacroCompiler(TastyslistlibWorstProgram(_)) {
-  inline def compile(): StorageManager => Any = ${compileImpl()}
+  inline def compile(): StorageManager => Any = ${this.compileImpl()}
   val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/tastyslistlib/facts"
 }
 
@@ -176,7 +176,7 @@ class TastyslistlibinverseOptimizedProgram(engine: ExecutionEngine) extends Solv
   pretest(this)
 }
 object TastyslistlibinverseOptimizedMacroCompiler extends MacroCompiler(TastyslistlibinverseOptimizedProgram(_)) {
-  inline def compile(): StorageManager => Any = ${compileImpl()}
+  inline def compile(): StorageManager => Any = ${this.compileImpl()}
   val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/tastyslistlibinverse/facts"
 }
 
@@ -186,6 +186,6 @@ class TastyslistlibinverseWorstProgram(engine: ExecutionEngine) extends Solvable
   pretest(this)
 }
 object TastyslistlibinverseWorstMacroCompiler extends MacroCompiler(TastyslistlibinverseWorstProgram(_)) {
-  inline def compile(): StorageManager => Any = ${compileImpl()}
+  inline def compile(): StorageManager => Any = ${this.compileImpl()}
   val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/tastyslistlibinverse/facts"
 }
