@@ -47,12 +47,12 @@ abstract class MacroCompiler[T <: SolvableProgram](val makeProgram: ExecutionEng
   def makeEngine(): StagedExecutionEngine = {
     val storageManager = DefaultStorageManager()
     StagedExecutionEngine(storageManager, JITOptions(
-      mode = Mode.JIT, granularity = Granularity.ALL,
+      mode = Mode.JIT, granularity = Granularity.DELTA,
       // FIXME: make the dotty parameter optional, maybe by making it a
       // parameter of Backend.Quotes and having a separate Backend.Macro.
       dotty = null,
       compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel,
-      backend = Backend.Quotes))
+      backend = Backend.MacroQuotes))
   }
   private val engine: StagedExecutionEngine = makeEngine()
   val jitOptions: JITOptions = engine.defaultJITOptions

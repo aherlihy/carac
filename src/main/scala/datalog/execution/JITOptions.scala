@@ -11,7 +11,7 @@ enum CompileSync:
 enum SortOrder:
   case Sel, IntMax, Mixed, Badluck, Unordered, Worst
 enum Backend:
-  case Quotes, Bytecode, Lambda
+  case MacroQuotes, Quotes, Bytecode, Lambda
 enum Granularity(val flag: OpCode):
   case ALL extends Granularity(OpCode.EVAL_RULE_SN)
   case RULE extends Granularity(OpCode.EVAL_RULE_BODY)
@@ -42,7 +42,7 @@ case class JITOptions(
     throw new Exception(s"Do you really want to set JIT options with $mode?")
   if (
     (mode == Mode.Interpreted && backend != Backend.Quotes) ||
-      (mode == Mode.Compiled && sortOrder != SortOrder.Unordered) ||
+      // (mode == Mode.Compiled && sortOrder != SortOrder.Unordered) ||
       (fuzzy != DEFAULT_FUZZY && compileSync == CompileSync.Blocking) ||
       (compileSync != CompileSync.Async && !useGlobalContext))
     throw new Exception(s"Weird options for mode $mode ($backend, $sortOrder, or $compileSync), are you sure?")
@@ -57,6 +57,11 @@ case class JITOptions(
     s"${programStr}_${granStr}_$backendStr"
 
   def getSortFn(storageManager: StorageManager): (Atom, Boolean) => (Boolean, Int) =
+    JITOptions.getSortFn(sortOrder, storageManager)
+}
+
+object JITOptions {
+  def getSortFn(sortOrder: SortOrder, storageManager: StorageManager): (Atom, Boolean) => (Boolean, Int) =
       sortOrder match
         case SortOrder.IntMax =>
           (a: Atom, isDelta: Boolean) => if (storageManager.edbContains(a.rId))

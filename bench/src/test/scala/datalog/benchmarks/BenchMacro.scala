@@ -65,6 +65,26 @@ class BenchMacro {
   }
 
   @Benchmark
+  def ackermann_worst_lambda = {
+    val engine = StagedExecutionEngine(DefaultStorageManager(), AckermannWorstMacroCompiler.jitOptions.copy(backend = Backend.Lambda))
+    val facts = Paths.get(AckermannWorstMacroCompiler.factDir)
+    val program = AckermannWorstMacroCompiler.makeProgram(engine)
+    program.loadFromFactDir(facts.toString)
+    val res = program.namedRelation(program.toSolve).solve()
+    // println(res)
+  }
+
+  @Benchmark
+  def ackermann_opt_lambda = {
+    val engine = StagedExecutionEngine(DefaultStorageManager(), AckermannOptimizedMacroCompiler.jitOptions.copy(backend = Backend.Lambda))
+    val facts = Paths.get(AckermannOptimizedMacroCompiler.factDir)
+    val program = AckermannOptimizedMacroCompiler.makeProgram(engine)
+    program.loadFromFactDir(facts.toString)
+    val res = program.namedRelation(program.toSolve).solve()
+    // println(res)
+  }
+
+  @Benchmark
   def simple_interpreter = {
     val engine = StagedExecutionEngine(DefaultStorageManager(), SimpleMacroCompiler.jitOptions.copy(
       mode = Mode.Interpreted, granularity = Granularity.NEVER))
