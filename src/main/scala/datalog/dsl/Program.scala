@@ -65,7 +65,7 @@ class Program(engine: ExecutionEngine) extends AbstractProgram {
           reader.close()
         })
     } else {
-      throw new Exception(s"Unable to find fact directory '$factdir'")
+      println(s"Warning: Unable to find fact directory '$factdir'")
     }
   }
 }

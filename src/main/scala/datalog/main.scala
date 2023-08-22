@@ -666,10 +666,10 @@ def tastyslistlibinverse(program: Program): String = {
 
   val toSolve = benchmark match
     case "ackermann" => ackermann(program)
-//    case "cbaexprvalue" => cba(program)
-//    case "equal" => equal(program)
-//    case "fib" => fib(program)
-//    case "prime" => prime(program)
+    case "cbaexprvalue" => cba(program)
+    case "equal" => equal(program)
+    case "fib" => fib(program)
+    case "prime" => prime(program)
     case "tastyslistlib" => tastyslistlib(program)
     case "tastyslistlibinverse" => tastyslistlibinverse(program)
     case _ => throw new Exception(s"Unknown benchmark $benchmark")
