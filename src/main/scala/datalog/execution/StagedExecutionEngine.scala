@@ -27,6 +27,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
 //  var threadpool: ExecutorService = null
 
   val compiler: StagedCompiler = defaultJITOptions.backend match
+    case Backend.MacroQuotes => MacroQuoteCompiler(storageManager)
     case Backend.Quotes => QuoteCompiler(storageManager)
     case Backend.Bytecode => BytecodeCompiler(storageManager)
     case Backend.Lambda => LambdaCompiler(storageManager)

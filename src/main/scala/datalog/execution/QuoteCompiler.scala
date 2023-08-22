@@ -11,6 +11,58 @@ import java.util.concurrent.atomic.AtomicInteger
 import scala.collection.{immutable, mutable}
 import scala.quoted.*
 
+class MacroQuoteCompiler(storageManager: StorageManager)(using JITOptions) extends QuoteCompiler(storageManager) {
+  override def compileIRRelOp(irTree: IROp[EDB])(using stagedSM: Expr[StorageManager])(using Quotes): Expr[EDB] = {
+    irTree match {
+      case ProjectJoinFilterOp(rId, k, children: _*) =>
+        val deltaIdx = Expr(children.indexWhere(op =>
+          op match
+            case o: ScanOp => o.db == DB.Delta
+            case _ => false)
+        )
+        val unorderedChildren = Expr.ofSeq(children.map(compileIRRelOp))
+        val childrenLength = Expr(children.length)
+        val sortOrder = Expr(jitOptions.sortOrder)
+        val stagedId = Expr(rId)
+        val ruleHash = rId.toString + "%" + k.hash
+
+        jitOptions.sortOrder match {
+          case SortOrder.Sel | SortOrder.Mixed | SortOrder.IntMax | SortOrder.Worst if jitOptions.granularity.flag == irTree.code => '{
+            val originalK = $stagedSM.allRulesAllIndexes($stagedId).apply(${Expr(k.hash)})
+            val sortBy = JITOptions.getSortFn($sortOrder, $stagedSM)
+            val (newBody, newHash) =
+              if ($sortOrder == SortOrder.Worst)
+                JoinIndexes.presortSelectWorst(sortBy, originalK, $stagedSM, $deltaIdx)
+              else
+                JoinIndexes.presortSelect(sortBy, originalK, $stagedSM, $deltaIdx)
+            val newK = $stagedSM.allRulesAllIndexes($stagedId).getOrElseUpdate(
+              newHash,
+              JoinIndexes(originalK.atoms.head +: newBody.map(_._1), Some(originalK.cxns))
+            )
+            val unordered = $unorderedChildren
+            val orderedSeq = newK.atoms.view.drop(1).map(a => unordered(originalK.atoms.view.drop(1).indexOf(a))).to(immutable.ArraySeq)
+            $stagedSM.joinProjectHelper_withHash(
+              orderedSeq,
+              ${ Expr(rId) },
+              newK.hash,
+              ${ Expr(jitOptions.onlineSort) }
+            )
+          }
+          case _ => '{
+            $stagedSM.joinProjectHelper_withHash(
+              $unorderedChildren,
+              $stagedId,
+              ${ Expr(k.hash) },
+              ${ Expr(jitOptions.onlineSort) }
+            )
+          }
+        }
+      case _ =>
+        super.compileIRRelOp(irTree)
+    }
+  }
+}
+
 /**
  * Separate out compile logic from StagedExecutionEngine
  */
@@ -79,6 +131,17 @@ class QuoteCompiler(val storageManager: StorageManager)(using JITOptions) extend
     }
   }
 
+  given ToExpr[SortOrder] with {
+    def apply(x: SortOrder)(using Quotes) = {
+      x match
+        case SortOrder.Sel => '{ SortOrder.Sel }
+        case SortOrder.IntMax => '{ SortOrder.IntMax }
+        case SortOrder.Mixed => '{ SortOrder.Mixed }
+        case SortOrder.Badluck => '{ SortOrder.Badluck }
+        case SortOrder.Unordered => '{ SortOrder.Unordered }
+        case SortOrder.Worst => '{ SortOrder.Worst }
+    }
+  }
   /**
    * Compiles a relational operator into a quote that returns an EDB. Future TODO: merge with compileIR when dotty supports.
    */
