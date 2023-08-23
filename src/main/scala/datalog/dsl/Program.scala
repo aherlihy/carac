@@ -64,8 +64,8 @@ class Program(engine: ExecutionEngine) extends AbstractProgram {
           }
           reader.close()
         })
-    } else {
+    }/* else {
       println(s"Warning: Unable to find fact directory '$factdir'")
-    }
+    }*/
   }
 }
