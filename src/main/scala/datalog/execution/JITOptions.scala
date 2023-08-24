@@ -43,7 +43,7 @@ case class JITOptions(
   if (
     (mode == Mode.Interpreted && backend != Backend.Quotes) ||
       (mode == Mode.Compiled && sortOrder != SortOrder.Unordered) ||
-      (fuzzy != DEFAULT_FUZZY && compileSync == CompileSync.Blocking) ||
+//      (fuzzy != DEFAULT_FUZZY && compileSync == CompileSync.Blocking) ||
       (compileSync != CompileSync.Async && !useGlobalContext))
     throw new Exception(s"Weird options for mode $mode ($backend, $sortOrder, or $compileSync), are you sure?")
 
