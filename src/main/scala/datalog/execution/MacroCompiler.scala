@@ -51,7 +51,7 @@ abstract class MacroCompiler[T <: SolvableProgram](val makeProgram: ExecutionEng
       // FIXME: make the dotty parameter optional, maybe by making it a
       // parameter of Backend.Quotes and having a separate Backend.Macro.
       dotty = null,
-      compileSync = CompileSync.Blocking, sortOrder = SortOrder.Unordered,
+      compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel,
       backend = Backend.Quotes))
   }
   private val engine: StagedExecutionEngine = makeEngine()
