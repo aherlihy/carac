@@ -52,7 +52,7 @@ class BenchMacro {
     val res = AckermannOptimizedMacroCompiler.runCompiled(ackermannOptCompiled)(
       program => program.loadFromFactDir(facts.toString)
     )
-    println(res)
+    // println(res)
   }
 
   @Benchmark
@@ -61,7 +61,7 @@ class BenchMacro {
     val res = AckermannWorstMacroCompiler.runCompiled(ackermannWorstCompiled)(
       program => program.loadFromFactDir(facts.toString)
     )
-    println(res)
+    // println(res)
   }
 
   @Benchmark
