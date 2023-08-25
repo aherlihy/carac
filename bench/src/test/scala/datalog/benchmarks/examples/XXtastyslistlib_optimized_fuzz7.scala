@@ -57,12 +57,7 @@ class XXtastyslistlib_optimized_fuzz7() extends ExampleBenchmarkGenerator(
   }
 
   // interpreted
-  @Benchmark def interpreted_default_sel__7____EOL(blackhole: Blackhole): Unit = {
-    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
-    if (!programs.contains(p))
-      throw new Exception(f"Error: program for '$p' not found")
-    blackhole.consume(run(programs(p), result))
-  }
+
 
   @Benchmark def interpreted_default_badluck__7____EOL(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
