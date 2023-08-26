@@ -23,7 +23,7 @@ enum Mode:
   case Compiled
   case JIT
 
-val DEFAULT_FUZZY = 4
+val DEFAULT_FUZZY = 0
 
 // TODO: make JITOptions into an enum itself
 case class JITOptions(
