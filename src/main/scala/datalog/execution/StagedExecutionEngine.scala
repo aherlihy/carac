@@ -307,7 +307,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
         op.run(storageManager)
 
       case op: UnionSPJOp if jitOptions.granularity.flag == op.code && op.children.length > 2=>
-        if (jitOptions.sortOrder != SortOrder.Unordered && jitOptions.sortOrder != SortOrder.Badluck && jitOptions.fuzzy != 0) { // sort child relations and see if change is above threshold
+        if (jitOptions.sortOrder != SortOrder.Unordered && jitOptions.sortOrder != SortOrder.Badluck && jitOptions.fuzzy != 0 && jitOptions.backend != Backend.Lambda) { // sort child relations and see if change is above threshold
           val f = checkFuzzy(op, op.k)
           if (f.nonEmpty)
             return f.get
@@ -327,7 +327,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
           compileAsync(op, ec)
         }
       case op: ProjectJoinFilterOp if jitOptions.granularity.flag == op.code  && op.children.length > 2 =>
-        if (jitOptions.sortOrder != SortOrder.Unordered && jitOptions.sortOrder != SortOrder.Badluck && jitOptions.fuzzy != 0) { // sort child relations and see if change is above threshold
+        if (jitOptions.sortOrder != SortOrder.Unordered && jitOptions.sortOrder != SortOrder.Badluck && jitOptions.fuzzy != 0 && jitOptions.backend != Backend.Lambda) { // sort child relations and see if change is above threshold
           val f = checkFuzzy(op, op.k)
           if (f.nonEmpty)
             return f.get
