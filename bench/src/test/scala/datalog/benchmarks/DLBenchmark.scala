@@ -91,10 +91,10 @@ abstract class DLBenchmark {
                   sortOrder = sort,
                   onlineSort = onlineSort,
                   backend = bc,
-                  fuzzy = fuzzy,
+                  fuzzy = 7, //fuzzy,
                   dotty = dotty,
                 )
-                programs(jo.toBenchmark) = Program(
+                programs(jo.toBenchmark.replace("_7_", "_0_")) = Program(
                   StagedExecutionEngine(DefaultStorageManager(), jo)
                 )
               )
