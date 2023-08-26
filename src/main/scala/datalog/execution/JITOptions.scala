@@ -23,7 +23,7 @@ enum Mode:
   case Compiled
   case JIT
 
-val DEFAULT_FUZZY = 0
+val DEFAULT_FUZZY = 4
 
 // TODO: make JITOptions into an enum itself
 case class JITOptions(
@@ -38,7 +38,7 @@ case class JITOptions(
                        useGlobalContext: Boolean = true
                      ) {
   if ((mode == Mode.Compiled || mode == Mode.Interpreted) &&
-    (compileSync != CompileSync.Blocking || granularity != Granularity.NEVER || fuzzy != 0))
+    (compileSync != CompileSync.Blocking || granularity != Granularity.NEVER || fuzzy != DEFAULT_FUZZY))
     throw new Exception(s"Do you really want to set JIT options with $mode?")
   if (
     (mode == Mode.Interpreted && backend != Backend.Quotes) ||

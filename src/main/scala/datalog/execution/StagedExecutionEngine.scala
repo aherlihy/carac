@@ -244,6 +244,40 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
 //    ))
   }
 
+  def checkFuzzy[T](op: IROp[T], k: JoinIndexes)(using jitOptions: JITOptions)(using ec: ExecutionContext): Option[T] = {
+    val (nb, _) = JoinIndexes.presortSelect(jitOptions.getSortFn(storageManager), k, storageManager, -1)
+    val oldBody = k.atoms.drop(1).map(_.hash)
+    val newBodyIdx = nb.map(h => oldBody.indexOf(h._1.hash))
+
+    def levenstein(s1: String, s2: String): Int = { // from wikipedia
+      val memorizedCosts = mutable.Map[(Int, Int), Int]()
+
+      def lev: ((Int, Int)) => Int = {
+        case (k1, k2) =>
+          memorizedCosts.getOrElseUpdate((k1, k2), (k1, k2) match {
+            case (i, 0) => i
+            case (0, j) => j
+            case (i, j) =>
+              Seq(1 + lev((i - 1, j)),
+                1 + lev((i, j - 1)),
+                lev((i - 1, j - 1))
+                  + (if (s1(i - 1) != s2(j - 1)) 1 else 0)).min
+          })
+      }
+
+      lev((s1.length, s2.length))
+    }
+
+    val distance = levenstein(newBodyIdx.mkString("", "", ""), Array.range(0, newBodyIdx.length).mkString("", "", ""))
+    if (distance < jitOptions.fuzzy)
+      if (op.blockingCompiledFn != null)
+        Some(op.blockingCompiledFn(storageManager))
+      else
+        Some(op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o))))
+    else
+      None
+  }
+
   def jit[T](irTree: IROp[T])(using jitOptions: JITOptions)(using ec: ExecutionContext): T = {
 //    debug("", () => s"IN STAGED JIT IR, code=${irTree.code}, gran=${jitOptions.granularity}")
     irTree match {
@@ -273,37 +307,11 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
         op.run(storageManager)
 
       case op: UnionSPJOp if jitOptions.granularity.flag == op.code && op.children.length > 2=>
-        if (jitOptions.sortOrder != SortOrder.Unordered && jitOptions.sortOrder != SortOrder.Badluck && jitOptions.fuzzy != 0) // sort child relations and see if change is above threshold
-          val (nb, _) = JoinIndexes.presortSelect(jitOptions.getSortFn(storageManager), op.k, storageManager, -1)
-          val oldBody = op.k.atoms.drop(1).map(_.hash)
-          val newBodyIdx = nb.map(h => oldBody.indexOf(h._1.hash))
-
-          def levenstein(s1: String, s2: String): Int = { // from wikipedia
-            val memorizedCosts = mutable.Map[(Int, Int), Int]()
-
-            def lev: ((Int, Int)) => Int = {
-              case (k1, k2) =>
-                memorizedCosts.getOrElseUpdate((k1, k2), (k1, k2) match {
-                  case (i, 0) => i
-                  case (0, j) => j
-                  case (i, j) =>
-                    Seq(1 + lev((i - 1, j)),
-                      1 + lev((i, j - 1)),
-                      lev((i - 1, j - 1))
-                        + (if (s1(i - 1) != s2(j - 1)) 1 else 0)).min
-                })
-            }
-
-            lev((s1.length, s2.length))
-          }
-
-          val distance = levenstein(newBodyIdx.mkString("", "", ""), Array.range(0, newBodyIdx.length).mkString("", "", ""))
-          if (distance < jitOptions.fuzzy)
-            return if (op.blockingCompiledFn != null)
-              op.blockingCompiledFn(storageManager)
-            else
-              op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o)))
-
+        if (jitOptions.sortOrder != SortOrder.Unordered && jitOptions.sortOrder != SortOrder.Badluck && jitOptions.fuzzy != 0) { // sort child relations and see if change is above threshold
+          val f = checkFuzzy(op, op.k)
+          if (f.nonEmpty)
+            return f.get
+        }
         if (jitOptions.compileSync == CompileSync.Blocking) {
           op.blockingCompiledFn = compiler.compile(op)
           op.blockingCompiledFn(storageManager)
@@ -319,6 +327,11 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
           compileAsync(op, ec)
         }
       case op: ProjectJoinFilterOp if jitOptions.granularity.flag == op.code  && op.children.length > 2 =>
+        if (jitOptions.sortOrder != SortOrder.Unordered && jitOptions.sortOrder != SortOrder.Badluck && jitOptions.fuzzy != 0) { // sort child relations and see if change is above threshold
+          val f = checkFuzzy(op, op.k)
+          if (f.nonEmpty)
+            return f.get
+        }
         op.blockingCompiledFn = compiler.compile(op)
         op.blockingCompiledFn(storageManager)
 
