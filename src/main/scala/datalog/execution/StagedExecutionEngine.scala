@@ -200,7 +200,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
   /**
    * For loop operations can compile asynchronously and then pick up compiled code at the current loop iteration.
    */
-  inline def compileAsync(op: (UnionOp | UnionSPJOp), ec: ExecutionContext)(using jitOptions: JITOptions): EDB = {
+  inline def compileAsync(op: IROp[EDB], ec: ExecutionContext)(using jitOptions: JITOptions): EDB = {
     // threadpool = Executors.newFixedThreadPool(Runtime.getRuntime.availableProcessors())
     // threadpool = new ForkJoinPool(Runtime.getRuntime.availableProcessors)
     // val executionContext = ExecutionContext.fromExecutor(threadpool)
@@ -217,7 +217,8 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
       future.value match {
         case Some(Success(run)) =>
           debug(s"Compilation succeeded: ${op.code}", () => "")
-          run(storageManager, i)
+          op.blockingCompiledFnIndexed = run
+          op.blockingCompiledFnIndexed(storageManager, i)
         case Some(Failure(e)) =>
           throw Exception(s"Error compiling ${op.code} with: ${e.getCause}")
         case None =>
@@ -244,7 +245,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
 //    ))
   }
 
-  def checkFuzzy[T](op: IROp[T], k: JoinIndexes)(using jitOptions: JITOptions)(using ec: ExecutionContext): Option[T] = {
+  def freshRecompile[T](op: IROp[T], k: JoinIndexes)(using jitOptions: JITOptions)(using ec: ExecutionContext): Boolean = {
     val (nb, _) = JoinIndexes.presortSelect(jitOptions.getSortFn(storageManager), k, storageManager, -1)
     val oldBody = k.atoms.drop(1).map(_.hash)
     val newBodyIdx = nb.map(h => oldBody.indexOf(h._1.hash))
@@ -269,13 +270,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
     }
 
     val distance = levenstein(newBodyIdx.mkString("", "", ""), Array.range(0, newBodyIdx.length).mkString("", "", ""))
-    if (distance < jitOptions.fuzzy)
-      if (op.blockingCompiledFn != null)
-        Some(op.blockingCompiledFn(storageManager))
-      else
-        Some(op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o))))
-    else
-      None
+    distance > jitOptions.fuzzy
   }
 
   def jit[T](irTree: IROp[T])(using jitOptions: JITOptions)(using ec: ExecutionContext): T = {
@@ -307,16 +302,35 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
         op.run(storageManager)
 
       case op: UnionSPJOp if jitOptions.granularity.flag == op.code && op.children.length > 2=>
-        if (jitOptions.sortOrder != SortOrder.Unordered && jitOptions.sortOrder != SortOrder.Badluck && jitOptions.fuzzy != 0 && jitOptions.backend != Backend.Lambda) { // sort child relations and see if change is above threshold
-          val f = checkFuzzy(op, op.k)
-          if (f.nonEmpty)
-            return f.get
-        }
+        val recompile =
+          jitOptions.backend == Backend.Lambda ||
+          jitOptions.sortOrder == SortOrder.Unordered ||
+          jitOptions.fuzzy == 0 ||
+          freshRecompile(op, op.k)  // sort child relations and see if change is above threshold
+
         if (jitOptions.compileSync == CompileSync.Blocking) {
-          op.blockingCompiledFn = compiler.compile(op)
-          op.blockingCompiledFn(storageManager)
+          if (recompile)
+//            println("\tblocking recompiling")
+            op.blockingCompiledFn = compiler.compile(op)
+            op.blockingCompiledFn(storageManager)
+          else if (op.blockingCompiledFn != null)
+//            println("\tblocking using existing compiled fn")
+            op.blockingCompiledFn(storageManager)
+          else
+//            println("\tblocking reverting to interp")
+            op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o)))
         } else {
-          compileAsync(op, ec)
+          if (recompile)
+//            println("\tasync recompiling")
+            compileAsync(op, ec)
+          else if (op.blockingCompiledFnIndexed != null)
+//            println("\tasync using existing compiled fn")
+            storageManager.union(op.children.zipWithIndex.map((c, i) =>
+              op.blockingCompiledFnIndexed(storageManager, i)
+            ))
+          else
+//            println("\tasync reverting to interp")
+            op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o)))
         }
 
       case op: UnionOp if jitOptions.granularity.flag == op.code && op.children.length > 2 =>
@@ -327,13 +341,21 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
           compileAsync(op, ec)
         }
       case op: ProjectJoinFilterOp if jitOptions.granularity.flag == op.code  && op.children.length > 2 =>
-        if (jitOptions.sortOrder != SortOrder.Unordered && jitOptions.sortOrder != SortOrder.Badluck && jitOptions.fuzzy != 0 && jitOptions.backend != Backend.Lambda) { // sort child relations and see if change is above threshold
-          val f = checkFuzzy(op, op.k)
-          if (f.nonEmpty)
-            return f.get
-        }
-        op.blockingCompiledFn = compiler.compile(op)
-        op.blockingCompiledFn(storageManager)
+        val recompile =
+          jitOptions.backend == Backend.Lambda ||
+          jitOptions.sortOrder == SortOrder.Unordered ||
+          jitOptions.fuzzy == 0 ||
+          freshRecompile(op, op.k) // sort child relations and see if change is above threshold
+        if (recompile)
+//          println("\trecompiling")
+          op.blockingCompiledFn = compiler.compile(op)
+          op.blockingCompiledFn(storageManager)
+        else if (op.blockingCompiledFn != null)
+//          println("\tusing existing compiled fn")
+          op.blockingCompiledFn(storageManager)
+        else
+//          println ("\treverting to interp")
+          op.run_continuation(storageManager, op.children.map (o => (sm: StorageManager) => jit (o) ) )
 
       case op: ScanOp =>
         op.run(storageManager)

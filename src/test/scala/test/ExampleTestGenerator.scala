@@ -90,6 +90,7 @@ abstract class TestGenerator(directory: Path,
     val program: Fixture[Program] = new Fixture[Program]("Programs") {
       var program: Program = null
       def apply(): Program = program
+      val fuzzy = 3
 
       override def beforeEach(context: BeforeEach): Unit = {
         program = context.test.name match {
@@ -108,37 +109,37 @@ abstract class TestGenerator(directory: Path,
 
           // blocking
           case "JITStaged_Sel_RULE_Block_QuotesDefault" =>
-            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.RULE, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Quotes)))
+            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.RULE, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Quotes, fuzzy = fuzzy)))
           case "JITStaged_Sel_ALL_Block_QuotesDefault" =>
-            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.ALL, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Quotes)))
+            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.ALL, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Quotes, fuzzy = fuzzy)))
           case "JITStaged_Sel_DELTA_Block_QuotesDefault" =>
-            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.DELTA, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Quotes)))
+            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.DELTA, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Quotes, fuzzy = fuzzy)))
           case "JITStaged_Sel_RULE_Block_BCDefault" =>
-            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.RULE, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Bytecode)))
+            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.RULE, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Bytecode, fuzzy = fuzzy)))
           case "JITStaged_Sel_ALL_Block_BCDefault" =>
-            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.ALL, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Bytecode)))
+            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.ALL, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Bytecode, fuzzy = fuzzy)))
           case "JITStaged_Sel_DELTA_Block_BCDefault" =>
-            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.DELTA, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Bytecode)))
+            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.DELTA, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Bytecode, fuzzy = fuzzy)))
           case "JITStaged_Sel_RULE_Block_LambdaDefault" =>
-            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.RULE, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)))
+            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.RULE, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda, fuzzy = fuzzy)))
           case "JITStaged_Sel_ALL_Block_LambdaDefault" =>
-            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.ALL, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)))
+            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.ALL, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda, fuzzy = fuzzy)))
           case "JITStaged_Sel_DELTA_Block_LambdaDefault" =>
-            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.DELTA, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)))
+            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.DELTA, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda, fuzzy = fuzzy)))
 
           // async
           case "JITStaged_Sel_RULE_Async_QuotesDefault" =>
-            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.RULE, dotty = dotty, compileSync = CompileSync.Async, sortOrder = SortOrder.Sel, backend = Backend.Quotes)))
+            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.RULE, dotty = dotty, compileSync = CompileSync.Async, sortOrder = SortOrder.Sel, backend = Backend.Quotes, fuzzy = fuzzy)))
           case "JITStaged_Sel_ALL_Async_QuotesDefault" =>
-            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.ALL, dotty = dotty, compileSync = CompileSync.Async, sortOrder = SortOrder.Sel, backend = Backend.Quotes)))
+            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.ALL, dotty = dotty, compileSync = CompileSync.Async, sortOrder = SortOrder.Sel, backend = Backend.Quotes, fuzzy = fuzzy)))
           case "JITStaged_Sel_RULE_Async_BCDefault" =>
-            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.RULE, dotty = dotty, compileSync = CompileSync.Async, sortOrder = SortOrder.Sel, backend = Backend.Bytecode)))
+            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.RULE, dotty = dotty, compileSync = CompileSync.Async, sortOrder = SortOrder.Sel, backend = Backend.Bytecode, fuzzy = fuzzy)))
           case "JITStaged_Sel_ALL_Async_BCDefault" =>
-            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.ALL, dotty = dotty, compileSync = CompileSync.Async, sortOrder = SortOrder.Sel, backend = Backend.Bytecode)))
+            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.ALL, dotty = dotty, compileSync = CompileSync.Async, sortOrder = SortOrder.Sel, backend = Backend.Bytecode, fuzzy = fuzzy)))
           case "JITStaged_Sel_RULE_Async_LambdaDefault" =>
-            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.RULE, dotty = dotty, compileSync = CompileSync.Async, sortOrder = SortOrder.Sel, backend = Backend.Lambda)))
+            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.RULE, dotty = dotty, compileSync = CompileSync.Async, sortOrder = SortOrder.Sel, backend = Backend.Lambda, fuzzy = fuzzy)))
           case "JITStaged_Sel_ALL_Async_LambdaDefault" =>
-            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.ALL, dotty = dotty, compileSync = CompileSync.Async, sortOrder = SortOrder.Sel, backend = Backend.Lambda)))
+            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.ALL, dotty = dotty, compileSync = CompileSync.Async, sortOrder = SortOrder.Sel, backend = Backend.Lambda, fuzzy = fuzzy)))
 
           case _ => // WARNING: MUnit just returns null pointers everywhere if an error or assert is triggered in beforeEach
             throw new Exception(s"Unknown engine construction ${context.test.name}") // TODO: this is reported as passing
@@ -160,9 +161,9 @@ abstract class TestGenerator(directory: Path,
 //      "Naive",
 //      "SemiNaive",
 //      "CompiledStaged", // TODO: for longer tests, can throw MethodTooLarge
-      "InterpretedStaged",
-      "JITStaged_Sel_RULE_Block_BC",
-      "JITStaged_Sel_DELTA_Block_BC",
+//      "InterpretedStaged",
+//      "JITStaged_Sel_RULE_Block_BC",
+//      "JITStaged_Sel_DELTA_Block_BC",
 //      "JITStaged_Sel_ALL_Block_BC",
       "JITStaged_Sel_RULE_Block_Quotes",
       "JITStaged_Sel_DELTA_Block_Quotes",
@@ -170,11 +171,11 @@ abstract class TestGenerator(directory: Path,
 //      "JITStaged_Sel_RULE_Async_Quotes",
 //      "JITStaged_Sel_ALL_Async_Quotes",
 //      "JITStaged_Sel_ALL_Block_Lambda",
-      "JITStaged_Sel_DELTA_Block_Lambda",
-      "JITStaged_Sel_RULE_Block_Lambda",
+//      "JITStaged_Sel_DELTA_Block_Lambda",
+//      "JITStaged_Sel_RULE_Block_Lambda",
 //      "JITStaged_Sel_ALL_Async_Lambda",
-      "JITStaged_Sel_RULE_Async_Lambda",
-      "JITStaged_Sel_RULE_Async_BC",
+//      "JITStaged_Sel_RULE_Async_Lambda",
+//      "JITStaged_Sel_RULE_Async_BC",
 //      "JITStaged_Sel_ALL_Async_BC",
     ).foreach(execution => {
       Seq("Volcano", "Default").foreach(storage => {

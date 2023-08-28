@@ -37,6 +37,8 @@ abstract class IROp[T](val children: IROp[T]*)(using val jitOptions: JITOptions,
   val code: OpCode
   var compiledFn: Future[CompiledFn[T]] = null
   var blockingCompiledFn: CompiledFn[T] = null // for when we're blocking and not ahead-of-time, so might as well skip the future
+  var compiledFnIndexed: Future[CompiledFnIndexed[T]] = null
+  var blockingCompiledFnIndexed: CompiledFnIndexed[T] = null // for when we're blocking and not ahead-of-time, so might as well skip the future
   var compiledSnippetContinuationFn: (StorageManager, Seq[StorageManager => T]) => T = null
 
   /**
@@ -271,9 +273,6 @@ case class ProjectJoinFilterOp(rId: RelationId, var k: JoinIndexes, override val
  */
 case class UnionOp(override val code: OpCode, override val children:IROp[EDB]*)(using JITOptions) extends IROp[EDB](children:_*) {
 //  var compiledFnIndexed: java.util.concurrent.Future[CompiledFnIndexed[EDB]] = null
-  var compiledFnIndexed: Future[CompiledFnIndexed[EDB]] = null
-  var blockingCompiledFnIndexed: CompiledFnIndexed[EDB] = null
-
   override def run_continuation(storageManager: StorageManager, opFns: Seq[CompiledFn[EDB]]): EDB =
     storageManager.union(opFns.map(o => o(storageManager)))
   override def run(storageManager: StorageManager): EDB =
@@ -287,8 +286,6 @@ case class UnionOp(override val code: OpCode, override val children:IROp[EDB]*)(
  */
 case class UnionSPJOp(rId: RelationId, var k: JoinIndexes, override val children:ProjectJoinFilterOp*)(using JITOptions) extends IROp[EDB](children:_*) {
   val code: OpCode = OpCode.EVAL_RULE_BODY
-  var compiledFnIndexed: Future[CompiledFnIndexed[EDB]] = null
-//  var compiledFnIndexed: java.util.concurrent.Future[CompiledFnIndexed[EDB]] = null
   // for now not filled out bc not planning on compiling higher than this
   override def run_continuation(storageManager: StorageManager, opFns: Seq[CompiledFn[EDB]]): EDB =
     storageManager.union(opFns.map(o => o(storageManager)))
