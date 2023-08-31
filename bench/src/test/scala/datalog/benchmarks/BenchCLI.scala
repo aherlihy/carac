@@ -36,6 +36,7 @@ class BenchCLI_tastyslistlibinverse extends tastyslistlibinverse_worst {
   val benchmark = pattern.findFirstMatchIn(factDirectory).get.group(1)
   var directory = null
   val dotty = staging.Compiler.make(getClass.getClassLoader)
+  Process(Seq(s"src/test/scala/datalog/benchmarks/run-cli/souffle-generate-preprofile.sh", benchmark)).!
 
 //  @Setup(Level.Trial)
 //  def mkdirs(): Unit = {
@@ -46,6 +47,10 @@ class BenchCLI_tastyslistlibinverse extends tastyslistlibinverse_worst {
 
   @Setup(Level.Iteration)
   def s(): Unit = {
+    Process(s"rm -rf souffle-out/preprofiled-compile/$benchmark").!
+    Process(s"mkdir souffle-out/preprofiled-compile/$benchmark").!
+    Process(s"rm -rf souffle-out/preprofiled-interp/$benchmark").!
+    Process(s"mkdir souffle-out/preprofiled-interp/$benchmark").!
     Process(s"rm -rf souffle-out/compile/$benchmark").!
     Process(s"mkdir souffle-out/compile/$benchmark").!
     Process(s"rm -rf souffle-out/interp/$benchmark").!
@@ -60,6 +65,20 @@ class BenchCLI_tastyslistlibinverse extends tastyslistlibinverse_worst {
     Process(s"mkdir carac-out/$benchmark").!
     Process(s"rm -rf carac-scala-out/$benchmark").!
     Process(s"mkdir carac-scala-out/$benchmark").!
+  }
+
+  @Benchmark def souffle_preprofiled_compile(blackhole: Blackhole): Unit = {
+    val pb = Process(Seq(s"src/test/scala/datalog/benchmarks/run-cli/souffle-preprofiled-compile.sh", benchmark))
+    val exitCode = pb.!
+    if (exitCode != 0) throw new Exception(s"Souffle exited with code $exitCode")
+    blackhole.consume(exitCode) // prob unnecessary
+  }
+
+  @Benchmark def souffle_preprofiled_interp(blackhole: Blackhole): Unit = {
+    val pb = Process(Seq(s"src/test/scala/datalog/benchmarks/run-cli/souffle-preprofiled-interp.sh", benchmark))
+    val exitCode = pb.!
+    if (exitCode != 0) throw new Exception(s"Souffle exited with code $exitCode")
+    blackhole.consume(exitCode) // prob unnecessary
   }
 
   @Benchmark def carac_warm_quotes(blackhole: Blackhole): Unit = {
@@ -183,6 +202,7 @@ class BenchCLI_tastyslistlib extends tastyslistlib_worst {
   val benchmark = pattern.findFirstMatchIn(factDirectory).get.group(1)
   var directory = null
   val dotty = staging.Compiler.make(getClass.getClassLoader)
+  Process(Seq(s"src/test/scala/datalog/benchmarks/run-cli/souffle-generate-preprofile.sh", benchmark)).!
 
   //  @Setup(Level.Trial)
   //  def mkdirs(): Unit = {
@@ -193,6 +213,10 @@ class BenchCLI_tastyslistlib extends tastyslistlib_worst {
 
   @Setup(Level.Iteration)
   def s(): Unit = {
+    Process(s"rm -rf souffle-out/preprofiled-compile/$benchmark").!
+    Process(s"mkdir souffle-out/preprofiled-compile/$benchmark").!
+    Process(s"rm -rf souffle-out/preprofiled-interp/$benchmark").!
+    Process(s"mkdir souffle-out/preprofiled-interp/$benchmark").!
     Process(s"rm -rf souffle-out/compile/$benchmark").!
     Process(s"mkdir souffle-out/compile/$benchmark").!
     Process(s"rm -rf souffle-out/interp/$benchmark").!
@@ -207,6 +231,20 @@ class BenchCLI_tastyslistlib extends tastyslistlib_worst {
     Process(s"mkdir carac-out/$benchmark").!
     Process(s"rm -rf carac-scala-out/$benchmark").!
     Process(s"mkdir carac-scala-out/$benchmark").!
+  }
+
+  @Benchmark def souffle_preprofiled_compile(blackhole: Blackhole): Unit = {
+    val pb = Process(Seq(s"src/test/scala/datalog/benchmarks/run-cli/souffle-preprofiled-compile.sh", benchmark))
+    val exitCode = pb.!
+    if (exitCode != 0) throw new Exception(s"Souffle exited with code $exitCode")
+    blackhole.consume(exitCode) // prob unnecessary
+  }
+
+  @Benchmark def souffle_preprofiled_interp(blackhole: Blackhole): Unit = {
+    val pb = Process(Seq(s"src/test/scala/datalog/benchmarks/run-cli/souffle-preprofiled-interp.sh", benchmark))
+    val exitCode = pb.!
+    if (exitCode != 0) throw new Exception(s"Souffle exited with code $exitCode")
+    blackhole.consume(exitCode) // prob unnecessary
   }
 
   @Benchmark def carac_warm_quotes(blackhole: Blackhole): Unit = {
@@ -330,6 +368,7 @@ class BenchCLI_ackermann extends ackermann_worst {
   val benchmark = pattern.findFirstMatchIn(factDirectory).get.group(1)
   var directory = null
   val dotty = staging.Compiler.make(getClass.getClassLoader)
+  Process(Seq(s"src/test/scala/datalog/benchmarks/run-cli/souffle-generate-preprofile.sh", benchmark)).!
 
   //  @Setup(Level.Trial)
   //  def mkdirs(): Unit = {
@@ -340,6 +379,10 @@ class BenchCLI_ackermann extends ackermann_worst {
 
   @Setup(Level.Iteration)
   def s(): Unit = {
+    Process(s"rm -rf souffle-out/preprofiled-compile/$benchmark").!
+    Process(s"mkdir souffle-out/preprofiled-compile/$benchmark").!
+    Process(s"rm -rf souffle-out/preprofiled-interp/$benchmark").!
+    Process(s"mkdir souffle-out/preprofiled-interp/$benchmark").!
     Process(s"rm -rf souffle-out/compile/$benchmark").!
     Process(s"mkdir souffle-out/compile/$benchmark").!
     Process(s"rm -rf souffle-out/interp/$benchmark").!
@@ -354,6 +397,20 @@ class BenchCLI_ackermann extends ackermann_worst {
     Process(s"mkdir carac-out/$benchmark").!
     Process(s"rm -rf carac-scala-out/$benchmark").!
     Process(s"mkdir carac-scala-out/$benchmark").!
+  }
+
+  @Benchmark def souffle_preprofiled_compile(blackhole: Blackhole): Unit = {
+    val pb = Process(Seq(s"src/test/scala/datalog/benchmarks/run-cli/souffle-preprofiled-compile.sh", benchmark))
+    val exitCode = pb.!
+    if (exitCode != 0) throw new Exception(s"Souffle exited with code $exitCode")
+    blackhole.consume(exitCode) // prob unnecessary
+  }
+
+  @Benchmark def souffle_preprofiled_interp(blackhole: Blackhole): Unit = {
+    val pb = Process(Seq(s"src/test/scala/datalog/benchmarks/run-cli/souffle-preprofiled-interp.sh", benchmark))
+    val exitCode = pb.!
+    if (exitCode != 0) throw new Exception(s"Souffle exited with code $exitCode")
+    blackhole.consume(exitCode) // prob unnecessary
   }
 
   @Benchmark def carac_warm_quotes(blackhole: Blackhole): Unit = {
@@ -477,6 +534,7 @@ class BenchCLI_cbaexprvalue extends cbaexprvalue_worst {
   val benchmark = pattern.findFirstMatchIn(factDirectory).get.group(1)
   var directory = null
   val dotty = staging.Compiler.make(getClass.getClassLoader)
+  Process(Seq(s"src/test/scala/datalog/benchmarks/run-cli/souffle-generate-preprofile.sh", benchmark)).!
 
   //  @Setup(Level.Trial)
   //  def mkdirs(): Unit = {
@@ -487,6 +545,10 @@ class BenchCLI_cbaexprvalue extends cbaexprvalue_worst {
 
   @Setup(Level.Iteration)
   def s(): Unit = {
+    Process(s"rm -rf souffle-out/preprofiled-compile/$benchmark").!
+    Process(s"mkdir souffle-out/preprofiled-compile/$benchmark").!
+    Process(s"rm -rf souffle-out/preprofiled-interp/$benchmark").!
+    Process(s"mkdir souffle-out/preprofiled-interp/$benchmark").!
     Process(s"rm -rf souffle-out/compile/$benchmark").!
     Process(s"mkdir souffle-out/compile/$benchmark").!
     Process(s"rm -rf souffle-out/interp/$benchmark").!
@@ -501,6 +563,20 @@ class BenchCLI_cbaexprvalue extends cbaexprvalue_worst {
     Process(s"mkdir carac-out/$benchmark").!
     Process(s"rm -rf carac-scala-out/$benchmark").!
     Process(s"mkdir carac-scala-out/$benchmark").!
+  }
+
+  @Benchmark def souffle_preprofiled_compile(blackhole: Blackhole): Unit = {
+    val pb = Process(Seq(s"src/test/scala/datalog/benchmarks/run-cli/souffle-preprofiled-compile.sh", benchmark))
+    val exitCode = pb.!
+    if (exitCode != 0) throw new Exception(s"Souffle exited with code $exitCode")
+    blackhole.consume(exitCode) // prob unnecessary
+  }
+
+  @Benchmark def souffle_preprofiled_interp(blackhole: Blackhole): Unit = {
+    val pb = Process(Seq(s"src/test/scala/datalog/benchmarks/run-cli/souffle-preprofiled-interp.sh", benchmark))
+    val exitCode = pb.!
+    if (exitCode != 0) throw new Exception(s"Souffle exited with code $exitCode")
+    blackhole.consume(exitCode) // prob unnecessary
   }
 
   @Benchmark def carac_warm_quotes(blackhole: Blackhole): Unit = {
@@ -624,6 +700,7 @@ class BenchCLI_equal extends equal_worst {
   val benchmark = pattern.findFirstMatchIn(factDirectory).get.group(1)
   var directory = null
   val dotty = staging.Compiler.make(getClass.getClassLoader)
+  Process(Seq(s"src/test/scala/datalog/benchmarks/run-cli/souffle-generate-preprofile.sh", benchmark)).!
 
   //  @Setup(Level.Trial)
   //  def mkdirs(): Unit = {
@@ -634,6 +711,10 @@ class BenchCLI_equal extends equal_worst {
 
   @Setup(Level.Iteration)
   def s(): Unit = {
+    Process(s"rm -rf souffle-out/preprofiled-compile/$benchmark").!
+    Process(s"mkdir souffle-out/preprofiled-compile/$benchmark").!
+    Process(s"rm -rf souffle-out/preprofiled-interp/$benchmark").!
+    Process(s"mkdir souffle-out/preprofiled-interp/$benchmark").!
     Process(s"rm -rf souffle-out/compile/$benchmark").!
     Process(s"mkdir souffle-out/compile/$benchmark").!
     Process(s"rm -rf souffle-out/interp/$benchmark").!
@@ -648,6 +729,20 @@ class BenchCLI_equal extends equal_worst {
     Process(s"mkdir carac-out/$benchmark").!
     Process(s"rm -rf carac-scala-out/$benchmark").!
     Process(s"mkdir carac-scala-out/$benchmark").!
+  }
+
+  @Benchmark def souffle_preprofiled_compile(blackhole: Blackhole): Unit = {
+    val pb = Process(Seq(s"src/test/scala/datalog/benchmarks/run-cli/souffle-preprofiled-compile.sh", benchmark))
+    val exitCode = pb.!
+    if (exitCode != 0) throw new Exception(s"Souffle exited with code $exitCode")
+    blackhole.consume(exitCode) // prob unnecessary
+  }
+
+  @Benchmark def souffle_preprofiled_interp(blackhole: Blackhole): Unit = {
+    val pb = Process(Seq(s"src/test/scala/datalog/benchmarks/run-cli/souffle-preprofiled-interp.sh", benchmark))
+    val exitCode = pb.!
+    if (exitCode != 0) throw new Exception(s"Souffle exited with code $exitCode")
+    blackhole.consume(exitCode) // prob unnecessary
   }
 
   @Benchmark def carac_warm_quotes(blackhole: Blackhole): Unit = {
@@ -771,6 +866,7 @@ class BenchCLI_prime extends prime_worst {
   val benchmark = pattern.findFirstMatchIn(factDirectory).get.group(1)
   var directory = null
   val dotty = staging.Compiler.make(getClass.getClassLoader)
+  Process(Seq(s"src/test/scala/datalog/benchmarks/run-cli/souffle-generate-preprofile.sh", benchmark)).!
 
   //  @Setup(Level.Trial)
   //  def mkdirs(): Unit = {
@@ -781,6 +877,10 @@ class BenchCLI_prime extends prime_worst {
 
   @Setup(Level.Iteration)
   def s(): Unit = {
+    Process(s"rm -rf souffle-out/preprofiled-compile/$benchmark").!
+    Process(s"mkdir souffle-out/preprofiled-compile/$benchmark").!
+    Process(s"rm -rf souffle-out/preprofiled-interp/$benchmark").!
+    Process(s"mkdir souffle-out/preprofiled-interp/$benchmark").!
     Process(s"rm -rf souffle-out/compile/$benchmark").!
     Process(s"mkdir souffle-out/compile/$benchmark").!
     Process(s"rm -rf souffle-out/interp/$benchmark").!
@@ -795,6 +895,20 @@ class BenchCLI_prime extends prime_worst {
     Process(s"mkdir carac-out/$benchmark").!
     Process(s"rm -rf carac-scala-out/$benchmark").!
     Process(s"mkdir carac-scala-out/$benchmark").!
+  }
+
+  @Benchmark def souffle_preprofiled_compile(blackhole: Blackhole): Unit = {
+    val pb = Process(Seq(s"src/test/scala/datalog/benchmarks/run-cli/souffle-preprofiled-compile.sh", benchmark))
+    val exitCode = pb.!
+    if (exitCode != 0) throw new Exception(s"Souffle exited with code $exitCode")
+    blackhole.consume(exitCode) // prob unnecessary
+  }
+
+  @Benchmark def souffle_preprofiled_interp(blackhole: Blackhole): Unit = {
+    val pb = Process(Seq(s"src/test/scala/datalog/benchmarks/run-cli/souffle-preprofiled-interp.sh", benchmark))
+    val exitCode = pb.!
+    if (exitCode != 0) throw new Exception(s"Souffle exited with code $exitCode")
+    blackhole.consume(exitCode) // prob unnecessary
   }
 
   @Benchmark def carac_warm_quotes(blackhole: Blackhole): Unit = {
@@ -918,7 +1032,9 @@ class BenchCLI_fib extends fib_worst {
   val benchmark = pattern.findFirstMatchIn(factDirectory).get.group(1)
   var directory = null
   val dotty = staging.Compiler.make(getClass.getClassLoader)
+  Process(Seq(s"src/test/scala/datalog/benchmarks/run-cli/souffle-generate-preprofile.sh", benchmark)).!
 
+  Process(Seq(s"src/test/scala/datalog/benchmarks/run-cli/souffle-generate-preprofile.sh", benchmark)).!
   //  @Setup(Level.Trial)
   //  def mkdirs(): Unit = {
   //    Process(s"mkdir souffle-out").!
@@ -928,6 +1044,10 @@ class BenchCLI_fib extends fib_worst {
 
   @Setup(Level.Iteration)
   def s(): Unit = {
+    Process(s"rm -rf souffle-out/preprofiled-compile/$benchmark").!
+    Process(s"mkdir souffle-out/preprofiled-compile/$benchmark").!
+    Process(s"rm -rf souffle-out/preprofiled-interp/$benchmark").!
+    Process(s"mkdir souffle-out/preprofiled-interp/$benchmark").!
     Process(s"rm -rf souffle-out/compile/$benchmark").!
     Process(s"mkdir souffle-out/compile/$benchmark").!
     Process(s"rm -rf souffle-out/interp/$benchmark").!
@@ -942,6 +1062,20 @@ class BenchCLI_fib extends fib_worst {
     Process(s"mkdir carac-out/$benchmark").!
     Process(s"rm -rf carac-scala-out/$benchmark").!
     Process(s"mkdir carac-scala-out/$benchmark").!
+  }
+
+  @Benchmark def souffle_preprofiled_compile(blackhole: Blackhole): Unit = {
+    val pb = Process(Seq(s"src/test/scala/datalog/benchmarks/run-cli/souffle-preprofiled-compile.sh", benchmark))
+    val exitCode = pb.!
+    if (exitCode != 0) throw new Exception(s"Souffle exited with code $exitCode")
+    blackhole.consume(exitCode) // prob unnecessary
+  }
+
+  @Benchmark def souffle_preprofiled_interp(blackhole: Blackhole): Unit = {
+    val pb = Process(Seq(s"src/test/scala/datalog/benchmarks/run-cli/souffle-preprofiled-interp.sh", benchmark))
+    val exitCode = pb.!
+    if (exitCode != 0) throw new Exception(s"Souffle exited with code $exitCode")
+    blackhole.consume(exitCode) // prob unnecessary
   }
 
   @Benchmark def carac_warm_quotes(blackhole: Blackhole): Unit = {
