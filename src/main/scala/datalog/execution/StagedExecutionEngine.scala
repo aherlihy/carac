@@ -200,7 +200,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
   /**
    * For loop operations can compile asynchronously and then pick up compiled code at the current loop iteration.
    */
-  inline def compileAsync(op: (UnionOp | UnionSPJOp), ec: ExecutionContext)(using jitOptions: JITOptions): EDB = {
+  inline def compileAsync(op: IROp[EDB], ec: ExecutionContext)(using jitOptions: JITOptions): EDB = {
     // threadpool = Executors.newFixedThreadPool(Runtime.getRuntime.availableProcessors())
     // threadpool = new ForkJoinPool(Runtime.getRuntime.availableProcessors)
     // val executionContext = ExecutionContext.fromExecutor(threadpool)
@@ -217,7 +217,8 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
       future.value match {
         case Some(Success(run)) =>
           debug(s"Compilation succeeded: ${op.code}", () => "")
-          run(storageManager, i)
+          op.blockingCompiledFnIndexed = run
+          op.blockingCompiledFnIndexed(storageManager, i)
         case Some(Failure(e)) =>
           throw Exception(s"Error compiling ${op.code} with: ${e.getCause}")
         case None =>
@@ -242,6 +243,34 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
 //        future.cancel(true)
 //        c.run(storageManager)
 //    ))
+  }
+
+  def freshRecompile[T](op: IROp[T], k: JoinIndexes)(using jitOptions: JITOptions)(using ec: ExecutionContext): Boolean = {
+    val (nb, _) = JoinIndexes.presortSelect(jitOptions.getSortFn(storageManager), k, storageManager, -1)
+    val oldBody = k.atoms.drop(1).map(_.hash)
+    val newBodyIdx = nb.map(h => oldBody.indexOf(h._1.hash))
+
+    def levenstein(s1: String, s2: String): Int = { // from wikipedia
+      val memorizedCosts = mutable.Map[(Int, Int), Int]()
+
+      def lev: ((Int, Int)) => Int = {
+        case (k1, k2) =>
+          memorizedCosts.getOrElseUpdate((k1, k2), (k1, k2) match {
+            case (i, 0) => i
+            case (0, j) => j
+            case (i, j) =>
+              Seq(1 + lev((i - 1, j)),
+                1 + lev((i, j - 1)),
+                lev((i - 1, j - 1))
+                  + (if (s1(i - 1) != s2(j - 1)) 1 else 0)).min
+          })
+      }
+
+      lev((s1.length, s2.length))
+    }
+
+    val distance = levenstein(newBodyIdx.mkString("", "", ""), Array.range(0, newBodyIdx.length).mkString("", "", ""))
+    distance > jitOptions.fuzzy
   }
 
   def jit[T](irTree: IROp[T])(using jitOptions: JITOptions)(using ec: ExecutionContext): T = {
@@ -273,42 +302,35 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
         op.run(storageManager)
 
       case op: UnionSPJOp if jitOptions.granularity.flag == op.code && op.children.length > 2=>
-        if (jitOptions.sortOrder != SortOrder.Unordered && jitOptions.sortOrder != SortOrder.Badluck && jitOptions.fuzzy != 0) // sort child relations and see if change is above threshold
-          val (nb, _) = JoinIndexes.presortSelect(jitOptions.getSortFn(storageManager), op.k, storageManager, -1)
-          val oldBody = op.k.atoms.drop(1).map(_.hash)
-          val newBodyIdx = nb.map(h => oldBody.indexOf(h._1.hash))
-
-          def levenstein(s1: String, s2: String): Int = { // from wikipedia
-            val memorizedCosts = mutable.Map[(Int, Int), Int]()
-
-            def lev: ((Int, Int)) => Int = {
-              case (k1, k2) =>
-                memorizedCosts.getOrElseUpdate((k1, k2), (k1, k2) match {
-                  case (i, 0) => i
-                  case (0, j) => j
-                  case (i, j) =>
-                    Seq(1 + lev((i - 1, j)),
-                      1 + lev((i, j - 1)),
-                      lev((i - 1, j - 1))
-                        + (if (s1(i - 1) != s2(j - 1)) 1 else 0)).min
-                })
-            }
-
-            lev((s1.length, s2.length))
-          }
-
-          val distance = levenstein(newBodyIdx.mkString("", "", ""), Array.range(0, newBodyIdx.length).mkString("", "", ""))
-          if (distance < jitOptions.fuzzy)
-            return if (op.blockingCompiledFn != null)
-              op.blockingCompiledFn(storageManager)
-            else
-              op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o)))
+        val recompile =
+          jitOptions.backend == Backend.Lambda ||
+          jitOptions.sortOrder == SortOrder.Unordered ||
+          jitOptions.fuzzy == 0 ||
+          freshRecompile(op, op.k)  // sort child relations and see if change is above threshold
 
         if (jitOptions.compileSync == CompileSync.Blocking) {
-          op.blockingCompiledFn = compiler.compile(op)
-          op.blockingCompiledFn(storageManager)
+          if (recompile)
+//            println("\tblocking recompiling")
+            op.blockingCompiledFn = compiler.compile(op)
+            op.blockingCompiledFn(storageManager)
+          else if (op.blockingCompiledFn != null)
+//            println("\tblocking using existing compiled fn")
+            op.blockingCompiledFn(storageManager)
+          else
+//            println("\tblocking reverting to interp")
+            op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o)))
         } else {
-          compileAsync(op, ec)
+          if (recompile)
+//            println("\tasync recompiling")
+            compileAsync(op, ec)
+          else if (op.blockingCompiledFnIndexed != null)
+//            println("\tasync using existing compiled fn")
+            storageManager.union(op.children.zipWithIndex.map((c, i) =>
+              op.blockingCompiledFnIndexed(storageManager, i)
+            ))
+          else
+//            println("\tasync reverting to interp")
+            op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o)))
         }
 
       case op: UnionOp if jitOptions.granularity.flag == op.code && op.children.length > 2 =>
@@ -319,8 +341,21 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
           compileAsync(op, ec)
         }
       case op: ProjectJoinFilterOp if jitOptions.granularity.flag == op.code  && op.children.length > 2 =>
-        op.blockingCompiledFn = compiler.compile(op)
-        op.blockingCompiledFn(storageManager)
+        val recompile =
+          jitOptions.backend == Backend.Lambda ||
+          jitOptions.sortOrder == SortOrder.Unordered ||
+          jitOptions.fuzzy == 0 ||
+          freshRecompile(op, op.k) // sort child relations and see if change is above threshold
+        if (recompile)
+//          println("\trecompiling")
+          op.blockingCompiledFn = compiler.compile(op)
+          op.blockingCompiledFn(storageManager)
+        else if (op.blockingCompiledFn != null)
+//          println("\tusing existing compiled fn")
+          op.blockingCompiledFn(storageManager)
+        else
+//          println ("\treverting to interp")
+          op.run_continuation(storageManager, op.children.map (o => (sm: StorageManager) => jit (o) ) )
 
       case op: ScanOp =>
         op.run(storageManager)

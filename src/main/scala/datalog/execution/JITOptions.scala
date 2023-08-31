@@ -38,12 +38,12 @@ case class JITOptions(
                        useGlobalContext: Boolean = true
                      ) {
   if ((mode == Mode.Compiled || mode == Mode.Interpreted) &&
-    (compileSync != CompileSync.Blocking || granularity != Granularity.NEVER || fuzzy != 0))
+    (compileSync != CompileSync.Blocking || granularity != Granularity.NEVER || fuzzy != DEFAULT_FUZZY))
     throw new Exception(s"Do you really want to set JIT options with $mode?")
   if (
     (mode == Mode.Interpreted && backend != Backend.Quotes) ||
       (mode == Mode.Compiled && sortOrder != SortOrder.Unordered) ||
-      (fuzzy != DEFAULT_FUZZY && compileSync == CompileSync.Blocking) ||
+//      (fuzzy != DEFAULT_FUZZY && compileSync == CompileSync.Blocking) ||
       (compileSync != CompileSync.Async && !useGlobalContext))
     throw new Exception(s"Weird options for mode $mode ($backend, $sortOrder, or $compileSync), are you sure?")
 
