@@ -1,0 +1,9 @@
+slistlib.Main.main.deserialize.temp	slistlib.Main.main.deserialize.build
+slistlib.Main.main.INT_SERIALIZED	slistlib.Main.main.SERIALIZED_VAR
+slistlib.Main.main.range.i	slistlib.Main.main.range.from
+slistlib.StringWrap.s	slistlib.StringWrap.<init>.s
+slistlib.SimpleList.reverse.rec.temp	slistlib.SimpleList.reverse.rec.acc
+slistlib.IntWrap.c	slistlib.IntWrap.<init>.c
+slistlib.Cons.first	slistlib.Cons.<init>.first
+slistlib.Cons.cons	slistlib.Cons.<init>.cons
+slistlib.Cons.get.temp	slistlib.Cons.first

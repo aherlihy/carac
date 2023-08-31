@@ -1,0 +1,11 @@
+scala.Predef.println	instr#3	slistlib.Main.main.display
+scala.Predef.augmentString	instr#10	slistlib.Main.main.deserialize
+scala.Predef.println	instr#29	slistlib.Main.main
+slistlib.Main.main.display	instr#30	slistlib.Main.main
+slistlib.Main.main.serialize	instr#31	slistlib.Main.main
+slistlib.Main.main.deserialize	instr#32	slistlib.Main.main
+slistlib.Main.main.range	instr#39	slistlib.Main.main
+scala.Predef.println	instr#41	slistlib.Main.main
+slistlib.Main.main.display	instr#42	slistlib.Main.main
+slistlib.SimpleList.reverse.rec	instr#49	slistlib.SimpleList.reverse.rec
+slistlib.SimpleList.reverse.rec	instr#51	slistlib.SimpleList.reverse

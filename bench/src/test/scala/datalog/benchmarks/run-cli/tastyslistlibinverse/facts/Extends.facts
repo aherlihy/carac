@@ -1,0 +1,8 @@
+slistlib.Main	java.lang.Object
+slistlib.StringWrap	java.lang.Object
+slistlib.SimpleList	java.lang.Object
+slistlib.SimpleList	slistlib.Printable
+slistlib.IntWrap	java.lang.Object
+slistlib.Printable	java.lang.Object
+slistlib.Empty	slistlib.SimpleList
+slistlib.Cons	slistlib.SimpleList

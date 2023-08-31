@@ -1,0 +1,204 @@
+.decl ActualArg(x: symbol, y: symbol, z: symbol, w: symbol)
+.input ActualArg()
+.decl ActualReturn(x: symbol, y: symbol)
+.input ActualReturn()
+.decl Alloc(x: symbol, y: symbol, z: symbol)
+.input Alloc()
+.decl DefinesWith(x: symbol, y: symbol, z: symbol)
+.input DefinesWith()
+.decl Extends(x: symbol, y: symbol)
+.input Extends()
+.decl FormalArg(x: symbol, y: symbol, z: symbol, w: symbol)
+.input FormalArg()
+.decl FormalReturn(x: symbol, y: symbol)
+.input FormalReturn()
+.decl HeapType(x: symbol, y: symbol)
+.input HeapType()
+.decl NotDefines(x: symbol, y: symbol)
+.input NotDefines()
+.decl Reachable(x: symbol)
+.input Reachable()
+.decl ThisVar(x: symbol, y: symbol)
+.input ThisVar()
+.decl VCall(x: symbol, y: symbol, z: symbol, w: symbol)
+.input VCall()
+
+.decl LookUp(x: symbol, y: symbol, z: symbol)
+.input LookUp()
+.decl Move(x: symbol, y: symbol)
+.input Move()
+.decl Store(x: symbol, y: symbol, z: symbol)
+.input Store()
+.decl Load(x: symbol, y: symbol, z: symbol, w: symbol)
+.input Load()
+
+.decl StaticCall(x: symbol, y: symbol, z: symbol)
+.input StaticCall()
+.decl StaticLookUp(x: symbol, y: symbol)
+.input StaticLookUp()
+
+.decl VarPointsTo(x: symbol, y: symbol)
+.output VarPointsTo()
+.decl CallGraph(x: symbol, y: symbol)
+.output CallGraph()
+.decl FldPointsTo(x: symbol, y: symbol, z: symbol)
+.output FldPointsTo()
+.decl InterProcAssign(x: symbol, y: symbol)
+.output InterProcAssign()
+
+.decl Delegate(x: symbol, y: symbol)
+.output Delegate()
+.decl SuperCall(x: symbol, y: symbol, z: symbol)
+.output SuperCall()
+.decl FieldValDef(x: symbol, y: symbol)
+.output FieldValDef()
+
+.decl Refers(x: symbol, y: symbol)
+.output Refers()
+.decl Overrides(x: symbol, y: symbol)
+.output Overrides()
+.decl TopLevel(x: symbol, y: symbol)
+.output TopLevel()
+
+VarPointsTo(varr, heap) :- Reachable(meth),
+                               Alloc(varr, heap, meth).
+
+
+
+VarPointsTo(to, heap) :- Move(to, from),
+                             VarPointsTo(from, heap).
+
+
+/*x*/ FldPointsTo(baseH, fld, heap) :- VarPointsTo(from, heap),
+                                           VarPointsTo(base, baseH),
+                                           Store(base, fld, from).
+
+
+
+/*x*/ VarPointsTo(to, heap) :- VarPointsTo(base, baseH),
+                                   Load(to, base, fld, inMeth),
+                                   FldPointsTo(baseH, fld, heap).
+
+
+/*x*/ Reachable(toMeth) :- VarPointsTo(base, heap),
+                               LookUp(heapT, sig, toMeth),
+                               Reachable(inMeth),
+                               ThisVar(toMeth, thiss),
+                               VCall(base, sig, invo, inMeth),
+                               HeapType(heap, heapT).
+
+
+/*x*/ VarPointsTo(thiss, heap) :- VarPointsTo(base, heap),
+                                      LookUp(heapT, sig, toMeth),
+                                      Reachable(inMeth),
+                                      ThisVar(toMeth, thiss),
+                                      VCall(base, sig, invo, inMeth),
+                                      HeapType(heap, heapT).
+
+
+/*x*/ CallGraph(invo, toMeth) :- VarPointsTo(base, heap),
+                                     LookUp(heapT, sig, toMeth),
+                                     Reachable(inMeth),
+                                     ThisVar(toMeth, thiss),
+                                     VCall(base, sig, invo, inMeth),
+                                     HeapType(heap, heapT).
+
+
+CallGraph(invo, toMeth) :- Reachable(inMeth),
+                               StaticCall(toMeth, invo, inMeth).
+
+
+// rules for dynamic val
+/*x*/ Reachable(toMeth) :- VarPointsTo(base, heap),
+                               LookUp(heapT, sig, toMeth),
+                               Reachable(inMeth),
+                               ThisVar(toMeth, thiss),
+                               HeapType(heap, heapT),
+                               FormalReturn(toMeth, from),
+                               Load(to, base, sig, inMeth).
+
+
+/*x*/ VarPointsTo(thiss, heap) :- VarPointsTo(base, heap),
+                                      LookUp(heapT, sig, toMeth),
+                                      Reachable(inMeth),
+                                      ThisVar(toMeth, thiss),
+                                      HeapType(heap, heapT),
+                                      FormalReturn(toMeth, from),
+                                      Load(to, base, sig, inMeth).
+
+
+/*x*/ InterProcAssign(to, from) :- VarPointsTo(base, heap),
+                                       LookUp(heapT, sig, toMeth),
+                                       Reachable(inMeth),
+                                       ThisVar(toMeth, thiss),
+                                       HeapType(heap, heapT),
+                                       FormalReturn(toMeth, from),
+                                       Load(to, base, sig, inMeth).
+
+
+/*x*/ InterProcAssign(to, from) :- ActualArg(invo, m, n, from),
+                                       CallGraph(invo, meth),
+                                       FormalArg(meth, m, n, to).
+
+
+/*x*/ InterProcAssign(to, from) :- ActualReturn(invo, to),
+                                       FormalReturn(meth, from),
+                                       CallGraph(invo, meth).
+
+
+VarPointsTo(to, heap) :- VarPointsTo(from, heap),
+                             InterProcAssign(to, from).
+
+Reachable(toMeth) :- Reachable(inMeth),
+                         StaticCall(toMeth, invo, inMeth).
+
+
+// without negation support, we generate NotDefines facts
+LookUp(classC, sig, meth) :- DefinesWith(classC, sig, meth).
+/*x*/ LookUp(classC, sigA, sigB) :- NotDefines(classC, sigB),
+                                        LookUp(classB, sigA, sigB),
+                                        Extends(classC, classB).
+
+
+DefinesWith(classC, sigA, sigC) :- DefinesWith(classB, sigA, sigB),
+                                       DefinesWith(classC, sigB, sigC).
+
+
+DefinesWith(classC, sigC, sigC) :- DefinesWith(classC, sigB, sigC).
+// with negations we would have something like:
+// LookUp(classC, sig, meth) :- DefinesWith(classC, sig, meth)
+// LookUp(classC, sigA, sigB) :- (LookUp(classB, sigA, sigB), Not(Defines(classC, sigB)), Extends(classC, classB))
+// DefinesWith(classC, sigA, sigC) :- (DefinesWith(classC, sigB, sigC), DefinesWith(classB, sigA, sigB))
+// DefinesWith(classC, sigC, sigC) :- DefinesWith(classC, sigB, sigC)
+// Defines(classC, sigA) :- DefinesWith(classC, sigA, sigC)
+
+// super calls
+/*x*/ Reachable(toMeth) :- VarPointsTo(thisFrom, heap),
+                               Reachable(inMeth),
+                               ThisVar(toMeth, thiss),
+                               ThisVar(inMeth, thisFrom),
+                               SuperCall(toMeth, invo, inMeth).
+
+
+/*x*/ VarPointsTo(thiss, heap) :- VarPointsTo(thisFrom, heap),
+                                      Reachable(inMeth),
+                                      ThisVar(inMeth, thisFrom),
+                                      ThisVar(toMeth, thiss),
+                                      SuperCall(toMeth, invo, inMeth).
+
+
+/*x*/ CallGraph(invo, toMeth) :- VarPointsTo(thisFrom, heap),
+                                     Reachable(inMeth),
+                                     ThisVar(inMeth, thisFrom),
+                                     ThisVar(toMeth, thiss),
+                                     SuperCall(toMeth, invo, inMeth).
+
+
+/*x*/ VarPointsTo(to, heap) :- VarPointsTo(from, heap),
+                                   VarPointsTo(base, baseH),
+                                   LookUp(heapT, fld, actualFld),
+                                   HeapType(baseH, heapT),
+                                   Load(to, base, fld, inMeth),
+                                   FieldValDef(actualFld, from).
+
+.output VarPointsTo()
