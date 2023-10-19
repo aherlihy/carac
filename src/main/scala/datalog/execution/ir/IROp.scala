@@ -1,7 +1,7 @@
 package datalog.execution.ir
 
-import datalog.dsl.{Atom, Constant}
-import datalog.execution.{JITOptions, JoinIndexes, PrecedenceGraph, SortOrder, StagedCompiler, ir}
+import datalog.dsl.{Atom, Constant, GroupingAtom}
+import datalog.execution.{JITOptions, JoinIndexes, PrecedenceGraph, SortOrder, StagedCompiler, ir, GroupingJoinIndexes}
 import datalog.execution.ast.*
 import datalog.storage.{DB, EDB, KNOWLEDGE, RelationId, StorageManager}
 import datalog.tools.Debug
@@ -20,6 +20,7 @@ enum OpCode:
   SCAN, SCANEDB, SCAN_DISCOVERED,
   COMPLEMENT,
   SPJ, INSERT, UNION, DIFF,
+  GROUPING,
   DEBUG, DEBUGP, DOWHILE, UPDATE_DISCOVERED,
   EVAL_STRATUM, EVAL_RULE_NAIVE, EVAL_RULE_SN, EVAL_RULE_BODY, EVAL_NAIVE, EVAL_SN, LOOP_BODY, OTHER // convenience labels for generating functions
 object OpCode {
@@ -131,6 +132,7 @@ case class UpdateDiscoveredOp()(using JITOptions) extends IROp[Any] {
   val code: OpCode = OpCode.UPDATE_DISCOVERED
   override def run(storageManager: StorageManager): Any =
     storageManager.updateDiscovered()
+    storageManager.clearKnownDelta()
 
   override def run_continuation(storageManager: StorageManager, opFns: Seq[CompiledFn[Any]]): Any =
     run(storageManager)
@@ -328,6 +330,16 @@ case class DiffOp(override val children:IROp[EDB]*)(using JITOptions) extends IR
     storageManager.diff(opFns(0)(storageManager), opFns(1)(storageManager))
   override def run(storageManager: StorageManager): EDB =
     storageManager.diff(children.head.run(storageManager), children(1).run(storageManager))
+}
+
+case class GroupingOp(child: IROp[EDB], var gji: GroupingJoinIndexes)(using JITOptions) extends IROp[EDB](child) {
+  val code: OpCode = OpCode.GROUPING
+
+  override def run(storageManager: StorageManager): EDB =
+    storageManager.groupingHelper(child.run(storageManager), gji)
+
+  override def run_continuation(storageManager: StorageManager, opFns: Seq[CompiledFn[EDB]]): EDB =
+    storageManager.groupingHelper(opFns(0)(storageManager), gji)
 }
 
 case class DebugNode(prefix: String, dbg: () => String)(using JITOptions) extends IROp[Any] {

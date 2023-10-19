@@ -69,3 +69,6 @@ class NS() {
 //    s"${rIdToName(h.head.toInt)}${h.drop(1).mkString("(", ", ", ")")}"
     s"$neg${rIdToName(head.toInt)}.${h(1)}"
 }
+
+enum StorageAggOp:
+  case SUM, COUNT, MIN, MAX

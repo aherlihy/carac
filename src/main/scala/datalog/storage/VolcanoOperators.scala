@@ -4,6 +4,9 @@ import datalog.dsl.Constant
 import datalog.storage.CollectionsCasts.asCollectionsEDB
 import datalog.tools.Debug.debug
 
+import datalog.execution.{GroupingJoinIndexes, AggOpIndex}
+import datalog.storage.StorageAggOp
+
 import scala.collection.mutable
 
 // Indicates the end of the stream
@@ -232,5 +235,72 @@ class VolcanoOperators[S <: StorageManager](val storageManager: S) {
         Option(outputRelation(index - 1))
     }
     def close(): Unit = ops.foreach(o => o.close())
+  }
+
+
+  // Closely coupled to Collections
+  case class Grouping(input: VolOperator, gji: GroupingJoinIndexes) extends VolOperator {
+    private var outputRelation: CollectionsEDB = CollectionsEDB()
+    private var index = 0
+
+    def filter(get: Int => StorageTerm) = {
+      val vCmp = gji.varIndexes.isEmpty || gji.varIndexes.forall(condition =>
+        val toCompare = get(condition.head)
+        condition.drop(1).forall(idx => get(idx) == toCompare)
+      )
+      val kCmp = gji.constIndexes.isEmpty || gji.constIndexes.forall((idx, const) => get(idx) == const)
+      vCmp && kCmp
+    }
+
+    def getTpe(x: StorageConstant): Char = x match
+      case _: Int => 'i'
+      case _: String => 's'
+
+    def compute(tmp: CollectionsRow) =
+      val (getters: Seq[CollectionsRow => StorageConstant], tpes) = gji.aggOpInfos.map{
+        case (StorageAggOp.COUNT, _) =>
+          ((_: CollectionsRow) => 1, 'i')
+        case (_, AggOpIndex.GV(i)) =>
+          ((r: CollectionsRow) => r.apply(i).asInstanceOf[StorageConstant], getTpe(tmp(i).asInstanceOf[StorageConstant]))
+        case (_, AggOpIndex.LV(i)) =>
+          ((r: CollectionsRow) => r.apply(i).asInstanceOf[StorageConstant], getTpe(tmp(i).asInstanceOf[StorageConstant]))
+        case (_, AggOpIndex.C(c)) =>
+          ((_: CollectionsRow) => c, getTpe(c))
+      }.unzip
+      val okgetters = (r: CollectionsRow) => CollectionsRow(getters.map(_.apply(r)))
+      val reducers: Seq[(StorageConstant, StorageConstant) => StorageConstant] = gji.aggOpInfos.map(_._1).zip(tpes).map{
+        case (StorageAggOp.SUM, t) =>
+          t match
+            case 'i' => (a, b) => a.asInstanceOf[Int] + b.asInstanceOf[Int]
+            case 's' => (a, b) => a.asInstanceOf[String] + b.asInstanceOf[String]
+        case (StorageAggOp.COUNT, _) => (a, b) => a.asInstanceOf[Int] + b.asInstanceOf[Int]
+        case (StorageAggOp.MIN, t) =>
+          t match
+            case 'i' => (a, b) => Math.min(a.asInstanceOf[Int], b.asInstanceOf[Int])
+            case 's' => (a, b) => if a.asInstanceOf[String] < b.asInstanceOf[String] then a.asInstanceOf[String] else b.asInstanceOf[String]
+        case (StorageAggOp.MAX, t) =>
+          t match
+            case 'i' => (a, b) => Math.max(a.asInstanceOf[Int], b.asInstanceOf[Int])
+            case 's' => (a, b) => if a.asInstanceOf[String] > b.asInstanceOf[String] then a.asInstanceOf[String] else b.asInstanceOf[String]
+      }
+      val okreducers = (a: CollectionsRow, b: CollectionsRow) => CollectionsRow(a.wrapped.zip(b.wrapped).zip(reducers).map((x, y) => y.apply(x._1.asInstanceOf[StorageConstant], x._2.asInstanceOf[StorageConstant])))
+      (okgetters, okreducers)
+      
+
+    def open(): Unit =
+      val tmp = Filter(input)(r => filter(r.apply)).toList().distinct()
+      if tmp.nonEmpty
+      then
+        val (okgetters, okreducers) = compute(tmp(0))
+        outputRelation = tmp.groupMapReduce(r => CollectionsRow(gji.groupingIndexes.map(r.apply)), okgetters, okreducers)
+      else outputRelation = tmp
+    def next(): Option[CollectionsRow] = {
+      if (index >= outputRelation.length)
+        NilTuple
+      else
+        index += 1
+        Option(outputRelation(index - 1))
+    }
+    def close(): Unit = input.close()
   }
 }

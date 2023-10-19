@@ -1,7 +1,7 @@
 package datalog.execution
 
-import datalog.dsl.{Atom, Constant, Term, Variable}
-import datalog.storage.{RelationId, CollectionsStorageManager, StorageManager, EDB}
+import datalog.dsl.{Atom, Constant, Term, Variable, GroupingAtom, AggOp}
+import datalog.storage.{RelationId, CollectionsStorageManager, StorageManager, EDB, StorageAggOp}
 import datalog.tools.Debug.debug
 
 import scala.collection.mutable
@@ -40,6 +40,11 @@ class NaiveExecutionEngine(val storageManager: StorageManager, stratified: Boole
     val jIdx = getOperatorKey(rule)
     prebuiltOpKeys.getOrElseUpdate(rId, mutable.ArrayBuffer[JoinIndexes]()).addOne(jIdx)
     storageManager.addConstantsToDomain(jIdx.constIndexes.values.toSeq)
+
+    // We need to add the constants occurring in the grouping predicates of the grouping atoms
+    rule.collect{ case ga: GroupingAtom => ga}.foreach(ga =>
+      storageManager.addConstantsToDomain(jIdx.groupingIndexes(ga.hash).constIndexes.values.toSeq)
+    )
   }
 
   def insertEDB(rule: Atom): Unit = {

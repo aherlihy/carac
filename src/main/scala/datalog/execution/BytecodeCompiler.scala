@@ -164,6 +164,12 @@ class BytecodeCompiler(val storageManager: StorageManager)(using JITOptions) ext
           traverse(xb, children(1))
           emitSMCall(xb, "diff", classOf[EDB], classOf[EDB])
 
+        case GroupingOp(child, gji) =>
+          xb.aload(0)
+          traverse(xb, child)
+          emitGroupingJoinIndexes(xb, gji)
+          emitSMCall(xb, "groupingHelper", classOf[EDB], classOf[GroupingJoinIndexes])
+
         case DebugPeek(prefix, msg, children: _*) =>
           assert(false, s"Unimplemented node: $irTree")
 

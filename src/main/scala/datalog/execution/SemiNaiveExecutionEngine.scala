@@ -98,6 +98,7 @@ class SemiNaiveExecutionEngine(override val storageManager: StorageManager, stra
         innerSolve(toSolve, relations.toSeq)
         if (idx < strata.length - 1)
           storageManager.updateDiscovered()
+          storageManager.clearKnownDelta()
       )
     storageManager.getNewIDBResult(toSolve)
   }
