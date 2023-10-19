@@ -2,7 +2,7 @@ package test
 import datalog.execution.{ExecutionEngine, PrecedenceGraph, SemiNaiveExecutionEngine}
 
 import scala.collection.mutable
-import datalog.dsl.{Program, Constant, Atom, __}
+import datalog.dsl.{Program, Constant, Atom, __, GroupingAtom, groupBy}
 import datalog.storage.{NS, VolcanoStorageManager}
 
 class PrecedenceGraphTest extends munit.FunSuite {
@@ -295,10 +295,10 @@ class PrecedenceGraphTest extends munit.FunSuite {
     b() :- !c()
     c() :- !a()
 
-    interceptMessage[java.lang.Exception]("Negative cycle detected in input program") {
+    interceptMessage[java.lang.Exception]("Negative or grouping cycle detected in input program") {
       engine.precedenceGraph.tarjan()
     }
-    interceptMessage[java.lang.Exception]("Negative cycle detected in input program") {
+    interceptMessage[java.lang.Exception]("Negative or grouping cycle detected in input program") {
       engine.precedenceGraph.ullman()
     }
   }
@@ -316,10 +316,10 @@ class PrecedenceGraphTest extends munit.FunSuite {
     c() :- a()
     d() :- !d()
 
-    interceptMessage[java.lang.Exception]("Negative cycle detected in input program") {
+    interceptMessage[java.lang.Exception]("Negative or grouping cycle detected in input program") {
       engine.precedenceGraph.tarjan()
     }
-    interceptMessage[java.lang.Exception]("Negative cycle detected in input program") {
+    interceptMessage[java.lang.Exception]("Negative or grouping cycle detected in input program") {
       engine.precedenceGraph.ullman()
     }
   }
@@ -336,6 +336,70 @@ class PrecedenceGraphTest extends munit.FunSuite {
     b() :- c()
     c() :- a()
     a() :- !other()
+
+    assertEquals(
+      engine.precedenceGraph.tarjan(),
+      Seq(Set(other.id), Set(a.id, b.id, c.id))
+    )
+    assertEquals(
+      engine.precedenceGraph.ullman(),
+      Seq(Set(other.id), Set(a.id, b.id, c.id))
+    )
+  }
+
+  test("simple grouping cycle") {
+    given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new VolcanoStorageManager())
+
+    val program = Program(engine)
+    val a = program.relation[String]("a")
+    val b = program.relation[String]("b")
+    val c = program.relation[String]("c")
+
+    a() :- groupBy(b(), Seq())
+    b() :- groupBy(c(), Seq())
+    c() :- groupBy(a(), Seq())
+
+    interceptMessage[java.lang.Exception]("Negative or grouping cycle detected in input program") {
+      engine.precedenceGraph.tarjan()
+    }
+    interceptMessage[java.lang.Exception]("Negative or grouping cycle detected in input program") {
+      engine.precedenceGraph.ullman()
+    }
+  }
+  test("simple self grouping cycle") {
+    given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new VolcanoStorageManager())
+
+    val program = Program(engine)
+    val a = program.relation[String]("a")
+    val b = program.relation[String]("b")
+    val c = program.relation[String]("c")
+    val d = program.relation[String]("d")
+
+    a() :- b()
+    b() :- c()
+    c() :- a()
+    d() :- groupBy(d(), Seq())
+
+    interceptMessage[java.lang.Exception]("Negative or grouping cycle detected in input program") {
+      engine.precedenceGraph.tarjan()
+    }
+    interceptMessage[java.lang.Exception]("Negative or grouping cycle detected in input program") {
+      engine.precedenceGraph.ullman()
+    }
+  }
+  test("simple cycle with 1 grouping strata") {
+    given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new VolcanoStorageManager())
+
+    val program = Program(engine)
+    val a = program.relation[String]("a")
+    val b = program.relation[String]("b")
+    val c = program.relation[String]("c")
+    val other = program.relation[String]("other")
+
+    a() :- b()
+    b() :- c()
+    c() :- a()
+    a() :- groupBy(other(), Seq())
 
     assertEquals(
       engine.precedenceGraph.tarjan(),
@@ -479,10 +543,10 @@ class PrecedenceGraphTest extends munit.FunSuite {
     )
     graph.updateNodeAlias(mutable.Map(1 -> 0))
 
-    interceptMessage[java.lang.Exception]("Negative cycle detected in input program") {
+    interceptMessage[java.lang.Exception]("Negative or grouping cycle detected in input program") {
       graph.ullman()
     }
-    interceptMessage[java.lang.Exception]("Negative cycle detected in input program") {
+    interceptMessage[java.lang.Exception]("Negative or grouping cycle detected in input program") {
       graph.tarjan()
     }
   }
@@ -500,6 +564,63 @@ class PrecedenceGraphTest extends munit.FunSuite {
     val graph = new PrecedenceGraph(using new NS())
     for ((node, deps) <- negAdjacency) {
       graph.addNode(Atom(node, Seq.empty, false) +: deps.map(d => Atom(d, Seq.empty, true)))
+    }
+    for ((node, deps) <- posAdjacency) {
+      graph.addNode(Atom(node, Seq.empty, false) +: deps.map(d => Atom(d, Seq.empty, false)))
+    }
+
+    assertEquals(
+      graph.scc(3).flatten,
+      Seq(0, 1, 2, 3),
+    )
+    graph.updateNodeAlias(mutable.Map(2 -> 1, 1 -> 0))
+    assertEquals(
+      graph.scc(3).flatten,
+      Seq(0, 3),
+    )
+  }
+
+  test("simple alias removal grouping") {
+    val groupAdjacency = Map(
+      2 -> Seq(1),
+    )
+    val posAdjacency = Map(
+      0 -> Seq(),
+      1 -> Seq(0)
+    )
+
+    val graph = new PrecedenceGraph(using new NS())
+    for ((node, deps) <- groupAdjacency) {
+      graph.addNode(Atom(node, Seq.empty, false) +: deps.map(d => GroupingAtom(Atom(d, Seq.empty, false), Seq.empty, Seq.empty)))
+    }
+    for ((node, deps) <- posAdjacency) {
+      graph.addNode(Atom(node, Seq.empty, false) +: deps.map(d => Atom(d, Seq.empty, false)))
+    }
+
+    assertEquals(
+      graph.scc(2).flatten,
+      Seq(0, 1, 2),
+    )
+    graph.updateNodeAlias(mutable.Map(1 -> 0))
+    assertEquals(
+      graph.scc(2).flatten,
+      Seq(0, 2),
+    )
+  }
+
+  test("consecutive aliases removal negative") {
+    val groupAdjacency = Map(
+      3 -> Seq(2),
+    )
+    val posAdjacency = Map(
+      0 -> Seq(),
+      1 -> Seq(0),
+      2 -> Seq(1),
+    )
+
+    val graph = new PrecedenceGraph(using new NS())
+    for ((node, deps) <- groupAdjacency) {
+      graph.addNode(Atom(node, Seq.empty, false) +: deps.map(d => GroupingAtom(Atom(d, Seq.empty, false), Seq.empty, Seq.empty)))
     }
     for ((node, deps) <- posAdjacency) {
       graph.addNode(Atom(node, Seq.empty, false) +: deps.map(d => Atom(d, Seq.empty, false)))

@@ -48,7 +48,7 @@ class StratifiedNegationTests extends munit.FunSuite {
     e(1, 2) :- ()
     e(x, y) :- (e(x, y), not(e(y, x)))
 
-    interceptMessage[java.lang.Exception]("Negative cycle detected in input program") {
+    interceptMessage[java.lang.Exception]("Negative or grouping cycle detected in input program") {
       p.solve(e.id)
     }
   }
