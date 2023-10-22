@@ -7,6 +7,7 @@ import test.ExampleTestGenerator
 class tc_count_test extends ExampleTestGenerator("tc_count") with tc_count
 
 trait tc_count {
+  val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/tc_count/facts"
   val toSolve = "c"
 
   def pretest(program: Program): Unit = {

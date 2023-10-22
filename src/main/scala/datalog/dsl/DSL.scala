@@ -83,6 +83,8 @@ object groupBy:
     val gVars = gv.toSet
     val aggVars = ags.map(_._2).toSet
     val aggdVars = ags.map(_._1.t).collect{ case v: Variable => v }.toSet
+    if (gVars.contains(__) || aggVars.contains(__) || aggdVars.contains(__))
+      throw new Exception("Anonymous variable ('__') not allowed as a grouping variable, aggregation variable or aggregated variable")
     if (aggVars.intersect(gpVars).nonEmpty)
       throw new Exception("No aggregation variable must not occur in the grouping predicate")
     if (!(aggdVars ++ gVars).subsetOf(gpVars))

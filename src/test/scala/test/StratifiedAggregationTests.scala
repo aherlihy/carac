@@ -29,6 +29,18 @@ class StratifiedAggregationTests extends munit.FunSuite {
       r(x, y) :- groupBy(f(x, z), Seq(x), AggOp.SUM(z) -> y, AggOp.COUNT(z) -> y) // aggregation variables are repeated.
     }
 
+    interceptMessage[java.lang.Exception]("Anonymous variable ('__') not allowed as a grouping variable, aggregation variable or aggregated variable") {
+      r(x, y) :- groupBy(f(x, z), Seq(x, __), AggOp.SUM(z) -> y) // anonymous variable as a grouping variable.
+    }
+
+    interceptMessage[java.lang.Exception]("Anonymous variable ('__') not allowed as a grouping variable, aggregation variable or aggregated variable") {
+      r(x) :- groupBy(f(x, z), Seq(x), AggOp.SUM(z) -> __) // anonymous variable as an aggregation variable.
+    }
+
+    interceptMessage[java.lang.Exception]("Anonymous variable ('__') not allowed as a grouping variable, aggregation variable or aggregated variable") {
+      r(x, y) :- groupBy(f(x, z), Seq(x), AggOp.SUM(__) -> y) // anonymous variable as an aggregated variable.
+    }
+
     interceptMessage[java.lang.Exception]("No aggregation variable must not occur in the grouping predicate") {
       r(x, y) :- groupBy(f(x, z), Seq(x), AggOp.SUM(z) -> z) // aggregation variable occurr in the grouping predicate.
     }

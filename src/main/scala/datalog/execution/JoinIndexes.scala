@@ -140,10 +140,11 @@ object JoinIndexes {
     //groupings
     val groupingIndexes = precalculatedGroupingIndexes.getOrElse(
       body.collect{ case ga: GroupingAtom => ga }.map(ga =>
-        val (vars, ctans) = ga.gp.terms.zipWithIndex.partitionMap{
+        val (varsp, ctans) = ga.gp.terms.zipWithIndex.partitionMap{
           case (v: Variable, i) => Left((v, i))
           case (c: Constant, i) => Right((c, i))
         }
+        val vars = varsp.filterNot(_._1.anon)
         val gis = ga.gv.map(v => vars.find(_._1 == v).get).map(_._2)
         ga.hash -> GroupingJoinIndexes(
           vars.groupBy(_._1).values.filter(_.size > 1).map(_.map(_._2)).toSeq,
