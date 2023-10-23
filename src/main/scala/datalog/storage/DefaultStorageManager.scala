@@ -241,7 +241,11 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
             case 's' => (a, b) => if a.asInstanceOf[String] > b.asInstanceOf[String] then a.asInstanceOf[String] else b.asInstanceOf[String]
       }
       val okreducers = (a: CollectionsRow, b: CollectionsRow) => CollectionsRow(a.wrapped.zip(b.wrapped).zip(reducers).map((x, y) => y.apply(x._1.asInstanceOf[StorageConstant], x._2.asInstanceOf[StorageConstant])))
-      filteredBase.groupMapReduce(r => CollectionsRow(gji.groupingIndexes.map(r.apply)), okgetters, okreducers)
+      val res = filteredBase.groupMapReduce(r => CollectionsRow(gji.groupingIndexes.map(r.apply)), okgetters, okreducers)
+
+      val ctans = res.wrapped.map(_.wrapped.drop(gji.groupingIndexes.length)).flatten.toSeq
+      addConstantsToDomain(ctans)
+      res
     else getEmptyEDB()
   }
 
