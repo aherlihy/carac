@@ -238,7 +238,7 @@ class VolcanoOperators[S <: StorageManager](val storageManager: S) {
   }
 
 
-  // Closely coupled to Collections
+  // Closely coupled to Collections. Alternative: calculate an individual group when calling next()
   case class Grouping(input: VolOperator, gji: GroupingJoinIndexes) extends VolOperator {
     private var outputRelation: CollectionsEDB = CollectionsEDB()
     private var index = 0

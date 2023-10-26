@@ -72,8 +72,8 @@ class CopyEliminationPass()(using ASTTransformerContext) extends Transformer {
         case n: AtomNode => n match {
           case LogicAtom(relation, terms, neg) =>
             LogicAtom(ctx.aliases.getOrElse(relation, relation), terms, neg)
-          case LogicGroupingAtom(LogicAtom(relation, terms, neg), gv, ags, currentGK) =>
-            LogicGroupingAtom(LogicAtom(ctx.aliases.getOrElse(relation, relation), terms, neg), gv, ags, currentGK)
+          case LogicGroupingAtom(LogicAtom(relation, terms, neg), gv, ags) =>
+            LogicGroupingAtom(LogicAtom(ctx.aliases.getOrElse(relation, relation), terms, neg), gv, ags)
         }
         case n: TermNode => n
       }

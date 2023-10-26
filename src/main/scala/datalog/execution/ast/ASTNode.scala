@@ -25,6 +25,6 @@ case class VarTerm(value: Variable) extends TermNode(value) {}
 
 case class ConstTerm(value: Constant) extends TermNode(value) {}
 
-case class LogicGroupingAtom(gp: LogicAtom, gv: Seq[VarTerm], ags: Seq[(AggOpNode, VarTerm)], currentGK: GroupingJoinIndexes) extends AtomNode {}
+case class LogicGroupingAtom(gp: LogicAtom, gv: Seq[VarTerm], ags: Seq[(AggOpNode, VarTerm)]) extends AtomNode {}
 
 case class AggOpNode(aggOp: StorageAggOp, term: TermNode) extends ASTNode {}

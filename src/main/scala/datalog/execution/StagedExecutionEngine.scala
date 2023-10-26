@@ -126,8 +126,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
                     case x: Variable => VarTerm(x)
                     case x: Constant => ConstTerm(x)
                   
-                ), VarTerm(v))},
-                k.groupingIndexes(ga.hash)
+                ), VarTerm(v))}
               )
             case b =>
               LogicAtom(b.rId, b.terms.map {

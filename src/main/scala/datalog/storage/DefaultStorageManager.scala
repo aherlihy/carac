@@ -209,7 +209,7 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
     val filteredBase = base.filter(r => prefilter(gji.constIndexes, 0, r) && toJoin(gji.varIndexes, r, CollectionsRow(Seq()))).distinct()
     if filteredBase.nonEmpty
     then
-      def getTpe(x: StorageConstant): Char = x match
+      inline def getTpe(x: StorageConstant): Char = x match
         case _: Int => 'i'
         case _: String => 's'
       
