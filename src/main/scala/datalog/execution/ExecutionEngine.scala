@@ -1,6 +1,6 @@
 package datalog.execution
 
-import datalog.dsl.{Atom, Constant, Term, Variable}
+import datalog.dsl.{Atom, Constant, Term, Variable, Constraint}
 import datalog.storage.{RelationId, StorageManager}
 
 import scala.collection.mutable
@@ -12,7 +12,7 @@ trait ExecutionEngine {
   val prebuiltOpKeys: mutable.Map[RelationId, mutable.ArrayBuffer[JoinIndexes]]
   def initRelation(rId: RelationId, name: String): Unit
 
-  def insertIDB(rId: RelationId, rule: Seq[Atom]): Unit
+  def insertIDB(rId: RelationId, rule: Seq[Atom | Constraint]): Unit
   def insertEDB(body: Atom): Unit
 
   def solve(rId: RelationId): Set[Seq[Term]]
@@ -28,8 +28,8 @@ trait ExecutionEngine {
    *
    * @param rule - Includes the head at idx 0
    */
-  inline def getOperatorKey(rule: Seq[Atom]): JoinIndexes =
-    JoinIndexes(rule, None, None)
+  inline def getOperatorKey(rule: Seq[Atom], constraints: Seq[Constraint]): JoinIndexes =
+    JoinIndexes(rule, constraints, None, None, None)
 
   def getOperatorKeys(rId: RelationId): mutable.ArrayBuffer[JoinIndexes] = {
     prebuiltOpKeys.getOrElseUpdate(rId, mutable.ArrayBuffer[JoinIndexes]())

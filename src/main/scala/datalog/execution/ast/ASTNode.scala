@@ -1,6 +1,6 @@
 package datalog.execution.ast
 
-import datalog.dsl.{Atom, Constant, Term, Variable}
+import datalog.dsl.{Atom, Constant, Term, Variable, Comparison, Expression, Constraint}
 import datalog.execution.{JoinIndexes, GroupingJoinIndexes}
 import datalog.storage.{RelationId, StorageAggOp}
 
@@ -17,7 +17,7 @@ abstract class AtomNode() extends ASTNode {}
 
 case class LogicAtom(relation: RelationId, terms: Seq[ASTNode], negated: Boolean) extends AtomNode {}
 
-case class RuleNode(head: ASTNode, body: Seq[ASTNode], dslAtoms: Seq[Atom], currentK: JoinIndexes) extends ASTNode {}
+case class RuleNode(head: ASTNode, body: Seq[ASTNode], dslAtoms: Seq[Atom], dslConstraints: Seq[Constraint], currentK: JoinIndexes) extends ASTNode {}
 
 abstract class TermNode(value: Term) extends ASTNode {}
 
@@ -28,3 +28,5 @@ case class ConstTerm(value: Constant) extends TermNode(value) {}
 case class LogicGroupingAtom(gp: LogicAtom, gv: Seq[VarTerm], ags: Seq[(AggOpNode, VarTerm)], currentGK: GroupingJoinIndexes) extends AtomNode {}
 
 case class AggOpNode(aggOp: StorageAggOp, term: TermNode) extends ASTNode {}
+
+case class ConstraintAtom(c: Comparison, l: Expression, r: Expression) extends ASTNode {}  // Decompose expressions into subtrees

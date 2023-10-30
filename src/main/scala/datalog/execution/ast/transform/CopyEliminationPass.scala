@@ -22,7 +22,7 @@ class CopyEliminationPass()(using ASTTransformerContext) extends Transformer {
       case AllRulesNode(rules, _, edb) =>
         if (rules.size == 1 && !edb)
           checkAlias(rules.head)
-      case RuleNode(head, body, _, _) =>
+      case RuleNode(head, body, _, _, _) =>
         if (body.size == 1) // for now just subst simple equality
           (head, body(0)) match {
             case (h: LogicAtom, b: LogicAtom) =>
@@ -44,7 +44,7 @@ class CopyEliminationPass()(using ASTTransformerContext) extends Transformer {
           ) // delete aliased rules
         case AllRulesNode(rules, rId, edb) =>
           AllRulesNode(rules.map(transform), rId, edb)
-        case RuleNode(head, body, atoms, k) =>
+        case RuleNode(head, body, atoms, constraints, k) =>
           var aliased = false
           var newK = k
           val transformedAtoms = atoms.head +: atoms.drop(1).map(a =>
@@ -59,16 +59,16 @@ class CopyEliminationPass()(using ASTTransformerContext) extends Transformer {
               a
           )
           if (aliased)
-            newK = JoinIndexes(transformedAtoms, None, None)
+            newK = JoinIndexes(transformedAtoms, constraints, None, None, None)
             ctx.sm.allRulesAllIndexes.getOrElseUpdate(transformedAtoms.head.rId, mutable.Map[String, JoinIndexes]()).addOne(newK.hash, newK)
             if (body.size < heuristics.max_length_cache)
-              val allK = JoinIndexes.allOrders(transformedAtoms)
+              val allK = JoinIndexes.allOrders(transformedAtoms, constraints)
               ctx.sm.allRulesAllIndexes(transformedAtoms.head.rId) ++= allK
 
             ctx.precedenceGraph.addNode(transformedAtoms)
             ctx.precedenceGraph.updateNodeAlias(ctx.aliases)
 
-          RuleNode(transform(head), body.map(transform), transformedAtoms, newK)
+          RuleNode(transform(head), body.map(transform), transformedAtoms, constraints, newK)
         case n: AtomNode => n match {
           case LogicAtom(relation, terms, neg) =>
             LogicAtom(ctx.aliases.getOrElse(relation, relation), terms, neg)
@@ -76,6 +76,7 @@ class CopyEliminationPass()(using ASTTransformerContext) extends Transformer {
             LogicGroupingAtom(LogicAtom(ctx.aliases.getOrElse(relation, relation), terms, neg), gv, ags, currentGK)
         }
         case n: TermNode => n
+        case c: ConstraintAtom => c
       }
     else
       node
