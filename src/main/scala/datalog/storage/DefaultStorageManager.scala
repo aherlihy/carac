@@ -27,26 +27,38 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
     val kCmp = k.constIndexes.isEmpty || k.constIndexes.forall((idx, const) =>
       idx >= maxIdx || get(idx) == const
     )
-    vCmp && kCmp
+    val cCmp = k.cons.isEmpty || k.cons.forall((o, sc, l, r, idx) =>
+      o.exists(x => x) || idx >= maxIdx || {
+        val tpe = getType(get(idx).asInstanceOf[StorageConstant])
+        val el = buildExpression(l, tpe)
+        val er = buildExpression(r, tpe)
+        val op = buildComparison(sc, tpe)
+        op(el(get), er(get))
+      }
+    )
+
+    vCmp && kCmp && cCmp
   }
 
   override def joinHelper(inputEDB: Seq[EDB], k: JoinIndexes): CollectionsEDB = {
-    val inputs = asCollectionsSeqEDB(inputEDB)
-    inputs
-      .reduceLeft((outer: CollectionsEDB, inner: CollectionsEDB) => {
-        outer.flatMap(outerTuple => {
-          inner.flatMap(innerTuple => {
-            val get = (i: Int) => {
-              outerTuple.applyOrElse(i, j => innerTuple(j - outerTuple.length))
-            }
-            if(scanFilter(k, innerTuple.length + outerTuple.length)(get))
-              Some(outerTuple.concat(innerTuple))
-            else
-              None
+    if k.cons.exists(_._1.exists(x => !x)) then getEmptyEDB()  // Some constraint is false
+    else
+      val inputs = asCollectionsSeqEDB(inputEDB)
+      inputs
+        .reduceLeft((outer: CollectionsEDB, inner: CollectionsEDB) => {
+          outer.flatMap(outerTuple => {
+            inner.flatMap(innerTuple => {
+              val get = (i: Int) => {
+                outerTuple.applyOrElse(i, j => innerTuple(j - outerTuple.length))
+              }
+              if(scanFilter(k, innerTuple.length + outerTuple.length)(get))
+                Some(outerTuple.concat(innerTuple))
+              else
+                None
+            })
           })
         })
-      })
-      .filter(r => scanFilter(k, r.length)(r.apply))
+        .filter(r => scanFilter(k, r.length)(r.apply))
   }
 
   override def projectHelper(input: EDB, k: JoinIndexes): CollectionsEDB = {
@@ -79,6 +91,18 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
     )
   }
 
+  private inline def consfilter(cons: Seq[(Option[Boolean], StorageComparison, StorageExpression, StorageExpression, Int)], tuple: CollectionsRow): Boolean = {
+    cons.isEmpty || cons.forall((o, sc, l, r, idx) =>
+      o.exists(x => x) || idx >= tuple.length || {
+        val tpe = getType(tuple(idx).asInstanceOf[StorageConstant])
+        val el = buildExpression(l, tpe)
+        val er = buildExpression(r, tpe)
+        val op = buildComparison(sc, tpe)
+        op(el(tuple.apply), er(tuple.apply))
+      }
+    )
+  }
+
   override def joinProjectHelper_withHash(inputsEDB: Seq[EDB], rId: Int, hash: String, onlineSort: Boolean): CollectionsEDB = {
     val originalK = allRulesAllIndexes(rId)(hash)
     val inputs = asCollectionsSeqEDB(inputsEDB)
@@ -88,6 +112,7 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
         .filter(e =>
           val filteredC = originalK.constIndexes.filter((ind, _) => ind < e.length)
           prefilter(filteredC, 0, e) && filteredC.size == originalK.constIndexes.size)
+        .filter(r => consfilter(originalK.cons, r))
         .map(t =>
           CollectionsRow(originalK.projIndexes.flatMap((typ, idx) =>
             typ match {
@@ -109,8 +134,8 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
             val (inner, outer) = // on the fly swapping of join order
               if (atomI > 1 && onlineSort && outerT.length > innerT.length)
                 val body = k.atoms.drop(1)
-                val newerHash = JoinIndexes.getRuleHash(Seq(k.atoms.head, body(atomI)) ++ body.dropRight(body.length - atomI) ++ body.drop(atomI + 1))
-                k = allRulesAllIndexes(rId).getOrElseUpdate(newerHash, JoinIndexes(originalK.atoms.head +: body, Some(originalK.cxns), Some(originalK.groupingIndexes)))
+                val newerHash = JoinIndexes.getRuleHash(Seq(k.atoms.head, body(atomI)) ++ body.dropRight(body.length - atomI) ++ body.drop(atomI + 1), k.constraints)
+                k = allRulesAllIndexes(rId).getOrElseUpdate(newerHash, JoinIndexes(originalK.atoms.head +: body, originalK.constraints, Some(originalK.cxns), Some((originalK.cons, originalK.pos2Term)), Some(originalK.groupingIndexes)))
                 (outerT, innerT)
               else
                 (innerT, outerT)
@@ -125,6 +150,7 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
                     prefilter(k.constIndexes.filter((ind, _) => ind >= outerTuple.length && ind < (outerTuple.length + i.length)), outerTuple.length, i) && toJoin(k.varIndexes, outerTuple, i)
                   )
                   .map(innerTuple => outerTuple.concat(innerTuple)))
+                  .filter(r => consfilter(k.cons, r))
 //            intermediateCardinalities = intermediateCardinalities :+ edbResult.length
             (edbResult, atomI + 1, k)
         )
@@ -150,6 +176,7 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
         .filter(e =>
           val filteredC = originalK.constIndexes.filter((ind, _) => ind < e.length)
           prefilter(filteredC, 0, e) && filteredC.size == originalK.constIndexes.size)
+        .filter(r => consfilter(originalK.cons, r))
         .map(t =>
           CollectionsRow(originalK.projIndexes.flatMap((typ, idx) =>
             typ match {
@@ -174,7 +201,7 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
             val (inner, outer) =
               if (atomI > 1 && onlineSort && outerT.length > innerT.length)
                 val body = k.atoms.drop(1)
-                k = JoinIndexes(Seq(k.atoms.head, body(atomI)) ++ body.dropRight(body.length - atomI) ++ body.drop(atomI + 1), Some(originalK.cxns), Some(originalK.groupingIndexes))
+                k = JoinIndexes(Seq(k.atoms.head, body(atomI)) ++ body.dropRight(body.length - atomI) ++ body.drop(atomI + 1), originalK.constraints, Some(originalK.cxns), Some((originalK.cons, originalK.pos2Term)), Some(originalK.groupingIndexes))
                 (outerT, innerT)
               else
                 (innerT, outerT)
@@ -188,6 +215,7 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
                     prefilter(k.constIndexes.filter((ind, _) => ind >= outerTuple.length && ind < (outerTuple.length + i.length)), outerTuple.length, i) && toJoin(k.varIndexes, outerTuple, i)
                   )
                   .map(innerTuple => outerTuple.concat(innerTuple)))
+                  .filter(r => consfilter(k.cons, r))
             (edbResult, atomI + 1, k)
           )
       result._1
