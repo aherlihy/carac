@@ -2,7 +2,7 @@ package datalog.execution
 
 import datalog.dsl.{Atom, Constant, Variable, Term, GroupingAtom, AggOp, Comparison, Expression, Constraint}
 import datalog.execution.ir.{IROp, ProjectJoinFilterOp, ScanOp}
-import datalog.storage.{DB, EDB, NS, RelationId, StorageManager, StorageAggOp, StorageComparison, StorageExpression, getType, buildComparison}
+import datalog.storage.{DB, EDB, NS, RelationId, StorageManager, StorageAggOp, StorageComparison, StorageExpression, getType, comparisons}
 import datalog.tools.Debug.debug
 
 import scala.collection.mutable
@@ -196,7 +196,7 @@ object JoinIndexes {
           case Comparison.GTE => StorageComparison.GTE
         (
           (sl, sr) match
-            case (StorageExpression.One(c1: Constant), StorageExpression.One(c2: Constant)) => Some(buildComparison(sc, getType(c1))(c1, c2))
+            case (StorageExpression.One(c1: Constant), StorageExpression.One(c2: Constant)) => Some(comparisons(sc)(getType(c1))(c1, c2))
             case _ => None
           ,
           sc,

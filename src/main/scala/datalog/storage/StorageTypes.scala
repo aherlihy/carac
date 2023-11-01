@@ -98,6 +98,33 @@ val aggOps: Map[StorageAggOp, Map[Char, (StorageConstant, StorageConstant) => St
 enum StorageComparison:
   case EQ, NEQ, LT, LTE, GT, GTE
 
+val comparisons: Map[StorageComparison, Map[Char, (StorageConstant, StorageConstant) => Boolean]] = Map(
+  StorageComparison.EQ -> Map(
+    'i' -> ((x, y) => x.asInstanceOf[Int] == y.asInstanceOf[Int]),
+    's' -> ((x, y) => x.asInstanceOf[String] == y.asInstanceOf[String])
+  ),
+  StorageComparison.NEQ -> Map(
+    'i' -> ((x, y) => x.asInstanceOf[Int] != y.asInstanceOf[Int]),
+    's' -> ((x, y) => x.asInstanceOf[String] != y.asInstanceOf[String])
+  ),
+  StorageComparison.LT -> Map(
+    'i' -> ((x, y) => x.asInstanceOf[Int] < y.asInstanceOf[Int]),
+    's' -> ((x, y) => x.asInstanceOf[String] < y.asInstanceOf[String])
+  ),
+  StorageComparison.LTE -> Map(
+    'i' -> ((x, y) => x.asInstanceOf[Int] <= y.asInstanceOf[Int]),
+    's' -> ((x, y) => x.asInstanceOf[String] <= y.asInstanceOf[String])
+  ),
+  StorageComparison.GT -> Map(
+    'i' -> ((x, y) => x.asInstanceOf[Int] > y.asInstanceOf[Int]),
+    's' -> ((x, y) => x.asInstanceOf[String] > y.asInstanceOf[String])
+  ),
+  StorageComparison.GTE -> Map(
+    'i' -> ((x, y) => x.asInstanceOf[Int] >= y.asInstanceOf[Int]),
+    's' -> ((x, y) => x.asInstanceOf[String] >= y.asInstanceOf[String])
+  )
+)
+
 enum StorageExpression:
   case One(t: Either[StorageConstant, Int])
   case Add(l: StorageExpression, r: Either[StorageConstant, Int])
@@ -105,35 +132,6 @@ enum StorageExpression:
   case Mul(l: StorageExpression, r: Either[StorageConstant, Int])
   case Div(l: StorageExpression, r: Either[StorageConstant, Int])
   case Mod(l: StorageExpression, r: Either[StorageConstant, Int])
-
-
-def buildComparison(sc: StorageComparison, tpe: Char): (StorageConstant, StorageConstant) => Boolean =
-  import StorageComparison.*
-  sc match
-    case EQ =>
-      tpe match
-        case 'i' => (x, y) => x.asInstanceOf[Int] == y.asInstanceOf[Int]
-        case 's' => (x, y) => x.asInstanceOf[String] == y.asInstanceOf[String]
-    case NEQ =>
-      tpe match
-        case 'i' => (x, y) => x.asInstanceOf[Int] != y.asInstanceOf[Int]
-        case 's' => (x, y) => x.asInstanceOf[String] != y.asInstanceOf[String]
-    case LT =>
-      tpe match
-        case 'i' => (x, y) => x.asInstanceOf[Int] < y.asInstanceOf[Int]
-        case 's' => (x, y) => x.asInstanceOf[String] < y.asInstanceOf[String]
-    case LTE =>
-      tpe match
-        case 'i' => (x, y) => x.asInstanceOf[Int] <= y.asInstanceOf[Int]
-        case 's' => (x, y) => x.asInstanceOf[String] <= y.asInstanceOf[String]
-    case GT =>
-      tpe match
-        case 'i' => (x, y) => x.asInstanceOf[Int] > y.asInstanceOf[Int]
-        case 's' => (x, y) => x.asInstanceOf[String] > y.asInstanceOf[String]
-    case GTE =>
-      tpe match
-        case 'i' => (x, y) => x.asInstanceOf[Int] >= y.asInstanceOf[Int]
-        case 's' => (x, y) => x.asInstanceOf[String] >= y.asInstanceOf[String]
 
 def buildExpression(se: StorageExpression, tpe: Char): (Int => StorageTerm) => StorageConstant =
   import StorageExpression.*

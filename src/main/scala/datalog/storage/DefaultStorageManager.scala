@@ -32,7 +32,7 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
         val tpe = getType(get(idx).asInstanceOf[StorageConstant])
         val el = buildExpression(l, tpe)
         val er = buildExpression(r, tpe)
-        val op = buildComparison(sc, tpe)
+        val op = comparisons(sc)(tpe)
         op(el(get), er(get))
       }
     )
@@ -97,7 +97,7 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
         val tpe = getType(tuple(idx).asInstanceOf[StorageConstant])
         val el = buildExpression(l, tpe)
         val er = buildExpression(r, tpe)
-        val op = buildComparison(sc, tpe)
+        val op = comparisons(sc)(tpe)
         op(el(tuple.apply), er(tuple.apply))
       }
     )
