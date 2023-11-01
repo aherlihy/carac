@@ -209,38 +209,21 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
     val filteredBase = base.filter(r => prefilter(gji.constIndexes, 0, r) && toJoin(gji.varIndexes, r, CollectionsRow(Seq()))).distinct()
     if filteredBase.nonEmpty
     then
-      inline def getTpe(x: StorageConstant): Char = x match
-        case _: Int => 'i'
-        case _: String => 's'
-      
       val tmp = filteredBase(0)
-      val (getters: Seq[CollectionsRow => StorageConstant], tpes) = gji.aggOpInfos.map{
+      val (getters, tpes) = gji.aggOpInfos.map{
         case (StorageAggOp.COUNT, _) =>
           ((_: CollectionsRow) => 1, 'i')
         case (_, AggOpIndex.GV(i)) =>
-          ((r: CollectionsRow) => r.apply(i).asInstanceOf[StorageConstant], getTpe(tmp(i).asInstanceOf[StorageConstant]))
+          ((r: CollectionsRow) => r.apply(i), getType(tmp(i).asInstanceOf[StorageConstant]))
         case (_, AggOpIndex.LV(i)) =>
-          ((r: CollectionsRow) => r.apply(i).asInstanceOf[StorageConstant], getTpe(tmp(i).asInstanceOf[StorageConstant]))
+          ((r: CollectionsRow) => r.apply(i), getType(tmp(i).asInstanceOf[StorageConstant]))
         case (_, AggOpIndex.C(c)) =>
-          ((_: CollectionsRow) => c, getTpe(c))
+          ((_: CollectionsRow) => c, getType(c))
       }.unzip
       val okgetters = (r: CollectionsRow) => CollectionsRow(getters.map(_.apply(r)))
-      val reducers: Seq[(StorageConstant, StorageConstant) => StorageConstant] = gji.aggOpInfos.map(_._1).zip(tpes).map{
-        case (StorageAggOp.SUM, t) =>
-          t match
-            case 'i' => (a, b) => a.asInstanceOf[Int] + b.asInstanceOf[Int]
-            case 's' => (a, b) => a.asInstanceOf[String] + b.asInstanceOf[String]
-        case (StorageAggOp.COUNT, _) => (a, b) => a.asInstanceOf[Int] + b.asInstanceOf[Int]
-        case (StorageAggOp.MIN, t) =>
-          t match
-            case 'i' => (a, b) => Math.min(a.asInstanceOf[Int], b.asInstanceOf[Int])
-            case 's' => (a, b) => if a.asInstanceOf[String] < b.asInstanceOf[String] then a.asInstanceOf[String] else b.asInstanceOf[String]
-        case (StorageAggOp.MAX, t) =>
-          t match
-            case 'i' => (a, b) => Math.max(a.asInstanceOf[Int], b.asInstanceOf[Int])
-            case 's' => (a, b) => if a.asInstanceOf[String] > b.asInstanceOf[String] then a.asInstanceOf[String] else b.asInstanceOf[String]
-      }
-      val okreducers = (a: CollectionsRow, b: CollectionsRow) => CollectionsRow(a.wrapped.zip(b.wrapped).zip(reducers).map((x, y) => y.apply(x._1.asInstanceOf[StorageConstant], x._2.asInstanceOf[StorageConstant])))
+      val reducers = gji.aggOpInfos.map(_._1).zip(tpes).map(aggOps(_)(_))
+      val okreducers = (a: CollectionsRow, b: CollectionsRow) =>
+        CollectionsRow(a.wrapped.zip(b.wrapped).zip(reducers).map((x, y) => y.apply(x._1.asInstanceOf[StorageConstant], x._2.asInstanceOf[StorageConstant])))
       val res = filteredBase.groupMapReduce(r => CollectionsRow(gji.groupingIndexes.map(r.apply)), okgetters, okreducers)
 
       val ctans = res.wrapped.map(_.wrapped.drop(gji.groupingIndexes.length)).flatten.toSeq
