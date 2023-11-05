@@ -255,4 +255,19 @@ class VolcanoOperators[S <: StorageManager](val storageManager: S) {
     }
     def close(): Unit = input.close()
   }
+
+  case class ZeroOut(input: VolOperator, cols: Seq[Boolean]) extends VolOperator {
+    private var outputRelation: CollectionsEDB = CollectionsEDB()
+    private var index = 0
+    def open(): Unit =
+      outputRelation = asCollectionsEDB(storageManager.zeroOut(input.toList(), cols))
+    def next(): Option[CollectionsRow] = {
+      if (index >= outputRelation.length)
+        NilTuple
+      else
+        index += 1
+        Option(outputRelation(index - 1))
+    }
+    def close(): Unit = input.close()
+  }
 }
