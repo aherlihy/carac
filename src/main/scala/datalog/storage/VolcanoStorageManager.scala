@@ -41,10 +41,13 @@ class VolcanoStorageManager(ns: NS = NS()) extends CollectionsStorageManager(ns)
                 val q = Scan(getKnownDerivedDB(r), r)
                 typ match
                   case PredicateType.NEGATED =>
-                    val arity = k.atoms(i + 1).terms.length
-                    val compl = getComplement(arity)
-                    val res = Diff(Seq(Scan(compl, r), q))
-                    debug(s"found negated relation, rule=", () => s"${printer.ruleToString(k.atoms)}\n\tarity=$arity")
+                    val nis = k.negationInfo(k.atoms(i + 1).hash)
+                    val cols = nis.map(_.exists(_.isEmpty))
+                    
+                    val compl = getGroundOf(nis)
+                    val nq = ZeroOut(q, cols)
+                    val res = Diff(Seq(Scan(compl, r), nq))
+                    debug(s"found negated relation, rule=", () => s"${printer.ruleToString(k.atoms)}")
                     res
                   case PredicateType.GROUPING =>
                     val ga = k.atoms(i + 1).asInstanceOf[GroupingAtom]
@@ -94,10 +97,13 @@ class VolcanoStorageManager(ns: NS = NS()) extends CollectionsStorageManager(ns)
                       Scan(getKnownDerivedDB(r), r)
                     typ match
                       case PredicateType.NEGATED =>
-                        val arity = k.atoms(i + 1).terms.length
-                        val compl = getComplement(arity)
-                        val res = Diff(Seq(Scan(compl, r), q))
-                        debug(s"found negated relation, rule=", () => s"${printer.ruleToString(k.atoms)}\n\tarity=$arity")
+                        val nis = k.negationInfo(k.atoms(i + 1).hash)
+                        val cols = nis.map(_.exists(_.isEmpty))
+                        
+                        val compl = getGroundOf(nis)
+                        val nq = ZeroOut(q, cols)
+                        val res = Diff(Seq(Scan(compl, r), nq))
+                        debug(s"found negated relation, rule=", () => s"${printer.ruleToString(k.atoms)}")
                         res
                       case PredicateType.GROUPING =>
                         val ga = k.atoms(i + 1).asInstanceOf[GroupingAtom]

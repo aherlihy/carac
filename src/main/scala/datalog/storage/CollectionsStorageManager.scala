@@ -11,7 +11,6 @@ import scala.collection.{Iterator, immutable, mutable}
 abstract class CollectionsStorageManager(override val ns: NS) extends StorageManager(ns) {
   // "database", i.e. relationID => Relation
   protected val edbs: CollectionsDatabase = CollectionsDatabase() // raw user-supplied EDBs from initialization.
-  val edbDomain: mutable.Set[StorageTerm] = mutable.Set.empty // incrementally grow the total domain of all EDBs, used for calculating complement of negated predicates
   protected val discoveredFacts: CollectionsDatabase = CollectionsDatabase() // all EDBs + facts discovered in previous strata
   var knownDbId: KnowledgeId = -1
   var newDbId: KnowledgeId = -1
@@ -65,48 +64,37 @@ abstract class CollectionsStorageManager(override val ns: NS) extends StorageMan
     else
       edbs(rule.rId) = CollectionsEDB()
       edbs(rule.rId).addOne(CollectionsRow(rule.terms))
-    edbDomain.addAll(rule.terms)
   }
-  /* Call when adding an IDB rule so domain can grow incrementally */
-  override def addConstantsToDomain(constants: Seq[StorageTerm]): Unit = {
-    edbDomain.addAll(constants)
-  }
+
   def getEmptyEDB(): CollectionsEDB = CollectionsEDB()
   def getEDB(rId: RelationId): CollectionsEDB = edbs(rId)
   def edbContains(rId: RelationId): Boolean = edbs.contains(rId)
   def getAllEDBS(): mutable.Map[RelationId, Any] = edbs.wrapped.asInstanceOf[mutable.Map[RelationId, Any]]
 
-  /**
-   * Used for computing DOM(k) of a negated relation. Returns the (unchanging) set of possible EDB values +
-   * constants in all IDB rules. Currently unused because we incrementally add elements to the domain but may
-   * be useful if we want a domain containing only predicates from <= strata.
-   */
-// Comment out until we can track domain in something other than indexes
-//  def computeDomain(): Set[StorageTerm] = {
-//    val constants = mutable.Set[StorageTerm]()
-//    edbs.foreach((_, rows) => // avoid map or flatMap for CollectionsDatabase, CollectionRow
-//      rows.foreach(row =>
-//        constants.addAll(row.toSeq)
-//      )
-//    )
-//    constants.addAll(allRulesAllIndexes.flatMap((_, allIndexes) =>
-//      allIndexes.head._2.constIndexes.values
-//    ))
-//    constants.toSet
-//  }
-
-  /**
-   * Compute Dom * Dom * ... arity # times
-   */
-  override def getComplement(arity: Int): CollectionsEDB = {
-    // short but inefficient
-    val res = List.fill(arity)(edbDomain).flatten.combinations(arity).flatMap(_.permutations).toSeq
-    CollectionsEDB(
-      res.map(r => CollectionsRow(r.toSeq)):_*
-    )
+  def getGroundOf(cols: Seq[Either[StorageConstant, Seq[(RelationId, Int)]]]): CollectionsEDB = {
+    val ctans = cols.collect{ case Right(value) => value }.flatten.groupBy(_._1).view.mapValues(v => v.map(_._2).distinct.map(col =>
+      val der = getKnownDerivedDB(v.head._1).wrapped.map(r => r(col).asInstanceOf[StorageConstant])
+      val del = getKnownDeltaDB(v.head._1).wrapped.map(r => r(col).asInstanceOf[StorageConstant])
+      col -> (der.toSet ++ del.toSet)
+    ).toMap)
+  
+    val colCtans = cols.map{
+      case Left(value) => Set(value)
+      case Right(value) => if value.isEmpty then Set(0) else value.map((rel, col) => ctans(rel)(col)).reduceLeft(_.intersect(_))
+    }
+    
+    val first = CollectionsEDB(colCtans.head.map(c => CollectionsRow(Seq(c))).toSeq*)
+    colCtans.tail.foldLeft(first)((acc, s) => acc.flatMap(c => s.map(n => c.concat(CollectionsRow(Seq(n))))))
   }
 
+  def zeroOut(input: EDB, cols: Seq[Boolean]): CollectionsEDB =
+    val tmp = asCollectionsEDB(input)
+    if cols.exists(identity) then
+      tmp.map(r => CollectionsRow(r.wrapped.zip(cols).map((v, a) => if a then 0 else v))).distinct()
+    else tmp
+
   // Read intermediate results
+  
   def getKnownDerivedDB(rId: RelationId): CollectionsEDB =
     derivedDB(knownDbId).getOrElse(rId, discoveredFacts.getOrElse(rId, CollectionsEDB()))
   def getNewDerivedDB(rId: RelationId): CollectionsEDB =

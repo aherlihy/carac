@@ -67,6 +67,7 @@ class StagedSnippetCompiler(val storageManager: StorageManager)(using val jitOpt
           ${ Expr(x.deps) },
           ${ Expr(x.atoms) },
           ${ Expr(x.cxns) },
+          ${ Expr(x.negationInfo) },
           ${ Expr(x.edb) },
         ) }
     }
@@ -127,8 +128,11 @@ class StagedSnippetCompiler(val storageManager: StorageManager)(using val jitOpt
             }
         }
 
-      case ComplementOp(arity) =>
-        '{ $stagedSM.getComplement(${ Expr(arity) }) }
+      case GroundOfOp(cols) =>
+        '{ $stagedSM.getGroundOf(${ Expr(cols) }) }
+
+      case ZeroOutOp(child, cols) =>
+        '{ $stagedSM.zeroOut($stagedFns.head($stagedSM), ${ Expr(cols) }) }
 
       case ScanEDBOp(rId) =>
         if (storageManager.edbContains(rId))

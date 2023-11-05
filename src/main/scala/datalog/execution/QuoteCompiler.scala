@@ -72,6 +72,7 @@ class QuoteCompiler(val storageManager: StorageManager)(using JITOptions) extend
           ${ Expr(x.deps) },
           ${ Expr(x.atoms) },
           ${ Expr(x.cxns) },
+          ${ Expr(x.negationInfo) },
           ${ Expr(x.edb) }
         )
       }
@@ -135,8 +136,12 @@ class QuoteCompiler(val storageManager: StorageManager)(using JITOptions) extend
             }
         }
 
-      case ComplementOp(arity) =>
-        '{ $stagedSM.getComplement(${ Expr(arity) }) }
+      case GroundOfOp(cols) =>
+        '{ $stagedSM.getGroundOf(${ Expr(cols) }) }
+
+      case ZeroOutOp(child, cols) =>
+        val clh = compileIRRelOp(child)
+        '{ $stagedSM.zeroOut($clh, ${ Expr(cols) }) }
 
       case ScanEDBOp(rId) =>
         if (storageManager.edbContains(rId))
