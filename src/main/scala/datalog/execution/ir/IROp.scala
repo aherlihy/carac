@@ -132,7 +132,7 @@ case class UpdateDiscoveredOp()(using JITOptions) extends IROp[Any] {
   val code: OpCode = OpCode.UPDATE_DISCOVERED
   override def run(storageManager: StorageManager): Any =
     storageManager.updateDiscovered()
-    storageManager.clearKnownDelta()
+    storageManager.clearKnownDelta()  // See explanation in SemiNaiveExecutionEngine::solve
 
   override def run_continuation(storageManager: StorageManager, opFns: Seq[CompiledFn[Any]]): Any =
     run(storageManager)
