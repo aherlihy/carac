@@ -4,6 +4,9 @@ import datalog.dsl.Constant
 import datalog.storage.CollectionsCasts.asCollectionsEDB
 import datalog.tools.Debug.debug
 
+import datalog.execution.{GroupingJoinIndexes, AggOpIndex}
+import datalog.storage.StorageAggOp
+
 import scala.collection.mutable
 
 // Indicates the end of the stream
@@ -232,5 +235,24 @@ class VolcanoOperators[S <: StorageManager](val storageManager: S) {
         Option(outputRelation(index - 1))
     }
     def close(): Unit = ops.foreach(o => o.close())
+  }
+
+
+  // Closely coupled to Collections. Alternative: calculate an individual group when calling next()
+  case class Grouping(input: VolOperator, gji: GroupingJoinIndexes) extends VolOperator {
+    private var outputRelation: CollectionsEDB = CollectionsEDB()
+    private var index = 0
+
+    def open(): Unit =
+      outputRelation = asCollectionsEDB(storageManager.groupingHelper(input.toList(), gji))
+
+    def next(): Option[CollectionsRow] = {
+      if (index >= outputRelation.length)
+        NilTuple
+      else
+        index += 1
+        Option(outputRelation(index - 1))
+    }
+    def close(): Unit = input.close()
   }
 }

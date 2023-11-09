@@ -1,11 +1,11 @@
 package datalog.execution
 
-import datalog.dsl.{Atom, Constant, Term, Variable}
+import datalog.dsl.{Atom, Constant, Term, Variable, GroupingAtom, AggOp}
 import datalog.execution
 import datalog.execution.ast.*
 import datalog.execution.ast.transform.{ASTTransformerContext, CopyEliminationPass, Transformer}
 import datalog.execution.ir.*
-import datalog.storage.{DB, EDB, KNOWLEDGE, StorageManager}
+import datalog.storage.{DB, EDB, KNOWLEDGE, StorageManager, StorageAggOp}
 import datalog.tools.Debug.debug
 
 import java.util.concurrent.{Executors, ForkJoinPool}
@@ -58,7 +58,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
 //    println(s"${storageManager.printer.ruleToString(ruleSeq)}")
 
     var rule = ruleSeq
-    var k = JoinIndexes(rule, None)
+    var k = JoinIndexes(rule, None, None)
     storageManager.allRulesAllIndexes.getOrElseUpdate(rId, mutable.Map[String, JoinIndexes]()).addOne(k.hash, k)
 
     if (rule.length <= heuristics.max_length_cache)
@@ -77,7 +77,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
         -1
       )
       rule = rule.head +: sortedBody.map(_._1)
-      k = JoinIndexes(rule, Some(k.cxns))
+      k = JoinIndexes(rule, Some(k.cxns), Some(k.groupingIndexes))
       storageManager.allRulesAllIndexes(rId).addOne(k.hash, k)
     else if (defaultJITOptions.sortOrder == SortOrder.Badluck) // mimic "bad luck" program definition, so ingest rules in a bad order and then don't update them.
       val (sortedBody, newHash) = JoinIndexes.presortSelectWorst(
@@ -91,7 +91,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
         -1
       )
       rule = rule.head +: sortedBody.map(_._1)
-      k = JoinIndexes(rule, Some(k.cxns))
+      k = JoinIndexes(rule, Some(k.cxns), Some(k.groupingIndexes))
       storageManager.allRulesAllIndexes(rId).addOne(k.hash, k)
 
     //    println(s"${storageManager.printer.ruleToString(rule)}")
@@ -108,10 +108,31 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
           rule.head.negated
         ),
         rule.drop(1).map(b =>
-          LogicAtom(b.rId, b.terms.map {
-            case x: Variable => VarTerm(x)
-            case x: Constant => ConstTerm(x)
-          }, b.negated)
+          b match
+            case ga: GroupingAtom =>
+              LogicGroupingAtom(
+                LogicAtom(ga.gp.rId, ga.gp.terms.map{
+                  case x: Variable => VarTerm(x)
+                  case x: Constant => ConstTerm(x)
+                }, ga.gp.negated),
+                ga.gv.map(v => VarTerm(v)),
+                ga.ags.map{(ao, v) => (AggOpNode(
+                  ao match
+                    case AggOp.SUM(_) => StorageAggOp.SUM 
+                    case AggOp.COUNT(_) => StorageAggOp.COUNT
+                    case AggOp.MIN(_) => StorageAggOp.MIN
+                    case AggOp.MAX(_) => StorageAggOp.MAX
+                  , ao.t match
+                    case x: Variable => VarTerm(x)
+                    case x: Constant => ConstTerm(x)
+                  
+                ), VarTerm(v))}
+              )
+            case b =>
+              LogicAtom(b.rId, b.terms.map {
+                case x: Variable => VarTerm(x)
+                case x: Constant => ConstTerm(x)
+              }, b.negated)
         ),
         rule,
         k
@@ -341,6 +362,9 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
         op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o)))
 
       case op: DiffOp =>
+        op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o)))
+
+      case op: GroupingOp =>
         op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o)))
 
       case op: DebugPeek =>

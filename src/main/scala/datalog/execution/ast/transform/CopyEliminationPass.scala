@@ -2,7 +2,7 @@ package datalog.execution.ast.transform
 
 import datalog.execution.ast.*
 import datalog.storage.StorageManager
-import datalog.dsl.Atom
+import datalog.dsl.{Atom, GroupingAtom}
 import datalog.execution.{JoinIndexes, heuristics}
 
 import scala.collection.mutable
@@ -50,12 +50,16 @@ class CopyEliminationPass()(using ASTTransformerContext) extends Transformer {
           val transformedAtoms = atoms.head +: atoms.drop(1).map(a =>
             if (ctx.aliases.contains(a.rId))
               aliased = true
-              Atom(ctx.aliases.getOrElse(a.rId, a.rId), a.terms, a.negated)
+              a match
+                case ga: GroupingAtom =>
+                  GroupingAtom(Atom(ctx.aliases.getOrElse(a.rId, a.rId), ga.gp.terms, ga.gp.negated), ga.gv, ga.ags)
+                case a => 
+                  Atom(ctx.aliases.getOrElse(a.rId, a.rId), a.terms, a.negated)
             else
               a
           )
           if (aliased)
-            newK = JoinIndexes(transformedAtoms, None)
+            newK = JoinIndexes(transformedAtoms, None, None)
             ctx.sm.allRulesAllIndexes.getOrElseUpdate(transformedAtoms.head.rId, mutable.Map[String, JoinIndexes]()).addOne(newK.hash, newK)
             if (body.size < heuristics.max_length_cache)
               val allK = JoinIndexes.allOrders(transformedAtoms)
@@ -68,6 +72,8 @@ class CopyEliminationPass()(using ASTTransformerContext) extends Transformer {
         case n: AtomNode => n match {
           case LogicAtom(relation, terms, neg) =>
             LogicAtom(ctx.aliases.getOrElse(relation, relation), terms, neg)
+          case LogicGroupingAtom(LogicAtom(relation, terms, neg), gv, ags) =>
+            LogicGroupingAtom(LogicAtom(ctx.aliases.getOrElse(relation, relation), terms, neg), gv, ags)
         }
         case n: TermNode => n
       }

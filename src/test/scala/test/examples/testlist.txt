@@ -19,7 +19,7 @@
 ❌ comp-parametrized-multilvl - aggregators, comp
 ❌ convex_hull - aggregators, negation
 ❌ counter - aggregators, str
-❌ degree - aggregators
+✅ degree - aggregators
 ❌ dfa - comp, negation
 ✅ dfa_live_vars - negation
 ❌ dfa_min - negation, aggregators
@@ -47,7 +47,7 @@ double_tree
 ✅ grad
 ❌ graph - aggregators
 ❌ grid - aggregators
-❌ highest_degree - aggregator
+✅ highest_degree - aggregator
 ✅ hmmer - negation
 ❌ independent_body3 - aggregator
 ❌ inline_nats - aggregator
@@ -96,8 +96,8 @@ double_tree
 ❌ rewrite - data types
 ✅ rsg
 ❌ sequences - aggregators
-ship
-❌ shortest_edges - aggregators
+✅ ship
+✅ shortest_edges - aggregators
 ❌ shortest_path - aggregators
 ❌ shortest_path2 - aggregators
 ✅ small

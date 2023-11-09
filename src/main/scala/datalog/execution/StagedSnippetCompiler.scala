@@ -2,7 +2,7 @@ package datalog.execution
 
 import datalog.dsl.{Atom, Constant, Term, Variable}
 import datalog.execution.ir.*
-import datalog.storage.{DB, EDB, KNOWLEDGE, StorageManager}
+import datalog.storage.{DB, EDB, KNOWLEDGE, StorageManager, StorageAggOp}
 import datalog.tools.Debug.debug
 
 import scala.collection.mutable
@@ -72,6 +72,41 @@ class StagedSnippetCompiler(val storageManager: StorageManager)(using val jitOpt
     }
   }
 
+
+  given ToExpr[StorageAggOp] with {
+    def apply(x: StorageAggOp)(using Quotes) = {
+      x match
+        case StorageAggOp.SUM => '{ StorageAggOp.SUM }
+        case StorageAggOp.COUNT => '{ StorageAggOp.COUNT }
+        case StorageAggOp.MIN => '{ StorageAggOp.MIN }
+        case StorageAggOp.MAX => '{ StorageAggOp.MAX }
+    }
+  }
+
+  given ToExpr[AggOpIndex] with {
+    def apply(x: AggOpIndex)(using Quotes) = {
+      x match
+        case AggOpIndex.LV(i) => '{ AggOpIndex.LV(${ Expr(i) }) }
+        case AggOpIndex.GV(i) => '{ AggOpIndex.GV(${ Expr(i) }) }
+        case AggOpIndex.C(c) => '{ AggOpIndex.C(${ Expr(c) }) }
+      
+    }
+  }
+
+  given ToExpr[GroupingJoinIndexes] with {
+    def apply(x: GroupingJoinIndexes)(using Quotes) = {
+      '{
+        GroupingJoinIndexes(
+          ${ Expr(x.varIndexes) },
+          ${ Expr(x.constIndexes) },
+          ${ Expr(x.groupingIndexes) },
+          ${ Expr(x.aggOpInfos) }
+        )
+      }
+    }
+  }
+
+
   def compileIRRelOp(irTree: IROp[EDB])(using stagedSM: Expr[StorageManager])(using stagedFns: Expr[Seq[CompiledFn[EDB]]])(using Quotes): Expr[EDB] = {
     irTree match {
       case ScanOp(rId, db, knowledge) =>
@@ -121,6 +156,9 @@ class StagedSnippetCompiler(val storageManager: StorageManager)(using val jitOpt
 
       case DiffOp(children:_*) =>
         '{ $stagedSM.diff($stagedFns(0)($stagedSM), $stagedFns(1)($stagedSM)) }
+
+      case GroupingOp(child, gji) =>
+        '{ $stagedSM.groupingHelper($stagedFns.head($stagedSM), ${ Expr(gji) }) }
 
       case DebugPeek(prefix, msg, children:_*) =>
         val res = compileIRRelOp(children.head)

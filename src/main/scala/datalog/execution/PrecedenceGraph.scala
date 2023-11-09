@@ -1,6 +1,6 @@
 package datalog.execution
 
-import datalog.dsl.Atom
+import datalog.dsl.{Atom, GroupingAtom}
 import datalog.tools.Debug.debug
 import datalog.storage.{NS, RelationId}
 
@@ -34,8 +34,9 @@ class PrecedenceGraph(using ns: NS /* ns used for pretty printing */) {
 
   def addNode(rule: Seq[Atom]): Unit = {
     idbs.addOne(rule.head.rId)
-    adjacencyList.update(rule.head.rId, adjacencyList.getOrElse(rule.head.rId, Seq.empty) ++ rule.drop(1).filter(!_.negated).map(_.rId))
-    negAdjacencyList.update(rule.head.rId, negAdjacencyList.getOrElse(rule.head.rId, Seq.empty) ++ rule.drop(1).filter(_.negated).map(_.rId))
+    def cond(a: Atom) = !a.negated && !a.isInstanceOf[GroupingAtom]  // We treat grouping atoms as if they were negated because negation and aggregation require the same stratification
+    adjacencyList.update(rule.head.rId, adjacencyList.getOrElse(rule.head.rId, Seq.empty) ++ rule.drop(1).filter(cond(_)).map(_.rId))
+    negAdjacencyList.update(rule.head.rId, negAdjacencyList.getOrElse(rule.head.rId, Seq.empty) ++ rule.drop(1).filter(!cond(_)).map(_.rId))
   }
 
   def updateNodeAlias(aliases: mutable.Map[RelationId, RelationId]): Unit = {
@@ -131,11 +132,11 @@ class PrecedenceGraph(using ns: NS /* ns used for pretty printing */) {
 
     val result = sorted.map(_.toSet).toSeq
 
-    // check for negative cycle
+    // check for negative or grouping cycle (since both require the same check we treat grouping atoms as negated atoms in the dependency graph)
     result.foreach(strata =>
       strata.foreach(p =>
         if (graph(p).negEdges.map(n => n.rId).intersect(strata).nonEmpty)
-          throw new Exception("Negative cycle detected in input program")
+          throw new Exception("Negative or grouping cycle detected in input program")
       )
     )
 
@@ -163,7 +164,7 @@ class PrecedenceGraph(using ns: NS /* ns used for pretty printing */) {
         )
       )
       if (stratum.nonEmpty && stratum.values.max > stratum.keys.size)
-        throw new Exception("Negative cycle detected in input program")
+        throw new Exception("Negative or grouping cycle detected in input program")
       setDiff = prevStratum != stratum
       prevStratum = stratum.clone
     }

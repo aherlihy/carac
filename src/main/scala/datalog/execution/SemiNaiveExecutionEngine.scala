@@ -98,6 +98,8 @@ class SemiNaiveExecutionEngine(override val storageManager: StorageManager, stra
         innerSolve(toSolve, relations.toSeq)
         if (idx < strata.length - 1)
           storageManager.updateDiscovered()
+          storageManager.clearKnownDelta()  // KnownDelta is not always empty when moving to the next stratum,
+                                            // it is a problem for aggregates because it leads to the creation of unwanted tuples.
       )
     storageManager.getNewIDBResult(toSolve)
   }

@@ -1,7 +1,8 @@
 package datalog.execution
 
 import datalog.dsl.{Atom, Constant, Term, Variable}
-import datalog.storage.RelationId
+import datalog.execution.AggOpIndex
+import datalog.storage.{RelationId, StorageAggOp}
 
 import java.lang.constant.ConstantDescs.*
 import java.lang.constant.*
@@ -192,11 +193,11 @@ object BytecodeGenerator {
       case e: Int => emitInteger(xb, e)
       case s: String => emitString(xb, s)
 
-   def emitStringConstantTuple2(xb: CodeBuilder, t: (String, Constant)): Unit =
-     emitNew(xb, classOf[(String, Constant)], xxb =>
-       emitString(xxb, t._1)
-       emitConstant(xxb, t._2)
-     )
+  def emitStringConstantTuple2(xb: CodeBuilder, t: (String, Constant)): Unit =
+    emitNew(xb, classOf[(String, Constant)], xxb =>
+      emitString(xxb, t._1)
+      emitConstant(xxb, t._2)
+    )
 
   def emitVariable(xb: CodeBuilder, variable: Variable): Unit =
     emitNew(xb, classOf[Variable], xxb =>
@@ -277,6 +278,42 @@ object BytecodeGenerator {
       emitSeq(xb, value.atoms.map(a => xxb => emitAtom(xxb, a)))
       emitCxns(xxb, value.cxns)
       emitBool(xxb, value.edb))
+
+  def emitStorageAggOp(xb: CodeBuilder, sao: StorageAggOp): Unit =
+    val enumCompanionCls = classOf[StorageAggOp.type]
+    emitObject(xb, enumCompanionCls)
+    xb.constantInstruction(sao.ordinal)
+    emitCall(xb, enumCompanionCls, "fromOrdinal", classOf[Int])
+
+  def emitAggOpIndex(xb: CodeBuilder, aoi: AggOpIndex): Unit = aoi match {
+    case gv: AggOpIndex.GV =>
+      emitNew(xb, classOf[AggOpIndex.GV], xxb =>
+        emitInteger(xxb, gv.i)
+      )
+    case lv: AggOpIndex.LV =>
+      emitNew(xb, classOf[AggOpIndex.GV], xxb =>
+        emitInteger(xxb, lv.i)
+      )
+    case c: AggOpIndex.C =>
+      emitNew(xb, classOf[AggOpIndex.C], xxb =>
+        emitConstant(xxb, c.c)
+      )
+  }
+
+  def emitAggOpInfos(xb: CodeBuilder, value: Seq[(StorageAggOp, AggOpIndex)]): Unit =
+    emitSeq(xb, value.map(v => xxb =>
+      emitNew(xb, classOf[(StorageAggOp, AggOpIndex)], xxxb =>
+        emitStorageAggOp(xxxb, v._1)
+        emitAggOpIndex(xxxb, v._2)
+      )  
+    ))
+
+  def emitGroupingJoinIndexes(xb: CodeBuilder, value: GroupingJoinIndexes): Unit =
+    emitNew(xb, classOf[GroupingJoinIndexes], xxb =>
+      emitVarIndexes(xxb, value.varIndexes)
+      emitConstIndexes(xxb, value.constIndexes)
+      emitSeqInt(xxb, value.groupingIndexes)
+      emitAggOpInfos(xxb, value.aggOpInfos))
 
   val CD_BoxedUnit = clsDesc(classOf[scala.runtime.BoxedUnit])
 

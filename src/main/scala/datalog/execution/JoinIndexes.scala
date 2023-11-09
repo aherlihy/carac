@@ -1,8 +1,8 @@
 package datalog.execution
 
-import datalog.dsl.{Atom, Constant, Variable}
+import datalog.dsl.{Atom, Constant, Variable, GroupingAtom, AggOp}
 import datalog.execution.ir.{IROp, ProjectJoinFilterOp, ScanOp}
-import datalog.storage.{DB, EDB, NS, RelationId, StorageManager}
+import datalog.storage.{DB, EDB, NS, RelationId, StorageManager, StorageAggOp}
 import datalog.tools.Debug.debug
 
 import scala.collection.mutable
@@ -12,7 +12,19 @@ import scala.reflect.ClassTag
 type AllIndexes = mutable.Map[String, JoinIndexes]
 
 enum PredicateType:
-  case POSITIVE, NEGATED
+  case POSITIVE, NEGATED, GROUPING
+
+
+enum AggOpIndex:
+  case LV(i: Int)
+  case GV(i: Int)
+  case C(c: Constant)
+
+case class GroupingJoinIndexes(varIndexes: Seq[Seq[Int]],
+                               constIndexes: mutable.Map[Int, Constant],
+                               groupingIndexes: Seq[Int],
+                               aggOpInfos: Seq[(StorageAggOp, AggOpIndex)]
+                              )
 
 /**
  * Wrapper object for join keys for IDB rules
@@ -31,7 +43,8 @@ case class JoinIndexes(varIndexes: Seq[Seq[Int]],
                        deps: Seq[(PredicateType, RelationId)],
                        atoms: Seq[Atom],
                        cxns: mutable.Map[String, mutable.Map[Int, Seq[String]]],
-                       edb: Boolean = false
+                       edb: Boolean = false,
+                       groupingIndexes: Map[String, GroupingJoinIndexes] = Map.empty
                       ) {
   override def toString(): String = ""//toStringWithNS(null)
 
@@ -57,13 +70,18 @@ case class JoinIndexes(varIndexes: Seq[Seq[Int]],
 }
 
 object JoinIndexes {
-  def apply(rule: Seq[Atom], precalculatedCxns: Option[mutable.Map[String, mutable.Map[Int, Seq[String]]]]) = {
+  def apply(rule: Seq[Atom], precalculatedCxns: Option[mutable.Map[String, mutable.Map[Int, Seq[String]]]],
+            precalculatedGroupingIndexes: Option[Map[String, GroupingJoinIndexes]]) = {
     val constants = mutable.Map[Int, Constant]() // position => constant
     val variables = mutable.Map[Variable, Int]() // v.oid => position
 
     val body = rule.drop(1)
 
-    val deps = body.map(a => (if (a.negated) PredicateType.NEGATED else PredicateType.POSITIVE, a.rId))
+    val deps = body.map(a => (
+      a match
+        case _: GroupingAtom => PredicateType.GROUPING
+        case _ => if (a.negated) PredicateType.NEGATED else PredicateType.POSITIVE
+      , a.rId))
 
     val typeHelper = body.flatMap(a => a.terms.map(* => !a.negated))
 
@@ -119,7 +137,36 @@ object JoinIndexes {
       )).to(mutable.Map)
     )
 
-    new JoinIndexes(bodyVars, constants.to(mutable.Map), projects, deps, rule, cxns)
+    //groupings
+    val groupingIndexes = precalculatedGroupingIndexes.getOrElse(
+      body.collect{ case ga: GroupingAtom => ga }.map(ga =>
+        val (varsp, ctans) = ga.gp.terms.zipWithIndex.partitionMap{
+          case (v: Variable, i) => Left((v, i))
+          case (c: Constant, i) => Right((c, i))
+        }
+        val vars = varsp.filterNot(_._1.anon)
+        val gis = ga.gv.map(v => vars.find(_._1 == v).get).map(_._2)
+        ga.hash -> GroupingJoinIndexes(
+          vars.groupBy(_._1).values.filter(_.size > 1).map(_.map(_._2)).toSeq,
+          ctans.map(_.swap).to(mutable.Map),
+          gis,
+          ga.ags.map(_._1).map(ao =>
+            val aoi = ao.t match
+              case v: Variable =>
+                val i = ga.gv.indexOf(v)
+                if i >= 0 then AggOpIndex.GV(gis(i)) else AggOpIndex.LV(vars.find(_._1 == v).get._2)
+              case c: Constant => AggOpIndex.C(c)
+            ao match
+              case AggOp.SUM(t) => (StorageAggOp.SUM, aoi)
+              case AggOp.COUNT(t) => (StorageAggOp.COUNT, aoi)
+              case AggOp.MIN(t) => (StorageAggOp.MIN, aoi)
+              case AggOp.MAX(t) => (StorageAggOp.MAX, aoi)
+          )
+        )
+      ).toMap
+    )
+
+    new JoinIndexes(bodyVars, constants.to(mutable.Map), projects, deps, rule, cxns, edb = false, groupingIndexes = groupingIndexes)
   }
 
   // used to approximate poor user-defined order
@@ -214,7 +261,7 @@ object JoinIndexes {
             presortSelect(sortBy, originalK, sm, -1)
         val newK = sm.allRulesAllIndexes(rId).getOrElseUpdate(
           newHash,
-          JoinIndexes(originalK.atoms.head +: newBody.map(_._1), Some(originalK.cxns))
+          JoinIndexes(originalK.atoms.head +: newBody.map(_._1), Some(originalK.cxns), Some(originalK.groupingIndexes))
         )
         (input.map(c => ProjectJoinFilterOp(rId, newK, newBody.map((_, oldP) => c.childrenSO(oldP)): _*)), newK)
   }
@@ -235,15 +282,15 @@ object JoinIndexes {
             presortSelect(sortBy, originalK, sm, deltaIdx)
         val newK = sm.allRulesAllIndexes(rId).getOrElseUpdate(
           newHash,
-          JoinIndexes(originalK.atoms.head +: newBody.map(_._1), Some(originalK.cxns))
+          JoinIndexes(originalK.atoms.head +: newBody.map(_._1), Some(originalK.cxns), Some(originalK.groupingIndexes))
         )
         (newK.atoms.drop(1).map(a => input(originalK.atoms.drop(1).indexOf(a))), newK)
   }
 
   def allOrders(rule: Seq[Atom]): AllIndexes = {
-    val idx = JoinIndexes(rule, None)
+    val idx = JoinIndexes(rule, None, None)
     mutable.Map[String, JoinIndexes](rule.drop(1).permutations.map(r =>
-      val toRet = JoinIndexes(rule.head +: r, Some(idx.cxns))
+      val toRet = JoinIndexes(rule.head +: r, Some(idx.cxns), Some(idx.groupingIndexes))
       toRet.hash -> toRet
     ).toSeq:_*)
   }
