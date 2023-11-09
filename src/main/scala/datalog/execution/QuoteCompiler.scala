@@ -140,6 +140,37 @@ class QuoteCompiler(val storageManager: StorageManager)(using JITOptions) extend
         case SortOrder.Badluck => '{ SortOrder.Badluck }
         case SortOrder.Unordered => '{ SortOrder.Unordered }
         case SortOrder.Worst => '{ SortOrder.Worst }
+
+  given ToExpr[StorageAggOp] with {
+    def apply(x: StorageAggOp)(using Quotes) = {
+      x match
+        case StorageAggOp.SUM => '{ StorageAggOp.SUM }
+        case StorageAggOp.COUNT => '{ StorageAggOp.COUNT }
+        case StorageAggOp.MIN => '{ StorageAggOp.MIN }
+        case StorageAggOp.MAX => '{ StorageAggOp.MAX }
+    }
+  }
+
+  given ToExpr[AggOpIndex] with {
+    def apply(x: AggOpIndex)(using Quotes) = {
+      x match
+        case AggOpIndex.LV(i) => '{ AggOpIndex.LV(${ Expr(i) }) }
+        case AggOpIndex.GV(i) => '{ AggOpIndex.GV(${ Expr(i) }) }
+        case AggOpIndex.C(c) => '{ AggOpIndex.C(${ Expr(c) }) }
+      
+    }
+  }
+
+  given ToExpr[GroupingJoinIndexes] with {
+    def apply(x: GroupingJoinIndexes)(using Quotes) = {
+      '{
+        GroupingJoinIndexes(
+          ${ Expr(x.varIndexes) },
+          ${ Expr(x.constIndexes) },
+          ${ Expr(x.groupingIndexes) },
+          ${ Expr(x.aggOpInfos) }
+        )
+      }
     }
   }
   /**
