@@ -128,11 +128,13 @@ class StagedSnippetCompiler(val storageManager: StorageManager)(using val jitOpt
             }
         }
 
-      case GroundOfOp(cols) =>
-        '{ $stagedSM.getGroundOf(${ Expr(cols) }) }
-
-      case ZeroOutOp(child, cols) =>
-        '{ $stagedSM.zeroOut($stagedFns.head($stagedSM), ${ Expr(cols) }) }
+      case NegationOp(child, cols) =>
+        val tmp = cols.map(_.exists(_.isEmpty))
+        '{ 
+          val compl = $stagedSM.getGroundOf(${ Expr(cols) })
+          val nq = $stagedSM.zeroOut($stagedFns.head($stagedSM), ${ Expr(tmp) })
+          $stagedSM.diff(compl, nq)
+        }
 
       case ScanEDBOp(rId) =>
         if (storageManager.edbContains(rId))

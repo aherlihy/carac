@@ -115,10 +115,7 @@ class StagedSnippetExecutionEngine(override val storageManager: StorageManager,
       case op: DebugPeek =>
         op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o)))
 
-      case op: GroundOfOp =>
-        op.run(storageManager)
-
-      case op: ZeroOutOp =>
+      case op: NegationOp =>
         op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o)))
 
       case _ => throw new Exception(s"Error: interpretRelOp called with unit operation: code=${irTree.code}")

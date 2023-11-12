@@ -256,11 +256,14 @@ class VolcanoOperators[S <: StorageManager](val storageManager: S) {
     def close(): Unit = input.close()
   }
 
-  case class ZeroOut(input: VolOperator, cols: Seq[Boolean]) extends VolOperator {
+  case class Negation(input: VolOperator, cols: Seq[Either[StorageConstant, Seq[(RelationId, Int)]]]) extends VolOperator {
     private var outputRelation: CollectionsEDB = CollectionsEDB()
     private var index = 0
     def open(): Unit =
-      outputRelation = asCollectionsEDB(storageManager.zeroOut(input.toList(), cols))
+      val tmp = cols.map(_.exists(_.isEmpty))              
+      val compl = storageManager.getGroundOf(cols)
+      val nq = storageManager.zeroOut(input.toList(), tmp)
+      outputRelation = asCollectionsEDB(storageManager.diff(compl, nq))
     def next(): Option[CollectionsRow] = {
       if (index >= outputRelation.length)
         NilTuple

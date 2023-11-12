@@ -349,10 +349,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
       case op: ScanEDBOp =>
         op.run(storageManager)
 
-      case op: GroundOfOp =>
-        op.run(storageManager)
-
-      case op: ZeroOutOp =>
+      case op: NegationOp =>
         op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o)))
 
       case op: ProjectJoinFilterOp =>

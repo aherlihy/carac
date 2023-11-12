@@ -41,12 +41,8 @@ class VolcanoStorageManager(ns: NS = NS()) extends CollectionsStorageManager(ns)
                 val q = Scan(getKnownDerivedDB(r), r)
                 typ match
                   case PredicateType.NEGATED =>
-                    val nis = k.negationInfo(k.atoms(i + 1).hash)
-                    val cols = nis.map(_.exists(_.isEmpty))
-                    
-                    val compl = getGroundOf(nis)
-                    val nq = ZeroOut(q, cols)
-                    val res = Diff(Seq(Scan(compl, r), nq))
+                    val cols = k.negationInfo(k.atoms(i + 1).hash)
+                    val res = Negation(q, cols)
                     debug(s"found negated relation, rule=", () => s"${printer.ruleToString(k.atoms)}")
                     res
                   case PredicateType.GROUPING =>
@@ -97,12 +93,8 @@ class VolcanoStorageManager(ns: NS = NS()) extends CollectionsStorageManager(ns)
                       Scan(getKnownDerivedDB(r), r)
                     typ match
                       case PredicateType.NEGATED =>
-                        val nis = k.negationInfo(k.atoms(i + 1).hash)
-                        val cols = nis.map(_.exists(_.isEmpty))
-                        
-                        val compl = getGroundOf(nis)
-                        val nq = ZeroOut(q, cols)
-                        val res = Diff(Seq(Scan(compl, r), nq))
+                        val cols = k.negationInfo(k.atoms(i + 1).hash)
+                        val res = Negation(q, cols)
                         debug(s"found negated relation, rule=", () => s"${printer.ruleToString(k.atoms)}")
                         res
                       case PredicateType.GROUPING =>

@@ -136,12 +136,14 @@ class QuoteCompiler(val storageManager: StorageManager)(using JITOptions) extend
             }
         }
 
-      case GroundOfOp(cols) =>
-        '{ $stagedSM.getGroundOf(${ Expr(cols) }) }
-
-      case ZeroOutOp(child, cols) =>
+      case NegationOp(child, cols) =>
+        val tmp = cols.map(_.exists(_.isEmpty))
         val clh = compileIRRelOp(child)
-        '{ $stagedSM.zeroOut($clh, ${ Expr(cols) }) }
+        '{ 
+          val compl = $stagedSM.getGroundOf(${ Expr(cols) })
+          val nq = $stagedSM.zeroOut($clh, ${ Expr(tmp) })
+          $stagedSM.diff(compl, nq)
+        }
 
       case ScanEDBOp(rId) =>
         if (storageManager.edbContains(rId))
