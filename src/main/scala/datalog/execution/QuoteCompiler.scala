@@ -117,6 +117,7 @@ class QuoteCompiler(val storageManager: StorageManager)(using JITOptions) extend
           ${ Expr(x.cxns) },
           ${ Expr(x.cons) },
           ${ Expr(x.constraints) },
+          ${ Expr(x.negationInfo) },
           ${ Expr(x.edb) }
         )
       }
@@ -180,8 +181,14 @@ class QuoteCompiler(val storageManager: StorageManager)(using JITOptions) extend
             }
         }
 
-      case ComplementOp(arity) =>
-        '{ $stagedSM.getComplement(${ Expr(arity) }) }
+      case NegationOp(child, cols) =>
+        val tmp = cols.map(_.exists(_.isEmpty))
+        val clh = compileIRRelOp(child)
+        '{ 
+          val compl = $stagedSM.getGroundOf(${ Expr(cols) })
+          val nq = $stagedSM.zeroOut($clh, ${ Expr(tmp) })
+          $stagedSM.diff(compl, nq)
+        }
 
       case ScanEDBOp(rId) =>
         if (storageManager.edbContains(rId))

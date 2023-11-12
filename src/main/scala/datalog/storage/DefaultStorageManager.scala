@@ -252,11 +252,7 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
       val reducers = gji.aggOpInfos.map(_._1).zip(tpes).map(aggOps(_)(_))
       val okreducers = (a: CollectionsRow, b: CollectionsRow) =>
         CollectionsRow(a.wrapped.zip(b.wrapped).zip(reducers).map((x, y) => y.apply(x._1.asInstanceOf[StorageConstant], x._2.asInstanceOf[StorageConstant])))
-      val res = filteredBase.groupMapReduce(r => CollectionsRow(gji.groupingIndexes.map(r.apply)), okgetters, okreducers)
-
-      val ctans = res.wrapped.map(_.wrapped.drop(gji.groupingIndexes.length)).flatten.toSeq
-      addConstantsToDomain(ctans)
-      res
+      filteredBase.groupMapReduce(r => CollectionsRow(gji.groupingIndexes.map(r.apply)), okgetters, okreducers)
     else getEmptyEDB()
   }
 
@@ -291,10 +287,13 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
 
                 typ match
                   case PredicateType.NEGATED =>
-                    val arity = k.atoms(i + 1).terms.length
-                    val compl = getComplement(arity)
-                    val res = diff(compl, q)
-                    debug("found negated relation, rule=", () => s"${printer.ruleToString(k.atoms)}\n\tarity=$arity, compl=${printer.factToString(compl)}, Q=${printer.factToString(q)}, final res=${printer.factToString(res)}")
+                    val nis = k.negationInfo(k.atoms(i + 1).hash)
+                    val cols = nis.map(_.exists(_.isEmpty))
+                    
+                    val compl = getGroundOf(nis)
+                    val nq = zeroOut(q, cols)
+                    val res = diff(compl, nq)
+                    debug("found negated relation, rule=", () => s"${printer.ruleToString(k.atoms)}\n\tcompl=${printer.factToString(compl)}, Q=${printer.factToString(q)}, final res=${printer.factToString(res)}")
                     res
                   case PredicateType.GROUPING =>
                     val ga = k.atoms(i + 1).asInstanceOf[GroupingAtom]
@@ -320,10 +319,13 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
                 val q = getKnownDerivedDB(r)
                 typ match
                   case PredicateType.NEGATED =>
-                    val arity = k.atoms(i + 1).terms.length
-                    val compl = getComplement(arity)
-                    val res = diff(compl, q)
-                    debug(s"found negated relation, rule=", () => s"${printer.ruleToString(k.atoms)}\n\tarity=$arity, compl=${printer.factToString(compl)}, Q=${printer.factToString(q)}, final res=${printer.factToString(res)}")
+                    val nis = k.negationInfo(k.atoms(i + 1).hash)
+                    val cols = nis.map(_.exists(_.isEmpty))
+                    
+                    val compl = getGroundOf(nis)
+                    val nq = zeroOut(q, cols)
+                    val res = diff(compl, nq)
+                    debug(s"found negated relation, rule=", () => s"${printer.ruleToString(k.atoms)}\n\tcompl=${printer.factToString(compl)}, Q=${printer.factToString(q)}, final res=${printer.factToString(res)}")
                     res
                   case PredicateType.GROUPING =>
                     val ga = k.atoms(i + 1).asInstanceOf[GroupingAtom]
