@@ -3,11 +3,12 @@ package datalog.storage
 import datalog.dsl.Constant
 import datalog.storage.CollectionsCasts.asCollectionsEDB
 import datalog.tools.Debug.debug
-
-import datalog.execution.{GroupingJoinIndexes, AggOpIndex}
+import datalog.execution.{AggOpIndex, GroupingJoinIndexes}
 import datalog.storage.StorageAggOp
 
+import java.io.{BufferedInputStream, BufferedOutputStream, BufferedReader, BufferedWriter, DataInputStream, DataOutputStream, EOFException, InputStreamReader, OutputStreamWriter}
 import scala.collection.mutable
+import scala.sys.process.*
 
 // Indicates the end of the stream
 final val NilTuple: Option[Nothing] = None
@@ -69,6 +70,89 @@ class VolcanoOperators[S <: StorageManager](val storageManager: S) {
 //            op.close()
 //          }
 //        }
+  }
+
+  case class UDFScanOperator(path: String) extends VolOperator {
+    val outputRelation = CollectionsEDB()
+    var index = 0
+    def open(): Unit = {
+      index = 0
+      val pb = Process(path) // Or, Seq(<process>, <args>)
+
+      val processLogger = ProcessLogger(
+        (output: String) => {
+          outputRelation.addOne(CollectionsRow(Seq(output)))
+        }, // Handle standard output
+        (error: String) => System.err.println(error) // Handle error output
+      )
+
+      val exitCode = pb.run(processLogger).exitValue()
+
+      if (exitCode != 0) throw new Exception(s"User-supplied utility exited with code $exitCode")
+    }
+
+    def next(): Option[CollectionsRow] = {
+      if (index >= outputRelation.length)
+        NilTuple
+      else
+        index += 1
+        Option(outputRelation(index - 1))
+    }
+
+    def close(): Unit = {}
+  }
+
+  case class UDFProjectOperator(path: String, input: VolOperator) extends VolOperator {
+    var process: Process = _
+    var processOutput: BufferedReader = _
+    var processInput: BufferedWriter = _
+    var counter = 0
+
+    def open(): Unit = {
+      counter = 0
+      input.open()
+
+      // Start the subprocess
+      val io = new ProcessIO(
+        stdin => {
+          processInput = new BufferedWriter(new OutputStreamWriter(stdin))
+        },
+        stdout => {
+          processOutput = new BufferedReader(new InputStreamReader(stdout))
+        },
+        stderr => {
+          scala.io.Source.fromInputStream(stderr).getLines().foreach(l => System.out.println(s"Error from subprocess: $l"))
+        }
+      )
+
+      process = path.run(io)
+    }
+
+    override def next(): Option[CollectionsRow] = {
+      input.next() match {
+        case Some(tuple) =>
+          // Write to the subprocess and flush
+          println(s"received: ${tuple.wrapped.head}")
+          processInput.write(tuple.wrapped.head.toString)
+          processInput.newLine()
+          processInput.flush()
+
+          // Read the subprocess's response
+          val response = processOutput.readLine()
+          println(s"response from project subprocess $response") // Print the response
+          Some(CollectionsRow(Seq(response))) // Emit the contents of that line
+        case None =>
+          NilTuple
+      }
+    }
+
+    def close(): Unit = {
+      input.close()
+      // Close the subprocess streams
+      processInput.close()
+      processOutput.close()
+//      if (process.isAlive()) process.destroy() // TODO: needed?
+    }
   }
 
   case class EmptyScan() extends VolOperator {

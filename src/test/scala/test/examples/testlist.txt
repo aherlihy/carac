@@ -1,17 +1,17 @@
 🟨 2sat - negation, but with var only in negated
 ✅ access-policy
 ✅ ackermann
-❌ amicable - aggregators, functions
+❌ amicable - functions, constraints
 ✅ andersen
-❌ array - aggregators, negation
+❌ array - constraints
 ✅ bigrams
-❌ catalan - aggregators
+❌ catalan - constraints
 ✅ cba_expr_value
-❌ cellular_automata - aggregators, negation
-❌ centroids - negation, built-in predicates
-❌ circuit_eval - negation, disjunction
-❌ circuit_records - aggregators
-❌ circuit_sat - aggregators, negation
+❌ cellular_automata - constraints
+❌ centroids - constraints
+❌ circuit_eval - disjunction
+❌ circuit_records - constraints, list type
+❌ circuit_sat - aggregators, negation, comp
 ✅ clique
 ✅ cliquer
 ❌ comp-parametrized - aggregators, negation, comp

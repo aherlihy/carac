@@ -3,10 +3,11 @@ package datalog
 import buildinfo.BuildInfo
 import datalog.dsl.*
 import datalog.execution.{Backend, CompileSync, ExecutionEngine, Granularity, JITOptions, NaiveExecutionEngine, SemiNaiveExecutionEngine, SortOrder, StagedExecutionEngine, ir, Mode as CaracMode}
-import datalog.storage.DefaultStorageManager
+import datalog.storage.{CollectionsEDB, CollectionsRow, DefaultStorageManager, VolcanoOperators, VolcanoStorageManager}
+
 import scala.util.Using
 import java.nio.file.{FileSystems, Files, Path, Paths}
-
+import scala.collection.mutable
 import scala.quoted.staging
 
 def ackermann(program: Program): String = {
@@ -576,8 +577,101 @@ def tastyslistlibinverse(program: Program): String = {
     // END SLOWEST -------------------------------------
   }
 
-  unoptimizedPointsTo()
+//  unoptimizedPointsTo()
 
+  def optimizedPointsTo(): Unit = {
+    VarPointsTo(varr, heap) :- (Reachable(meth), Alloc(varr, heap, meth))
+    VarPointsTo(to, heap) :- (Move(to, from), VarPointsTo(from, heap))
+    FldPointsTo(baseH, fld, heap) :- (Store(base, fld, from), VarPointsTo(from, heap), VarPointsTo(base, baseH))
+    VarPointsTo(to, heap) :- (Load(to, base, fld, inMeth), VarPointsTo(base, baseH), FldPointsTo(baseH, fld, heap))
+
+    Reachable(toMeth) :-
+      (VCall(base, sig, invo, inMeth), Reachable(inMeth),
+        VarPointsTo(base, heap),
+        HeapType(heap, heapT), LookUp(heapT, sig, toMeth),
+        ThisVar(toMeth, thiss))
+
+    VarPointsTo(thiss, heap) :-
+      (VCall(base, sig, invo, inMeth), Reachable(inMeth),
+        VarPointsTo(base, heap),
+        HeapType(heap, heapT), LookUp(heapT, sig, toMeth),
+        ThisVar(toMeth, thiss))
+
+    CallGraph(invo, toMeth) :-
+      (VCall(base, sig, invo, inMeth), Reachable(inMeth),
+        VarPointsTo(base, heap),
+        HeapType(heap, heapT), LookUp(heapT, sig, toMeth),
+        ThisVar(toMeth, thiss))
+
+    // rules for dynamic val
+    Reachable(toMeth) :-
+      (Load(to, base, sig, inMeth), Reachable(inMeth),
+        VarPointsTo(base, heap),
+        HeapType(heap, heapT), LookUp(heapT, sig, toMeth),
+        ThisVar(toMeth, thiss),
+        FormalReturn(toMeth, from))
+
+    VarPointsTo(thiss, heap) :-
+      (Load(to, base, sig, inMeth), Reachable(inMeth),
+        VarPointsTo(base, heap),
+        HeapType(heap, heapT), LookUp(heapT, sig, toMeth),
+        ThisVar(toMeth, thiss),
+        FormalReturn(toMeth, from))
+
+    InterProcAssign(to, from) :-
+      (Load(to, base, sig, inMeth), Reachable(inMeth),
+        VarPointsTo(base, heap),
+        HeapType(heap, heapT), LookUp(heapT, sig, toMeth),
+        ThisVar(toMeth, thiss),
+        FormalReturn(toMeth, from))
+
+    InterProcAssign(to, from) :- (CallGraph(invo, meth), FormalArg(meth, m, n, to), ActualArg(invo, m, n, from))
+
+    InterProcAssign(to, from) :- (CallGraph(invo, meth), FormalReturn(meth, from), ActualReturn(invo, to))
+
+    VarPointsTo(to, heap) :- (InterProcAssign(to, from), VarPointsTo(from, heap))
+
+    Reachable(toMeth) :- (StaticCall(toMeth, invo, inMeth), Reachable(inMeth))
+
+    CallGraph(invo, toMeth) :- (StaticCall(toMeth, invo, inMeth), Reachable(inMeth))
+
+    // without negation support, we generate NotDefines facts
+    LookUp(classC, sig, meth) :- DefinesWith(classC, sig, meth)
+    LookUp(classC, sigA, sigB) :- (LookUp(classB, sigA, sigB), NotDefines(classC, sigB), Extends(classC, classB))
+    DefinesWith(classC, sigA, sigC) :- (DefinesWith(classC, sigB, sigC), DefinesWith(classB, sigA, sigB))
+    DefinesWith(classC, sigC, sigC) :- DefinesWith(classC, sigB, sigC)
+
+    // with negations we would have something like:
+    // LookUp(classC, sig, meth) :- DefinesWith(classC, sig, meth)
+    // LookUp(classC, sigA, sigB) :- (LookUp(classB, sigA, sigB), Not(Defines(classC, sigB)), Extends(classC, classB))
+    // DefinesWith(classC, sigA, sigC) :- (DefinesWith(classC, sigB, sigC), DefinesWith(classB, sigA, sigB))
+    // DefinesWith(classC, sigC, sigC) :- DefinesWith(classC, sigB, sigC)
+    // Defines(classC, sigA) :- DefinesWith(classC, sigA, sigC)
+
+    // super calls
+    Reachable(toMeth) :-
+      (SuperCall(toMeth, invo, inMeth), Reachable(inMeth),
+        ThisVar(inMeth, thisFrom), VarPointsTo(thisFrom, heap),
+        ThisVar(toMeth, thiss))
+
+    VarPointsTo(thiss, heap) :-
+      (SuperCall(toMeth, invo, inMeth), Reachable(inMeth),
+        ThisVar(inMeth, thisFrom), VarPointsTo(thisFrom, heap),
+        ThisVar(toMeth, thiss))
+
+    CallGraph(invo, toMeth) :-
+      (SuperCall(toMeth, invo, inMeth), Reachable(inMeth),
+        ThisVar(inMeth, thisFrom), VarPointsTo(thisFrom, heap),
+        ThisVar(toMeth, thiss))
+
+    VarPointsTo(to, heap) :-
+      (Load(to, base, fld, inMeth), VarPointsTo(base, baseH),
+        HeapType(baseH, heapT), LookUp(heapT, fld, actualFld),
+        FieldValDef(actualFld, from),
+        VarPointsTo(from, heap))
+  }
+
+  optimizedPointsTo()
   // Add inverse extension to points-to, for convenience store in a new relation
   val a0, a1, a2, a3 = program.variable()
   val input, output, F, instr, invF, invInstr, ctx, v0, v1, v2, heap2, heap1, arg = program.variable()
@@ -650,39 +744,63 @@ def tastyslistlibinverse(program: Program): String = {
   EquivToOutput.name
 }
 
+def run_pipeline_baseline() = {
+  val volcano = new VolcanoStorageManager()
+  val inputData = CollectionsEDB(mutable.ArrayBuffer[CollectionsRow](CollectionsRow(Seq(1,2,3))))
+  val operators = VolcanoOperators(volcano)
+  val pipeline =
+//    operators.Scan(inputData, 0)
+    operators.UDFProjectOperator("/Users/anna/dias/pipeline-runner-master/utils/graal/int-add-baseline",
+      operators.UDFScanOperator("/Users/anna/dias/pipeline-runner-master/utils/graal/int10-gen-baseline-be")
+    )
+  println(pipeline.toList())
+}
+//def run_pipeline_binary() = {
+//  val volcano = new VolcanoStorageManager()
+//  val inputData = CollectionsEDB(mutable.ArrayBuffer[CollectionsRow](CollectionsRow(Seq(1,2,3))))
+//  val operators = VolcanoOperators(volcano)
+//  val pipeline =
+//  //    operators.Scan(inputData, 0)
+//    operators.UDFProjectBinaryOperator("/Users/anna/dias/pipeline-runner-master/utils/graal/BE_int-add-binary",
+//      operators.UDFScanBinaryOperator("/Users/anna/dias/pipeline-runner-master/utils/graal/int10-gen-binary-be")
+//    )
+//  println(pipeline.toList())
+//}
+
 @main def main(benchmark: String, back: String) = {
-  val b = back match
-    case "quotes" => Backend.Quotes
-    case "bytecode" => Backend.Bytecode
-    case "lambda" => Backend.Lambda
-    case _ => throw new Exception(s"Unknown backend $back")
-  val dotty = staging.Compiler.make(getClass.getClassLoader)
-  val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = b)
-  val engine = new StagedExecutionEngine(new DefaultStorageManager(), jo)
-  val program = Program(engine)
-
-  val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/$benchmark/facts"
-  program.loadFromFactDir(factDirectory)
-
-  val toSolve = benchmark match
-    case "ackermann" => ackermann(program)
-    case "cbaexprvalue" => cba(program)
-    case "equal" => equal(program)
-    case "fib" => fib(program)
-    case "prime" => prime(program)
-    case "tastyslistlib" => tastyslistlib(program)
-    case "tastyslistlibinverse" => tastyslistlibinverse(program)
-    case _ => throw new Exception(s"Unknown benchmark $benchmark")
-
-  val result = program.namedRelation(toSolve).solve()
+//  val b = back match
+//    case "quotes" => Backend.Quotes
+//    case "bytecode" => Backend.Bytecode
+//    case "lambda" => Backend.Lambda
+//    case _ => throw new Exception(s"Unknown backend $back")
+//  val dotty = staging.Compiler.make(getClass.getClassLoader)
+//  val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = b)
+//  val engine = new StagedExecutionEngine(new DefaultStorageManager(), jo)
+//  val program = Program(engine)
+//
+//  val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/$benchmark/facts"
+//  program.loadFromFactDir(factDirectory)
+//
+//  val toSolve = benchmark match
+//    case "ackermann" => ackermann(program)
+//    case "cbaexprvalue" => cba(program)
+//    case "equal" => equal(program)
+//    case "fib" => fib(program)
+//    case "prime" => prime(program)
+//    case "tastyslistlib" => tastyslistlib(program)
+//    case "tastyslistlibinverse" => tastyslistlibinverse(program)
+//    case _ => throw new Exception(s"Unknown benchmark $benchmark")
+//
+//  val result = program.namedRelation(toSolve).solve()
 //  Using(Files.newBufferedWriter(Paths.get("carac-out", benchmark, engine.storageManager.ns(toSolve) + ".csv"))) { writer =>
 //    result.foreach(f => writer.write(f.mkString("", "\t", "\n")))
 //  }
 
 
-  engine.precedenceGraph.idbs.foreach(i =>
-    val idb = engine.storageManager.ns(i)
-    Using(Files.newBufferedWriter(Paths.get("carac-out", benchmark, idb + ".csv"))) { writer =>
-      engine.get(idb).foreach(f => writer.write(f.mkString("", "\t", "\n")))
-    })
+//  engine.precedenceGraph.idbs.foreach(i =>
+//    val idb = engine.storageManager.ns(i)
+//    Using(Files.newBufferedWriter(Paths.get("carac-out", benchmark, idb + ".csv"))) { writer =>
+//      engine.get(idb).foreach(f => writer.write(f.mkString("", "\t", "\n")))
+//    })
+  run_pipeline_baseline()
 }
