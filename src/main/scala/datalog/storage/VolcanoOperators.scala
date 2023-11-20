@@ -132,14 +132,14 @@ class VolcanoOperators[S <: StorageManager](val storageManager: S) {
       input.next() match {
         case Some(tuple) =>
           // Write to the subprocess and flush
-          println(s"received: ${tuple.wrapped.head}")
+//          println(s"received: ${tuple.wrapped.head}")
           processInput.write(tuple.wrapped.head.toString)
           processInput.newLine()
           processInput.flush()
 
           // Read the subprocess's response
           val response = processOutput.readLine()
-          println(s"response from project subprocess $response") // Print the response
+//          println(s"response from project subprocess $response") // Print the response
           Some(CollectionsRow(Seq(response))) // Emit the contents of that line
         case None =>
           NilTuple

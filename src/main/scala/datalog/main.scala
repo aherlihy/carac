@@ -8,6 +8,8 @@ import datalog.storage.{CollectionsEDB, CollectionsRow, DefaultStorageManager, V
 import scala.util.Using
 import java.nio.file.{FileSystems, Files, Path, Paths}
 import scala.collection.mutable
+import scala.collection.mutable.ArrayBuffer
+import scala.concurrent.Await
 import scala.quoted.staging
 
 def ackermann(program: Program): String = {
@@ -744,63 +746,50 @@ def tastyslistlibinverse(program: Program): String = {
   EquivToOutput.name
 }
 
-def run_pipeline_baseline() = {
+def run_pipeline_baseline(src: String, producer: String, consumer: String) = {
   val volcano = new VolcanoStorageManager()
   val inputData = CollectionsEDB(mutable.ArrayBuffer[CollectionsRow](CollectionsRow(Seq(1,2,3))))
   val operators = VolcanoOperators(volcano)
-  val pipeline =
-//    operators.Scan(inputData, 0)
-    operators.UDFProjectOperator("/Users/anna/dias/pipeline-runner-master/utils/graal/int-add-baseline",
-      operators.UDFScanOperator("/Users/anna/dias/pipeline-runner-master/utils/graal/int10-gen-baseline-be")
-    )
-  println(pipeline.toList())
-}
-//def run_pipeline_binary() = {
-//  val volcano = new VolcanoStorageManager()
-//  val inputData = CollectionsEDB(mutable.ArrayBuffer[CollectionsRow](CollectionsRow(Seq(1,2,3))))
-//  val operators = VolcanoOperators(volcano)
 //  val pipeline =
-//  //    operators.Scan(inputData, 0)
-//    operators.UDFProjectBinaryOperator("/Users/anna/dias/pipeline-runner-master/utils/graal/BE_int-add-binary",
-//      operators.UDFScanBinaryOperator("/Users/anna/dias/pipeline-runner-master/utils/graal/int10-gen-binary-be")
+//    operators.Scan(inputData, 0)
+//    operators.UDFProjectOperator(producer,
+//      operators.UDFScanOperator(src)
 //    )
-//  println(pipeline.toList())
-//}
+  val optPipeline =
+    operators.UDFProjectOperator(consumer,
+      operators.UDFProjectOperator(producer,
+        operators.UDFScanOperator(src)
+      )
+    )
 
-@main def main(benchmark: String, back: String) = {
-//  val b = back match
-//    case "quotes" => Backend.Quotes
-//    case "bytecode" => Backend.Bytecode
-//    case "lambda" => Backend.Lambda
-//    case _ => throw new Exception(s"Unknown backend $back")
-//  val dotty = staging.Compiler.make(getClass.getClassLoader)
-//  val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = b)
-//  val engine = new StagedExecutionEngine(new DefaultStorageManager(), jo)
-//  val program = Program(engine)
-//
-//  val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/$benchmark/facts"
-//  program.loadFromFactDir(factDirectory)
-//
-//  val toSolve = benchmark match
-//    case "ackermann" => ackermann(program)
-//    case "cbaexprvalue" => cba(program)
-//    case "equal" => equal(program)
-//    case "fib" => fib(program)
-//    case "prime" => prime(program)
-//    case "tastyslistlib" => tastyslistlib(program)
-//    case "tastyslistlibinverse" => tastyslistlibinverse(program)
-//    case _ => throw new Exception(s"Unknown benchmark $benchmark")
-//
-//  val result = program.namedRelation(toSolve).solve()
-//  Using(Files.newBufferedWriter(Paths.get("carac-out", benchmark, engine.storageManager.ns(toSolve) + ".csv"))) { writer =>
-//    result.foreach(f => writer.write(f.mkString("", "\t", "\n")))
-//  }
+  println(optPipeline.toList())
+}
 
+def run_pipeline_adds(project: String) = {
+  val volcano = new VolcanoStorageManager()
+  val inputData = CollectionsEDB(mutable.ArrayBuffer[CollectionsRow](
+    CollectionsRow(Seq(0)),
+    CollectionsRow(Seq(1)),
+    CollectionsRow(Seq(2)),
+    CollectionsRow(Seq(3)),
+    CollectionsRow(Seq(4))))
 
-//  engine.precedenceGraph.idbs.foreach(i =>
-//    val idb = engine.storageManager.ns(i)
-//    Using(Files.newBufferedWriter(Paths.get("carac-out", benchmark, idb + ".csv"))) { writer =>
-//      engine.get(idb).foreach(f => writer.write(f.mkString("", "\t", "\n")))
-//    })
-  run_pipeline_baseline()
+  val operators = VolcanoOperators(volcano)
+  val optPipeline =
+    operators.UDFProjectOperator(project,
+      operators.UDFProjectOperator(project,
+        operators.UDFProjectOperator(project,
+          operators.Scan(inputData, 0)
+        )
+      )
+    )
+  println(optPipeline.toList())
+}
+
+@main def main(/*src: String, producer: String, consumer: String*/) = {
+  val path = "/Users/anna/dias/pipeline-runner-master/utils/graal/"
+  val baseline = "add"
+  run_pipeline_adds(
+    s"$path/$baseline"
+  )
 }
