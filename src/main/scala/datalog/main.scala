@@ -768,12 +768,7 @@ def run_pipeline_baseline(src: String, producer: String, consumer: String) = {
 
 def run_pipeline_adds(projectPath: String) = {
   val volcano = new VolcanoStorageManager()
-  val inputData = CollectionsEDB(mutable.ArrayBuffer[CollectionsRow](
-    CollectionsRow(Seq(0)),
-    CollectionsRow(Seq(1)),
-    CollectionsRow(Seq(2)),
-    CollectionsRow(Seq(3)),
-    CollectionsRow(Seq(4))))
+  val inputData = CollectionsEDB(ArrayBuffer.range(0, 5).map(i => CollectionsRow(Seq(i))))
 
   val operators = VolcanoOperators(volcano)
   val src = operators.Scan(inputData, 0)
@@ -787,11 +782,27 @@ def run_pipeline_adds(projectPath: String) = {
   println(optPipeline.toList())
 }
 
+def run_pipeline_adds_baseline(projectPath: String) = {
+  val volcano = new VolcanoStorageManager()
+  val inputData = CollectionsEDB(ArrayBuffer.range(0, 5).map(i => CollectionsRow(Seq(i))))
+
+  val operators = VolcanoOperators(volcano)
+  val src = operators.Scan(inputData, 0)
+  val producer = operators.UDFProjectOperator(projectPath, src)
+  val intermediate = operators.UDFProjectOperator(projectPath, producer)
+  val consumer = operators.UDFProjectOperator(projectPath, intermediate)
+  val optPipeline =
+    consumer
+  //    operators.UDFProjectOperator(project,
+  //    )
+  println(optPipeline.toList())
+}
+
 @main def main(/*src: String, producer: String, consumer: String*/) = {
   // Expects programs to be in the format of baseline, baseline-producer, baseline-consumer, or baseline-producer-consumer
   val path = "/Users/anna/dias/pipeline-runner-master/utils/graal"
   val baseline = "add"
-  run_pipeline_adds(
+  run_pipeline_adds_baseline(
     s"$path/$baseline"
   )
 }

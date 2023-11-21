@@ -144,11 +144,11 @@ class VolcanoOperators[S <: StorageManager](val storageManager: S) {
       input.next() match {
         case Some(tuple) => {
           // Write to the subprocess and flush
-          val inputInt = tuple.wrapped.head.asInstanceOf[Int] // TODO: fix
-          println(s"received: ${inputInt}")
+//          println(s"received: ${tuple}")
           inputMD match
             case Metadata.CSV =>
 //              println("Consumer CSV")
+              val inputInt = tuple.wrapped.head.toString // conversion bc CollectionRow type, known string
               val processInputWriter = new BufferedWriter(new OutputStreamWriter(processInput))
               processInputWriter.write(inputInt.toString)
               processInputWriter.newLine()
@@ -156,6 +156,7 @@ class VolcanoOperators[S <: StorageManager](val storageManager: S) {
 
             case Metadata.Binary(length, byteOrder) =>
 //              println("Consumer Binary")
+              val inputInt = tuple.wrapped.head.asInstanceOf[Int] // conversion bc CollectionsRow type
               bb.clear()
               bb.putInt(inputInt)
               bb.flip()
