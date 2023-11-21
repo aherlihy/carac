@@ -27,10 +27,10 @@ class BenchPipeline {
 //  }
 
   val datasize = 1000000
+  val path = "/Users/anna/dias/pipeline-runner-master/utils/graal"
 
   @Benchmark def pipeline_optimized(blackhole: Blackhole): Unit = {
     val baseline = "add"
-    val path = "/Users/anna/dias/pipeline-runner-master/utils/graal"
     val projectPath = s"$path/$baseline"
     val volcano = new VolcanoStorageManager()
     val inputData = CollectionsEDB(ArrayBuffer.range(0, datasize).map(i => CollectionsRow(Seq(i))))
@@ -47,7 +47,6 @@ class BenchPipeline {
 
   @Benchmark def pipeline_baseline(blackhole: Blackhole): Unit = {
     val baseline = "add"
-    val path = "/Users/anna/dias/pipeline-runner-master/utils/graal"
     val projectPath = s"$path/$baseline"
     val volcano = new VolcanoStorageManager()
     val inputData = CollectionsEDB(ArrayBuffer.range(0, datasize).map(i => CollectionsRow(Seq(i))))
@@ -64,7 +63,6 @@ class BenchPipeline {
 
   @Benchmark def pipeline_optimized_operatorfused(blackhole: Blackhole): Unit = {
     val baseline = "add"
-    val path = "/Users/anna/dias/pipeline-runner-master/utils/graal"
     val projectPath = s"$path/$baseline"
     val volcano = new VolcanoStorageManager()
     val inputData = CollectionsEDB(ArrayBuffer.range(0, datasize).map(i => CollectionsRow(Seq(i))))
@@ -83,7 +81,6 @@ class BenchPipeline {
 
   @Benchmark def pipeline_optimized_processfused(blackhole: Blackhole): Unit = {
     val baseline = "add-fused"
-    val path = "/Users/anna/dias/pipeline-runner-master/utils/graal"
     val projectPath = s"$path/$baseline"
     val volcano = new VolcanoStorageManager()
     val inputData = CollectionsEDB(ArrayBuffer.range(0, datasize).map(i => CollectionsRow(Seq(i))))
@@ -102,7 +99,6 @@ class BenchPipeline {
 
   @Benchmark def pipeline_optimized_unixfused(blackhole: Blackhole): Unit = {
     val baseline = "add"
-    val path = "/Users/anna/dias/pipeline-runner-master/utils/graal"
     val projectPath = s"$path/$baseline"
     val volcano = new VolcanoStorageManager()
     val inputData = CollectionsEDB(ArrayBuffer.range(0, datasize).map(i => CollectionsRow(Seq(i))))
