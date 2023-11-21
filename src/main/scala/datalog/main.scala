@@ -5,6 +5,7 @@ import datalog.dsl.*
 import datalog.execution.{Backend, CompileSync, ExecutionEngine, Granularity, JITOptions, NaiveExecutionEngine, SemiNaiveExecutionEngine, SortOrder, StagedExecutionEngine, ir, Mode as CaracMode}
 import datalog.storage.{CollectionsEDB, CollectionsRow, DefaultStorageManager, VolcanoOperators, VolcanoStorageManager}
 
+import java.nio.ByteOrder
 import scala.util.Using
 import java.nio.file.{FileSystems, Files, Path, Paths}
 import scala.collection.mutable
@@ -765,7 +766,7 @@ def run_pipeline_baseline(src: String, producer: String, consumer: String) = {
   println(optPipeline.toList())
 }
 
-def run_pipeline_adds(project: String) = {
+def run_pipeline_adds(projectPath: String) = {
   val volcano = new VolcanoStorageManager()
   val inputData = CollectionsEDB(mutable.ArrayBuffer[CollectionsRow](
     CollectionsRow(Seq(0)),
@@ -775,19 +776,20 @@ def run_pipeline_adds(project: String) = {
     CollectionsRow(Seq(4))))
 
   val operators = VolcanoOperators(volcano)
+  val src = operators.Scan(inputData, 0)
+  val producer = operators.UDFProjectOperator(projectPath, src, outputMD = operators.Metadata.Binary(4, ByteOrder.BIG_ENDIAN))
+  val intermediate = operators.UDFProjectOperator(projectPath, producer,  outputMD = operators.Metadata.Binary(4, ByteOrder.BIG_ENDIAN), inputMD = operators.Metadata.Binary(4, ByteOrder.BIG_ENDIAN))
+  val consumer = operators.UDFProjectOperator(projectPath, intermediate, inputMD = operators.Metadata.Binary(4, ByteOrder.BIG_ENDIAN))
   val optPipeline =
-    operators.UDFProjectOperator(project,
-      operators.UDFProjectOperator(project,
-        operators.UDFProjectOperator(project,
-          operators.Scan(inputData, 0)
-        )
-      )
-    )
+    consumer
+//    operators.UDFProjectOperator(project,
+//    )
   println(optPipeline.toList())
 }
 
 @main def main(/*src: String, producer: String, consumer: String*/) = {
-  val path = "/Users/anna/dias/pipeline-runner-master/utils/graal/"
+  // Expects programs to be in the format of baseline, baseline-producer, baseline-consumer, or baseline-producer-consumer
+  val path = "/Users/anna/dias/pipeline-runner-master/utils/graal"
   val baseline = "add"
   run_pipeline_adds(
     s"$path/$baseline"

@@ -7,6 +7,7 @@ import datalog.execution.{AggOpIndex, GroupingJoinIndexes}
 import datalog.storage.StorageAggOp
 
 import java.io.{BufferedInputStream, BufferedOutputStream, BufferedReader, BufferedWriter, DataInputStream, DataOutputStream, EOFException, InputStreamReader, OutputStreamWriter}
+import java.nio.{ByteBuffer, ByteOrder}
 import scala.collection.mutable
 import scala.sys.process.*
 
@@ -102,11 +103,18 @@ class VolcanoOperators[S <: StorageManager](val storageManager: S) {
     def close(): Unit = {}
   }
 
-  case class UDFProjectOperator(path: String, input: VolOperator) extends VolOperator {
+  enum Metadata:
+    case CSV
+    case Binary(length: Int, byteOrder: ByteOrder)
+
+  case class UDFProjectOperator(path: String, input: VolOperator, inputMD: Metadata = Metadata.CSV, outputMD: Metadata = Metadata.CSV) extends VolOperator {
     var process: Process = _
-    var processOutput: BufferedReader = _
-    var processInput: BufferedWriter = _
+    var processOutput: BufferedInputStream = _
+    var processInput: BufferedOutputStream = _
+    var processOutputReader: BufferedReader = _
+    var processInputWriter: BufferedWriter = _
     var counter = 0
+    val bb = ByteBuffer.allocate(4).order(ByteOrder.BIG_ENDIAN) // TODO set to metadata
 
     def open(): Unit = {
       counter = 0
@@ -115,32 +123,63 @@ class VolcanoOperators[S <: StorageManager](val storageManager: S) {
       // Start the subprocess
       val io = new ProcessIO(
         stdin => {
-          processInput = new BufferedWriter(new OutputStreamWriter(stdin))
+          processInput = new BufferedOutputStream(stdin)
         },
         stdout => {
-          processOutput = new BufferedReader(new InputStreamReader(stdout))
+          processOutput = new BufferedInputStream(stdout)
         },
         stderr => {
           scala.io.Source.fromInputStream(stderr).getLines().foreach(l => System.out.println(s"Error from subprocess: $l"))
         }
       )
 
-      process = path.run(io)
+      val p = s"$path${if (outputMD == Metadata.CSV) "" else "-producer"}${if (inputMD == Metadata.CSV) "" else "-consumer"}"
+      process = p.run(io)
+
+//      processInputWriter = new BufferedWriter(new OutputStreamWriter(processInput))
+//      processOutputReader = new BufferedReader(new InputStreamReader(processOutput))
     }
 
     override def next(): Option[CollectionsRow] = {
       input.next() match {
-        case Some(tuple) =>
+        case Some(tuple) => {
           // Write to the subprocess and flush
-//          println(s"received: ${tuple.wrapped.head}")
-          processInput.write(tuple.wrapped.head.toString)
-          processInput.newLine()
-          processInput.flush()
+          val inputInt = tuple.wrapped.head.asInstanceOf[Int] // TODO: fix
+          println(s"received: ${inputInt}")
+          inputMD match
+            case Metadata.CSV =>
+//              println("Consumer CSV")
+              val processInputWriter = new BufferedWriter(new OutputStreamWriter(processInput))
+              processInputWriter.write(inputInt.toString)
+              processInputWriter.newLine()
+              processInputWriter.flush()
 
-          // Read the subprocess's response
-          val response = processOutput.readLine()
-//          println(s"response from project subprocess $response") // Print the response
+            case Metadata.Binary(length, byteOrder) =>
+//              println("Consumer Binary")
+              bb.clear()
+              bb.putInt(inputInt)
+              bb.flip()
+              processInput.write(bb.array())
+              processInput.flush()
+
+          val response =
+            outputMD match
+              case Metadata.CSV =>
+//                println("Producer CSV")
+                val processOutputReader = new BufferedReader(new InputStreamReader(processOutput))
+                processOutputReader.readLine()
+
+              case Metadata.Binary(length, byteOrder) =>
+//                println("Producer Binary")
+                bb.clear()
+                processOutput.read(bb.array())
+                val read = bb.getInt
+//                println(s"Read in $read")
+                read // TODO: fix
+
+//          println(s"received response $response")
           Some(CollectionsRow(Seq(response))) // Emit the contents of that line
+        }
         case None =>
           NilTuple
       }
