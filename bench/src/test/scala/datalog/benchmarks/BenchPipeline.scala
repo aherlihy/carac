@@ -19,7 +19,8 @@ import org.openjdk.jmh.infra.Blackhole
 @Measurement(iterations = 10, time = 10, timeUnit = TimeUnit.SECONDS, batchSize= 1)
 @State(Scope.Thread)
 //@TearDown(Level.Invocation)
-@BenchmarkMode(Array(Mode.SingleShotTime))
+//@BenchmarkMode(Array(Mode.SingleShotTime))
+@BenchmarkMode(Array(Mode.AverageTime))
 class BenchPipeline {
 //  @Setup(Level.Iteration)
 //  def s(): Unit = {
@@ -72,6 +73,25 @@ class BenchPipeline {
     val src = operators.Scan(inputData, 0)
 
     val fused = operators.Fused3xUDFProjectOperator(
+      projectPath,
+      src,
+    )
+    blackhole.consume(
+      fused.toList()
+    )
+  }
+
+  @Benchmark def pipeline_optimized_processfused(blackhole: Blackhole): Unit = {
+    val baseline = "add-fused"
+    val path = "/Users/anna/dias/pipeline-runner-master/utils/graal"
+    val projectPath = s"$path/$baseline"
+    val volcano = new VolcanoStorageManager()
+    val inputData = CollectionsEDB(ArrayBuffer.range(0, datasize).map(i => CollectionsRow(Seq(i))))
+
+    val operators = VolcanoOperators(volcano)
+    val src = operators.Scan(inputData, 0)
+
+    val fused = operators.UDFProjectOperator(
       projectPath,
       src,
     )

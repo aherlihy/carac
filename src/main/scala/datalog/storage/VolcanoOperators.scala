@@ -180,9 +180,14 @@ class VolcanoOperators[S <: StorageManager](val storageManager: S) {
           val intermediateInput = intermediateProcess.getOutputStream
           try {
             var byte = producerOutput.read()
+            var byteCount = 0
             while (byte != -1) {
               intermediateInput.write(byte)
-              intermediateInput.flush()
+              byteCount += 1
+              if (byteCount >= 4) {
+                intermediateInput.flush()
+                byteCount = 0
+              }
               byte = producerOutput.read()
             }
           } finally {
@@ -199,9 +204,14 @@ class VolcanoOperators[S <: StorageManager](val storageManager: S) {
           val consumerInput = consumerProcess.getOutputStream
           try {
             var byte = intermediateOutput.read()
+            var byteCount = 0
             while (byte != -1) {
               consumerInput.write(byte)
-              consumerInput.flush()
+              byteCount += 1
+              if (byteCount >= 4) {
+                consumerInput.flush()
+                byteCount = 0
+              }
               byte = intermediateOutput.read()
             }
           } finally {
@@ -319,7 +329,7 @@ class VolcanoOperators[S <: StorageManager](val storageManager: S) {
     }
 
     def close(): Unit = {
-      println("closed called")
+//      println("closed called")
       input.close()
       processInput.close()
       processOutput.close()
