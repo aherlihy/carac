@@ -149,7 +149,28 @@ class VolcanoOperators[S <: StorageManager](val storageManager: S) {
     }
   }
   class FusedUnixUDFProjectOperator(path: String, input: VolOperator, inputMD: Metadata = Metadata.CSV, outputMD: Metadata = Metadata.CSV) extends UDFProjectOperator(path, input, inputMD, outputMD) {
+    override def open(): Unit = {
+      val producerPath = s"$path-producer" // only fuse for optimized
+      val consumerPath = s"$path-consumer"
+      val cmd = Seq("bash", "-c", s"$producerPath | $consumerPath")
 
+      input.open()
+
+      // Start the subprocess
+      val io = new ProcessIO(
+        stdin => {
+          processInput = new BufferedOutputStream(stdin)
+        },
+        stdout => {
+          processOutput = new BufferedInputStream(stdout)
+        },
+        stderr => {
+          scala.io.Source.fromInputStream(stderr).getLines().foreach(l => System.out.println(s"Error from subprocess: $l"))
+        }
+      )
+
+      val process = cmd.run(io) // need process?
+    }
   }
   case class UDFProjectOperator(path: String, input: VolOperator, inputMD: Metadata = Metadata.CSV, outputMD: Metadata = Metadata.CSV) extends VolOperator {
     var processOutput: BufferedInputStream = _

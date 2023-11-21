@@ -805,7 +805,7 @@ def run_fused_pipeline_adds(projectPath: String) = {
   val operators = VolcanoOperators(volcano)
   val src = operators.Scan(inputData, 0)
 
-  val fused = operators.FusedUDFProjectOperator(
+  val fused = operators.FusedUnixUDFProjectOperator(
     projectPath,
     src,
   )
