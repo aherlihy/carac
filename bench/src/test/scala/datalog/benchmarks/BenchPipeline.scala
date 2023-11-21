@@ -25,7 +25,7 @@ class BenchPipeline {
 //  def s(): Unit = {
 //  }
 
-  val datasize = 100000000
+  val datasize = 1000000//00
 
   @Benchmark def pipeline_producer_consumer(blackhole: Blackhole): Unit = {
     val baseline = "add"

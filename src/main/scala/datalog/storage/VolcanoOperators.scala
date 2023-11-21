@@ -7,6 +7,7 @@ import datalog.execution.{AggOpIndex, GroupingJoinIndexes}
 import datalog.storage.StorageAggOp
 
 import java.io.{BufferedInputStream, BufferedOutputStream, BufferedReader, BufferedWriter, DataInputStream, DataOutputStream, EOFException, InputStreamReader, OutputStreamWriter}
+import java.lang.ProcessBuilder
 import java.nio.{ByteBuffer, ByteOrder}
 import scala.collection.mutable
 import scala.sys.process.*
@@ -107,17 +108,55 @@ class VolcanoOperators[S <: StorageManager](val storageManager: S) {
     case CSV
     case Binary(length: Int, byteOrder: ByteOrder)
 
+  val Optimized = Metadata.Binary(4, ByteOrder.BIG_ENDIAN) // TODO: remove, just for readability of benchmarks
+
+  class FusedUDFProjectOperator(path: String, input: VolOperator, inputMD: Metadata = Metadata.CSV, outputMD: Metadata = Metadata.CSV) extends UDFProjectOperator(path, input, inputMD, outputMD) {
+    override def open(): Unit = {
+      input.open()
+      val producerPath = s"$path-producer" // only fuse for optimized
+      val consumerPath = s"$path-consumer"
+
+      val producerProcessBuilder = new ProcessBuilder(producerPath)
+      val consumerProcessBuilder = new ProcessBuilder(consumerPath)
+
+      // Start the producer and consumer processes
+      val producerProcess = producerProcessBuilder.start()
+      val consumerProcess = consumerProcessBuilder.start()
+
+      // Get the raw streams
+      val producerOutput = producerProcess.getInputStream
+      val consumerInput = consumerProcess.getOutputStream
+
+      // Set up the pipe thread, for now flush every 4 bytes
+      val pipeThread = new Thread(new Runnable {
+        def run(): Unit = {
+          try {
+            var byte = producerOutput.read()
+            while (byte != -1) {
+              consumerInput.write(byte)
+              consumerInput.flush()
+              byte = producerOutput.read()
+            }
+          } finally {
+            consumerInput.close()
+          }
+        }
+      })
+      pipeThread.start()
+
+      processInput = new BufferedOutputStream(producerProcess.getOutputStream)
+      processOutput = new BufferedInputStream(consumerProcess.getInputStream)
+    }
+  }
+  class FusedUnixUDFProjectOperator(path: String, input: VolOperator, inputMD: Metadata = Metadata.CSV, outputMD: Metadata = Metadata.CSV) extends UDFProjectOperator(path, input, inputMD, outputMD) {
+
+  }
   case class UDFProjectOperator(path: String, input: VolOperator, inputMD: Metadata = Metadata.CSV, outputMD: Metadata = Metadata.CSV) extends VolOperator {
-    var process: Process = _
     var processOutput: BufferedInputStream = _
     var processInput: BufferedOutputStream = _
-    var processOutputReader: BufferedReader = _
-    var processInputWriter: BufferedWriter = _
-    var counter = 0
     val bb = ByteBuffer.allocate(4).order(ByteOrder.BIG_ENDIAN) // TODO set to metadata
 
     def open(): Unit = {
-      counter = 0
       input.open()
 
       // Start the subprocess
@@ -134,7 +173,7 @@ class VolcanoOperators[S <: StorageManager](val storageManager: S) {
       )
 
       val p = s"$path${if (outputMD == Metadata.CSV) "" else "-producer"}${if (inputMD == Metadata.CSV) "" else "-consumer"}"
-      process = p.run(io)
+      val process = p.run(io) // need process?
 
 //      processInputWriter = new BufferedWriter(new OutputStreamWriter(processInput))
 //      processOutputReader = new BufferedReader(new InputStreamReader(processOutput))
@@ -149,7 +188,7 @@ class VolcanoOperators[S <: StorageManager](val storageManager: S) {
             case Metadata.CSV =>
 //              println("Consumer CSV")
               val inputInt = tuple.wrapped.head.toString // conversion bc CollectionRow type, known string
-              val processInputWriter = new BufferedWriter(new OutputStreamWriter(processInput))
+              val processInputWriter = new BufferedWriter(new OutputStreamWriter(processInput)) // TODO: need to close?
               processInputWriter.write(inputInt.toString)
               processInputWriter.newLine()
               processInputWriter.flush()
@@ -176,7 +215,7 @@ class VolcanoOperators[S <: StorageManager](val storageManager: S) {
                 processOutput.read(bb.array())
                 val read = bb.getInt
 //                println(s"Read in $read")
-                read // TODO: fix
+                read
 
 //          println(s"received response $response")
           Some(CollectionsRow(Seq(response))) // Emit the contents of that line
