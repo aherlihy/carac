@@ -148,11 +148,81 @@ class VolcanoOperators[S <: StorageManager](val storageManager: S) {
       processOutput = new BufferedInputStream(consumerProcess.getInputStream)
     }
   }
+
+  class Fused3xUDFProjectOperator(path: String, input: VolOperator, inputMD: Metadata = Metadata.CSV, outputMD: Metadata = Metadata.CSV) extends UDFProjectOperator(path, input, inputMD, outputMD) {
+    var producerProcess: Process = _
+    var intermediateProcess: Process = _
+    var consumerProcess: Process = _
+
+    override def open(): Unit = {
+      input.open()
+      val producerPath = s"$path-producer" // only fuse for optimized
+      val consumerPath = s"$path-consumer"
+      val intermediatePath = s"$path-producer-consumer"
+
+      val producerProcessBuilder = new ProcessBuilder(producerPath)
+      val intermediateProcessBuilder = new ProcessBuilder(intermediatePath) // Intermediate process builder
+      val consumerProcessBuilder = new ProcessBuilder(consumerPath)
+
+      // Start the producer and consumer processes
+      val producerProcess = producerProcessBuilder.start()
+      val intermediateProcess = intermediateProcessBuilder.start() // Start intermediate process
+      val consumerProcess = consumerProcessBuilder.start()
+
+      // Get the raw streams
+      val producerOutput = producerProcess.getInputStream
+      val consumerInput = consumerProcess.getOutputStream
+
+      // Set up the pipe from producer's stdout to intermediate's stdin
+      val pipeProducerToIntermediate = new Thread(new Runnable {
+        def run(): Unit = {
+          val producerOutput = producerProcess.getInputStream
+          val intermediateInput = intermediateProcess.getOutputStream
+          try {
+            var byte = producerOutput.read()
+            while (byte != -1) {
+              intermediateInput.write(byte)
+              intermediateInput.flush()
+              byte = producerOutput.read()
+            }
+          } finally {
+            intermediateInput.close()
+          }
+        }
+      })
+      pipeProducerToIntermediate.start()
+
+      // Set up the pipe from intermediate's stdout to consumer's stdin
+      val pipeIntermediateToConsumer = new Thread(new Runnable {
+        def run(): Unit = {
+          val intermediateOutput = intermediateProcess.getInputStream
+          val consumerInput = consumerProcess.getOutputStream
+          try {
+            var byte = intermediateOutput.read()
+            while (byte != -1) {
+              consumerInput.write(byte)
+              consumerInput.flush()
+              byte = intermediateOutput.read()
+            }
+          } finally {
+            consumerInput.close()
+          }
+        }
+      })
+      pipeIntermediateToConsumer.start()
+
+      processInput = new BufferedOutputStream(producerProcess.getOutputStream)
+      processOutput = new BufferedInputStream(consumerProcess.getInputStream)
+    }
+    // TODO: clean up pipe threads on close
+  }
+
   class FusedUnixUDFProjectOperator(path: String, input: VolOperator, inputMD: Metadata = Metadata.CSV, outputMD: Metadata = Metadata.CSV) extends UDFProjectOperator(path, input, inputMD, outputMD) {
     override def open(): Unit = {
       val producerPath = s"$path-producer" // only fuse for optimized
       val consumerPath = s"$path-consumer"
-      val cmd = Seq("bash", "-c", s"$producerPath | $consumerPath")
+      val intermediatePath = s"$path-producer-consumer"
+      val cmd = Seq("bash", "-c", s"$producerPath | $intermediatePath | $consumerPath")
 
       input.open()
 
@@ -178,6 +248,7 @@ class VolcanoOperators[S <: StorageManager](val storageManager: S) {
     val bb = ByteBuffer.allocate(4).order(ByteOrder.BIG_ENDIAN) // TODO set to metadata
 
     def open(): Unit = {
+//      println("Open called")
       input.open()
 
       // Start the subprocess
@@ -201,6 +272,7 @@ class VolcanoOperators[S <: StorageManager](val storageManager: S) {
     }
 
     override def next(): Option[CollectionsRow] = {
+//      println("Next called")
       input.next() match {
         case Some(tuple) => {
           // Write to the subprocess and flush
@@ -247,11 +319,12 @@ class VolcanoOperators[S <: StorageManager](val storageManager: S) {
     }
 
     def close(): Unit = {
+      println("closed called")
       input.close()
-      // Close the subprocess streams
       processInput.close()
       processOutput.close()
-//      if (process.isAlive()) process.destroy() // TODO: needed?
+      processInput = null
+      processOutput = null
     }
   }
 

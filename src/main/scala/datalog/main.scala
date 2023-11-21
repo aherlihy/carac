@@ -798,7 +798,21 @@ def run_pipeline_adds_baseline(projectPath: String) = {
   println(optPipeline.toList())
 }
 
-def run_fused_pipeline_adds(projectPath: String) = {
+def run_fused3x_pipeline_adds(projectPath: String) = {
+  val volcano = new VolcanoStorageManager()
+  val inputData = CollectionsEDB(ArrayBuffer.range(0, 5).map(i => CollectionsRow(Seq(i))))
+
+  val operators = VolcanoOperators(volcano)
+  val src = operators.Scan(inputData, 0)
+
+  val fused = operators.Fused3xUDFProjectOperator(
+    projectPath,
+    src,
+  )
+  val optPipeline = fused
+    println(optPipeline.toList())
+}
+def run_unix_fused_pipeline_adds(projectPath: String) = {
   val volcano = new VolcanoStorageManager()
   val inputData = CollectionsEDB(ArrayBuffer.range(0, 5).map(i => CollectionsRow(Seq(i))))
 
@@ -810,14 +824,16 @@ def run_fused_pipeline_adds(projectPath: String) = {
     src,
   )
   val optPipeline = fused
-    println(optPipeline.toList())
+  println(optPipeline.toList())
 }
 
 @main def main(/*src: String, producer: String, consumer: String*/) = {
   // Expects programs to be in the format of baseline, baseline-producer, baseline-consumer, or baseline-producer-consumer
   val path = "/Users/anna/dias/pipeline-runner-master/utils/graal"
   val baseline = "add"
-  run_fused_pipeline_adds(
-    s"$path/$baseline"
+  Seq.range(0,10).foreach( i =>
+    run_unix_fused_pipeline_adds(
+      s"$path/$baseline"
+    )
   )
 }

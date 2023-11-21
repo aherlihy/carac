@@ -19,15 +19,15 @@ import org.openjdk.jmh.infra.Blackhole
 @Measurement(iterations = 10, time = 10, timeUnit = TimeUnit.SECONDS, batchSize= 1)
 @State(Scope.Thread)
 //@TearDown(Level.Invocation)
-@BenchmarkMode(Array(Mode.AverageTime))
+@BenchmarkMode(Array(Mode.SingleShotTime))
 class BenchPipeline {
 //  @Setup(Level.Iteration)
 //  def s(): Unit = {
 //  }
 
-  val datasize = 1000000//00
+  val datasize = 1000000
 
-  @Benchmark def pipeline_producer_consumer(blackhole: Blackhole): Unit = {
+  @Benchmark def pipeline_optimized(blackhole: Blackhole): Unit = {
     val baseline = "add"
     val path = "/Users/anna/dias/pipeline-runner-master/utils/graal"
     val projectPath = s"$path/$baseline"
@@ -61,4 +61,43 @@ class BenchPipeline {
     )
   }
 
+  @Benchmark def pipeline_optimized_operatorfused(blackhole: Blackhole): Unit = {
+    val baseline = "add"
+    val path = "/Users/anna/dias/pipeline-runner-master/utils/graal"
+    val projectPath = s"$path/$baseline"
+    val volcano = new VolcanoStorageManager()
+    val inputData = CollectionsEDB(ArrayBuffer.range(0, datasize).map(i => CollectionsRow(Seq(i))))
+
+    val operators = VolcanoOperators(volcano)
+    val src = operators.Scan(inputData, 0)
+
+    val fused = operators.Fused3xUDFProjectOperator(
+      projectPath,
+      src,
+    )
+    blackhole.consume(
+      fused.toList()
+    )
+  }
+
+  @Benchmark def pipeline_optimized_unixfused(blackhole: Blackhole): Unit = {
+    val baseline = "add"
+    val path = "/Users/anna/dias/pipeline-runner-master/utils/graal"
+    val projectPath = s"$path/$baseline"
+    val volcano = new VolcanoStorageManager()
+    val inputData = CollectionsEDB(ArrayBuffer.range(0, datasize).map(i => CollectionsRow(Seq(i))))
+
+    val operators = VolcanoOperators(volcano)
+    val src = operators.Scan(inputData, 0)
+
+    val fused = operators.FusedUnixUDFProjectOperator(
+      projectPath,
+      src,
+    )
+//    Thread.sleep(5000)
+
+    blackhole.consume(
+      fused.toList()
+    )
+  }
 }
