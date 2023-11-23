@@ -19,8 +19,8 @@ import org.openjdk.jmh.infra.Blackhole
 @Measurement(iterations = 10, time = 10, timeUnit = TimeUnit.SECONDS, batchSize= 1)
 @State(Scope.Thread)
 //@TearDown(Level.Invocation)
-//@BenchmarkMode(Array(Mode.SingleShotTime))
-@BenchmarkMode(Array(Mode.AverageTime))
+@BenchmarkMode(Array(Mode.SingleShotTime))
+//@BenchmarkMode(Array(Mode.AverageTime))
 class BenchPipeline {
 //  @Setup(Level.Iteration)
 //  def s(): Unit = {
