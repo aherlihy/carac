@@ -1,7 +1,7 @@
 package datalog
 
 import buildinfo.BuildInfo
-import datalog.execution.{Backend, ExecutionEngine, JITOptions, MacroCompiler, SolvableProgram}
+import datalog.execution.{Backend, ExecutionEngine, JITOptions, MacroCompiler, SolvableProgram, SortOrder}
 import datalog.dsl.*
 import datalog.execution.ir.*
 import datalog.storage.{DefaultStorageManager, StorageManager}
@@ -49,7 +49,7 @@ class AckermannOptimizedProgram(engine: ExecutionEngine) extends SolvableProgram
   initializeEmptyFactsFromDir(factDir)
   pretest(this)
 }
-object AckermannOptimizedMacroCompiler extends MacroCompiler(AckermannOptimizedProgram(_), JITOptions(backend = Backend.MacroQuotes)) {
+object AckermannOptimizedMacroCompiler extends MacroCompiler(AckermannOptimizedProgram(_), JITOptions(backend = Backend.MacroQuotes, sortOrder = SortOrder.Sel)) {
   inline def compile(): StorageManager => Any = ${this.compileImpl()}
   val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/ackermann/facts"
 }
@@ -69,7 +69,7 @@ class AckermannWorstProgramWithFacts(engine: ExecutionEngine) extends SolvablePr
   loadFromFactDir(factDir)
   pretest(this)
 }
-object AckermannWorstMacroCompilerWithFacts extends MacroCompiler(AckermannWorstProgramWithFacts(_), JITOptions(backend = Backend.MacroQuotes)) {
+object AckermannWorstMacroCompilerWithFacts extends MacroCompiler(AckermannWorstProgramWithFacts(_), JITOptions(backend = Backend.MacroQuotes, sortOrder = SortOrder.Sel)) {
   inline def compile(): StorageManager => Any = ${compileImpl()}
   val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/ackermann/facts"
 }

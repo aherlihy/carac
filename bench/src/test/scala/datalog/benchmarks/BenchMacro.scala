@@ -29,11 +29,12 @@ class BenchMacro {
    * Both facts + rules available at compile-time, no online optimization
    */
   @Benchmark
-  def ackermann_macro_aot_offline = {
+  def ackermann_macro_aot_offline(blackhole: Blackhole) = {
     val facts = Paths.get(AckermannMacroCompilerWithFacts.factDir)
     val res = AckermannMacroCompilerWithFacts.runCompiled(ackermannWithFactsCompiled)( // facts already loaded at compile-time
       program => ()//// println(s"size succ = ${program.namedRelation("succ").get().size}")
     )
+    blackhole.consume(res)
     // println(s"macro AOT offline results =${res.size}")
   }
 
@@ -41,13 +42,14 @@ class BenchMacro {
    * Only rules available at compile-time, no online optimization
    */
   @Benchmark
-  def ackermann_macro_runtimefacts_offline = {
+  def ackermann_macro_runtimefacts_offline(blackhole: Blackhole) = {
     val facts = Paths.get(AckermannMacroCompiler.factDir)
     val res = AckermannMacroCompiler.runCompiled(ackermannCompiled)(
       program =>
 //        // println(s"size succ = ${program.namedRelation("succ").get().size}")
         program.loadFromFactDir(facts.toString)
     )
+    blackhole.consume(res)
     // println(s"macro runtimefacts offline, results =${res.size}")
   }
 
@@ -55,11 +57,12 @@ class BenchMacro {
    * Both facts + rules available at compile-time, online optimization
    */
   @Benchmark
-  def ackermann_macro_aot_online = {
+  def ackermann_macro_aot_online(blackhole: Blackhole) = {
     val facts = Paths.get(AckermannMacroCompilerWithFacts.factDir)
     val res = AckermannMacroCompilerWithFacts.runCompiled(ackermannWithFactsCompiled)(
       program => {} // facts already loaded at compile-time
     )
+    blackhole.consume(res)
     // println(s"macro AOT online, results =${res.size}")
   }
 
@@ -67,11 +70,12 @@ class BenchMacro {
    * Only rules available at compile-time, online optimization
    */
   @Benchmark
-  def ackermann_macro_runtimefacts_online = {
+  def ackermann_macro_runtimefacts_online(blackhole: Blackhole) = {
     val facts = Paths.get(AckermannMacroCompiler.factDir)
     val res = AckermannMacroCompiler.runCompiled(ackermannCompiled)(
       program => program.loadFromFactDir(facts.toString)
     )
+    blackhole.consume(res)
     // println(s"macro runtimefacts online, results =${res.size}")
   }
 
@@ -79,7 +83,7 @@ class BenchMacro {
    * Nothing available at compile-time, runtime optimization, lambda
    */
   @Benchmark
-  def ackermann_jit_lambda_online = {
+  def ackermann_jit_lambda_online(blackhole: Blackhole) = {
     val facts = Paths.get(AckermannMacroCompiler.factDir)
     val engine = StagedExecutionEngine(DefaultStorageManager(), JITOptions(
       backend = Backend.Lambda,
@@ -88,6 +92,7 @@ class BenchMacro {
     val program = AckermannMacroCompiler.makeProgram(engine)
     program.loadFromFactDir(facts.toString)
     val res = program.namedRelation(program.toSolve).solve()
+    blackhole.consume(res)
     // println(s"lambda results =${res.size}")
   }
 
@@ -95,7 +100,7 @@ class BenchMacro {
    * Baseline, interp no optimization
    */
   @Benchmark
-  def ackermann_interpreter_worst_baseline_offline = {
+  def ackermann_interpreter_worst_baseline_offline(blackhole: Blackhole) = {
     val facts = Paths.get(AckermannMacroCompiler.factDir)
     val engine = StagedExecutionEngine(DefaultStorageManager(), JITOptions(
       mode = Mode.Interpreted, granularity = Granularity.NEVER, sortOrder = SortOrder.Unordered
@@ -103,11 +108,12 @@ class BenchMacro {
     val program = AckermannMacroCompiler.makeProgram(engine)
     program.loadFromFactDir(facts.toString)
     val res = program.namedRelation(program.toSolve).solve()
+    blackhole.consume(res)
     // println(s"baseline results =${res.size}")
   }
 
   @Benchmark
-  def ackermann_interpreter_best_baseline_offline = {
+  def ackermann_interpreter_best_baseline_offline(blackhole: Blackhole) = {
     val facts = Paths.get(AckermannOptimizedMacroCompiler.factDir)
     val engine = StagedExecutionEngine(DefaultStorageManager(), JITOptions(
       mode = Mode.Interpreted, granularity = Granularity.NEVER, sortOrder = SortOrder.Unordered
@@ -115,6 +121,7 @@ class BenchMacro {
     val program = AckermannOptimizedMacroCompiler.makeProgram(engine)
     program.loadFromFactDir(facts.toString)
     val res = program.namedRelation(program.toSolve).solve()
+    blackhole.consume(res)
     // println(s"baseline hand-optimized results =${res.size}")
   }
 }
