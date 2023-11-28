@@ -41,7 +41,7 @@ class Program(engine: ExecutionEngine) extends AbstractProgram {
         .forEach(f => {
           val edbName = f.getFileName.toString.replaceFirst("[.][^.]+$", "")
           val fact = relation[Constant](edbName)
-          println(fact)
+//          println(fact)
         })
     } else throw new Exception(s"Directory $factdir does not contain any facts")
   }
