@@ -3,7 +3,7 @@ package datalog.benchmarks
 import java.util.concurrent.TimeUnit
 import org.openjdk.jmh.annotations.{Mode as JmhMode, *}
 import org.openjdk.jmh.infra.Blackhole
-import datalog.{AckermannWorstMacroCompiler as AckermannMacroCompiler, AckermannWorstMacroCompilerNoFacts as AckermannMacroCompilerNoFacts, AckermannOptimizedMacroCompiler}
+import datalog.{AckermannWorstMacroCompiler as AckermannMacroCompiler, AckermannWorstMacroCompilerWithFacts as AckermannMacroCompilerWithFacts, AckermannOptimizedMacroCompiler}
 
 import scala.compiletime.uninitialized
 import datalog.execution.ir.InterpreterContext
@@ -14,7 +14,7 @@ import java.nio.file.Paths
 
 object BenchMacro {
   val ackermannCompiled = AckermannMacroCompiler.compile()
-  val ackermannNoFactsCompiled = AckermannMacroCompilerNoFacts.compile()
+  val ackermannWithFactsCompiled = AckermannMacroCompilerWithFacts.compile()
   val ackermannOptimizedCompiled = AckermannOptimizedMacroCompiler.compile()
 }
 import BenchMacro.*
@@ -30,11 +30,11 @@ class BenchMacro {
    */
   @Benchmark
   def ackermann_macro_aot_offline = {
-    val facts = Paths.get(AckermannMacroCompiler.factDir)
-    val res = AckermannMacroCompiler.runCompiled(ackermannCompiled)(
-      program => {} // facts already loaded at compile-time
+    val facts = Paths.get(AckermannMacroCompilerWithFacts.factDir)
+    val res = AckermannMacroCompilerWithFacts.runCompiled(ackermannWithFactsCompiled)( // facts already loaded at compile-time
+      program => ()//// println(s"size succ = ${program.namedRelation("succ").get().size}")
     )
-    println(s"macro AOT offline results =${res.size}")
+    // println(s"macro AOT offline results =${res.size}")
   }
 
   /**
@@ -42,11 +42,13 @@ class BenchMacro {
    */
   @Benchmark
   def ackermann_macro_runtimefacts_offline = {
-    val facts = Paths.get(AckermannMacroCompilerNoFacts.factDir)
-    val res = AckermannMacroCompilerNoFacts.runCompiled(ackermannNoFactsCompiled)(
-      program => program.loadFromFactDir(facts.toString)
+    val facts = Paths.get(AckermannMacroCompiler.factDir)
+    val res = AckermannMacroCompiler.runCompiled(ackermannCompiled)(
+      program =>
+//        // println(s"size succ = ${program.namedRelation("succ").get().size}")
+        program.loadFromFactDir(facts.toString)
     )
-    println(s"macro runtimefacts offline, results =${res.size}")
+    // println(s"macro runtimefacts offline, results =${res.size}")
   }
 
   /**
@@ -54,11 +56,11 @@ class BenchMacro {
    */
   @Benchmark
   def ackermann_macro_aot_online = {
-    val facts = Paths.get(AckermannMacroCompiler.factDir)
-    val res = AckermannMacroCompiler.runCompiled(ackermannCompiled)(
+    val facts = Paths.get(AckermannMacroCompilerWithFacts.factDir)
+    val res = AckermannMacroCompilerWithFacts.runCompiled(ackermannWithFactsCompiled)(
       program => {} // facts already loaded at compile-time
     )
-    println(s"macro AOT online, results =${res.size}")
+    // println(s"macro AOT online, results =${res.size}")
   }
 
   /**
@@ -66,11 +68,11 @@ class BenchMacro {
    */
   @Benchmark
   def ackermann_macro_runtimefacts_online = {
-    val facts = Paths.get(AckermannMacroCompilerNoFacts.factDir)
-    val res = AckermannMacroCompilerNoFacts.runCompiled(ackermannNoFactsCompiled)(
+    val facts = Paths.get(AckermannMacroCompiler.factDir)
+    val res = AckermannMacroCompiler.runCompiled(ackermannCompiled)(
       program => program.loadFromFactDir(facts.toString)
     )
-    println(s"macro runtimefacts online, results =${res.size}")
+    // println(s"macro runtimefacts online, results =${res.size}")
   }
 
   /**
@@ -86,7 +88,7 @@ class BenchMacro {
     val program = AckermannMacroCompiler.makeProgram(engine)
     program.loadFromFactDir(facts.toString)
     val res = program.namedRelation(program.toSolve).solve()
-    println(s"lambda results =${res.size}")
+    // println(s"lambda results =${res.size}")
   }
 
   /**
@@ -101,7 +103,7 @@ class BenchMacro {
     val program = AckermannMacroCompiler.makeProgram(engine)
     program.loadFromFactDir(facts.toString)
     val res = program.namedRelation(program.toSolve).solve()
-    println(s"baseline results =${res.size}")
+    // println(s"baseline results =${res.size}")
   }
 
   @Benchmark
@@ -113,6 +115,6 @@ class BenchMacro {
     val program = AckermannOptimizedMacroCompiler.makeProgram(engine)
     program.loadFromFactDir(facts.toString)
     val res = program.namedRelation(program.toSolve).solve()
-    println(s"baseline hand-optimized results =${res.size}")
+    // println(s"baseline hand-optimized results =${res.size}")
   }
 }
