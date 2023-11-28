@@ -42,20 +42,13 @@ abstract class SolvableProgram(engine: ExecutionEngine) extends Program(engine) 
  *
  *    MyMacroCompiler.runCompiled(compiled)(p => p.edge("b", "c") :- ())
  */
-abstract class MacroCompiler[T <: SolvableProgram](val makeProgram: ExecutionEngine => T/*, sortOrder: SortOrder*/) {
+abstract class MacroCompiler[T <: SolvableProgram](val makeProgram: ExecutionEngine => T, jitOptions: JITOptions) {
   /** Generate an engine suitable for use with the output of `compile()`. */
   def makeEngine(): StagedExecutionEngine = {
     val storageManager = DefaultStorageManager()
-    StagedExecutionEngine(storageManager, JITOptions(
-      mode = Mode.JIT, granularity = Granularity.DELTA,
-      // FIXME: make the dotty parameter optional, maybe by making it a
-      // parameter of Backend.Quotes and having a separate Backend.Macro.
-      dotty = null,
-      compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel,
-      backend = Backend.MacroQuotes))
+    StagedExecutionEngine(storageManager, jitOptions)
   }
   private val engine: StagedExecutionEngine = makeEngine()
-  val jitOptions: JITOptions = engine.defaultJITOptions
   private val program: T = makeProgram(engine)
 
   protected def compileImpl()(using Quotes): Expr[StorageManager => Any] = {

@@ -35,7 +35,8 @@ case class JITOptions(
                        backend: Backend = Backend.Quotes,
                        fuzzy: Int = DEFAULT_FUZZY,
                        dotty: staging.Compiler = staging.Compiler.make(getClass.getClassLoader),
-                       useGlobalContext: Boolean = true
+                       useGlobalContext: Boolean = true,
+                       runtimeSort: SortOrder = SortOrder.Unordered // only used with macros to separate compile-time sort (usual sortOrder), and then an additional online sort
                      ) {
   if ((mode == Mode.Compiled || mode == Mode.Interpreted) &&
     (compileSync != CompileSync.Blocking || granularity != Granularity.NEVER || fuzzy != 0))
@@ -58,6 +59,8 @@ case class JITOptions(
 
   def getSortFn(storageManager: StorageManager): (Atom, Boolean) => (Boolean, Int) =
     JITOptions.getSortFn(sortOrder, storageManager)
+  def getRuntimeSortFn(storageManager: StorageManager): (Atom, Boolean) => (Boolean, Int) =
+    JITOptions.getSortFn(runtimeSort, storageManager)
 }
 
 object JITOptions {
