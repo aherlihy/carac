@@ -15,7 +15,7 @@ class MacroQuoteCompiler(storageManager: StorageManager)(using JITOptions) exten
   override def compileIRRelOp(irTree: IROp[EDB])(using stagedSM: Expr[StorageManager])(using Quotes): Expr[EDB] = {
     irTree match {
       case ProjectJoinFilterOp(rId, k, children: _*) => {
-        val (sortedChildren, newK) =
+        val (sortedChildren0, newK0) =
         // do macro-time sort
           if (jitOptions.sortOrder != SortOrder.Unordered && jitOptions.sortOrder != SortOrder.Badluck && jitOptions.granularity.flag == irTree.code)
             JoinIndexes.getOnlineSort(
@@ -28,34 +28,40 @@ class MacroQuoteCompiler(storageManager: StorageManager)(using JITOptions) exten
           else // no macro-time sort
             (children, k)
 
+        val compiledOps = Expr.ofSeq(sortedChildren0.map(compileIRRelOp))
         // do runtime sort
-//        val sortedChildren_CT = Expr.ofSeq(sortedChildren.map(c => Expr(c)))
-//        if (jitOptions.runtimeSort != SortOrder.Unordered)
-//          '{
-//            val (sortedChildren_RT, newK_RT) =
-//                JoinIndexes.getOnlineSort(
-//                  $sortedChildren_CT,
-//                  jitOptions.getRuntimeSortFn(storageManager),
-//                  rId,
-//                  newK,
-//                  storageManager
-//                );
-//
-//            $stagedSM.joinProjectHelper_withHash(
-//              sortedChildren_RT.map(s => s.run($stagedSM)),
-//              ${ Expr(rId) },
-//              ${ Expr(newK_RT.hash) },
-//              ${ Expr(jitOptions.onlineSort) }
-//            )
-//          }
-//        else // no runtime sort
-        val compiledOps = Expr.ofSeq(sortedChildren.map(compileIRRelOp))
-        '{
-          $stagedSM.joinProjectHelper_withHash(
-          $compiledOps,
-          ${ Expr(rId) },
-          ${ Expr(newK.hash) },
-          ${ Expr(jitOptions.onlineSort) })
+        if (jitOptions.runtimeSort != SortOrder.Unordered) {
+          val deltaIdx = sortedChildren0.indexWhere(op => // will return -1 if delta is negated relation, which is OK just ignore for now
+            op match
+              case o: ScanOp => o.db == DB.Delta
+              case _ => false
+          )
+          '{
+            val (sortedChildren_RT, newK_RT) =
+              JoinIndexes.getMacroOnlineSort(
+                $compiledOps,
+                ${ Expr(deltaIdx) },
+                ${ Expr(jitOptions.runtimeSort) },
+                ${ Expr(rId) },
+                ${ Expr( newK0 ) },
+                $stagedSM
+              )
+
+            $stagedSM.joinProjectHelper_withHash(
+              sortedChildren_RT,
+              ${ Expr(rId) },
+              newK_RT.hash,
+              ${ Expr(jitOptions.onlineSort) }
+            )
+          }
+        } else { // no runtime sort
+          '{
+            $stagedSM.joinProjectHelper_withHash(
+            $compiledOps,
+            ${ Expr(rId) },
+            ${ Expr(newK0.hash) },
+            ${ Expr(jitOptions.onlineSort) })
+          }
         }
       }
       case _ =>

@@ -225,11 +225,20 @@ object JoinIndexes {
         case o: ScanOp => o.db == DB.Delta
         case _ => false
     )
-    jitOptions.sortOrder match
+    getGenericOnlineSort(input, deltaIdx, sortBy, jitOptions.sortOrder, rId, originalK, sm)
+  }
+
+  def getMacroOnlineSort[T](input: Seq[T], deltaIdx: Int, sortOrder: SortOrder, rId: Int, originalK: JoinIndexes, sm: StorageManager): (Seq[T], JoinIndexes) = {
+    getGenericOnlineSort(input, deltaIdx, JITOptions.getSortFn(sortOrder, sm), sortOrder, rId, originalK, sm)
+  }
+
+
+  def getGenericOnlineSort[T](input: Seq[T], deltaIdx: Int, sortBy: (Atom, Boolean) => (Boolean, Int), sortOrder: SortOrder, rId: Int, originalK: JoinIndexes, sm: StorageManager): (Seq[T], JoinIndexes) = {
+    sortOrder match
       case SortOrder.Unordered | SortOrder.Badluck => (input, originalK)
       case SortOrder.Sel | SortOrder.Mixed | SortOrder.IntMax | SortOrder.Worst =>
         val (newBody, newHash) =
-          if (jitOptions.sortOrder == SortOrder.Worst)
+          if (sortOrder == SortOrder.Worst)
             presortSelectWorst(sortBy, originalK, sm, deltaIdx)
           else
             presortSelect(sortBy, originalK, sm, deltaIdx)
