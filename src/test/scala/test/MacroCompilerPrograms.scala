@@ -202,10 +202,20 @@ object AckermannOptimizedMacroCompiler extends MacroCompiler(AckermannOptimizedP
   inline def compile(): StorageManager => Any = ${compileImpl()}
   val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/ackermann/facts"
 }
+class AckermannWorstProgramNoFacts(engine: ExecutionEngine) extends SolvableProgram(engine) with ackermann_worst {
+  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/ackermann/facts"
+  initializeEmptyFactsFromDir(factDir)
+  pretest(this)
+}
+object AckermannWorstMacroCompilerNoFacts extends MacroCompiler(AckermannWorstProgramNoFacts(_)) {
+  inline def compile(): StorageManager => Any = ${compileImpl()}
+  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/ackermann/facts"
+}
 
 class AckermannWorstProgram(engine: ExecutionEngine) extends SolvableProgram(engine) with ackermann_worst {
   val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/ackermann/facts"
   initializeEmptyFactsFromDir(factDir)
+  loadFromFactDir(factDir)
   pretest(this)
 }
 object AckermannWorstMacroCompiler extends MacroCompiler(AckermannWorstProgram(_)) {

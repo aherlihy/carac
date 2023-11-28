@@ -42,7 +42,7 @@ abstract class SolvableProgram(engine: ExecutionEngine) extends Program(engine) 
  *
  *    MyMacroCompiler.runCompiled(compiled)(p => p.edge("b", "c") :- ())
  */
-abstract class MacroCompiler[T <: SolvableProgram](val makeProgram: ExecutionEngine => T) {
+abstract class MacroCompiler[T <: SolvableProgram](val makeProgram: ExecutionEngine => T/*, sortOrder: SortOrder*/) {
   /** Generate an engine suitable for use with the output of `compile()`. */
   def makeEngine(): StagedExecutionEngine = {
     val storageManager = DefaultStorageManager()
@@ -59,14 +59,18 @@ abstract class MacroCompiler[T <: SolvableProgram](val makeProgram: ExecutionEng
   private val program: T = makeProgram(engine)
 
   protected def compileImpl()(using Quotes): Expr[StorageManager => Any] = {
-    val irTree = engine.generateProgramTree(program.namedRelation(program.toSolve).id)._1
-    // TODO: more precise type for engine.compiler to avoid the cast.
-    val compiler = engine.compiler.asInstanceOf[QuoteCompiler]
-    val x = '{ (sm: StorageManager) =>
-      ${compiler.compileIR(irTree)(using 'sm)}
-    }
-    // println(x.show)
-    x
+    engine.generateProgramTree(program.namedRelation(program.toSolve).id) match
+      case Left(id) =>
+        ' { (sm: StorageManager ) => sm.getEDBResult(${Expr(id)}) }
+      case Right(irTree, irCtx) =>
+        given InterpreterContext = irCtx
+        // TODO: more precise type for engine.compiler to avoid the cast.
+        val compiler = engine.compiler.asInstanceOf[QuoteCompiler]
+        val x = '{ (sm: StorageManager) =>
+          ${ compiler.compileIR(irTree)(using 'sm) }
+        }
+        // println(x.show)
+        x
   }
 
   /**
@@ -88,19 +92,21 @@ abstract class MacroCompiler[T <: SolvableProgram](val makeProgram: ExecutionEng
    *                  TODO: Find a nice way to restrict this to only allow
    *                  adding extra facts and nothing else.
    */
-  def runCompiled(compiled: StorageManager => Any)(op: T => Any): Any = {
+  def runCompiled(compiled: StorageManager => Any)(op: T => Any): Set[Seq[Term]] = {
     val runtimeEngine = makeEngine()
     val runtimeProgram = makeProgram(runtimeEngine)
 
     // Even though we don't use the generated tree at runtime,
     // we still need to generate it to find the de-aliased irCtx.toSolve
     // and to populate runtimeEngine.storageManager.allRulesAllIndexes
-    val (_, irCtx) = runtimeEngine.generateProgramTree(program.namedRelation(program.toSolve).id)
+    runtimeEngine.generateProgramTree(program.namedRelation(program.toSolve).id) match
+      case Left(toSolve) =>
+        runtimeEngine.storageManager.getEDBResult(toSolve)
+      case Right(irTree, irCtx) =>
+        op(runtimeProgram)
 
-    op(runtimeProgram)
+        compiled(runtimeEngine.storageManager)
 
-    compiled(runtimeEngine.storageManager)
-
-    runtimeEngine.storageManager.getNewIDBResult(irCtx.toSolve)
+        runtimeEngine.storageManager.getNewIDBResult(irCtx.toSolve)
   }
 }
