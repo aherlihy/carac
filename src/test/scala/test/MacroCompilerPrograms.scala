@@ -64,6 +64,16 @@ object AckermannWorstMacroCompiler extends MacroCompiler(AckermannWorstProgram(_
   val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/ackermann/facts"
 }
 
+class AckermannWorstProgramNoFacts(engine: ExecutionEngine) extends SolvableProgram(engine) with ackermann_worst {
+  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/ackermann/facts"
+  initializeEmptyFactsFromDir(factDir)
+  pretest(this)
+}
+object AckermannWorstMacroCompilerNoFacts extends MacroCompiler(AckermannWorstProgramNoFacts(_), JITOptions(backend = Backend.MacroQuotes)) {
+  inline def compile(): StorageManager => Any = ${compileImpl()}
+  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/ackermann/facts"
+}
+
 //CBAExprValue
 class CbaexprvalueOptimizedProgram(engine: ExecutionEngine) extends SolvableProgram(engine) with cbaexprvalue_optimized {
   val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/cbaexprvalue/facts"

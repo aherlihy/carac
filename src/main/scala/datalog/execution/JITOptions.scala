@@ -42,7 +42,7 @@ case class JITOptions(
     (compileSync != CompileSync.Blocking || granularity != Granularity.NEVER || fuzzy != 0))
     throw new Exception(s"Do you really want to set JIT options with $mode?")
   if (
-    (mode == Mode.Interpreted && backend != Backend.Quotes) ||
+    (mode == Mode.Interpreted && backend != Backend.Quotes &&  backend != Backend.MacroQuotes) ||
       // (mode == Mode.Compiled && sortOrder != SortOrder.Unordered) ||
       (fuzzy != DEFAULT_FUZZY && compileSync == CompileSync.Blocking) ||
       (compileSync != CompileSync.Async && !useGlobalContext))
