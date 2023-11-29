@@ -5,7 +5,7 @@ import datalog.execution.ir.{IROp, ProjectJoinFilterOp, ScanOp}
 import datalog.storage.{DB, EDB, NS, RelationId, StorageManager}
 import datalog.tools.Debug.debug
 
-import scala.collection.mutable
+import scala.collection.{immutable, mutable}
 import scala.quoted.*
 import scala.reflect.ClassTag
 
@@ -253,7 +253,7 @@ object JoinIndexes {
           // Even though this is called `hash`, it is actually used to represent equality.
           originalIndex(atom.hash) = index
         )
-        (newK.atoms.view.drop(1).map(a => input(originalIndex(a.hash))).toSeq, newK)
+        (newK.atoms.view.drop(1).map(a => input(originalIndex(a.hash))).to(immutable.ArraySeq.untagged), newK)
 
         // This is less efficient and doesn't work in macros because
         // ToExpr[Atom] serializes all RelAtom as plain Atom which are not
