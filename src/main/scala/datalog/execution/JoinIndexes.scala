@@ -53,7 +53,7 @@ case class JoinIndexes(varIndexes: Seq[Seq[Int]],
         inCommon.map((count, hashs) =>
           count.toString + ": " + hashs.map(h => ns.hashToAtom(h)).mkString("", "|", "")
         ).mkString("", ", ", "")} }").mkString("[", ",\n", "]")
-  val hash: String = toRuleHash(atoms)
+  val hash: String = JoinIndexes.toRuleHash(atoms)
 }
 
 object JoinIndexes {
@@ -286,6 +286,6 @@ object JoinIndexes {
     val newAtoms = originalK.atoms.head +: atomHashs.drop(1).map(a =>
      originalK.atoms.drop(1)(originalIndexes(a))
     )
-    JoinIndexes(newAtoms, None, None)
+    JoinIndexes(newAtoms, None)
   }
 }

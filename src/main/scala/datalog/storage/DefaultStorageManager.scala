@@ -83,7 +83,6 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
     if (!allRulesAllIndexes.contains(rId)) throw new Exception(s"Missing relation ${ns(rId)} from JoinIndexes cache. Existing keys ${allRulesAllIndexes.keys.map(k => ns(k)).mkString("[", ", ", "]")}")
     if (!allRulesAllIndexes(rId).contains(hash))
 //      throw new Exception(s"Missing hash for ${ns(rId)}: $hash from JoinIndexes cache. # hashes: ${allRulesAllIndexes(rId).size}")
-      println(s"No rule index exists for $rId")
       allRulesAllIndexes(rId).update(hash, JoinIndexes.fromRuleHash(hash, allRulesAllIndexes(rId).values.head))
     val originalK = allRulesAllIndexes(rId)(hash)
     val inputs = asCollectionsSeqEDB(inputsEDB)
