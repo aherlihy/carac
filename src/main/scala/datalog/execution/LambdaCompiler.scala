@@ -173,8 +173,7 @@ class LambdaCompiler(val storageManager: StorageManager)(using JITOptions) exten
       sm => sm.joinProjectHelper_withHash(
         compiledOps(sm),
         rId,
-        newK.hash,
-        jitOptions.onlineSort
+        newK.hash
       )
 
     case UnionSPJOp(rId, k, children: _*) =>

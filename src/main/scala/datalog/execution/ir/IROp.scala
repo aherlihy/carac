@@ -252,16 +252,14 @@ case class ProjectJoinFilterOp(rId: RelationId, var k: JoinIndexes, override val
     storageManager.joinProjectHelper_withHash(
       inputs,
       rId,
-      k.hash,
-      jitOptions.onlineSort
+      k.hash
     )
   override def run(storageManager: StorageManager): EDB =
     val inputs = children.map(s => s.run(storageManager))
     storageManager.joinProjectHelper_withHash(
         inputs,
         rId,
-        k.hash,
-        jitOptions.onlineSort
+        k.hash
       )
 }
 

@@ -79,7 +79,7 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
     )
   }
 
-  override def joinProjectHelper_withHash(inputsEDB: Seq[EDB], rId: Int, hash: String, onlineSort: Boolean): CollectionsEDB = {
+  override def joinProjectHelper_withHash(inputsEDB: Seq[EDB], rId: Int, hash: String): CollectionsEDB = {
     if (!allRulesAllIndexes.contains(rId)) throw new Exception(s"Missing relation ${ns(rId)} from JoinIndexes cache. Existing keys ${allRulesAllIndexes.keys.map(k => ns(k)).mkString("[", ", ", "]")}")
     if (!allRulesAllIndexes(rId).contains(hash)) throw new Exception(s"Missing hash for ${ns(rId)}: $hash from JoinIndexes cache. # hashes: ${allRulesAllIndexes(rId).size}")
     val originalK = allRulesAllIndexes(rId)(hash)
@@ -108,13 +108,13 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
           if (atomI == 0) // not a monad :(
             (innerT, atomI + 1, k)
           else
-            val (inner, outer) = // on the fly swapping of join order
-              if (atomI > 1 && onlineSort && outerT.length > innerT.length)
-                val body = k.atoms.drop(1)
-                val newerHash = JoinIndexes.getRuleHash(Seq(k.atoms.head, body(atomI)) ++ body.dropRight(body.length - atomI) ++ body.drop(atomI + 1))
-                k = allRulesAllIndexes(rId).getOrElseUpdate(newerHash, JoinIndexes(originalK.atoms.head +: body, Some(originalK.cxns)))
-                (outerT, innerT)
-              else
+            val (inner, outer) = // on the fly swapping of join order, current turned off to separate runtime sort (sort in generated quotes in macro), from online sort (relation swapping at storage level)
+//              if (atomI > 1 && onlineSort && outerT.length > innerT.length)
+//                val body = k.atoms.drop(1)
+//                val newerHash = JoinIndexes.getRuleHash(Seq(k.atoms.head, body(atomI)) ++ body.dropRight(body.length - atomI) ++ body.drop(atomI + 1))
+//                k = allRulesAllIndexes(rId).getOrElseUpdate(newerHash, JoinIndexes(originalK.atoms.head +: body, Some(originalK.cxns), Some(originalK.groupingIndexes)))
+//                (outerT, innerT)
+//              else
                 (innerT, outerT)
             // outer = outer relation, inner = inner relation
             val edbResult = outer
@@ -145,7 +145,7 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
         )
   }
 
-  override def joinProjectHelper(inputsEDB: Seq[EDB], originalK: JoinIndexes, onlineSort: Boolean): CollectionsEDB = { // OLD, only keep around for benchmarks
+  override def joinProjectHelper(inputsEDB: Seq[EDB], originalK: JoinIndexes): CollectionsEDB = { // OLD, only keep around for benchmarks
     val inputs = asCollectionsSeqEDB(inputsEDB)
     if (inputs.length == 1) // just filter
       inputs.head
@@ -173,12 +173,12 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
           if (atomI == 0) // not a monad :(
             (innerT, atomI + 1, k)
           else
-            val (inner, outer) =
-              if (atomI > 1 && onlineSort && outerT.length > innerT.length)
-                val body = k.atoms.drop(1)
-                k = JoinIndexes(Seq(k.atoms.head, body(atomI)) ++ body.dropRight(body.length - atomI) ++ body.drop(atomI + 1), Some(originalK.cxns))
-                (outerT, innerT)
-              else
+            val (inner, outer) = // TODO: on the fly swapping of join order, current turned off to separate runtime sort (sort in generated quotes in macro), from online sort (relation swapping at storage level)
+//              if (atomI > 1 && onlineSort && outerT.length > innerT.length)
+//                val body = k.atoms.drop(1)
+//                k = JoinIndexes(Seq(k.atoms.head, body(atomI)) ++ body.dropRight(body.length - atomI) ++ body.drop(atomI + 1), Some(originalK.cxns), Some(originalK.groupingIndexes))
+//                (outerT, innerT)
+//              else
                 (innerT, outerT)
             val edbResult = outer
               .filter(o =>
@@ -243,7 +243,7 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
                     debug("found negated relation, rule=", () => s"${printer.ruleToString(k.atoms)}\n\tarity=$arity, compl=${printer.factToString(compl)}, Q=${printer.factToString(q)}, final res=${printer.factToString(res)}")
                     res
                   case _ => q
-            ), k, false).wrapped // don't sort in shallow embedding
+            ), k).wrapped // don't sort in shallow embedding
           }).distinct
       ))
   }

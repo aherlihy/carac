@@ -31,7 +31,7 @@ case class JITOptions(
                        granularity: Granularity = Granularity.NEVER,
                        compileSync: CompileSync = CompileSync.Blocking,
                        sortOrder: SortOrder = SortOrder.Unordered,
-                       onlineSort: Boolean = false,
+//                       onlineSort: Boolean = false, TODO: remove, not really used
                        backend: Backend = Backend.Quotes,
                        fuzzy: Int = DEFAULT_FUZZY,
                        dotty: staging.Compiler = staging.Compiler.make(getClass.getClassLoader),
@@ -48,12 +48,11 @@ case class JITOptions(
       (compileSync != CompileSync.Async && !useGlobalContext))
     throw new Exception(s"Weird options for mode $mode ($backend, $sortOrder, or $compileSync), are you sure?")
 
-  override def toString: String = s"{ Mode $mode Gran: $granularity, blocking: $compileSync, sortOrder: $sortOrder, onlineSort: $onlineSort, backend: $backend }"
+  override def toString: String = s"{ Mode $mode Gran: $granularity, blocking: $compileSync, sortOrder: $sortOrder, runtimeSort: $runtimeSort, backend: $backend }"
   def toBenchmark: String =
     val granStr = if (granularity == Granularity.NEVER) "" else granularity.toString
-    val onlineSortStr = if (onlineSort) "Online" else ""
     val blockingStr = if (mode == Mode.JIT) compileSync else ""
-    val programStr = s"${mode}_default_${sortOrder}_${onlineSortStr}_${fuzzy}_${blockingStr}".toLowerCase()
+    val programStr = s"${mode}_default_${sortOrder}_${runtimeSort}_${fuzzy}_${blockingStr}".toLowerCase()
     val backendStr = if (mode == Mode.Interpreted) "" else backend.toString.toLowerCase()
     s"${programStr}_${granStr}_$backendStr"
 

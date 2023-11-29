@@ -53,8 +53,7 @@ class MacroQuoteCompiler(storageManager: StorageManager)(using JITOptions) exten
             $stagedSM.joinProjectHelper_withHash(
               sortedChildren_RT,
               ${ Expr(rId) },
-              newK_RT.hash,
-              ${ Expr(jitOptions.onlineSort) }
+              newK_RT.hash
             )
           }
         } else { // no runtime sort
@@ -62,8 +61,7 @@ class MacroQuoteCompiler(storageManager: StorageManager)(using JITOptions) exten
             $stagedSM.joinProjectHelper_withHash(
             $compiledOps,
             ${ Expr(rId) },
-            ${ Expr(newK0.hash) },
-            ${ Expr(jitOptions.onlineSort) })
+            ${ Expr(newK0.hash) })
           }
         }
       }
@@ -235,8 +233,7 @@ class QuoteCompiler(val storageManager: StorageManager)(using JITOptions) extend
           $stagedSM.joinProjectHelper_withHash(
             $compiledOps,
             ${ Expr(rId) },
-            ${ Expr(newK.hash) },
-            ${ Expr(jitOptions.onlineSort) }
+            ${ Expr(newK.hash) }
           )
         }
 

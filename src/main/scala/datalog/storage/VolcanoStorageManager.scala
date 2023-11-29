@@ -14,8 +14,8 @@ import scala.collection.{immutable, mutable}
 class VolcanoStorageManager(ns: NS = NS()) extends CollectionsStorageManager(ns) {
   def joinHelper(inputs: Seq[EDB], k: JoinIndexes): EDB = ???
   def projectHelper(input: EDB, k: JoinIndexes): EDB = ???
-  def joinProjectHelper(inputs: Seq[EDB], k: JoinIndexes, onlineSort: Boolean): EDB = ???
-  def joinProjectHelper_withHash(inputs: Seq[EDB], rId: Int, hash: String, onlineSort: Boolean): EDB = ???
+  def joinProjectHelper(inputs: Seq[EDB], k: JoinIndexes): EDB = ???
+  def joinProjectHelper_withHash(inputs: Seq[EDB], rId: Int, hash: String): EDB = ???
 
   /**
    * Use relational operators to evaluate an IDB rule using Naive algo
