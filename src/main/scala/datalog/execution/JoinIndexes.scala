@@ -248,13 +248,16 @@ object JoinIndexes {
         )
 
         // A map from an atom rId to its index in originalK
-        val originalIndex = mutable.Map.empty[Int, Int]
+        val originalIndex = mutable.Map.empty[String, Int]
         originalK.atoms.view.drop(1).zipWithIndex.foreach((atom, index) =>
-          originalIndex(atom.rId) = index
+          // Even though this is called `hash`, it is actually used to represent equality.
+          originalIndex(atom.hash) = index
         )
-        (newK.atoms.view.drop(1).map(a => input(originalIndex(a.rId))).toSeq, newK)
-        // This is less efficient, but I'm also not sure why it didn't work from getMacroOnlineSort
-        // (originalK.atoms is made of `Atom` but newK.atoms is made of `RelAtom`)
+        (newK.atoms.view.drop(1).map(a => input(originalIndex(a.hash))).toSeq, newK)
+
+        // This is less efficient and doesn't work in macros because
+        // ToExpr[Atom] serializes all RelAtom as plain Atom which are not
+        // `equals` to RelAtom.
         // (newK.atoms.drop(1).map(a => input(originalK.atoms.drop(1).indexOf(a))), newK)
   }
 
