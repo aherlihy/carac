@@ -3,12 +3,13 @@ package test
 import datalog.execution.{ExecutionEngine, MacroCompiler, SolvableProgram}
 import datalog.dsl.*
 import datalog.execution.ir.*
-import datalog.storage.{StorageManager}
-import datalog.{SimpleMacroCompiler, AckermannOptimizedMacroCompiler}
+import datalog.storage.StorageManager
+import datalog.{AckermannOptimizedMacroCompiler, SimpleMacroCompiler, TastyslistlibinverseOptimizedMacroCompiler}
 
 object MacroCompilerTest {
   val simpleCompiled = SimpleMacroCompiler.compile()
   val ackermannCompiled = AckermannOptimizedMacroCompiler.compile()
+  val tastyslistlibinverseOptimizedMacroCompiler = TastyslistlibinverseOptimizedMacroCompiler.compile()
 }
 import MacroCompilerTest.*
 
@@ -23,7 +24,11 @@ class MacroCompilerTest extends munit.FunSuite {
     val res = AckermannOptimizedMacroCompiler.runCompiled(ackermannCompiled) { program =>
       program.loadFromFactDir(program.factDir)
     }
+  }
+  test("tastyslistlibinverse test") {
+    val res = TastyslistlibinverseOptimizedMacroCompiler.runCompiled(tastyslistlibinverseOptimizedMacroCompiler) { program =>
+      program.loadFromFactDir(program.factDir)
+    }
     println(res)
-//    assertEquals(res, Set(Seq("b"), Seq("c"), Seq("d")))
   }
 }
