@@ -246,7 +246,16 @@ object JoinIndexes {
           newHash,
           JoinIndexes(originalK.atoms.head +: newBody.map(_._1), Some(originalK.cxns))
         )
-        (newK.atoms.drop(1).map(a => input(originalK.atoms.drop(1).indexOf(a))), newK)
+
+        // A map from an atom rId to its index in originalK
+        val originalIndex = mutable.Map.empty[Int, Int]
+        originalK.atoms.view.drop(1).zipWithIndex.foreach((atom, index) =>
+          originalIndex(atom.rId) = index
+        )
+        (newK.atoms.view.drop(1).map(a => input(originalIndex(a.rId))).toSeq, newK)
+        // This is less efficient, but I'm also not sure why it didn't work from getMacroOnlineSort
+        // (originalK.atoms is made of `Atom` but newK.atoms is made of `RelAtom`)
+        // (newK.atoms.drop(1).map(a => input(originalK.atoms.drop(1).indexOf(a))), newK)
   }
 
   def allOrders(rule: Seq[Atom]): AllIndexes = {
