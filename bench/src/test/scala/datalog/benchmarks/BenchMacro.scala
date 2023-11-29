@@ -3,7 +3,13 @@ package datalog.benchmarks
 import java.util.concurrent.TimeUnit
 import org.openjdk.jmh.annotations.{Mode as JmhMode, *}
 import org.openjdk.jmh.infra.Blackhole
-import datalog.{AckermannWorstMacroCompiler as AckermannMacroCompiler, AckermannWorstMacroCompilerWithFacts as AckermannMacroCompilerWithFacts, AckermannOptimizedMacroCompiler}
+import datalog.{
+  AckermannWorstMacroCompiler as AckermannMacroCompiler,
+  AckermannWorstMacroCompilerWithFacts as AckermannMacroCompilerWithFacts,
+  AckermannOptimizedMacroCompiler,
+  AckermannWorstMacroCompilerWithFactsOnline as AckermannMacroCompilerWithFactsOnline,
+  AckermannWorstMacroCompilerOnline as AckermannMacroCompilerOnline,
+}
 
 import scala.compiletime.uninitialized
 import datalog.execution.ir.InterpreterContext
@@ -16,6 +22,8 @@ object BenchMacro {
   val ackermannCompiled = AckermannMacroCompiler.compile()
   val ackermannWithFactsCompiled = AckermannMacroCompilerWithFacts.compile()
   val ackermannOptimizedCompiled = AckermannOptimizedMacroCompiler.compile()
+  val ackermannOnlineCompiled = AckermannMacroCompilerOnline.compile()
+  val ackermannWithFactsOnlineCompiled = AckermannMacroCompilerWithFactsOnline.compile()
 }
 import BenchMacro.*
 
@@ -58,8 +66,8 @@ class BenchMacro {
    */
   @Benchmark
   def ackermann_macro_aot_online(blackhole: Blackhole) = {
-    val facts = Paths.get(AckermannMacroCompilerWithFacts.factDir)
-    val res = AckermannMacroCompilerWithFacts.runCompiled(ackermannWithFactsCompiled)(
+    val facts = Paths.get(AckermannMacroCompilerWithFactsOnline.factDir)
+    val res = AckermannMacroCompilerWithFactsOnline.runCompiled(ackermannWithFactsOnlineCompiled)(
       program => {} // facts already loaded at compile-time
     )
     blackhole.consume(res)
@@ -71,8 +79,8 @@ class BenchMacro {
    */
   @Benchmark
   def ackermann_macro_runtimefacts_online(blackhole: Blackhole) = {
-    val facts = Paths.get(AckermannMacroCompiler.factDir)
-    val res = AckermannMacroCompiler.runCompiled(ackermannCompiled)(
+    val facts = Paths.get(AckermannMacroCompilerOnline.factDir)
+    val res = AckermannMacroCompilerOnline.runCompiled(ackermannOnlineCompiled)(
       program => program.loadFromFactDir(facts.toString)
     )
     blackhole.consume(res)

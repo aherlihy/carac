@@ -15,9 +15,11 @@ class MacroQuoteCompiler(storageManager: StorageManager)(using JITOptions) exten
   override def compileIRRelOp(irTree: IROp[EDB])(using stagedSM: Expr[StorageManager])(using Quotes): Expr[EDB] = {
     irTree match {
       case ProjectJoinFilterOp(rId, k, children: _*) => {
+        //        println(s"sortOrder=${jitOptions.sortOrder}")
+        //        println(s"macro-time sort: unsortedChildren: ${children.map(c => storageManager.ns(c.asInstanceOf[ScanOp].rId)).mkString("[", ", ", "]")}")
         val (sortedChildren0, newK0) =
         // do macro-time sort
-          if (jitOptions.sortOrder != SortOrder.Unordered && jitOptions.sortOrder != SortOrder.Badluck && jitOptions.granularity.flag == irTree.code)
+          if (jitOptions.sortOrder != SortOrder.Unordered /* && jitOptions.sortOrder != SortOrder.Badluck && jitOptions.granularity.flag == irTree.code*/) // TODO: for now assume all macros sort or don't sort here
             JoinIndexes.getOnlineSort(
               children,
               jitOptions.getSortFn(storageManager),
@@ -27,6 +29,7 @@ class MacroQuoteCompiler(storageManager: StorageManager)(using JITOptions) exten
             )
           else // no macro-time sort
             (children, k)
+//        println(s"                   sortedChildren: ${sortedChildren.map(c => storageManager.ns(c.asInstanceOf[ScanOp].rId)).mkString("[", ", ", "]")}")
 
         val compiledOps = Expr.ofSeq(sortedChildren0.map(compileIRRelOp))
         // do runtime sort

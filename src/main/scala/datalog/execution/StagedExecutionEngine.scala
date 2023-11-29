@@ -54,9 +54,15 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
     get(storageManager.ns(name))
   }
 
+  /**
+   * Inserting IDB adds the initial rule to allRulesAllIndexes. If sortOrder is defined then also insert the sorted so
+   * that subsequent sorts are cheaper (timsort). If rule is short, precalculate the possible orders.
+   * @param rId
+   * @param ruleSeq
+   */
   def insertIDB(rId: Int, ruleSeq: Seq[Atom]): Unit = {
     precedenceGraph.addNode(ruleSeq)
-//    println(s"${storageManager.printer.ruleToString(ruleSeq)}")
+//    println(s"inserted IDB with order: ${storageManager.printer.ruleToString(ruleSeq)}")
 
     var rule = ruleSeq
     var k = JoinIndexes(rule, None)
@@ -66,34 +72,34 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
       val allK = JoinIndexes.allOrders(rule)
       storageManager.allRulesAllIndexes(rId) ++= allK
 
-    if (defaultJITOptions.sortOrder == SortOrder.Sel) // sort before inserting, just in case EDBs are defined
-      val (sortedBody, newHash) = JoinIndexes.presortSelect( // use preSort bc no child nodes to rearrange
-        (a, _) =>
-          if (storageManager.edbContains(a.rId))
-            (true, storageManager.getEDBResult(a.rId).size)
-          else
-            (true, Int.MaxValue),
-        k,
-        storageManager,
-        -1
-      )
-      rule = rule.head +: sortedBody.map(_._1)
-      k = JoinIndexes(rule, Some(k.cxns))
-      storageManager.allRulesAllIndexes(rId).addOne(k.hash, k)
-    else if (defaultJITOptions.sortOrder == SortOrder.Badluck) // mimic "bad luck" program definition, so ingest rules in a bad order and then don't update them.
-      val (sortedBody, newHash) = JoinIndexes.presortSelectWorst(
-        (a, _) =>
-          if (storageManager.edbContains(a.rId))
-            (true, storageManager.getEDBResult(a.rId).size)
-          else
-            (true, Int.MaxValue),
-        k,
-        storageManager,
-        -1
-      )
-      rule = rule.head +: sortedBody.map(_._1)
-      k = JoinIndexes(rule, Some(k.cxns))
-      storageManager.allRulesAllIndexes(rId).addOne(k.hash, k)
+//    if (defaultJITOptions.sortOrder == SortOrder.Sel) // sort before inserting, just in case EDBs are defined
+//      val (sortedBody, newHash) = JoinIndexes.presortSelect( // use preSort bc no child nodes to rearrange
+//        (a, _) =>
+//          if (storageManager.edbContains(a.rId))
+//            (true, storageManager.getEDBResult(a.rId).size)
+//          else
+//            (true, Int.MaxValue),
+//        k,
+//        storageManager,
+//        -1
+//      )
+//      rule = rule.head +: sortedBody.map(_._1)
+//      k = JoinIndexes(rule, Some(k.cxns), Some(k.groupingIndexes))
+//      storageManager.allRulesAllIndexes(rId).addOne(k.hash, k)
+//    else if (defaultJITOptions.sortOrder == SortOrder.Badluck) // mimic "bad luck" program definition, so ingest rules in a bad order and then don't update them.
+//      val (sortedBody, newHash) = JoinIndexes.presortSelectWorst(
+//        (a, _) =>
+//          if (storageManager.edbContains(a.rId))
+//            (true, storageManager.getEDBResult(a.rId).size)
+//          else
+//            (true, Int.MaxValue),
+//        k,
+//        storageManager,
+//        -1
+//      )
+//      rule = rule.head +: sortedBody.map(_._1)
+//      k = JoinIndexes(rule, Some(k.cxns), Some(k.groupingIndexes))
+//      storageManager.allRulesAllIndexes(rId).addOne(k.hash, k)
 
     //    println(s"${storageManager.printer.ruleToString(rule)}")
 

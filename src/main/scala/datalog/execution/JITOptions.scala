@@ -64,20 +64,28 @@ case class JITOptions(
 }
 
 object JITOptions {
+  /**
+   * Determine the sort order of facts + rules. Return (IDB?, weight).
+   * @param sortOrder
+   * @param storageManager
+   * @return a sorting function to pass to collection.sortBy. The sortFn eturns (tiebreaker, weight) where tiebreaker
+   *         is if it's an IDB relation, then cardinality, so that IDBs can be sorted separately from EDBs
+   */
   def getSortFn(sortOrder: SortOrder, storageManager: StorageManager): (Atom, Boolean) => (Boolean, Int) =
       sortOrder match
-        case SortOrder.IntMax =>
-          (a: Atom, isDelta: Boolean) => if (storageManager.edbContains(a.rId))
-            (true, storageManager.getEDBResult(a.rId).size)
-          else
-            (true, Int.MaxValue)
-        case SortOrder.Sel =>
+        case SortOrder.IntMax => // return EDB cardinalities and treat IDBs as max weight, so go first. Useful for sorting before start of execution.
+          (a: Atom, isDelta: Boolean) =>
+            if (storageManager.edbContains(a.rId))
+              (true, storageManager.getEDBResult(a.rId).size)
+            else
+              (true, Int.MaxValue)
+        case SortOrder.Sel => // return cardinalities of both EDB and IDB since computation will have started, return exact delta cardinalities.
           (a: Atom, isDelta: Boolean) =>
             if (isDelta)
               (true, storageManager.getKnownDeltaDB(a.rId).length)
             else
               (true, storageManager.getKnownDerivedDB(a.rId).length)
-        case SortOrder.Mixed =>
+        case SortOrder.Mixed => //
           (a: Atom, isDelta: Boolean) =>
             if (isDelta)
               (storageManager.allRulesAllIndexes.contains(a.rId), storageManager.getKnownDeltaDB(a.rId).length)

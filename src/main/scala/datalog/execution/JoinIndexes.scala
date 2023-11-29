@@ -164,7 +164,7 @@ object JoinIndexes {
 
 //    val sortedBody = originalK.atoms.drop(1).zipWithIndex.sortBy((a, _) => (sm.allRulesAllIndexes.contains(a.rId), sortBy(a)))
     val sortedBody = originalK.atoms.drop(1).zipWithIndex.sortBy((a, idx) => sortBy(a, idx == deltaIdx))
-//    println(s"\tOrder: ${sortedBody.map((a, _) => s"${sm.ns.hashToAtom(a.hash)}:|${sortBy(a)}|${if (sm.edbContains(a.rId)) "edb" else "idb"}").mkString("", ", ", "")}")
+//    println(s"\tOrder: ${sortedBody.map((a, _) => s"${sm.ns.hashToAtom(a.hash)}:|${sortBy(a, true)._2}|${if (sm.edbContains(a.rId)) "edb" else "idb"}").mkString("", ", ", "")}")
     //    if (input.length > 2)
 //    println(s"Rule: ${sm.printer.ruleToString(originalK.atoms)}\n")
 //    println(s"Rule cxn: ${originalK.cxnsToString(sm.ns)}\n")

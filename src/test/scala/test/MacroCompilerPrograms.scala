@@ -49,7 +49,7 @@ class AckermannOptimizedProgram(engine: ExecutionEngine) extends SolvableProgram
   initializeEmptyFactsFromDir(factDir)
   pretest(this)
 }
-object AckermannOptimizedMacroCompiler extends MacroCompiler(AckermannOptimizedProgram(_), JITOptions(backend = Backend.MacroQuotes, sortOrder = SortOrder.Sel)) {
+object AckermannOptimizedMacroCompiler extends MacroCompiler(AckermannOptimizedProgram(_), JITOptions(backend = Backend.MacroQuotes, sortOrder = SortOrder.IntMax)) {
   inline def compile(): StorageManager => Any = ${this.compileImpl()}
   val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/ackermann/facts"
 }
@@ -59,7 +59,8 @@ class AckermannWorstProgram(engine: ExecutionEngine) extends SolvableProgram(eng
   initializeEmptyFactsFromDir(factDir)
   pretest(this)
 }
-object AckermannWorstMacroCompiler extends MacroCompiler(AckermannWorstProgram(_), JITOptions(backend = Backend.MacroQuotes)) {
+object AckermannWorstMacroCompiler extends MacroCompiler(AckermannWorstProgram(_), JITOptions(backend = Backend.MacroQuotes, sortOrder = SortOrder.IntMax)) {
+//  println("Ackermann NO FACTS")
   inline def compile(): StorageManager => Any = ${this.compileImpl()}
   val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/ackermann/facts"
 }
@@ -69,133 +70,29 @@ class AckermannWorstProgramWithFacts(engine: ExecutionEngine) extends SolvablePr
   loadFromFactDir(factDir)
   pretest(this)
 }
-object AckermannWorstMacroCompilerWithFacts extends MacroCompiler(AckermannWorstProgramWithFacts(_), JITOptions(backend = Backend.MacroQuotes, sortOrder = SortOrder.Sel)) {
+object AckermannWorstMacroCompilerWithFacts extends MacroCompiler(AckermannWorstProgramWithFacts(_), JITOptions(backend = Backend.MacroQuotes, sortOrder = SortOrder.IntMax)) {
+  println("Ackermann WITH FACTS OFFLINE")
   inline def compile(): StorageManager => Any = ${compileImpl()}
   val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/ackermann/facts"
 }
-
-//CBAExprValue
-class CbaexprvalueOptimizedProgram(engine: ExecutionEngine) extends SolvableProgram(engine) with cbaexprvalue_optimized {
-  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/cbaexprvalue/facts"
+class AckermannWorstProgramOnline(engine: ExecutionEngine) extends SolvableProgram(engine) with ackermann_worst {
+  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/ackermann/facts"
   initializeEmptyFactsFromDir(factDir)
   pretest(this)
 }
-object CbaexprvalueOptimizedMacroCompiler extends MacroCompiler(CbaexprvalueOptimizedProgram(_), JITOptions(backend = Backend.MacroQuotes)) {
+object AckermannWorstMacroCompilerOnline extends MacroCompiler(AckermannWorstProgramOnline(_), JITOptions(backend = Backend.MacroQuotes, sortOrder = SortOrder.IntMax, runtimeSort = SortOrder.Sel)) {
+    println("Ackermann NO FACTS ONLINE")
   inline def compile(): StorageManager => Any = ${this.compileImpl()}
-  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/cbaexprvalue/facts"
+  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/ackermann/facts"
 }
 
-class CbaexprvalueWorstProgram(engine: ExecutionEngine) extends SolvableProgram(engine) with cbaexprvalue_worst {
-  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/cbaexprvalue/facts"
-  initializeEmptyFactsFromDir(factDir)
+class AckermannWorstProgramWithFactsOnline(engine: ExecutionEngine) extends SolvableProgram(engine) with ackermann_worst {
+  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/ackermann/facts"
+  loadFromFactDir(factDir)
   pretest(this)
 }
-object CbaexprvalueWorstMacroCompiler extends MacroCompiler(CbaexprvalueWorstProgram(_), JITOptions(backend = Backend.MacroQuotes)) {
-  inline def compile(): StorageManager => Any = ${this.compileImpl()}
-  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/cbaexprvalue/facts"
-}
-
-// Equal
-class EqualOptimizedProgram(engine: ExecutionEngine) extends SolvableProgram(engine) with equal_optimized {
-  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/equal/facts"
-  initializeEmptyFactsFromDir(factDir)
-  pretest(this)
-}
-object EqualOptimizedMacroCompiler extends MacroCompiler(EqualOptimizedProgram(_), JITOptions(backend = Backend.MacroQuotes)) {
-  inline def compile(): StorageManager => Any = ${this.compileImpl()}
-  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/equal/facts"
-}
-
-class EqualWorstProgram(engine: ExecutionEngine) extends SolvableProgram(engine) with equal_worst {
-  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/equal/facts"
-  initializeEmptyFactsFromDir(factDir)
-  pretest(this)
-}
-object EqualWorstMacroCompiler extends MacroCompiler(EqualWorstProgram(_), JITOptions(backend = Backend.MacroQuotes)) {
-  inline def compile(): StorageManager => Any = ${this.compileImpl()}
-  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/equal/facts"
-}
-
-// Fib
-class FibOptimizedProgram(engine: ExecutionEngine) extends SolvableProgram(engine) with fib_optimized {
-  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/fib/facts"
-  initializeEmptyFactsFromDir(factDir)
-  pretest(this)
-}
-object FibOptimizedMacroCompiler extends MacroCompiler(FibOptimizedProgram(_), JITOptions(backend = Backend.MacroQuotes)) {
-  inline def compile(): StorageManager => Any = ${this.compileImpl()}
-  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/fib/facts"
-}
-
-class FibWorstProgram(engine: ExecutionEngine) extends SolvableProgram(engine) with fib_worst {
-  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/fib/facts"
-  initializeEmptyFactsFromDir(factDir)
-  pretest(this)
-}
-object FibWorstMacroCompiler extends MacroCompiler(FibWorstProgram(_), JITOptions(backend = Backend.MacroQuotes)) {
-  inline def compile(): StorageManager => Any = ${this.compileImpl()}
-  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/fib/facts"
-}
-
-// Prime
-class PrimeOptimizedProgram(engine: ExecutionEngine) extends SolvableProgram(engine) with prime_optimized {
-  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/prime/facts"
-  initializeEmptyFactsFromDir(factDir)
-  pretest(this)
-}
-object PrimeOptimizedMacroCompiler extends MacroCompiler(PrimeOptimizedProgram(_), JITOptions(backend = Backend.MacroQuotes)) {
-  inline def compile(): StorageManager => Any = ${this.compileImpl()}
-  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/prime/facts"
-}
-
-class PrimeWorstProgram(engine: ExecutionEngine) extends SolvableProgram(engine) with prime_worst {
-  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/prime/facts"
-  initializeEmptyFactsFromDir(factDir)
-  pretest(this)
-}
-object PrimeWorstMacroCompiler extends MacroCompiler(PrimeWorstProgram(_), JITOptions(backend = Backend.MacroQuotes)) {
-  inline def compile(): StorageManager => Any = ${this.compileImpl()}
-  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/prime/facts"
-}
-
-// Tastyslistlib
-class TastyslistlibOptimizedProgram(engine: ExecutionEngine) extends SolvableProgram(engine) with tastyslistlib_optimized {
-  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/tastyslistlib/facts"
-  initializeEmptyFactsFromDir(factDir)
-  pretest(this)
-}
-object TastyslistlibOptimizedMacroCompiler extends MacroCompiler(TastyslistlibOptimizedProgram(_), JITOptions(backend = Backend.MacroQuotes)) {
-  inline def compile(): StorageManager => Any = ${this.compileImpl()}
-  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/tastyslistlib/facts"
-}
-
-class TastyslistlibWorstProgram(engine: ExecutionEngine) extends SolvableProgram(engine) with tastyslistlib_worst {
-  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/tastyslistlib/facts"
-  initializeEmptyFactsFromDir(factDir)
-  pretest(this)
-}
-object TastyslistlibWorstMacroCompiler extends MacroCompiler(TastyslistlibWorstProgram(_), JITOptions(backend = Backend.MacroQuotes)) {
-  inline def compile(): StorageManager => Any = ${this.compileImpl()}
-  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/tastyslistlib/facts"
-}
-
-// Tastyslistlibinverse
-class TastyslistlibinverseOptimizedProgram(engine: ExecutionEngine) extends SolvableProgram(engine) with tastyslistlibinverse_optimized {
-  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/tastyslistlibinverse/facts"
-  initializeEmptyFactsFromDir(factDir)
-  pretest(this)
-}
-object TastyslistlibinverseOptimizedMacroCompiler extends MacroCompiler(TastyslistlibinverseOptimizedProgram(_), JITOptions(backend = Backend.MacroQuotes)) {
-  inline def compile(): StorageManager => Any = ${this.compileImpl()}
-  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/tastyslistlibinverse/facts"
-}
-
-class TastyslistlibinverseWorstProgram(engine: ExecutionEngine) extends SolvableProgram(engine) with tastyslistlibinverse_worst {
-  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/tastyslistlibinverse/facts"
-  initializeEmptyFactsFromDir(factDir)
-  pretest(this)
-}
-object TastyslistlibinverseWorstMacroCompiler extends MacroCompiler(TastyslistlibinverseWorstProgram(_), JITOptions(backend = Backend.MacroQuotes)) {
-  inline def compile(): StorageManager => Any = ${this.compileImpl()}
-  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/tastyslistlibinverse/facts"
+object AckermannWorstMacroCompilerWithFactsOnline extends MacroCompiler(AckermannWorstProgramWithFactsOnline(_), JITOptions(backend = Backend.MacroQuotes, sortOrder = SortOrder.IntMax, runtimeSort = SortOrder.Sel)) {
+    println("Ackermann WITH FACTS ONLINE")
+  inline def compile(): StorageManager => Any = ${compileImpl()}
+  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/ackermann/facts"
 }
