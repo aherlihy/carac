@@ -17,7 +17,7 @@ trait prime_optimized {
 
     val count_third = program.relation[Constant]("count_third")
 
-    val succ = program.relation[Constant]("succ")
+    val succ = program.namedRelation("succ")
 
     val n, ppn, pn, pppn, x = program.variable()
 
@@ -28,27 +28,5 @@ trait prime_optimized {
     count_third(n) :- ( count_third(pppn), succ(pppn, ppn), succ(ppn, pn), succ(pn, n) )
 
     count_all(x) :- ( count_second(x), count_third(x) )
-
-    succ("0", "1") :- ()
-    succ("1", "2") :- ()
-    succ("2", "3") :- ()
-    succ("3", "4") :- ()
-    succ("4", "5") :- ()
-    succ("5", "6") :- ()
-    succ("6", "7") :- ()
-    succ("7", "8") :- ()
-    succ("8", "9") :- ()
-    succ("9", "10") :- ()
-    succ("10", "11") :- ()
-    succ("11", "12") :- ()
-    succ("12", "13") :- ()
-    succ("13", "14") :- ()
-    succ("14", "15") :- ()
-    succ("15", "16") :- ()
-    succ("16", "17") :- ()
-    succ("17", "18") :- ()
-    succ("18", "19") :- ()
-    succ("19", "20") :- ()
-    succ("20", "21") :- ()
   }
 }

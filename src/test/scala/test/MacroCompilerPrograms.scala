@@ -6,12 +6,12 @@ import datalog.dsl.*
 import datalog.execution.ir.*
 import datalog.storage.{DefaultStorageManager, StorageManager}
 import test.examples.ackermann.*
-import test.examples.cbaexprvalue.*
-import test.examples.equal.*
+import test.examples.fib.*
+import test.examples.prime.*
 import test.examples.fib.*
 import test.examples.prime.*
 import test.examples.tastyslistlib.*
-import test.examples.tastyslistlibinverse.*
+import test.examples.prime.*
 
 import java.nio.file.Paths
 
@@ -96,3 +96,105 @@ object AckermannWorstMacroCompilerWithFactsOnline extends MacroCompiler(Ackerman
   inline def compile(): StorageManager => Any = ${compileImpl()}
   val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/ackermann/facts"
 }
+
+/** ---------- Fib ---------- **/
+class FibOptimizedProgram(engine: ExecutionEngine) extends SolvableProgram(engine) with fib_optimized {
+  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/fib/facts"
+  initializeEmptyFactsFromDir(factDir)
+  pretest(this)
+}
+object FibOptimizedMacroCompiler extends MacroCompiler(FibOptimizedProgram(_), JITOptions(backend = Backend.MacroQuotes, sortOrder = SortOrder.IntMax)) {
+  inline def compile(): StorageManager => Any = ${this.compileImpl()}
+  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/fib/facts"
+}
+
+class FibWorstProgram(engine: ExecutionEngine) extends SolvableProgram(engine) with fib_worst {
+  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/fib/facts"
+  initializeEmptyFactsFromDir(factDir)
+  pretest(this)
+}
+object FibWorstMacroCompiler extends MacroCompiler(FibWorstProgram(_), JITOptions(backend = Backend.MacroQuotes, sortOrder = SortOrder.IntMax)) {
+  inline def compile(): StorageManager => Any = ${this.compileImpl()}
+  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/fib/facts"
+}
+
+class FibWorstProgramWithFacts(engine: ExecutionEngine) extends SolvableProgram(engine) with fib_worst {
+  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/fib/facts"
+  loadFromFactDir(factDir)
+  pretest(this)
+}
+object FibWorstMacroCompilerWithFacts extends MacroCompiler(FibWorstProgramWithFacts(_), JITOptions(backend = Backend.MacroQuotes, sortOrder = SortOrder.IntMax)) {
+  inline def compile(): StorageManager => Any = ${compileImpl()}
+  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/fib/facts"
+}
+class FibWorstProgramOnline(engine: ExecutionEngine) extends SolvableProgram(engine) with fib_worst {
+  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/fib/facts"
+  initializeEmptyFactsFromDir(factDir)
+  pretest(this)
+}
+object FibWorstMacroCompilerOnline extends MacroCompiler(FibWorstProgramOnline(_), JITOptions(backend = Backend.MacroQuotes, sortOrder = SortOrder.IntMax, runtimeSort = SortOrder.Sel)) {
+  inline def compile(): StorageManager => Any = ${this.compileImpl()}
+  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/fib/facts"
+}
+
+class FibWorstProgramWithFactsOnline(engine: ExecutionEngine) extends SolvableProgram(engine) with fib_worst {
+  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/fib/facts"
+  loadFromFactDir(factDir)
+  pretest(this)
+}
+object FibWorstMacroCompilerWithFactsOnline extends MacroCompiler(FibWorstProgramWithFactsOnline(_), JITOptions(backend = Backend.MacroQuotes, sortOrder = SortOrder.IntMax, runtimeSort = SortOrder.Sel)) {
+  inline def compile(): StorageManager => Any = ${compileImpl()}
+  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/fib/facts"
+}
+
+/** ---------- Prime ---------- **/
+class PrimeOptimizedProgram(engine: ExecutionEngine) extends SolvableProgram(engine) with prime_optimized {
+  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/prime/facts"
+  initializeEmptyFactsFromDir(factDir)
+  pretest(this)
+}
+object PrimeOptimizedMacroCompiler extends MacroCompiler(PrimeOptimizedProgram(_), JITOptions(backend = Backend.MacroQuotes, sortOrder = SortOrder.IntMax)) {
+  inline def compile(): StorageManager => Any = ${this.compileImpl()}
+  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/prime/facts"
+}
+
+class PrimeWorstProgram(engine: ExecutionEngine) extends SolvableProgram(engine) with prime_worst {
+  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/prime/facts"
+  initializeEmptyFactsFromDir(factDir)
+  pretest(this)
+}
+object PrimeWorstMacroCompiler extends MacroCompiler(PrimeWorstProgram(_), JITOptions(backend = Backend.MacroQuotes, sortOrder = SortOrder.IntMax)) {
+  inline def compile(): StorageManager => Any = ${this.compileImpl()}
+  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/prime/facts"
+}
+
+class PrimeWorstProgramWithFacts(engine: ExecutionEngine) extends SolvableProgram(engine) with prime_worst {
+  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/prime/facts"
+  loadFromFactDir(factDir)
+  pretest(this)
+}
+object PrimeWorstMacroCompilerWithFacts extends MacroCompiler(PrimeWorstProgramWithFacts(_), JITOptions(backend = Backend.MacroQuotes, sortOrder = SortOrder.IntMax)) {
+  inline def compile(): StorageManager => Any = ${compileImpl()}
+  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/prime/facts"
+}
+class PrimeWorstProgramOnline(engine: ExecutionEngine) extends SolvableProgram(engine) with prime_worst {
+  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/prime/facts"
+  initializeEmptyFactsFromDir(factDir)
+  pretest(this)
+}
+object PrimeWorstMacroCompilerOnline extends MacroCompiler(PrimeWorstProgramOnline(_), JITOptions(backend = Backend.MacroQuotes, sortOrder = SortOrder.IntMax, runtimeSort = SortOrder.Sel)) {
+  inline def compile(): StorageManager => Any = ${this.compileImpl()}
+  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/prime/facts"
+}
+
+class PrimeWorstProgramWithFactsOnline(engine: ExecutionEngine) extends SolvableProgram(engine) with prime_worst {
+  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/prime/facts"
+  loadFromFactDir(factDir)
+  pretest(this)
+}
+object PrimeWorstMacroCompilerWithFactsOnline extends MacroCompiler(PrimeWorstProgramWithFactsOnline(_), JITOptions(backend = Backend.MacroQuotes, sortOrder = SortOrder.IntMax, runtimeSort = SortOrder.Sel)) {
+  inline def compile(): StorageManager => Any = ${compileImpl()}
+  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/prime/facts"
+}
+
+
