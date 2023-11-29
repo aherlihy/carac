@@ -1,7 +1,7 @@
 package datalog.storage
 
 import datalog.dsl.{Atom, Constant, Term, Variable}
-import datalog.execution.{AllIndexes, JoinIndexes, PredicateType, GroupingJoinIndexes}
+import datalog.execution.{AllIndexes, JoinIndexes, PredicateType}
 
 import scala.collection.mutable
 import scala.collection.immutable
@@ -40,7 +40,6 @@ trait StorageManager(val ns: NS) {
   def resetNewDelta(rId: RelationId, rules: EDB): Unit
   def resetKnownDelta(rId: RelationId, rules: EDB): Unit
   def clearNewDerived(): Unit
-  def clearKnownDelta(): Unit
 
   def swapKnowledge(): Unit
   def compareNewDeltaDBs(): Boolean
@@ -55,9 +54,6 @@ trait StorageManager(val ns: NS) {
   def joinProjectHelper_withHash(inputs: Seq[EDB], rId: Int, hash: String, onlineSort: Boolean): EDB
   def diff(lhs: EDB, rhs: EDB): EDB
   def union(edbs: Seq[EDB]): EDB
-
-  // Helpers for grouping
-  def groupingHelper(base: EDB, gji: GroupingJoinIndexes): EDB
 
   def SPJU(rId: RelationId, keys: mutable.ArrayBuffer[JoinIndexes]): EDB
   def naiveSPJU(rId: RelationId, keys: mutable.ArrayBuffer[JoinIndexes]): EDB

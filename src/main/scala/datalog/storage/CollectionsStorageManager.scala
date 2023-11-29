@@ -141,8 +141,6 @@ abstract class CollectionsStorageManager(override val ns: NS) extends StorageMan
     deltaDB(newDbId)(rId) = asCollectionsEDB(rules)
   def clearNewDerived(): Unit =
     derivedDB(newDbId) = CollectionsDatabase()
-  def clearKnownDelta(): Unit =
-    deltaDB(knownDbId) = CollectionsDatabase()
   // Compare & Swap
   def swapKnowledge(): Unit = {
     iteration += 1

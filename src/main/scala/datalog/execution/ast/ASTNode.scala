@@ -1,8 +1,8 @@
 package datalog.execution.ast
 
 import datalog.dsl.{Atom, Constant, Term, Variable}
-import datalog.execution.{JoinIndexes, GroupingJoinIndexes}
-import datalog.storage.{RelationId, StorageAggOp}
+import datalog.execution.JoinIndexes
+import datalog.storage.RelationId
 
 import scala.collection.immutable
 import scala.collection.mutable.{ArrayBuffer, Map}
@@ -24,7 +24,3 @@ abstract class TermNode(value: Term) extends ASTNode {}
 case class VarTerm(value: Variable) extends TermNode(value) {}
 
 case class ConstTerm(value: Constant) extends TermNode(value) {}
-
-case class LogicGroupingAtom(gp: LogicAtom, gv: Seq[VarTerm], ags: Seq[(AggOpNode, VarTerm)]) extends AtomNode {}
-
-case class AggOpNode(aggOp: StorageAggOp, term: TermNode) extends ASTNode {}

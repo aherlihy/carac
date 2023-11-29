@@ -43,12 +43,6 @@ case class CollectionsEDB(wrapped: mutable.ArrayBuffer[CollectionsRow]) extends 
   def flatMap(f: CollectionsRow => IterableOnce[CollectionsRow]): CollectionsEDB =
     CollectionsEDB(wrapped.flatMap(e => f(e)))
 
-  def distinct(): CollectionsEDB =
-    CollectionsEDB(wrapped.distinct)
-
-  def groupMapReduce(key: CollectionsRow => CollectionsRow, f: CollectionsRow => CollectionsRow, r: (CollectionsRow, CollectionsRow) => CollectionsRow): CollectionsEDB =
-    CollectionsEDB(wrapped.groupMapReduce(key)(f)(r).map((k, a) => k.concat(a)).to(mutable.ArrayBuffer))
-
   def factToString: String = wrapped.map(s => s.mkString("(", ", ", ")")).mkString("[", ", ", "]")
 }
 
