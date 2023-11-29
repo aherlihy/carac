@@ -69,6 +69,31 @@ class MacroQuoteCompiler(storageManager: StorageManager)(using JITOptions) exten
         super.compileIRRelOp(irTree)
     }
   }
+
+  override def compileIR(irTree: IROp[Any])(using stagedSM: Expr[StorageManager])(using Quotes): Expr[Any] = {
+    irTree match {
+      case SequenceOp(label, children: _*) =>
+        val cOps = children.map(compileIR)
+        label match
+          case OpCode.EVAL_NAIVE if children.length / 2 > heuristics.max_relations =>
+            cOps.reduceLeft((acc, next) =>
+              '{ $acc ; def eval_naive_lambda() = $next ; eval_naive_lambda() }
+            )
+          case OpCode.EVAL_SN if children.length > heuristics.max_relations =>
+            cOps.reduceLeft((acc, next) =>
+              '{ $acc ; def eval_sn_lambda() = $next ; eval_sn_lambda() }
+            )
+          case _ =>
+            cOps.reduceLeft((acc, next) =>
+              if (children.length > 4)
+                '{ $acc ;  def eval_seq_lambda() = $next ; eval_seq_lambda() }
+              else
+                '{ $acc ; $next }
+            )
+      case _ =>
+        super.compileIR(irTree)
+    }
+  }
 }
 
 /**

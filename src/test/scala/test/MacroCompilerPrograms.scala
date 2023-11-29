@@ -11,6 +11,7 @@ import test.examples.prime.*
 import test.examples.fib.*
 import test.examples.prime.*
 import test.examples.tastyslistlib.*
+import test.examples.tastyslistlibinverse.*
 import test.examples.prime.*
 
 import java.nio.file.Paths
@@ -197,4 +198,103 @@ object PrimeWorstMacroCompilerWithFactsOnline extends MacroCompiler(PrimeWorstPr
   val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/prime/facts"
 }
 
+/** ---------- Tastyslistlib ---------- **/
+class TastyslistlibOptimizedProgram(engine: ExecutionEngine) extends SolvableProgram(engine) with tastyslistlib_optimized {
+  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/tastyslistlib/facts"
+  initializeEmptyFactsFromDir(factDir)
+  pretest(this)
+}
+object TastyslistlibOptimizedMacroCompiler extends MacroCompiler(TastyslistlibOptimizedProgram(_), JITOptions(backend = Backend.MacroQuotes, sortOrder = SortOrder.IntMax)) {
+  inline def compile(): StorageManager => Any = ${this.compileImpl()}
+  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/tastyslistlib/facts"
+}
+
+class TastyslistlibWorstProgram(engine: ExecutionEngine) extends SolvableProgram(engine) with tastyslistlib_worst {
+  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/tastyslistlib/facts"
+  initializeEmptyFactsFromDir(factDir)
+  pretest(this)
+}
+object TastyslistlibWorstMacroCompiler extends MacroCompiler(TastyslistlibWorstProgram(_), JITOptions(backend = Backend.MacroQuotes, sortOrder = SortOrder.IntMax)) {
+  inline def compile(): StorageManager => Any = ${this.compileImpl()}
+  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/tastyslistlib/facts"
+}
+
+class TastyslistlibWorstProgramWithFacts(engine: ExecutionEngine) extends SolvableProgram(engine) with tastyslistlib_worst {
+  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/tastyslistlib/facts"
+  loadFromFactDir(factDir)
+  pretest(this)
+}
+object TastyslistlibWorstMacroCompilerWithFacts extends MacroCompiler(TastyslistlibWorstProgramWithFacts(_), JITOptions(backend = Backend.MacroQuotes, sortOrder = SortOrder.IntMax)) {
+  inline def compile(): StorageManager => Any = ${compileImpl()}
+  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/tastyslistlib/facts"
+}
+class TastyslistlibWorstProgramOnline(engine: ExecutionEngine) extends SolvableProgram(engine) with tastyslistlib_worst {
+  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/tastyslistlib/facts"
+  initializeEmptyFactsFromDir(factDir)
+  pretest(this)
+}
+object TastyslistlibWorstMacroCompilerOnline extends MacroCompiler(TastyslistlibWorstProgramOnline(_), JITOptions(backend = Backend.MacroQuotes, sortOrder = SortOrder.IntMax, runtimeSort = SortOrder.Sel)) {
+  inline def compile(): StorageManager => Any = ${this.compileImpl()}
+  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/tastyslistlib/facts"
+}
+
+class TastyslistlibWorstProgramWithFactsOnline(engine: ExecutionEngine) extends SolvableProgram(engine) with tastyslistlib_worst {
+  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/tastyslistlib/facts"
+  loadFromFactDir(factDir)
+  pretest(this)
+}
+object TastyslistlibWorstMacroCompilerWithFactsOnline extends MacroCompiler(TastyslistlibWorstProgramWithFactsOnline(_), JITOptions(backend = Backend.MacroQuotes, sortOrder = SortOrder.IntMax, runtimeSort = SortOrder.Sel)) {
+  inline def compile(): StorageManager => Any = ${compileImpl()}
+  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/tastyslistlib/facts"
+}
+
+/** ---------- Tastyslistlibinverse ---------- **/
+class TastyslistlibinverseOptimizedProgram(engine: ExecutionEngine) extends SolvableProgram(engine) with tastyslistlibinverse_optimized {
+  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/tastyslistlibinverse/facts"
+  initializeEmptyFactsFromDir(factDir)
+  pretest(this)
+}
+object TastyslistlibinverseOptimizedMacroCompiler extends MacroCompiler(TastyslistlibinverseOptimizedProgram(_), JITOptions(backend = Backend.MacroQuotes, sortOrder = SortOrder.IntMax)) {
+  inline def compile(): StorageManager => Any = ${this.compileImpl()}
+  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/tastyslistlibinverse/facts"
+}
+
+class TastyslistlibinverseWorstProgram(engine: ExecutionEngine) extends SolvableProgram(engine) with tastyslistlibinverse_worst {
+  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/tastyslistlibinverse/facts"
+  initializeEmptyFactsFromDir(factDir)
+  pretest(this)
+}
+object TastyslistlibinverseWorstMacroCompiler extends MacroCompiler(TastyslistlibinverseWorstProgram(_), JITOptions(backend = Backend.MacroQuotes, sortOrder = SortOrder.IntMax)) {
+  inline def compile(): StorageManager => Any = ${this.compileImpl()}
+  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/tastyslistlibinverse/facts"
+}
+
+class TastyslistlibinverseWorstProgramWithFacts(engine: ExecutionEngine) extends SolvableProgram(engine) with tastyslistlibinverse_worst {
+  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/tastyslistlibinverse/facts"
+  loadFromFactDir(factDir)
+  pretest(this)
+}
+object TastyslistlibinverseWorstMacroCompilerWithFacts extends MacroCompiler(TastyslistlibinverseWorstProgramWithFacts(_), JITOptions(backend = Backend.MacroQuotes, sortOrder = SortOrder.IntMax)) {
+  inline def compile(): StorageManager => Any = ${compileImpl()}
+  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/tastyslistlibinverse/facts"
+}
+class TastyslistlibinverseWorstProgramOnline(engine: ExecutionEngine) extends SolvableProgram(engine) with tastyslistlibinverse_worst {
+  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/tastyslistlibinverse/facts"
+  initializeEmptyFactsFromDir(factDir)
+  pretest(this)
+}
+object TastyslistlibinverseWorstMacroCompilerOnline extends MacroCompiler(TastyslistlibinverseWorstProgramOnline(_), JITOptions(backend = Backend.MacroQuotes, sortOrder = SortOrder.IntMax, runtimeSort = SortOrder.Sel)) {
+  inline def compile(): StorageManager => Any = ${this.compileImpl()}
+  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/tastyslistlibinverse/facts"
+}
+
+class TastyslistlibinverseWorstProgramWithFactsOnline(engine: ExecutionEngine) extends SolvableProgram(engine) with tastyslistlibinverse_worst {
+  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/tastyslistlibinverse/facts"
+  loadFromFactDir(factDir)
+  pretest(this)
+}
+object TastyslistlibinverseWorstMacroCompilerWithFactsOnline extends MacroCompiler(TastyslistlibinverseWorstProgramWithFactsOnline(_), JITOptions(backend = Backend.MacroQuotes, sortOrder = SortOrder.IntMax, runtimeSort = SortOrder.Sel)) {
+  inline def compile(): StorageManager => Any = ${compileImpl()}
+  val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/tastyslistlibinverse/facts"
+}
 
