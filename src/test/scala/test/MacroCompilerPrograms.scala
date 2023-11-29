@@ -71,7 +71,7 @@ class AckermannWorstProgramWithFacts(engine: ExecutionEngine) extends SolvablePr
   pretest(this)
 }
 object AckermannWorstMacroCompilerWithFacts extends MacroCompiler(AckermannWorstProgramWithFacts(_), JITOptions(backend = Backend.MacroQuotes, sortOrder = SortOrder.IntMax)) {
-  println("Ackermann WITH FACTS OFFLINE")
+//  println("Ackermann WITH FACTS OFFLINE")
   inline def compile(): StorageManager => Any = ${compileImpl()}
   val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/ackermann/facts"
 }
@@ -81,7 +81,7 @@ class AckermannWorstProgramOnline(engine: ExecutionEngine) extends SolvableProgr
   pretest(this)
 }
 object AckermannWorstMacroCompilerOnline extends MacroCompiler(AckermannWorstProgramOnline(_), JITOptions(backend = Backend.MacroQuotes, sortOrder = SortOrder.IntMax, runtimeSort = SortOrder.Sel)) {
-  println("Ackermann NO FACTS ONLINE")
+//  println("Ackermann NO FACTS ONLINE")
   inline def compile(): StorageManager => Any = ${this.compileImpl()}
   val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/ackermann/facts"
 }
@@ -92,7 +92,7 @@ class AckermannWorstProgramWithFactsOnline(engine: ExecutionEngine) extends Solv
   pretest(this)
 }
 object AckermannWorstMacroCompilerWithFactsOnline extends MacroCompiler(AckermannWorstProgramWithFactsOnline(_), JITOptions(backend = Backend.MacroQuotes, sortOrder = SortOrder.IntMax, runtimeSort = SortOrder.Sel)) {
-  println("Ackermann WITH FACTS ONLINE")
+//  println("Ackermann WITH FACTS ONLINE")
   inline def compile(): StorageManager => Any = ${compileImpl()}
   val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/ackermann/facts"
 }
