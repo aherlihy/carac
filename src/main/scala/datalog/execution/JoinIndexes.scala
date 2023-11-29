@@ -53,7 +53,7 @@ case class JoinIndexes(varIndexes: Seq[Seq[Int]],
         inCommon.map((count, hashs) =>
           count.toString + ": " + hashs.map(h => ns.hashToAtom(h)).mkString("", "|", "")
         ).mkString("", ", ", "")} }").mkString("[", ",\n", "]")
-  val hash: String = atoms.map(a => a.hash).mkString("", "", "")
+  val hash: String = toRuleHash(atoms)
 }
 
 object JoinIndexes {
@@ -150,7 +150,7 @@ object JoinIndexes {
           nextOpt = None
 
     val newAtoms = originalK.atoms.head +: newBody.map(_._1)
-    val newHash = JoinIndexes.getRuleHash(newAtoms)
+    val newHash = JoinIndexes.toRuleHash(newAtoms)
 
 //    println(s"\tOrder: ${newBody.map((a, _) => s"${sm.ns(a.rId)}:|${sortBy(a)}|").mkString("", ", ", "")}")
 //    if (originalK.atoms.length > 3)
@@ -195,7 +195,7 @@ object JoinIndexes {
 //        println(s"\t\t\t==>next cxn to add: ${nextOpt.map(next => sm.ns.hashToAtom(next._1.hash)).getOrElse("None")}")
 
     val newAtoms = originalK.atoms.head +: newBody.map(_._1)
-    val newHash = JoinIndexes.getRuleHash(newAtoms)
+    val newHash = JoinIndexes.toRuleHash(newAtoms)
 
 //    if (originalK.atoms.length > 3)
 //      print(s"Rule: ${sm.printer.ruleToString(originalK.atoms)} => ")
@@ -246,11 +246,9 @@ object JoinIndexes {
           newHash,
           JoinIndexes(originalK.atoms.head +: newBody.map(_._1), Some(originalK.cxns))
         )
-
-        // A map from an atom rId to its index in originalK
+        // A map from an atom hash to its index in originalK
         val originalIndex = mutable.Map.empty[String, Int]
         originalK.atoms.view.drop(1).zipWithIndex.foreach((atom, index) =>
-          // Even though this is called `hash`, it is actually used to represent equality.
           originalIndex(atom.hash) = index
         )
         (newK.atoms.view.drop(1).map(a => input(originalIndex(a.hash))).to(immutable.ArraySeq.untagged), newK)
@@ -269,5 +267,25 @@ object JoinIndexes {
     ).toSeq:_*)
   }
 
-  def getRuleHash(rule: Seq[Atom]): String = rule.map(r => r.hash).mkString("", "", "")
+  def toRuleHash(rule: Seq[Atom]): String = rule.map(r => r.hash).mkString("", "-", "")
+
+  /**
+   * Only used when hashs are calculated potentially at compile-time and are not
+   * accessible anymore at runtime.
+   * @param hash
+   * @param originalK
+   * @return
+   */
+  def fromRuleHash(hash: String, originalK: JoinIndexes): JoinIndexes = {
+    val atomHashs = hash.split("-").toSeq
+
+    val originalIndexes = mutable.Map.empty[String, Int]
+    originalK.atoms.view.drop(1).zipWithIndex.foreach((atom, index) =>
+      originalIndexes(atom.hash) = index
+    )
+    val newAtoms = originalK.atoms.head +: atomHashs.drop(1).map(a =>
+     originalK.atoms.drop(1)(originalIndexes(a))
+    )
+    JoinIndexes(newAtoms, None, None)
+  }
 }
