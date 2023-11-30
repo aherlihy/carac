@@ -130,6 +130,11 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
     val allRules = ast.rules.getOrElseUpdate(rule.rId, AllRulesNode(mutable.ArrayBuffer.empty, rule.rId)).asInstanceOf[AllRulesNode]
     allRules.edb = true
   }
+  def insertEmptyEDB(rId: Int): Unit = {
+    storageManager.insertEmptyEDB(rId)
+    val allRules = ast.rules.getOrElseUpdate(rId, AllRulesNode(mutable.ArrayBuffer.empty, rId)).asInstanceOf[AllRulesNode]
+    allRules.edb = true
+  }
 
   def generateProgramTree(rId: Int): Either[Int, (IROp[Any], InterpreterContext)] = {
     storageManager.verifyEDBs(precedenceGraph.idbs)

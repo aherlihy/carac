@@ -18,6 +18,7 @@ trait StorageManager(val ns: NS) {
   def initEvaluation(): Unit
 
   def insertEDB(rule: Atom): Unit
+  def insertEmptyEDB(rId: RelationId): Unit
   def getEmptyEDB(): EDB
   def edbContains(rId: RelationId): Boolean
   def getEDB(rId: RelationId): EDB

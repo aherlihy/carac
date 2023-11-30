@@ -14,6 +14,7 @@ trait ExecutionEngine {
 
   def insertIDB(rId: RelationId, rule: Seq[Atom]): Unit
   def insertEDB(body: Atom): Unit
+  def insertEmptyEDB(rId: RelationId): Unit
 
   def solve(rId: RelationId): Set[Seq[Term]]
   def get(rId: RelationId): Set[Seq[Term]]

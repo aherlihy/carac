@@ -47,6 +47,9 @@ class NaiveExecutionEngine(val storageManager: StorageManager, stratified: Boole
       prebuiltOpKeys.getOrElseUpdate(rule.rId, mutable.ArrayBuffer[JoinIndexes]()).addOne(JoinIndexes(IndexedSeq(), mutable.Map(), IndexedSeq(), Seq((PredicateType.POSITIVE, rule.rId)), Seq(rule), mutable.Map.empty, true))
     storageManager.insertEDB(rule)
   }
+  def insertEmptyEDB(rId: RelationId): Unit = {
+    storageManager.insertEmptyEDB(rId)
+  }
 
   def evalRuleNaive(rId: RelationId):  EDB = {
     storageManager.naiveSPJU(rId, getOperatorKeys(rId))

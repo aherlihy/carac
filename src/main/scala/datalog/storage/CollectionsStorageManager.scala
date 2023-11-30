@@ -67,6 +67,10 @@ abstract class CollectionsStorageManager(override val ns: NS) extends StorageMan
       edbs(rule.rId).addOne(CollectionsRow(rule.terms))
     edbDomain.addAll(rule.terms)
   }
+  override def insertEmptyEDB(rId: RelationId): Unit = {
+    if (!edbs.contains(rId))
+      edbs(rId) = CollectionsEDB()
+  }
   /* Call when adding an IDB rule so domain can grow incrementally */
   override def addConstantsToDomain(constants: Seq[StorageTerm]): Unit = {
     edbDomain.addAll(constants)
