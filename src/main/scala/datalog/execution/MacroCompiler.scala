@@ -62,7 +62,8 @@ abstract class MacroCompiler[T <: SolvableProgram](val makeProgram: ExecutionEng
         val x = '{ (sm: StorageManager) =>
           ${ compiler.compileIR(irTree)(using 'sm) }
         }
-        // println(x.show)
+        if jitOptions.debug then
+          println(x.show)
         x
   }
 

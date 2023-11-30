@@ -214,7 +214,7 @@ class TastyslistlibWorstProgram(engine: ExecutionEngine) extends SolvableProgram
   initializeEmptyFactsFromDir(factDir)
   pretest(this)
 }
-object TastyslistlibWorstMacroCompiler extends MacroCompiler(TastyslistlibWorstProgram(_), JITOptions(backend = Backend.MacroQuotes, sortOrder = SortOrder.IntMax)) {
+object TastyslistlibWorstMacroCompiler extends MacroCompiler(TastyslistlibWorstProgram(_), JITOptions(backend = Backend.MacroQuotes, sortOrder = SortOrder.IntMax/*, debug = true*/)) {
   inline def compile(): StorageManager => Any = ${this.compileImpl()}
   val factDir = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/tastyslistlib/facts"
 }

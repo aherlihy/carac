@@ -244,6 +244,8 @@ class QuoteCompiler(val storageManager: StorageManager)(using JITOptions) extend
             (children, k)
 
         val compiledOps = sortedChildren.map(compileIRRelOp)
+        if jitOptions.debug then
+          println("compiledOps: " + compiledOps.length)
         '{ $stagedSM.union(${ Expr.ofSeq(compiledOps) }) }
 
       case UnionOp(label, children: _*) =>
