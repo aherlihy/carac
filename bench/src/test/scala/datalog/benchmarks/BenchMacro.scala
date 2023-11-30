@@ -6,27 +6,22 @@ import org.openjdk.jmh.infra.Blackhole
 import datalog.{
   AckermannWorstMacroCompiler as AckermannMacroCompiler,
   AckermannWorstMacroCompilerWithFacts as AckermannMacroCompilerWithFacts,
-  AckermannOptimizedMacroCompiler,
   AckermannWorstMacroCompilerWithFactsOnline as AckermannMacroCompilerWithFactsOnline,
   AckermannWorstMacroCompilerOnline as AckermannMacroCompilerOnline,
   FibWorstMacroCompiler as FibMacroCompiler,
   FibWorstMacroCompilerWithFacts as FibMacroCompilerWithFacts,
-  FibOptimizedMacroCompiler,
   FibWorstMacroCompilerWithFactsOnline as FibMacroCompilerWithFactsOnline,
   FibWorstMacroCompilerOnline as FibMacroCompilerOnline,
   PrimeWorstMacroCompiler as PrimeMacroCompiler,
   PrimeWorstMacroCompilerWithFacts as PrimeMacroCompilerWithFacts,
-  PrimeOptimizedMacroCompiler,
   PrimeWorstMacroCompilerWithFactsOnline as PrimeMacroCompilerWithFactsOnline,
   PrimeWorstMacroCompilerOnline as PrimeMacroCompilerOnline,
   TastyslistlibWorstMacroCompiler as TastyslistlibMacroCompiler,
   TastyslistlibWorstMacroCompilerWithFacts as TastyslistlibMacroCompilerWithFacts,
-  TastyslistlibOptimizedMacroCompiler,
   TastyslistlibWorstMacroCompilerWithFactsOnline as TastyslistlibMacroCompilerWithFactsOnline,
   TastyslistlibWorstMacroCompilerOnline as TastyslistlibMacroCompilerOnline,
   TastyslistlibinverseWorstMacroCompiler as TastyslistlibinverseMacroCompiler,
   TastyslistlibinverseWorstMacroCompilerWithFacts as TastyslistlibinverseMacroCompilerWithFacts,
-  TastyslistlibinverseOptimizedMacroCompiler,
   TastyslistlibinverseWorstMacroCompilerWithFactsOnline as TastyslistlibinverseMacroCompilerWithFactsOnline,
   TastyslistlibinverseWorstMacroCompilerOnline as TastyslistlibinverseMacroCompilerOnline,
 }
@@ -41,35 +36,30 @@ import java.nio.file.Paths
 object BenchMacro {
   val ackermannCompiled = AckermannMacroCompiler.compile()
   val ackermannWithFactsCompiled = AckermannMacroCompilerWithFacts.compile()
-  val ackermannOptimizedCompiled = AckermannOptimizedMacroCompiler.compile()
   val ackermannOnlineCompiled = AckermannMacroCompilerOnline.compile()
   val ackermannWithFactsOnlineCompiled = AckermannMacroCompilerWithFactsOnline.compile()
   val fibCompiled = FibMacroCompiler.compile()
   val fibWithFactsCompiled = FibMacroCompilerWithFacts.compile()
-  val fibOptimizedCompiled = FibOptimizedMacroCompiler.compile()
   val fibOnlineCompiled = FibMacroCompilerOnline.compile()
   val fibWithFactsOnlineCompiled = FibMacroCompilerWithFactsOnline.compile()
   val primeCompiled = PrimeMacroCompiler.compile()
   val primeWithFactsCompiled = PrimeMacroCompilerWithFacts.compile()
-  val primeOptimizedCompiled = PrimeOptimizedMacroCompiler.compile()
   val primeOnlineCompiled = PrimeMacroCompilerOnline.compile()
   val primeWithFactsOnlineCompiled = PrimeMacroCompilerWithFactsOnline.compile()
   val tastyslistlibCompiled = TastyslistlibMacroCompiler.compile()
   val tastyslistlibWithFactsCompiled = TastyslistlibMacroCompilerWithFacts.compile()
-  val tastyslistlibOptimizedCompiled = TastyslistlibOptimizedMacroCompiler.compile()
   val tastyslistlibOnlineCompiled = TastyslistlibMacroCompilerOnline.compile()
   val tastyslistlibWithFactsOnlineCompiled = TastyslistlibMacroCompilerWithFactsOnline.compile()
   val tastyslistlibinverseCompiled = TastyslistlibinverseMacroCompiler.compile()
   val tastyslistlibinverseWithFactsCompiled = TastyslistlibinverseMacroCompilerWithFacts.compile()
-  val tastyslistlibinverseOptimizedCompiled = TastyslistlibinverseOptimizedMacroCompiler.compile()
   val tastyslistlibinverseOnlineCompiled = TastyslistlibinverseMacroCompilerOnline.compile()
   val tastyslistlibinverseWithFactsOnlineCompiled = TastyslistlibinverseMacroCompilerWithFactsOnline.compile()
 }
 import BenchMacro.*
 
 @Fork(1)
-@Warmup(iterations = 10, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 100)
-@Measurement(iterations = 10, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 100)
+@Warmup(iterations = 10, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 10)
+@Measurement(iterations = 10, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 10)
 @State(Scope.Thread)
 @BenchmarkMode(Array(JmhMode.AverageTime))
 class BenchMacro {
@@ -92,7 +82,7 @@ class BenchMacro {
    * Only rules available at compile-time, no online optimization
    */
   @Benchmark
-  def ackermann_macro_runtimefacts_offline(blackhole: Blackhole) = {
+  def ackermann_macro_rules_offline(blackhole: Blackhole) = {
     val expectedSize = 54
 
     val facts = Paths.get(AckermannMacroCompiler.factDir)
@@ -103,7 +93,7 @@ class BenchMacro {
     )
     assert(res.size==expectedSize)
     blackhole.consume(res)
-    // println(s"macro runtimefacts offline, results =${res.size}")
+    // println(s"macro rules offline, results =${res.size}")
   }
 
   /**
@@ -126,7 +116,7 @@ class BenchMacro {
    * Only rules available at compile-time, online optimization
    */
   @Benchmark
-  def ackermann_macro_runtimefacts_online(blackhole: Blackhole) = {
+  def ackermann_macro_rules_online(blackhole: Blackhole) = {
     val expectedSize = 54
 
     val facts = Paths.get(AckermannMacroCompilerOnline.factDir)
@@ -135,62 +125,7 @@ class BenchMacro {
     )
     assert(res.size==expectedSize)
     blackhole.consume(res)
-    // println(s"macro runtimefacts online, results =${res.size}")
-  }
-
-  /**
-   * Nothing available at compile-time, runtime optimization, lambda
-   */
-  @Benchmark
-  def ackermann_jit_lambda_online(blackhole: Blackhole) = {
-    val expectedSize = 54
-
-    val facts = Paths.get(AckermannMacroCompiler.factDir)
-    val engine = StagedExecutionEngine(DefaultStorageManager(), JITOptions(
-      backend = Backend.Lambda,
-      mode = Mode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel
-    ))
-    val program = AckermannMacroCompiler.makeProgram(engine)
-    program.loadFromFactDir(facts.toString)
-    val res = program.namedRelation(program.toSolve).solve()
-    assert(res.size==expectedSize)
-    blackhole.consume(res)
-    // println(s"lambda results =${res.size}")
-  }
-
-  /**
-   * Baseline, interp no optimization
-   */
-  @Benchmark
-  def zzzackermann_interpreter_worst_baseline_offline(blackhole: Blackhole) = {
-    val expectedSize = 54
-
-    val facts = Paths.get(AckermannMacroCompiler.factDir)
-    val engine = StagedExecutionEngine(DefaultStorageManager(), JITOptions(
-      mode = Mode.Interpreted, granularity = Granularity.NEVER, sortOrder = SortOrder.Unordered
-    ))
-    val program = AckermannMacroCompiler.makeProgram(engine)
-    program.loadFromFactDir(facts.toString)
-    val res = program.namedRelation(program.toSolve).solve()
-    assert(res.size==expectedSize)
-    blackhole.consume(res)
-    // println(s"baseline results =${res.size}")
-  }
-
-  @Benchmark
-  def ackermann_interpreter_best_baseline_offline(blackhole: Blackhole) = {
-    val expectedSize = 54
-
-    val facts = Paths.get(AckermannOptimizedMacroCompiler.factDir)
-    val engine = StagedExecutionEngine(DefaultStorageManager(), JITOptions(
-      mode = Mode.Interpreted, granularity = Granularity.NEVER, sortOrder = SortOrder.Unordered
-    ))
-    val program = AckermannOptimizedMacroCompiler.makeProgram(engine)
-    program.loadFromFactDir(facts.toString)
-    val res = program.namedRelation(program.toSolve).solve()
-    assert(res.size==expectedSize)
-    blackhole.consume(res)
-    // println(s"baseline hand-optimized results =${res.size}")
+    // println(s"macro rules online, results =${res.size}")
   }
 
   /** ---------- Fib ---------- **/
@@ -214,7 +149,7 @@ class BenchMacro {
    * Only rules available at compile-time, no online optimization
    */
   @Benchmark
-  def fib_macro_runtimefacts_offline(blackhole: Blackhole) = {
+  def fib_macro_rules_offline(blackhole: Blackhole) = {
     val expectedSize = 21
 
     val facts = Paths.get(FibMacroCompiler.factDir)
@@ -225,7 +160,7 @@ class BenchMacro {
     )
     assert(res.size==expectedSize)
     blackhole.consume(res)
-    // println(s"macro runtimefacts offline, results =${res.size}")
+    // println(s"macro rules offline, results =${res.size}")
   }
 
   /**
@@ -248,7 +183,7 @@ class BenchMacro {
    * Only rules available at compile-time, online optimization
    */
   @Benchmark
-  def fib_macro_runtimefacts_online(blackhole: Blackhole) = {
+  def fib_macro_rules_online(blackhole: Blackhole) = {
     val expectedSize = 21
 
     val facts = Paths.get(FibMacroCompilerOnline.factDir)
@@ -257,62 +192,7 @@ class BenchMacro {
     )
     assert(res.size==expectedSize)
     blackhole.consume(res)
-    // println(s"macro runtimefacts online, results =${res.size}")
-  }
-
-  /**
-   * Nothing available at compile-time, runtime optimization, lambda
-   */
-  @Benchmark
-  def fib_jit_lambda_online(blackhole: Blackhole) = {
-    val expectedSize = 21
-
-    val facts = Paths.get(FibMacroCompiler.factDir)
-    val engine = StagedExecutionEngine(DefaultStorageManager(), JITOptions(
-      backend = Backend.Lambda,
-      mode = Mode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel
-    ))
-    val program = FibMacroCompiler.makeProgram(engine)
-    program.loadFromFactDir(facts.toString)
-    val res = program.namedRelation(program.toSolve).solve()
-    assert(res.size==expectedSize)
-    blackhole.consume(res)
-    // println(s"lambda results =${res.size}")
-  }
-
-  /**
-   * Baseline, interp no optimization
-   */
-  @Benchmark
-  def zzzfib_interpreter_worst_baseline_offline(blackhole: Blackhole) = {
-    val expectedSize = 21
-
-    val facts = Paths.get(FibMacroCompiler.factDir)
-    val engine = StagedExecutionEngine(DefaultStorageManager(), JITOptions(
-      mode = Mode.Interpreted, granularity = Granularity.NEVER, sortOrder = SortOrder.Unordered
-    ))
-    val program = FibMacroCompiler.makeProgram(engine)
-    program.loadFromFactDir(facts.toString)
-    val res = program.namedRelation(program.toSolve).solve()
-    assert(res.size==expectedSize)
-    blackhole.consume(res)
-    // println(s"baseline results =${res.size}")
-  }
-
-  @Benchmark
-  def fib_interpreter_best_baseline_offline(blackhole: Blackhole) = {
-    val expectedSize = 21
-
-    val facts = Paths.get(FibOptimizedMacroCompiler.factDir)
-    val engine = StagedExecutionEngine(DefaultStorageManager(), JITOptions(
-      mode = Mode.Interpreted, granularity = Granularity.NEVER, sortOrder = SortOrder.Unordered
-    ))
-    val program = FibOptimizedMacroCompiler.makeProgram(engine)
-    program.loadFromFactDir(facts.toString)
-    val res = program.namedRelation(program.toSolve).solve()
-    assert(res.size==expectedSize)
-    blackhole.consume(res)
-    // println(s"baseline hand-optimized results =${res.size}")
+    // println(s"macro rules online, results =${res.size}")
   }
 
   /** ---------- Prime ---------- * */
@@ -337,7 +217,7 @@ class BenchMacro {
    * Only rules available at compile-time, no online optimization
    */
   @Benchmark
-  def prime_macro_runtimefacts_offline(blackhole: Blackhole) = {
+  def prime_macro_rules_offline(blackhole: Blackhole) = {
     val expectedSize = 4
 
     val facts = Paths.get(PrimeMacroCompiler.factDir)
@@ -348,7 +228,7 @@ class BenchMacro {
     )
     assert(res.size==expectedSize)
     blackhole.consume(res)
-    // println(s"macro runtimefacts offline, results =${res.size}")
+    // println(s"macro rules offline, results =${res.size}")
   }
 
   /**
@@ -372,7 +252,7 @@ class BenchMacro {
    * Only rules available at compile-time, online optimization
    */
   @Benchmark
-  def prime_macro_runtimefacts_online(blackhole: Blackhole) = {
+  def prime_macro_rules_online(blackhole: Blackhole) = {
     val expectedSize = 4
 
     val facts = Paths.get(PrimeMacroCompilerOnline.factDir)
@@ -381,65 +261,7 @@ class BenchMacro {
     )
     assert(res.size==expectedSize)
     blackhole.consume(res)
-    // println(s"macro runtimefacts online, results =${res.size}")
-
-  }
-
-  /**
-   * Nothing available at compile-time, runtime optimization, lambda
-   */
-  @Benchmark
-  def prime_jit_lambda_online(blackhole: Blackhole) = {
-    val expectedSize = 4
-
-    val facts = Paths.get(PrimeMacroCompiler.factDir)
-    val engine = StagedExecutionEngine(DefaultStorageManager(), JITOptions(
-      backend = Backend.Lambda,
-      mode = Mode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel
-    ))
-    val program = PrimeMacroCompiler.makeProgram(engine)
-    program.loadFromFactDir(facts.toString)
-    val res = program.namedRelation(program.toSolve).solve()
-    assert(res.size==expectedSize)
-    blackhole.consume(res)
-    // println(s"lambda results =${res.size}")
-
-  }
-
-  /**
-   * Baseline, interp no optimization
-   */
-  @Benchmark
-  def zzzprime_interpreter_worst_baseline_offline(blackhole: Blackhole) = {
-    val expectedSize = 4
-
-    val facts = Paths.get(PrimeMacroCompiler.factDir)
-    val engine = StagedExecutionEngine(DefaultStorageManager(), JITOptions(
-      mode = Mode.Interpreted, granularity = Granularity.NEVER, sortOrder = SortOrder.Unordered
-    ))
-    val program = PrimeMacroCompiler.makeProgram(engine)
-    program.loadFromFactDir(facts.toString)
-    val res = program.namedRelation(program.toSolve).solve()
-    assert(res.size==expectedSize)
-    blackhole.consume(res)
-    // println(s"baseline results =${res.size}")
-
-  }
-
-  @Benchmark
-  def prime_interpreter_best_baseline_offline(blackhole: Blackhole) = {
-    val expectedSize = 4
-
-    val facts = Paths.get(PrimeOptimizedMacroCompiler.factDir)
-    val engine = StagedExecutionEngine(DefaultStorageManager(), JITOptions(
-      mode = Mode.Interpreted, granularity = Granularity.NEVER, sortOrder = SortOrder.Unordered
-    ))
-    val program = PrimeOptimizedMacroCompiler.makeProgram(engine)
-    program.loadFromFactDir(facts.toString)
-    val res = program.namedRelation(program.toSolve).solve()
-    assert(res.size==expectedSize)
-    blackhole.consume(res)
-    // println(s"baseline hand-optimized results =${res.size}")
+    // println(s"macro rules online, results =${res.size}")
 
   }
 
@@ -466,7 +288,7 @@ class BenchMacro {
    * Only rules available at compile-time, no online optimization
    */
   @Benchmark
-  def tastyslistlib_macro_runtimefacts_offline(blackhole: Blackhole) = {
+  def tastyslistlib_macro_rules_offline(blackhole: Blackhole) = {
     val expectedSize = 224
 
     val facts = Paths.get(TastyslistlibMacroCompiler.factDir)
@@ -477,7 +299,7 @@ class BenchMacro {
     )
     assert(res.size==expectedSize)
     blackhole.consume(res)
-    // println(s"macro runtimefacts offline, results =${res.size}")
+    // println(s"macro rules offline, results =${res.size}")
 
   }
 
@@ -502,7 +324,7 @@ class BenchMacro {
    * Only rules available at compile-time, online optimization
    */
   @Benchmark
-  def tastyslistlib_macro_runtimefacts_online(blackhole: Blackhole) = {
+  def tastyslistlib_macro_rules_online(blackhole: Blackhole) = {
     val expectedSize = 224
 
     val facts = Paths.get(TastyslistlibMacroCompilerOnline.factDir)
@@ -511,65 +333,7 @@ class BenchMacro {
     )
     assert(res.size==expectedSize)
     blackhole.consume(res)
-    // println(s"macro runtimefacts online, results =${res.size}")
-
-  }
-
-  /**
-   * Nothing available at compile-time, runtime optimization, lambda
-   */
-  @Benchmark
-  def tastyslistlib_jit_lambda_online(blackhole: Blackhole) = {
-    val expectedSize = 224
-
-    val facts = Paths.get(TastyslistlibMacroCompiler.factDir)
-    val engine = StagedExecutionEngine(DefaultStorageManager(), JITOptions(
-      backend = Backend.Lambda,
-      mode = Mode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel
-    ))
-    val program = TastyslistlibMacroCompiler.makeProgram(engine)
-    program.loadFromFactDir(facts.toString)
-    val res = program.namedRelation(program.toSolve).solve()
-    assert(res.size==expectedSize)
-    blackhole.consume(res)
-    // println(s"lambda results =${res.size}")
-
-  }
-
-  /**
-   * Baseline, interp no optimization
-   */
-  @Benchmark
-  def zzztastyslistlib_interpreter_worst_baseline_offline(blackhole: Blackhole) = {
-    val expectedSize = 224
-    val facts = Paths.get(TastyslistlibMacroCompiler.factDir)
-    val engine = StagedExecutionEngine(DefaultStorageManager(), JITOptions(
-      mode = Mode.Interpreted, granularity = Granularity.NEVER, sortOrder = SortOrder.Unordered
-    ))
-    val program = TastyslistlibMacroCompiler.makeProgram(engine)
-    program.loadFromFactDir(facts.toString)
-    println(s"sm = ${program.ee.storageManager.getAllEDBS().keys.map(rId => s"$rId:${program.ee.storageManager.ns(rId)}: |${program.ee.storageManager.getEDBResult(rId).size}|").mkString("{", ",\n  ", "}")}")
-    val res = program.namedRelation(program.toSolve).solve()
-    assert(res.size==expectedSize)
-    blackhole.consume(res)
-    // println(s"baseline results =${res.size}")
-
-  }
-
-  @Benchmark
-  def tastyslistlib_interpreter_best_baseline_offline(blackhole: Blackhole) = {
-    val expectedSize = 224
-
-    val facts = Paths.get(TastyslistlibOptimizedMacroCompiler.factDir)
-    val engine = StagedExecutionEngine(DefaultStorageManager(), JITOptions(
-      mode = Mode.Interpreted, granularity = Granularity.NEVER, sortOrder = SortOrder.Unordered
-    ))
-    val program = TastyslistlibOptimizedMacroCompiler.makeProgram(engine)
-    program.loadFromFactDir(facts.toString)
-    val res = program.namedRelation(program.toSolve).solve()
-    assert(res.size==expectedSize)
-    blackhole.consume(res)
-    // println(s"baseline hand-optimized results =${res.size}")
+    // println(s"macro rules online, results =${res.size}")
 
   }
 
@@ -596,7 +360,7 @@ class BenchMacro {
    * Only rules available at compile-time, no online optimization
    */
   @Benchmark
-  def tastyslistlibinverse_macro_runtimefacts_offline(blackhole: Blackhole) = {
+  def tastyslistlibinverse_macro_rules_offline(blackhole: Blackhole) = {
     val expectedSize = 1
 
     val facts = Paths.get(TastyslistlibinverseMacroCompiler.factDir)
@@ -607,7 +371,7 @@ class BenchMacro {
     )
     assert(res.size==expectedSize)
     blackhole.consume(res)
-    // println(s"macro runtimefacts offline, results =${res.size}")
+    // println(s"macro rules offline, results =${res.size}")
 
   }
 
@@ -632,7 +396,7 @@ class BenchMacro {
    * Only rules available at compile-time, online optimization
    */
   @Benchmark
-  def tastyslistlibinverse_macro_runtimefacts_online(blackhole: Blackhole) = {
+  def tastyslistlibinverse_macro_rules_online(blackhole: Blackhole) = {
     val expectedSize = 1
 
     val facts = Paths.get(TastyslistlibinverseMacroCompilerOnline.factDir)
@@ -641,65 +405,7 @@ class BenchMacro {
     )
     assert(res.size==expectedSize)
     blackhole.consume(res)
-    // println(s"macro runtimefacts online, results =${res.size}")
-
-  }
-
-  /**
-   * Nothing available at compile-time, runtime optimization, lambda
-   */
-  @Benchmark
-  def tastyslistlibinverse_jit_lambda_online(blackhole: Blackhole) = {
-    val expectedSize = 1
-
-    val facts = Paths.get(TastyslistlibinverseMacroCompiler.factDir)
-    val engine = StagedExecutionEngine(DefaultStorageManager(), JITOptions(
-      backend = Backend.Lambda,
-      mode = Mode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel
-    ))
-    val program = TastyslistlibinverseMacroCompiler.makeProgram(engine)
-    program.loadFromFactDir(facts.toString)
-    val res = program.namedRelation(program.toSolve).solve()
-    assert(res.size==expectedSize)
-    blackhole.consume(res)
-    // println(s"lambda results =${res.size}")
-
-  }
-
-  /**
-   * Baseline, interp no optimization
-   */
-  @Benchmark
-  def zzztastyslistlibinverse_interpreter_worst_baseline_offline(blackhole: Blackhole) = {
-    val expectedSize = 1
-
-    val facts = Paths.get(TastyslistlibinverseMacroCompiler.factDir)
-    val engine = StagedExecutionEngine(DefaultStorageManager(), JITOptions(
-      mode = Mode.Interpreted, granularity = Granularity.NEVER, sortOrder = SortOrder.Unordered
-    ))
-    val program = TastyslistlibinverseMacroCompiler.makeProgram(engine)
-    program.loadFromFactDir(facts.toString)
-    val res = program.namedRelation(program.toSolve).solve()
-    assert(res.size==expectedSize)
-    blackhole.consume(res)
-    // println(s"baseline results =${res.size}")
-
-  }
-
-  @Benchmark
-  def tastyslistlibinverse_interpreter_best_baseline_offline(blackhole: Blackhole) = {
-    val expectedSize = 1
-
-    val facts = Paths.get(TastyslistlibinverseOptimizedMacroCompiler.factDir)
-    val engine = StagedExecutionEngine(DefaultStorageManager(), JITOptions(
-      mode = Mode.Interpreted, granularity = Granularity.NEVER, sortOrder = SortOrder.Unordered
-    ))
-    val program = TastyslistlibinverseOptimizedMacroCompiler.makeProgram(engine)
-    program.loadFromFactDir(facts.toString)
-    val res = program.namedRelation(program.toSolve).solve()
-    assert(res.size==expectedSize)
-    blackhole.consume(res)
-    // println(s"baseline hand-optimized results =${res.size}")
+    // println(s"macro rules online, results =${res.size}")
 
   }
 }

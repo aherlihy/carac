@@ -12,8 +12,8 @@ scp herlihy@diascld$1.iccluster.epfl.ch:/scratch/herlihy/carac/bench.out results
 cat results/$2$1.csv |
  sed -e 's/"datalog\.benchmarks\.BenchMacro\.//' |
  sed -e 's/jit_lambda/jit-lambda_nothing/' |
- sed -e 's/interpreter_best_baseline/interpreter-hand-optimized_nothing/' |
- sed -e 's/interpreter_worst_baseline/interpreter_nothing/' |
+ sed -e 's/interpreter_optimized/interpreter-hand-optimized_nothing/' |
+ sed -e 's/interpreter_worst/interpreter_nothing/' |
  sed -e 's/zzz//' |
  sed -e 's/runtimefacts/rules/' |
  sed -e 's/aot/facts+rules/' |
