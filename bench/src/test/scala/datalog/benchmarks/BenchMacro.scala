@@ -71,7 +71,7 @@ import BenchMacro.*
 @Warmup(iterations = 10, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 100)
 @Measurement(iterations = 10, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 100)
 @State(Scope.Thread)
-@BenchmarkMode(Array(JmhMode.SingleShotTime))
+@BenchmarkMode(Array(JmhMode.AverageTime))
 class BenchMacro {
   /**
    * Both facts + rules available at compile-time, no online optimization
@@ -472,12 +472,8 @@ class BenchMacro {
     val facts = Paths.get(TastyslistlibMacroCompiler.factDir)
     val res = TastyslistlibMacroCompiler.runCompiled(tastyslistlibCompiled)(
       program =>
-//        println(s"  before sm = ${program.ee.storageManager.getAllEDBS().keys.map(rId => s"$rId:${program.ee.storageManager.ns(rId)}: |${program.ee.storageManager.getEDBResult(rId).size}|").mkString("{",",\n  ","}")}")
         val edbs = program.ee.storageManager.getAllEDBS()
-        Seq("Delegate", "Overrides", "Refers", "StaticLookUp", "Store", "SuperCall", "TopLevel").foreach(e => edbs.remove(program.ee.storageManager.ns(e)))
-//        println(s"  after clear = ${program.ee.storageManager.getAllEDBS().keys.map(rId => s"$rId:${program.ee.storageManager.ns(rId)}: |${program.ee.storageManager.getEDBResult(rId).size}|").mkString("{",",\n  ","}")}")
         program.loadFromFactDir(facts.toString)
-//        println(s"sm = ${program.ee.storageManager.getAllEDBS().keys.map(rId => s"$rId:${program.ee.storageManager.ns(rId)}: |${program.ee.storageManager.getEDBResult(rId).size}|").mkString("{", ",\n  ", "}")}")
     )
     assert(res.size==expectedSize)
     blackhole.consume(res)

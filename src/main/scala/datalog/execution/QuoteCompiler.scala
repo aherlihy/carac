@@ -206,7 +206,13 @@ class QuoteCompiler(val storageManager: StorageManager)(using JITOptions) extend
         if (storageManager.edbContains(rId))
           '{ $stagedSM.getEDB(${ Expr(rId) }) }
         else
-          '{ $stagedSM.getEmptyEDB() }
+          '{
+            val id = ${ Expr(rId) }
+            if $stagedSM.edbContains(id) then
+              $stagedSM.getEDB(id)
+            else
+              $stagedSM.getEmptyEDB()
+          }
 
       case ProjectJoinFilterOp(rId, k, children: _*) =>
         val (sortedChildren, newK) =
