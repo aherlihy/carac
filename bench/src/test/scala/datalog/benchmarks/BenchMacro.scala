@@ -24,6 +24,14 @@ import datalog.{
   TastyslistlibinverseWorstMacroCompilerWithFacts as TastyslistlibinverseMacroCompilerWithFacts,
   TastyslistlibinverseWorstMacroCompilerWithFactsOnline as TastyslistlibinverseMacroCompilerWithFactsOnline,
   TastyslistlibinverseWorstMacroCompilerOnline as TastyslistlibinverseMacroCompilerOnline,
+  CbaexprvalueWorstMacroCompiler as CbaexprvalueMacroCompiler,
+  CbaexprvalueWorstMacroCompilerWithFacts as CbaexprvalueMacroCompilerWithFacts,
+  CbaexprvalueWorstMacroCompilerWithFactsOnline as CbaexprvalueMacroCompilerWithFactsOnline,
+  CbaexprvalueWorstMacroCompilerOnline as CbaexprvalueMacroCompilerOnline,
+  EqualWorstMacroCompiler as EqualMacroCompiler,
+  EqualWorstMacroCompilerWithFacts as EqualMacroCompilerWithFacts,
+  EqualWorstMacroCompilerWithFactsOnline as EqualMacroCompilerWithFactsOnline,
+  EqualWorstMacroCompilerOnline as EqualMacroCompilerOnline,
 }
 
 import scala.compiletime.uninitialized
@@ -54,6 +62,14 @@ object BenchMacro {
   val tastyslistlibinverseWithFactsCompiled = TastyslistlibinverseMacroCompilerWithFacts.compile()
   val tastyslistlibinverseOnlineCompiled = TastyslistlibinverseMacroCompilerOnline.compile()
   val tastyslistlibinverseWithFactsOnlineCompiled = TastyslistlibinverseMacroCompilerWithFactsOnline.compile()
+  val equalCompiled = EqualMacroCompiler.compile()
+  val equalWithFactsCompiled = EqualMacroCompilerWithFacts.compile()
+  val equalOnlineCompiled = EqualMacroCompilerOnline.compile()
+  val equalWithFactsOnlineCompiled = EqualMacroCompilerWithFactsOnline.compile()
+  val cbaexprvalueCompiled = CbaexprvalueMacroCompiler.compile()
+  val cbaexprvalueWithFactsCompiled = CbaexprvalueMacroCompilerWithFacts.compile()
+  val cbaexprvalueOnlineCompiled = CbaexprvalueMacroCompilerOnline.compile()
+  val cbaexprvalueWithFactsOnlineCompiled = CbaexprvalueMacroCompilerWithFactsOnline.compile()
 }
 import BenchMacro.*
 
@@ -408,4 +424,135 @@ class BenchMacro {
     // println(s"macro rules online, results =${res.size}")
 
   }
+
+  /**
+   * Both facts + rules available at compile-time, no online optimization
+   */
+  @Benchmark
+  def equal_macro_aot_offline(blackhole: Blackhole) = {
+    val expectedSize = 0
+    val facts = Paths.get(EqualMacroCompilerWithFacts.factDir)
+    val res = EqualMacroCompilerWithFacts.runCompiled(equalWithFactsCompiled)( // facts already loaded at compile-time
+      program => () //println(s"size succ = ${program.namedRelation("succ").get().size}")
+    )
+    assert(res.size == expectedSize)
+    blackhole.consume(res)
+    // println(s"macro AOT offline results =${res.size}")
+  }
+
+  /**
+   * Only rules available at compile-time, no online optimization
+   */
+  @Benchmark
+  def equal_macro_rules_offline(blackhole: Blackhole) = {
+    val expectedSize = 0
+
+    val facts = Paths.get(EqualMacroCompiler.factDir)
+    val res = EqualMacroCompiler.runCompiled(equalCompiled)(
+      program =>
+        //println(s"size succ = ${program.namedRelation("succ").get().size}")
+        program.loadFromFactDir(facts.toString)
+    )
+    assert(res.size == expectedSize)
+    blackhole.consume(res)
+    // println(s"macro rules offline, results =${res.size}")
+  }
+
+  /**
+   * Both facts + rules available at compile-time, online optimization
+   */
+  @Benchmark
+  def equal_macro_aot_online(blackhole: Blackhole) = {
+    val expectedSize = 0
+
+    val facts = Paths.get(EqualMacroCompilerWithFactsOnline.factDir)
+    val res = EqualMacroCompilerWithFactsOnline.runCompiled(equalWithFactsOnlineCompiled)(
+      program => {} // facts already loaded at compile-time
+    )
+    assert(res.size == expectedSize)
+    blackhole.consume(res)
+    // println(s"macro AOT online, results =${res.size}")
+  }
+
+  /**
+   * Only rules available at compile-time, online optimization
+   */
+  @Benchmark
+  def equal_macro_rules_online(blackhole: Blackhole) = {
+    val expectedSize = 0
+
+    val facts = Paths.get(EqualMacroCompilerOnline.factDir)
+    val res = EqualMacroCompilerOnline.runCompiled(equalOnlineCompiled)(
+      program => program.loadFromFactDir(facts.toString)
+    )
+    assert(res.size == expectedSize)
+    blackhole.consume(res)
+    // println(s"macro rules online, results =${res.size}")
+  }
+
+  /**
+   * Both facts + rules available at compile-time, no online optimization
+   */
+  @Benchmark
+  def cbaexprvalue_macro_aot_offline(blackhole: Blackhole) = {
+    val expectedSize = 6
+    val facts = Paths.get(CbaexprvalueMacroCompilerWithFacts.factDir)
+    val res = CbaexprvalueMacroCompilerWithFacts.runCompiled(cbaexprvalueWithFactsCompiled)( // facts already loaded at compile-time
+      program => () //println(s"size succ = ${program.namedRelation("succ").get().size}")
+    )
+    assert(res.size == expectedSize)
+    blackhole.consume(res)
+    // println(s"macro AOT offline results =${res.size}")
+  }
+
+  /**
+   * Only rules available at compile-time, no online optimization
+   */
+  @Benchmark
+  def cbaexprvalue_macro_rules_offline(blackhole: Blackhole) = {
+    val expectedSize = 6
+
+    val facts = Paths.get(CbaexprvalueMacroCompiler.factDir)
+    val res = CbaexprvalueMacroCompiler.runCompiled(cbaexprvalueCompiled)(
+      program =>
+        //println(s"size succ = ${program.namedRelation("succ").get().size}")
+        program.loadFromFactDir(facts.toString)
+    )
+    assert(res.size == expectedSize)
+    blackhole.consume(res)
+    // println(s"macro rules offline, results =${res.size}")
+  }
+
+  /**
+   * Both facts + rules available at compile-time, online optimization
+   */
+  @Benchmark
+  def cbaexprvalue_macro_aot_online(blackhole: Blackhole) = {
+    val expectedSize = 6
+
+    val facts = Paths.get(CbaexprvalueMacroCompilerWithFactsOnline.factDir)
+    val res = CbaexprvalueMacroCompilerWithFactsOnline.runCompiled(cbaexprvalueWithFactsOnlineCompiled)(
+      program => {} // facts already loaded at compile-time
+    )
+    assert(res.size == expectedSize)
+    blackhole.consume(res)
+    // println(s"macro AOT online, results =${res.size}")
+  }
+
+  /**
+   * Only rules available at compile-time, online optimization
+   */
+  @Benchmark
+  def cbaexprvalue_macro_rules_online(blackhole: Blackhole) = {
+    val expectedSize = 6
+
+    val facts = Paths.get(CbaexprvalueMacroCompilerOnline.factDir)
+    val res = CbaexprvalueMacroCompilerOnline.runCompiled(cbaexprvalueOnlineCompiled)(
+      program => program.loadFromFactDir(facts.toString)
+    )
+    assert(res.size == expectedSize)
+    blackhole.consume(res)
+    // println(s"macro rules online, results =${res.size}")
+  }
+
 }

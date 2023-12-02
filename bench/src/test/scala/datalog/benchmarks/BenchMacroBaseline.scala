@@ -22,6 +22,10 @@ import test.examples.tastyslistlib.tastyslistlib_worst
 import test.examples.tastyslistlib.tastyslistlib_optimized
 import test.examples.tastyslistlibinverse.tastyslistlibinverse_worst
 import test.examples.tastyslistlibinverse.tastyslistlibinverse_optimized
+import test.examples.cbaexprvalue.cbaexprvalue_worst
+import test.examples.cbaexprvalue.cbaexprvalue_optimized
+import test.examples.equal.equal_worst
+import test.examples.equal.equal_optimized
 
 object AckermannWorst extends ackermann_worst
 object AckermannOptimized extends ackermann_optimized
@@ -33,6 +37,10 @@ object TastyslistlibWorst extends tastyslistlib_worst
 object TastyslistlibOptimized extends tastyslistlib_optimized
 object TastyslistlibinverseWorst extends tastyslistlibinverse_worst
 object TastyslistlibinverseOptimized extends tastyslistlibinverse_optimized
+object EqualWorst extends equal_worst
+object EqualOptimized extends equal_optimized
+object CbaexprvalueWorst extends cbaexprvalue_worst
+object CbaexprvalueOptimized extends cbaexprvalue_optimized
 
 @Fork(1)
 @Warmup(iterations = 10, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 10)
@@ -54,18 +62,6 @@ class BenchMacroBaseline {
     )
   }
 
-  @Benchmark
-  def ackermann_jit_irop_online(blackhole: Blackhole) = {
-    val jo = JITOptions(mode = Mode.Interpreted, sortOrder = SortOrder.Sel)
-    val engine = new StagedExecutionEngine(new DefaultStorageManager(), jo)
-    val program = Program(engine)
-    program.loadFromFactDir(AckermannWorst.factDirectory)
-    AckermannWorst.pretest(program)
-
-    blackhole.consume(
-      program.namedRelation(AckermannWorst.toSolve).solve()
-    )
-  }
 
   @Benchmark
   def ackermann_interpreter_optimized_offline(blackhole: Blackhole) = {
@@ -107,18 +103,6 @@ class BenchMacroBaseline {
     )
   }
 
-  @Benchmark
-  def fib_jit_irop_online(blackhole: Blackhole) = {
-    val jo = JITOptions(mode = Mode.Interpreted, sortOrder = SortOrder.Sel)
-    val engine = new StagedExecutionEngine(new DefaultStorageManager(), jo)
-    val program = Program(engine)
-    program.loadFromFactDir(FibWorst.factDirectory)
-    FibWorst.pretest(program)
-
-    blackhole.consume(
-      program.namedRelation(FibWorst.toSolve).solve()
-    )
-  }
 
   @Benchmark
   def fib_interpreter_optimized_offline(blackhole: Blackhole) = {
@@ -160,18 +144,6 @@ class BenchMacroBaseline {
     )
   }
 
-  @Benchmark
-  def prime_jit_irop_online(blackhole: Blackhole) = {
-    val jo = JITOptions(mode = Mode.Interpreted, sortOrder = SortOrder.Sel)
-    val engine = new StagedExecutionEngine(new DefaultStorageManager(), jo)
-    val program = Program(engine)
-    program.loadFromFactDir(PrimeWorst.factDirectory)
-    PrimeWorst.pretest(program)
-
-    blackhole.consume(
-      program.namedRelation(PrimeWorst.toSolve).solve()
-    )
-  }
 
   @Benchmark
   def prime_interpreter_optimized_offline(blackhole: Blackhole) = {
@@ -199,6 +171,90 @@ class BenchMacroBaseline {
     )
   }
 
+  /** -----------------Cbaexprvalue-----------------* */
+  @Benchmark
+  def cbaexprvalue_jit_lambda_online(blackhole: Blackhole) = {
+    val jo = JITOptions(mode = Mode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
+    val engine = new StagedExecutionEngine(new DefaultStorageManager(), jo)
+    val program = Program(engine)
+    program.loadFromFactDir(CbaexprvalueWorst.factDirectory)
+    CbaexprvalueWorst.pretest(program)
+
+    blackhole.consume(
+      program.namedRelation(CbaexprvalueWorst.toSolve).solve()
+    )
+  }
+
+
+  @Benchmark
+  def cbaexprvalue_interpreter_optimized_offline(blackhole: Blackhole) = {
+    val jo = JITOptions(mode = Mode.Interpreted)
+    val engine = new StagedExecutionEngine(new DefaultStorageManager(), jo)
+    val program = Program(engine)
+    program.loadFromFactDir(CbaexprvalueOptimized.factDirectory)
+    CbaexprvalueOptimized.pretest(program)
+
+    blackhole.consume(
+      program.namedRelation(CbaexprvalueOptimized.toSolve).solve()
+    )
+  }
+
+  @Benchmark
+  def cbaexprvalue_interpreter_worst_offline(blackhole: Blackhole) = {
+    val jo = JITOptions(mode = Mode.Interpreted)
+    val engine = new StagedExecutionEngine(new DefaultStorageManager(), jo)
+    val program = Program(engine)
+    program.loadFromFactDir(CbaexprvalueWorst.factDirectory)
+    CbaexprvalueWorst.pretest(program)
+
+    blackhole.consume(
+      program.namedRelation(CbaexprvalueWorst.toSolve).solve()
+    )
+  }
+
+
+  /** -----------------Equal-----------------* */
+  @Benchmark
+  def equal_jit_lambda_online(blackhole: Blackhole) = {
+    val jo = JITOptions(mode = Mode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
+    val engine = new StagedExecutionEngine(new DefaultStorageManager(), jo)
+    val program = Program(engine)
+    program.loadFromFactDir(EqualWorst.factDirectory)
+    EqualWorst.pretest(program)
+
+    blackhole.consume(
+      program.namedRelation(EqualWorst.toSolve).solve()
+    )
+  }
+
+
+  @Benchmark
+  def equal_interpreter_optimized_offline(blackhole: Blackhole) = {
+    val jo = JITOptions(mode = Mode.Interpreted)
+    val engine = new StagedExecutionEngine(new DefaultStorageManager(), jo)
+    val program = Program(engine)
+    program.loadFromFactDir(EqualOptimized.factDirectory)
+    EqualOptimized.pretest(program)
+
+    blackhole.consume(
+      program.namedRelation(EqualOptimized.toSolve).solve()
+    )
+  }
+
+  @Benchmark
+  def equal_interpreter_worst_offline(blackhole: Blackhole) = {
+    val jo = JITOptions(mode = Mode.Interpreted)
+    val engine = new StagedExecutionEngine(new DefaultStorageManager(), jo)
+    val program = Program(engine)
+    program.loadFromFactDir(EqualWorst.factDirectory)
+    EqualWorst.pretest(program)
+
+    blackhole.consume(
+      program.namedRelation(EqualWorst.toSolve).solve()
+    )
+  }
+
+
   /** -----------------Tastyslistlib-----------------* */
   @Benchmark
   def tastyslistlib_jit_lambda_online(blackhole: Blackhole) = {
@@ -213,18 +269,6 @@ class BenchMacroBaseline {
     )
   }
 
-  @Benchmark
-  def tastyslistlib_jit_irop_online(blackhole: Blackhole) = {
-    val jo = JITOptions(mode = Mode.Interpreted, sortOrder = SortOrder.Sel)
-    val engine = new StagedExecutionEngine(new DefaultStorageManager(), jo)
-    val program = Program(engine)
-    program.loadFromFactDir(TastyslistlibWorst.factDirectory)
-    TastyslistlibWorst.pretest(program)
-
-    blackhole.consume(
-      program.namedRelation(TastyslistlibWorst.toSolve).solve()
-    )
-  }
 
   @Benchmark
   def tastyslistlib_interpreter_optimized_offline(blackhole: Blackhole) = {
@@ -253,18 +297,6 @@ class BenchMacroBaseline {
     )
   }
 
-  @Benchmark
-  def tastyslistlibinverse_jit_irop_online(blackhole: Blackhole) = {
-    val jo = JITOptions(mode = Mode.Interpreted, sortOrder = SortOrder.Sel)
-    val engine = new StagedExecutionEngine(new DefaultStorageManager(), jo)
-    val program = Program(engine)
-    program.loadFromFactDir(TastyslistlibinverseWorst.factDirectory)
-    TastyslistlibinverseWorst.pretest(program)
-
-    blackhole.consume(
-      program.namedRelation(TastyslistlibinverseWorst.toSolve).solve()
-    )
-  }
 
   @Benchmark
   def tastyslistlibinverse_interpreter_optimized_offline(blackhole: Blackhole) = {
