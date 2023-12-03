@@ -132,9 +132,9 @@ class BytecodeCompiler(val storageManager: StorageManager)(using JITOptions) ext
           emitSeq(xb, sortedChildren.map(c => xxb => traverse(xxb, c)))
           xb.constantInstruction(rId)
           emitString(xb, newK.hash)
-          emitBool(xb, jitOptions.onlineSort)
+//          emitBool(xb, jitOptions.onlineSort)
           emitSMCall(xb, "joinProjectHelper_withHash",
-            classOf[Seq[?]], classOf[Int], classOf[String], classOf[Boolean])
+            classOf[Seq[?]], classOf[Int], classOf[String])
 
         case UnionSPJOp(rId, k, children: _*) =>
           val (sortedChildren, _) =
@@ -163,12 +163,6 @@ class BytecodeCompiler(val storageManager: StorageManager)(using JITOptions) ext
           traverse(xb, children(0))
           traverse(xb, children(1))
           emitSMCall(xb, "diff", classOf[EDB], classOf[EDB])
-
-        case GroupingOp(child, gji) =>
-          xb.aload(0)
-          traverse(xb, child)
-          emitGroupingJoinIndexes(xb, gji)
-          emitSMCall(xb, "groupingHelper", classOf[EDB], classOf[GroupingJoinIndexes])
 
         case DebugPeek(prefix, msg, children: _*) =>
           assert(false, s"Unimplemented node: $irTree")

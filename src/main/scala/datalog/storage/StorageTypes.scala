@@ -69,28 +69,3 @@ class NS() {
 //    s"${rIdToName(h.head.toInt)}${h.drop(1).mkString("(", ", ", ")")}"
     s"$neg${rIdToName(head.toInt)}.${h(1)}"
 }
-
-enum StorageAggOp:
-  case SUM, COUNT, MIN, MAX
-
-inline def getType(x: StorageConstant): Char = x match
-  case _: Int => 'i'
-  case _: String => 's'
-
-val aggOps: Map[StorageAggOp, Map[Char, (StorageConstant, StorageConstant) => StorageConstant]] = Map(
-  StorageAggOp.SUM -> Map(
-    'i' -> ((a, b) => a.asInstanceOf[Int] + b.asInstanceOf[Int]),
-    's' -> ((a, b) => a.asInstanceOf[String] + b.asInstanceOf[String])
-  ),
-  StorageAggOp.COUNT -> Map(
-    'i' -> ((a, b) => a.asInstanceOf[Int] + b.asInstanceOf[Int])
-  ),
-  StorageAggOp.MIN -> Map(
-    'i' -> ((a, b) => Math.min(a.asInstanceOf[Int], b.asInstanceOf[Int])),
-    's' -> ((a, b) => if a.asInstanceOf[String] < b.asInstanceOf[String] then a.asInstanceOf[String] else b.asInstanceOf[String])
-  ),
-  StorageAggOp.MAX -> Map(
-    'i' -> ((a, b) => Math.max(a.asInstanceOf[Int], b.asInstanceOf[Int])),
-    's' -> ((a, b) => if a.asInstanceOf[String] > b.asInstanceOf[String] then a.asInstanceOf[String] else b.asInstanceOf[String])
-  )
-)

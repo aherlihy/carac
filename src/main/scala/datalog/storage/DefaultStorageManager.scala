@@ -1,7 +1,7 @@
 package datalog.storage
 
-import datalog.dsl.{Atom, Constant, Variable, GroupingAtom, AggOp}
-import datalog.execution.{AllIndexes, JoinIndexes, PredicateType, AggOpIndex, GroupingJoinIndexes}
+import datalog.dsl.{Atom, Constant, Variable}
+import datalog.execution.{AllIndexes, JoinIndexes, PredicateType}
 import datalog.storage.CollectionsCasts.*
 
 import scala.collection.{immutable, mutable}
@@ -66,8 +66,8 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
     )
   }
 
-  private inline def toJoin(vars: Seq[Seq[Int]], innerTuple: CollectionsRow, outerTuple: CollectionsRow): Boolean = {
-    vars.isEmpty || vars.forall(condition =>
+  private inline def toJoin(k: JoinIndexes, innerTuple: CollectionsRow, outerTuple: CollectionsRow): Boolean = {
+    k.varIndexes.isEmpty || k.varIndexes.forall(condition =>
       if (condition.head >= innerTuple.length + outerTuple.length)
         true
       else
@@ -79,7 +79,11 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
     )
   }
 
-  override def joinProjectHelper_withHash(inputsEDB: Seq[EDB], rId: Int, hash: String, onlineSort: Boolean): CollectionsEDB = {
+  override def joinProjectHelper_withHash(inputsEDB: Seq[EDB], rId: Int, hash: String): CollectionsEDB = {
+    if (!allRulesAllIndexes.contains(rId)) throw new Exception(s"Missing relation ${ns(rId)} from JoinIndexes cache. Existing keys ${allRulesAllIndexes.keys.map(k => ns(k)).mkString("[", ", ", "]")}")
+    if (!allRulesAllIndexes(rId).contains(hash))
+//      throw new Exception(s"Missing hash for ${ns(rId)}: $hash from JoinIndexes cache. # hashes: ${allRulesAllIndexes(rId).size}")
+      allRulesAllIndexes(rId).update(hash, JoinIndexes.fromRuleHash(hash, allRulesAllIndexes(rId).values.head))
     val originalK = allRulesAllIndexes(rId)(hash)
     val inputs = asCollectionsSeqEDB(inputsEDB)
 //    var intermediateCardinalities = Seq[Int]()
@@ -106,13 +110,13 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
           if (atomI == 0) // not a monad :(
             (innerT, atomI + 1, k)
           else
-            val (inner, outer) = // on the fly swapping of join order
-              if (atomI > 1 && onlineSort && outerT.length > innerT.length)
-                val body = k.atoms.drop(1)
-                val newerHash = JoinIndexes.getRuleHash(Seq(k.atoms.head, body(atomI)) ++ body.dropRight(body.length - atomI) ++ body.drop(atomI + 1))
-                k = allRulesAllIndexes(rId).getOrElseUpdate(newerHash, JoinIndexes(originalK.atoms.head +: body, Some(originalK.cxns), Some(originalK.groupingIndexes)))
-                (outerT, innerT)
-              else
+            val (inner, outer) = // on the fly swapping of join order, current turned off to separate runtime sort (sort in generated quotes in macro), from online sort (relation swapping at storage level)
+//              if (atomI > 1 && onlineSort && outerT.length > innerT.length)
+//                val body = k.atoms.drop(1)
+//                val newerHash = JoinIndexes.getRuleHash(Seq(k.atoms.head, body(atomI)) ++ body.dropRight(body.length - atomI) ++ body.drop(atomI + 1))
+//                k = allRulesAllIndexes(rId).getOrElseUpdate(newerHash, JoinIndexes(originalK.atoms.head +: body, Some(originalK.cxns), Some(originalK.groupingIndexes)))
+//                (outerT, innerT)
+//              else
                 (innerT, outerT)
             // outer = outer relation, inner = inner relation
             val edbResult = outer
@@ -122,7 +126,7 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
               .flatMap(outerTuple =>
                 inner
                   .filter(i =>
-                    prefilter(k.constIndexes.filter((ind, _) => ind >= outerTuple.length && ind < (outerTuple.length + i.length)), outerTuple.length, i) && toJoin(k.varIndexes, outerTuple, i)
+                    prefilter(k.constIndexes.filter((ind, _) => ind >= outerTuple.length && ind < (outerTuple.length + i.length)), outerTuple.length, i) && toJoin(k, outerTuple, i)
                   )
                   .map(innerTuple => outerTuple.concat(innerTuple)))
 //            intermediateCardinalities = intermediateCardinalities :+ edbResult.length
@@ -143,7 +147,7 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
         )
   }
 
-  override def joinProjectHelper(inputsEDB: Seq[EDB], originalK: JoinIndexes, onlineSort: Boolean): CollectionsEDB = { // OLD, only keep around for benchmarks
+  override def joinProjectHelper(inputsEDB: Seq[EDB], originalK: JoinIndexes): CollectionsEDB = { // OLD, only keep around for benchmarks
     val inputs = asCollectionsSeqEDB(inputsEDB)
     if (inputs.length == 1) // just filter
       inputs.head
@@ -171,12 +175,12 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
           if (atomI == 0) // not a monad :(
             (innerT, atomI + 1, k)
           else
-            val (inner, outer) =
-              if (atomI > 1 && onlineSort && outerT.length > innerT.length)
-                val body = k.atoms.drop(1)
-                k = JoinIndexes(Seq(k.atoms.head, body(atomI)) ++ body.dropRight(body.length - atomI) ++ body.drop(atomI + 1), Some(originalK.cxns), Some(originalK.groupingIndexes))
-                (outerT, innerT)
-              else
+            val (inner, outer) = // TODO: on the fly swapping of join order, current turned off to separate runtime sort (sort in generated quotes in macro), from online sort (relation swapping at storage level)
+//              if (atomI > 1 && onlineSort && outerT.length > innerT.length)
+//                val body = k.atoms.drop(1)
+//                k = JoinIndexes(Seq(k.atoms.head, body(atomI)) ++ body.dropRight(body.length - atomI) ++ body.drop(atomI + 1), Some(originalK.cxns), Some(originalK.groupingIndexes))
+//                (outerT, innerT)
+//              else
                 (innerT, outerT)
             val edbResult = outer
               .filter(o =>
@@ -185,7 +189,7 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
               .flatMap(outerTuple =>
                 inner
                   .filter(i =>
-                    prefilter(k.constIndexes.filter((ind, _) => ind >= outerTuple.length && ind < (outerTuple.length + i.length)), outerTuple.length, i) && toJoin(k.varIndexes, outerTuple, i)
+                    prefilter(k.constIndexes.filter((ind, _) => ind >= outerTuple.length && ind < (outerTuple.length + i.length)), outerTuple.length, i) && toJoin(k, outerTuple, i)
                   )
                   .map(innerTuple => outerTuple.concat(innerTuple)))
             (edbResult, atomI + 1, k)
@@ -202,34 +206,6 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
               })
           )
         )
-  }
-
-  override def groupingHelper(baseEDB: EDB, gji: GroupingJoinIndexes): CollectionsEDB = {
-    val base = asCollectionsEDB(baseEDB)
-    val filteredBase = base.filter(r => prefilter(gji.constIndexes, 0, r) && toJoin(gji.varIndexes, r, CollectionsRow(Seq()))).distinct()
-    if filteredBase.nonEmpty
-    then
-      val tmp = filteredBase(0)
-      val (getters, tpes) = gji.aggOpInfos.map{
-        case (StorageAggOp.COUNT, _) =>
-          ((_: CollectionsRow) => 1, 'i')
-        case (_, AggOpIndex.GV(i)) =>
-          ((r: CollectionsRow) => r.apply(i), getType(tmp(i).asInstanceOf[StorageConstant]))
-        case (_, AggOpIndex.LV(i)) =>
-          ((r: CollectionsRow) => r.apply(i), getType(tmp(i).asInstanceOf[StorageConstant]))
-        case (_, AggOpIndex.C(c)) =>
-          ((_: CollectionsRow) => c, getType(c))
-      }.unzip
-      val okgetters = (r: CollectionsRow) => CollectionsRow(getters.map(_.apply(r)))
-      val reducers = gji.aggOpInfos.map(_._1).zip(tpes).map(aggOps(_)(_))
-      val okreducers = (a: CollectionsRow, b: CollectionsRow) =>
-        CollectionsRow(a.wrapped.zip(b.wrapped).zip(reducers).map((x, y) => y.apply(x._1.asInstanceOf[StorageConstant], x._2.asInstanceOf[StorageConstant])))
-      val res = filteredBase.groupMapReduce(r => CollectionsRow(gji.groupingIndexes.map(r.apply)), okgetters, okreducers)
-
-      val ctans = res.wrapped.map(_.wrapped.drop(gji.groupingIndexes.length)).flatten.toSeq
-      addConstantsToDomain(ctans)
-      res
-    else getEmptyEDB()
   }
 
   /**
@@ -268,12 +244,8 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
                     val res = diff(compl, q)
                     debug("found negated relation, rule=", () => s"${printer.ruleToString(k.atoms)}\n\tarity=$arity, compl=${printer.factToString(compl)}, Q=${printer.factToString(q)}, final res=${printer.factToString(res)}")
                     res
-                  case PredicateType.GROUPING =>
-                    val ga = k.atoms(i + 1).asInstanceOf[GroupingAtom]
-                    val gji = k.groupingIndexes(ga.hash)
-                    groupingHelper(q, gji)
                   case _ => q
-            ), k, false).wrapped // don't sort in shallow embedding
+            ), k).wrapped // don't sort in shallow embedding
           }).distinct
       ))
   }
@@ -297,10 +269,6 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
                     val res = diff(compl, q)
                     debug(s"found negated relation, rule=", () => s"${printer.ruleToString(k.atoms)}\n\tarity=$arity, compl=${printer.factToString(compl)}, Q=${printer.factToString(q)}, final res=${printer.factToString(res)}")
                     res
-                  case PredicateType.GROUPING =>
-                    val ga = k.atoms(i + 1).asInstanceOf[GroupingAtom]
-                    val gji = k.groupingIndexes(ga.hash)
-                    groupingHelper(q, gji)
                   case _ => q
               ), k // TODO: warn if EDB is empty? Right now can't tell the difference between undeclared and empty EDB)
             ), k

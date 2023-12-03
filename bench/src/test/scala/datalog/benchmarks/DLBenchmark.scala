@@ -55,20 +55,17 @@ abstract class DLBenchmark {
     val jitSortOpts = Seq(SortOrder.Unordered, SortOrder.Sel)
     val interpSortOpts = Seq(SortOrder.Unordered, SortOrder.Sel, SortOrder.Badluck)
     val fuzzySortOpts = Seq(0)
-    val onlineSortOpts = Seq(false) // add 1 to bench online sort
     val blocking = Seq(CompileSync.Blocking, CompileSync.Async)
 
   // --> uncomment for interpreted
     interpSortOpts.foreach(sort =>
-        onlineSortOpts.foreach(onlineSort =>
-          val jo = JITOptions(
-            mode = Mode.Interpreted,
-//            granularity = if (sort == SortOrder.Sel) Granularity.RULE else Granularity.NEVER, // TODO: eventually sort at other grans
-            sortOrder = sort,
-            onlineSort = onlineSort,
-            dotty = dotty)
-          programs(jo.toBenchmark) = Program(StagedExecutionEngine(DefaultStorageManager(), jo))
-        ))
+      val jo = JITOptions(
+        mode = Mode.Interpreted,
+        //            granularity = if (sort == SortOrder.Sel) Granularity.RULE else Granularity.NEVER, // TODO: eventually sort at other grans
+        sortOrder = sort,
+        dotty = dotty)
+      programs(jo.toBenchmark) = Program(StagedExecutionEngine(DefaultStorageManager(), jo))
+    )
 
     // JIT options
     val jitGranularities = Seq(
@@ -80,23 +77,20 @@ abstract class DLBenchmark {
   // --> uncomment for JIT
     jitGranularities.foreach(gran =>
       jitSortOpts.foreach(sort =>
-        onlineSortOpts.foreach(onlineSort =>
-          fuzzySortOpts.foreach(fuzzy =>
-            blocking.foreach(block =>
-              backends.foreach(bc =>
-                val jo = JITOptions(
-                  mode = Mode.JIT,
-                  granularity = gran,
-                  compileSync = block,
-                  sortOrder = sort,
-                  onlineSort = onlineSort,
-                  backend = bc,
-                  fuzzy = fuzzy,
-                  dotty = dotty,
-                )
-                programs(jo.toBenchmark) = Program(
-                  StagedExecutionEngine(DefaultStorageManager(), jo)
-                )
+        fuzzySortOpts.foreach(fuzzy =>
+          blocking.foreach(block =>
+            backends.foreach(bc =>
+              val jo = JITOptions(
+                mode = Mode.JIT,
+                granularity = gran,
+                compileSync = block,
+                sortOrder = sort,
+                backend = bc,
+                fuzzy = fuzzy,
+                dotty = dotty,
+              )
+              programs(jo.toBenchmark) = Program(
+                StagedExecutionEngine(DefaultStorageManager(), jo)
               )
             )
           )

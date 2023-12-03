@@ -7,7 +7,7 @@ import test.ExampleTestGenerator
 class tc_comp_test extends ExampleTestGenerator("tc_comp") with tc_comp
 
 trait tc_comp {
-  val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/tc_comp/facts"
+  val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/tc/facts"
   val toSolve = "tc"
 
   def pretest(program: Program): Unit = {

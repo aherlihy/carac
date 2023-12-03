@@ -11,12 +11,99 @@ import java.util.concurrent.atomic.AtomicInteger
 import scala.collection.{immutable, mutable}
 import scala.quoted.*
 
+class MacroQuoteCompiler(storageManager: StorageManager)(using JITOptions) extends QuoteCompiler(storageManager) {
+  override def compileIRRelOp(irTree: IROp[EDB])(using stagedSM: Expr[StorageManager])(using Quotes): Expr[EDB] = {
+    irTree match {
+      case ProjectJoinFilterOp(rId, k, children: _*) => {
+        //        println(s"sortOrder=${jitOptions.sortOrder}")
+        //        println(s"macro-time sort: unsortedChildren: ${children.map(c => storageManager.ns(c.asInstanceOf[ScanOp].rId)).mkString("[", ", ", "]")}")
+        val (sortedChildren0, newK0) =
+        // do macro-time sort
+          if (jitOptions.sortOrder != SortOrder.Unordered /* && jitOptions.sortOrder != SortOrder.Badluck && jitOptions.granularity.flag == irTree.code*/) // TODO: for now assume all macros sort or don't sort here
+            JoinIndexes.getOnlineSort(
+              children,
+              jitOptions.getSortFn(storageManager),
+              rId,
+              k,
+              storageManager
+            )
+          else // no macro-time sort
+            (children, k)
+//        println(s"                   sortedChildren: ${sortedChildren.map(c => storageManager.ns(c.asInstanceOf[ScanOp].rId)).mkString("[", ", ", "]")}")
+
+        val compiledOps = Expr.ofSeq(sortedChildren0.map(compileIRRelOp))
+        // do runtime sort
+        if (jitOptions.runtimeSort != SortOrder.Unordered) {
+          val deltaIdx = sortedChildren0.indexWhere(op => // will return -1 if delta is negated relation, which is OK just ignore for now
+            op match
+              case o: ScanOp => o.db == DB.Delta
+              case _ => false
+          )
+          '{
+            val (sortedChildren_RT, newK_RT) =
+              JoinIndexes.getMacroOnlineSort(
+                $compiledOps,
+                ${ Expr(deltaIdx) },
+                ${ Expr(jitOptions.runtimeSort) },
+                ${ Expr(rId) },
+                ${ Expr( newK0 ) },
+                $stagedSM
+              )
+
+            $stagedSM.joinProjectHelper_withHash(
+              sortedChildren_RT,
+              ${ Expr(rId) },
+              newK_RT.hash
+            )
+          }
+        } else { // no runtime sort
+          '{
+            $stagedSM.joinProjectHelper_withHash(
+            $compiledOps,
+            ${ Expr(rId) },
+            ${ Expr(newK0.hash) })
+          }
+        }
+      }
+      case _ =>
+        super.compileIRRelOp(irTree)
+    }
+  }
+
+  override def compileIR(irTree: IROp[Any])(using stagedSM: Expr[StorageManager])(using Quotes): Expr[Any] = {
+    irTree match {
+      case SequenceOp(label, children: _*) =>
+        val cOps = children.map(compileIR)
+        label match
+          case OpCode.EVAL_NAIVE if children.length / 2 > heuristics.max_relations =>
+            cOps.reduceLeft((acc, next) =>
+              '{ $acc ; def eval_naive_lambda() = $next ; eval_naive_lambda() }
+            )
+          case OpCode.EVAL_SN if children.length > heuristics.max_relations =>
+            cOps.reduceLeft((acc, next) =>
+              '{ $acc ; def eval_sn_lambda() = $next ; eval_sn_lambda() }
+            )
+          case _ =>
+            cOps.reduceLeft((acc, next) =>
+              if (children.length > 4)
+                '{ $acc ;  def eval_seq_lambda() = $next ; eval_seq_lambda() }
+              else
+                '{ $acc ; $next }
+            )
+      case _ =>
+        super.compileIR(irTree)
+    }
+  }
+}
+
 /**
  * Separate out compile logic from StagedExecutionEngine
  */
 class QuoteCompiler(val storageManager: StorageManager)(using JITOptions) extends StagedCompiler(storageManager) {
   given staging.Compiler = jitOptions.dotty
-  clearDottyThread()
+  // FIXME: Make dotty an optional parameter, this is null in MacroCompiler.
+  if (jitOptions.dotty != null)
+    clearDottyThread()
 
   given MutableMapToExpr[T: Type : ToExpr, U: Type : ToExpr]: ToExpr[mutable.Map[T, U]] with {
     def apply(map: mutable.Map[T, U])(using Quotes): Expr[mutable.Map[T, U]] =
@@ -58,7 +145,6 @@ class QuoteCompiler(val storageManager: StorageManager)(using JITOptions) extend
       x match
         case PredicateType.POSITIVE => '{ PredicateType.POSITIVE }
         case PredicateType.NEGATED => '{ PredicateType.NEGATED }
-        case PredicateType.GROUPING => '{ PredicateType.GROUPING }
     }
   }
 
@@ -78,37 +164,15 @@ class QuoteCompiler(val storageManager: StorageManager)(using JITOptions) extend
     }
   }
 
-  
-  given ToExpr[StorageAggOp] with {
-    def apply(x: StorageAggOp)(using Quotes) = {
+  given ToExpr[SortOrder] with {
+    def apply(x: SortOrder)(using Quotes) = {
       x match
-        case StorageAggOp.SUM => '{ StorageAggOp.SUM }
-        case StorageAggOp.COUNT => '{ StorageAggOp.COUNT }
-        case StorageAggOp.MIN => '{ StorageAggOp.MIN }
-        case StorageAggOp.MAX => '{ StorageAggOp.MAX }
-    }
-  }
-
-  given ToExpr[AggOpIndex] with {
-    def apply(x: AggOpIndex)(using Quotes) = {
-      x match
-        case AggOpIndex.LV(i) => '{ AggOpIndex.LV(${ Expr(i) }) }
-        case AggOpIndex.GV(i) => '{ AggOpIndex.GV(${ Expr(i) }) }
-        case AggOpIndex.C(c) => '{ AggOpIndex.C(${ Expr(c) }) }
-      
-    }
-  }
-
-  given ToExpr[GroupingJoinIndexes] with {
-    def apply(x: GroupingJoinIndexes)(using Quotes) = {
-      '{
-        GroupingJoinIndexes(
-          ${ Expr(x.varIndexes) },
-          ${ Expr(x.constIndexes) },
-          ${ Expr(x.groupingIndexes) },
-          ${ Expr(x.aggOpInfos) }
-        )
-      }
+        case SortOrder.Sel => '{ SortOrder.Sel }
+        case SortOrder.IntMax => '{ SortOrder.IntMax }
+        case SortOrder.Mixed => '{ SortOrder.Mixed }
+        case SortOrder.Badluck => '{ SortOrder.Badluck }
+        case SortOrder.Unordered => '{ SortOrder.Unordered }
+        case SortOrder.Worst => '{ SortOrder.Worst }
     }
   }
 
@@ -142,7 +206,13 @@ class QuoteCompiler(val storageManager: StorageManager)(using JITOptions) extend
         if (storageManager.edbContains(rId))
           '{ $stagedSM.getEDB(${ Expr(rId) }) }
         else
-          '{ $stagedSM.getEmptyEDB() }
+          '{
+            val id = ${ Expr(rId) }
+            if $stagedSM.edbContains(id) then
+              $stagedSM.getEDB(id)
+            else
+              $stagedSM.getEmptyEDB()
+          }
 
       case ProjectJoinFilterOp(rId, k, children: _*) =>
         val (sortedChildren, newK) =
@@ -162,8 +232,7 @@ class QuoteCompiler(val storageManager: StorageManager)(using JITOptions) extend
           $stagedSM.joinProjectHelper_withHash(
             $compiledOps,
             ${ Expr(rId) },
-            ${ Expr(newK.hash) },
-            ${ Expr(jitOptions.onlineSort) }
+            ${ Expr(newK.hash) }
           )
         }
 
@@ -199,10 +268,6 @@ class QuoteCompiler(val storageManager: StorageManager)(using JITOptions) extend
         val clhs = compileIRRelOp(children.head)
         val crhs = compileIRRelOp(children(1))
         '{ $stagedSM.diff($clhs, $crhs) }
-
-      case GroupingOp(child, gji) =>
-        val clh = compileIRRelOp(child)
-        '{ $stagedSM.groupingHelper($clh, ${ Expr(gji) }) }
 
       case DebugPeek(prefix, msg, children: _*) =>
         val res = compileIRRelOp(children.head)

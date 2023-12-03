@@ -1,11 +1,11 @@
 package datalog.execution
 
-import datalog.dsl.{Atom, Constant, Term, Variable, GroupingAtom, AggOp}
+import datalog.dsl.{Atom, Constant, Term, Variable}
 import datalog.execution
 import datalog.execution.ast.*
 import datalog.execution.ast.transform.{ASTTransformerContext, CopyEliminationPass, Transformer}
 import datalog.execution.ir.*
-import datalog.storage.{DB, EDB, KNOWLEDGE, StorageManager, StorageAggOp}
+import datalog.storage.{DB, EDB, KNOWLEDGE, StorageManager}
 import datalog.tools.Debug.debug
 
 import java.util.concurrent.{Executors, ForkJoinPool}
@@ -27,6 +27,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
 //  var threadpool: ExecutorService = null
 
   val compiler: StagedCompiler = defaultJITOptions.backend match
+    case Backend.MacroQuotes => MacroQuoteCompiler(storageManager)
     case Backend.Quotes => QuoteCompiler(storageManager)
     case Backend.Bytecode => BytecodeCompiler(storageManager)
     case Backend.Lambda => LambdaCompiler(storageManager)
@@ -53,46 +54,52 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
     get(storageManager.ns(name))
   }
 
+  /**
+   * Inserting IDB adds the initial rule to allRulesAllIndexes. If sortOrder is defined then also insert the sorted so
+   * that subsequent sorts are cheaper (timsort). If rule is short, precalculate the possible orders.
+   * @param rId
+   * @param ruleSeq
+   */
   def insertIDB(rId: Int, ruleSeq: Seq[Atom]): Unit = {
     precedenceGraph.addNode(ruleSeq)
-//    println(s"${storageManager.printer.ruleToString(ruleSeq)}")
+//    println(s"inserted IDB with order: ${storageManager.printer.ruleToString(ruleSeq)}")
 
     var rule = ruleSeq
-    var k = JoinIndexes(rule, None, None)
+    var k = JoinIndexes(rule, None)
     storageManager.allRulesAllIndexes.getOrElseUpdate(rId, mutable.Map[String, JoinIndexes]()).addOne(k.hash, k)
 
     if (rule.length <= heuristics.max_length_cache)
       val allK = JoinIndexes.allOrders(rule)
       storageManager.allRulesAllIndexes(rId) ++= allK
 
-    if (defaultJITOptions.sortOrder == SortOrder.Sel) // sort before inserting, just in case EDBs are defined
-      val (sortedBody, newHash) = JoinIndexes.presortSelect( // use preSort bc no child nodes to rearrange
-        (a, _) =>
-          if (storageManager.edbContains(a.rId))
-            (true, storageManager.getEDBResult(a.rId).size)
-          else
-            (true, Int.MaxValue),
-        k,
-        storageManager,
-        -1
-      )
-      rule = rule.head +: sortedBody.map(_._1)
-      k = JoinIndexes(rule, Some(k.cxns), Some(k.groupingIndexes))
-      storageManager.allRulesAllIndexes(rId).addOne(k.hash, k)
-    else if (defaultJITOptions.sortOrder == SortOrder.Badluck) // mimic "bad luck" program definition, so ingest rules in a bad order and then don't update them.
-      val (sortedBody, newHash) = JoinIndexes.presortSelectWorst(
-        (a, _) =>
-          if (storageManager.edbContains(a.rId))
-            (true, storageManager.getEDBResult(a.rId).size)
-          else
-            (true, Int.MaxValue),
-        k,
-        storageManager,
-        -1
-      )
-      rule = rule.head +: sortedBody.map(_._1)
-      k = JoinIndexes(rule, Some(k.cxns), Some(k.groupingIndexes))
-      storageManager.allRulesAllIndexes(rId).addOne(k.hash, k)
+//    if (defaultJITOptions.sortOrder == SortOrder.Sel) // sort before inserting, just in case EDBs are defined
+//      val (sortedBody, newHash) = JoinIndexes.presortSelect( // use preSort bc no child nodes to rearrange
+//        (a, _) =>
+//          if (storageManager.edbContains(a.rId))
+//            (true, storageManager.getEDBResult(a.rId).size)
+//          else
+//            (true, Int.MaxValue),
+//        k,
+//        storageManager,
+//        -1
+//      )
+//      rule = rule.head +: sortedBody.map(_._1)
+//      k = JoinIndexes(rule, Some(k.cxns), Some(k.groupingIndexes))
+//      storageManager.allRulesAllIndexes(rId).addOne(k.hash, k)
+//    else if (defaultJITOptions.sortOrder == SortOrder.Badluck) // mimic "bad luck" program definition, so ingest rules in a bad order and then don't update them.
+//      val (sortedBody, newHash) = JoinIndexes.presortSelectWorst(
+//        (a, _) =>
+//          if (storageManager.edbContains(a.rId))
+//            (true, storageManager.getEDBResult(a.rId).size)
+//          else
+//            (true, Int.MaxValue),
+//        k,
+//        storageManager,
+//        -1
+//      )
+//      rule = rule.head +: sortedBody.map(_._1)
+//      k = JoinIndexes(rule, Some(k.cxns), Some(k.groupingIndexes))
+//      storageManager.allRulesAllIndexes(rId).addOne(k.hash, k)
 
     //    println(s"${storageManager.printer.ruleToString(rule)}")
 
@@ -108,31 +115,10 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
           rule.head.negated
         ),
         rule.drop(1).map(b =>
-          b match
-            case ga: GroupingAtom =>
-              LogicGroupingAtom(
-                LogicAtom(ga.gp.rId, ga.gp.terms.map{
-                  case x: Variable => VarTerm(x)
-                  case x: Constant => ConstTerm(x)
-                }, ga.gp.negated),
-                ga.gv.map(v => VarTerm(v)),
-                ga.ags.map{(ao, v) => (AggOpNode(
-                  ao match
-                    case AggOp.SUM(_) => StorageAggOp.SUM 
-                    case AggOp.COUNT(_) => StorageAggOp.COUNT
-                    case AggOp.MIN(_) => StorageAggOp.MIN
-                    case AggOp.MAX(_) => StorageAggOp.MAX
-                  , ao.t match
-                    case x: Variable => VarTerm(x)
-                    case x: Constant => ConstTerm(x)
-                  
-                ), VarTerm(v))}
-              )
-            case b =>
-              LogicAtom(b.rId, b.terms.map {
-                case x: Variable => VarTerm(x)
-                case x: Constant => ConstTerm(x)
-              }, b.negated)
+          LogicAtom(b.rId, b.terms.map {
+            case x: Variable => VarTerm(x)
+            case x: Constant => ConstTerm(x)
+          }, b.negated)
         ),
         rule,
         k
@@ -145,13 +131,11 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
     allRules.edb = true
   }
 
-  // NOTE: this method is just for testing to see how much overhead tree processing has, not used irl.
-  def generateProgramTree(rId: Int): (IROp[Any], InterpreterContext) = {
-    // verify setup
+  def generateProgramTree(rId: Int): Either[Int, (IROp[Any], InterpreterContext)] = {
     storageManager.verifyEDBs(precedenceGraph.idbs)
     if (storageManager.edbContains(rId) && !precedenceGraph.idbs.contains(rId)) { // if just an edb predicate then return
       debug("Returning EDB without any IDB rule: ", () => storageManager.ns(rId))
-      throw new Exception("NOTE: using generateProgramTree which is only for benchmarking")
+      return Left(rId)
     }
     if (!precedenceGraph.idbs.contains(rId)) {
       throw new Exception("Solving for rule without body")
@@ -159,14 +143,20 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
     val transformedAST = transforms.foldLeft(ast: ASTNode)((t, pass) => pass.transform(t)(using storageManager))
 
     var toSolve = rId
-    if (tCtx.aliases.contains(rId))
+    if (tCtx.aliases.contains(rId)) {
       toSolve = tCtx.aliases.getOrElse(rId, rId)
       if (storageManager.edbContains(toSolve) && !precedenceGraph.idbs.contains(toSolve)) { // if just an edb predicate then return
-        throw new Exception("NOTE: using generateProgramTree which is only for benchmarking")
+        debug("Returning EDB as IDB aliased to EDB: ", () => storageManager.ns(toSolve))
+        return Left(toSolve)
       }
+    }
     given irCtx: InterpreterContext = InterpreterContext(storageManager, precedenceGraph, toSolve)
-    val irTree = createIR(transformedAST)
-    (irTree, irCtx)
+
+    debug("AST: ", () => storageManager.printer.printAST(ast))
+    debug("TRANSFORMED: ", () => storageManager.printer.printAST(transformedAST))
+    debug("PG: ", () => precedenceGraph.toString())
+
+    Right(createIR(transformedAST), irCtx)
   }
 
   // Separate out for easier benchmarking tree stuff vs. compilation
@@ -364,9 +354,6 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
       case op: DiffOp =>
         op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o)))
 
-      case op: GroupingOp =>
-        op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o)))
-
       case op: DebugPeek =>
         op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o)))
 
@@ -390,40 +377,16 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
     given JITOptions = defaultJITOptions
 //    println(s"jit opts==${defaultJITOptions.toBenchmark}")
     debug("", () => s"solve $rId with options $defaultJITOptions")
-    // verify setup
-    storageManager.verifyEDBs(precedenceGraph.idbs)
-    if (storageManager.edbContains(rId) && !precedenceGraph.idbs.contains(rId)) { // if just an edb predicate then return
-      debug("Returning EDB without any IDB rule: ", () => storageManager.ns(rId))
-      return storageManager.getEDBResult(rId)
-    }
-    if (!precedenceGraph.idbs.contains(rId)) {
-      throw new Exception("Solving for rule without body")
-    }
 
-    // generate and transform tree
-    val transformedAST = transforms.foldLeft(ast: ASTNode)((t, pass) => pass.transform(t)(using storageManager))
-    var toSolve = rId
-    if (tCtx.aliases.contains(rId)) {
-      toSolve = tCtx.aliases.getOrElse(rId, rId)
-      debug("aliased:", () => s"${storageManager.ns(rId)} => ${storageManager.ns(toSolve)}")
-      if (storageManager.edbContains(toSolve) && !precedenceGraph.idbs.contains(toSolve)) { // if just an edb predicate then return
-        debug("Returning EDB as IDB aliased to EDB: ", () => storageManager.ns(toSolve))
-        return storageManager.getEDBResult(toSolve)
-      }
-    }
-
-    given irCtx: InterpreterContext = InterpreterContext(storageManager, precedenceGraph, toSolve)
-    debug("AST: ", () => storageManager.printer.printAST(ast))
-    debug("TRANSFORMED: ", () => storageManager.printer.printAST(transformedAST))
-    debug("PG: ", () => precedenceGraph.toString())
-
-    val irTree = createIR(transformedAST)
-
-    debug("IRTree: ", () => storageManager.printer.printIR(irTree))
-    defaultJITOptions.mode match
-      case Mode.Interpreted => solveInterpreted(irTree, irCtx)
-      case Mode.Compiled => solveCompiled(irTree, irCtx)
-      case Mode.JIT => solveJIT(irTree, irCtx)
+    generateProgramTree(rId) match
+      case Left(id) => storageManager.getEDBResult(id)
+      case Right(irTree, irCtx) =>
+        given InterpreterContext = irCtx
+        debug("IRTree: ", () => storageManager.printer.printIR(irTree))
+        defaultJITOptions.mode match
+          case Mode.Interpreted => solveInterpreted(irTree, irCtx)
+          case Mode.Compiled => solveCompiled(irTree, irCtx)
+          case Mode.JIT => solveJIT(irTree, irCtx)
   }
 }
 class NaiveStagedExecutionEngine(storageManager: StorageManager, defaultJITOptions: JITOptions = JITOptions(mode = Mode.Interpreted)) extends StagedExecutionEngine(storageManager, defaultJITOptions) {

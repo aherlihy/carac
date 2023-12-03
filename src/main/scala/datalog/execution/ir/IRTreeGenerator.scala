@@ -1,6 +1,5 @@
 package datalog.execution.ir
 
-import datalog.dsl.GroupingAtom
 import datalog.execution.{JITOptions, PredicateType, StagedCompiler, ir}
 import datalog.execution.ast.{ASTNode, AllRulesNode, LogicAtom, ProgramNode, RuleNode}
 import datalog.storage.{DB, EDB, KNOWLEDGE, RelationId, StorageManager}
@@ -53,8 +52,8 @@ class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
     ast match {
       case AllRulesNode(rules, rId, edb) =>
         var allRes = rules.map(naiveEvalRule).toSeq
-        if (edb)
-          allRes = allRes :+ ScanEDBOp(rId) // TODO: potentially change this to Discovered not EDB
+        // if (edb)
+        allRes = allRes :+ ScanEDBOp(rId) // TODO: potentially change this to Discovered not EDB
 //        if(allRes.length == 1) allRes.head else
         UnionOp(OpCode.EVAL_RULE_NAIVE, allRes:_*)
       case RuleNode(head, _, atoms, k) =>
@@ -71,11 +70,6 @@ class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
                   val arity = k.atoms(i + 1).terms.length
                   val res = DiffOp(ComplementOp(arity), q)
                   debug(s"found negated relation, rule=", () => s"${ctx.storageManager.printer.ruleToString(k.atoms)}\n\tarity=$arity")
-                  res
-                case PredicateType.GROUPING =>
-                  val ga = k.atoms(i + 1).asInstanceOf[GroupingAtom]
-                  val gji = k.groupingIndexes(ga.hash)
-                  val res = GroupingOp(q, gji)
                   res
                 case _ => q
             ):_*
@@ -122,11 +116,6 @@ class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
                       val arity = k.atoms(i + 1).terms.length
                       val res = DiffOp(ComplementOp(arity), q)
                       debug(s"found negated relation, rule=", () => s"${ctx.storageManager.printer.ruleToString(k.atoms)}\n\tarity=$arity")
-                      res
-                    case PredicateType.GROUPING =>
-                      val ga = k.atoms(i + 1).asInstanceOf[GroupingAtom]
-                      val gji = k.groupingIndexes(ga.hash)
-                      val res = GroupingOp(q, gji)
                       res
                     case _ => q
                 }): _*

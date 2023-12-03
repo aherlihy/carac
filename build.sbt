@@ -4,8 +4,7 @@ import java.nio.file.{Files, Paths}
 
 inThisBuild(Seq(
   organization := "ch.epfl.lamp",
-  scalaVersion := "3.3.1-RC4",
-//  scalaVersion := "3.3.1-RC1-bin-SNAPSHOT",
+  scalaVersion := "3.4.0-RC1-bin-20230818-932c10d-NIGHTLY",
   version := "0.1",
 ))
 
@@ -17,7 +16,6 @@ lazy val root = project.in(file("."))
   .enablePlugins(NativeImagePlugin)
   .settings(
     name := "datalog",
-
     // By default, the plugin will fetch graalvm from the Internet itself, but
     // it only supports the Community Edition. Here we customize it to look up
     // graalvm's `native-image` on the PATH which lets us setup whatever version
