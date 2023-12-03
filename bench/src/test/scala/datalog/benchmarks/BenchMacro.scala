@@ -78,7 +78,7 @@ import BenchMacro.*
 @Measurement(iterations = 10, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 10)
 @State(Scope.Thread)
 @BenchmarkMode(Array(JmhMode.AverageTime))
-class BenchMacro {
+class zBenchMacro {
   /**
    * Both facts + rules available at compile-time, no online optimization
    */

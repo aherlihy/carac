@@ -47,7 +47,7 @@ object CbaexprvalueOptimized extends cbaexprvalue_optimized
 @Measurement(iterations = 10, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 10)
 @State(Scope.Thread)
 @BenchmarkMode(Array(JmhMode.AverageTime))
-class BenchMacroBaseline {
+class yBenchMacroBaseline {
   /**-----------------Ackermann-----------------**/
   @Benchmark
   def ackermann_jit_lambda_online(blackhole: Blackhole) = {
