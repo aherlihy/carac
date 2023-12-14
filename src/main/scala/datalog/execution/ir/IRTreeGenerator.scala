@@ -68,9 +68,9 @@ class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
               val q = ScanOp(r, DB.Derived, KNOWLEDGE.Known)
               typ match
                 case PredicateType.NEGATED =>
-                  val arity = k.atoms(i + 1).terms.length
-                  val res = DiffOp(ComplementOp(arity), q)
-                  debug(s"found negated relation, rule=", () => s"${ctx.storageManager.printer.ruleToString(k.atoms)}\n\tarity=$arity")
+                  val cols = k.negationInfo(k.atoms(i + 1).hash)
+                  val res = NegationOp(q, cols)
+                  debug(s"found negated relation, rule=", () => s"${ctx.storageManager.printer.ruleToString(k.atoms)}")
                   res
                 case PredicateType.GROUPING =>
                   val ga = k.atoms(i + 1).asInstanceOf[GroupingAtom]
@@ -119,9 +119,9 @@ class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
                     ScanOp(r, DB.Derived, KNOWLEDGE.Known)
                   typ match
                     case PredicateType.NEGATED =>
-                      val arity = k.atoms(i + 1).terms.length
-                      val res = DiffOp(ComplementOp(arity), q)
-                      debug(s"found negated relation, rule=", () => s"${ctx.storageManager.printer.ruleToString(k.atoms)}\n\tarity=$arity")
+                      val cols = k.negationInfo(k.atoms(i + 1).hash)
+                      val res = NegationOp(q, cols)
+                      debug(s"found negated relation, rule=", () => s"${ctx.storageManager.printer.ruleToString(k.atoms)}")
                       res
                     case PredicateType.GROUPING =>
                       val ga = k.atoms(i + 1).asInstanceOf[GroupingAtom]

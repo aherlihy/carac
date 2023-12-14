@@ -36,6 +36,7 @@ case class GroupingJoinIndexes(varIndexes: Seq[Seq[Int]],
  * @param edb - for rules that have EDBs defined on the same predicate, just read
  * @param atoms - the original atoms from the DSL
  * @param cxns - convenience data structure tracking how many variables in common each atom has with every other atom.
+ * @param negationInfo - information needed to build the complement relation of negated atoms: for each term, either a constant or a list of pairs (relationid, column) of the ocurrences of the variable in the rule (empty for anonynous variable)
  */
 case class JoinIndexes(varIndexes: Seq[Seq[Int]],
                        constIndexes: mutable.Map[Int, Constant],
@@ -43,6 +44,7 @@ case class JoinIndexes(varIndexes: Seq[Seq[Int]],
                        deps: Seq[(PredicateType, RelationId)],
                        atoms: Seq[Atom],
                        cxns: mutable.Map[String, mutable.Map[Int, Seq[String]]],
+                       negationInfo: Map[String, Seq[Either[Constant, Seq[(RelationId, Int)]]]],
                        edb: Boolean = false,
                        groupingIndexes: Map[String, GroupingJoinIndexes] = Map.empty
                       ) {
@@ -54,6 +56,7 @@ case class JoinIndexes(varIndexes: Seq[Seq[Int]],
       ", deps:" + depsToString(ns) +
       ", edb:" + edb +
       ", cxn: " + cxnsToString(ns) +
+      ", negation: " + negationToString(ns) +
       " }"
 
   def varToString(): String = varIndexes.map(v => v.mkString("$", "==$", "")).mkString("[", ",", "]")
@@ -66,6 +69,13 @@ case class JoinIndexes(varIndexes: Seq[Seq[Int]],
         inCommon.map((count, hashs) =>
           count.toString + ": " + hashs.map(h => ns.hashToAtom(h)).mkString("", "|", "")
         ).mkString("", ", ", "")} }").mkString("[", ",\n", "]")
+  def negationToString(ns: NS): String =
+    negationInfo.map((h, infos) =>
+      s"{ ${ns.hashToAtom(h)} => ${
+        infos.map{
+          case Left(value) => value
+          case Right(value) => s"[ ${value.map((r, c) => s"(${ns(r)}, $c)")} ]"
+        }} }").mkString("[", ",\n", "]")
   val hash: String = atoms.map(a => a.hash).mkString("", "", "")
 }
 
@@ -83,23 +93,19 @@ object JoinIndexes {
         case _ => if (a.negated) PredicateType.NEGATED else PredicateType.POSITIVE
       , a.rId))
 
-    val typeHelper = body.flatMap(a => a.terms.map(* => !a.negated))
-
     val bodyVars = body
-      .flatMap(a => a.terms)      // all terms in one seq
+      .flatMap(a => a.terms.zipWithIndex.map((t, i) => (t, (a.negated, a.isInstanceOf[GroupingAtom] && i >= a.asInstanceOf[GroupingAtom].gv.length))))  // all terms in one seq
       .zipWithIndex               // term, position
-      .groupBy(z => z._1)         // group by term
+      .groupBy(z => z._1._1)      // group by term
       .filter((term, matches) =>  // matches = Seq[(var, pos1), (var, pos2), ...]
         term match {
           case v: Variable =>
-            matches.map(_._2).find(typeHelper) match
-              case Some(pos) =>
-                variables(v) = pos
-              case None =>
-                if (v.oid != -1)
-                  throw new Exception(s"Variable with varId ${v.oid} appears only in negated rules")
-                else
-                  ()
+            val wrong = v.oid != -1 && matches.exists(_._1._2._1) && matches.forall(x => x._1._2._1 || x._1._2._2)  // Var occurs negated and all occurrences are either negated or aggregated
+            if wrong then
+              throw new Exception(s"Variable with varId ${v.oid} appears only in negated atoms (and possibly in aggregated positions of grouping atoms)")
+            else
+              if (v.oid != -1)
+                variables(v) = matches.find(!_._1._2._1).get._2
             !v.anon && matches.length >= 2
           case c: Constant =>
             matches.foreach((_, idx) => constants(idx) = c)
@@ -137,6 +143,18 @@ object JoinIndexes {
       )).to(mutable.Map)
     )
 
+
+    val variables2 = body.filterNot(_.negated).flatMap(a =>
+      a.terms.zipWithIndex.collect{ case (v: Variable, i) if !v.anon => (v, i) }.map((v, i) => (v, (a.rId, i)))
+    ).groupBy(_._1).view.mapValues(_.map(_._2))
+
+    val negationInfo = body.filter(_.negated).map(a =>
+      a.hash -> a.terms.map{
+        case c: Constant => Left(c)
+        case v: Variable => Right(if v.anon then Seq() else variables2(v))
+      }
+    ).toMap
+
     //groupings
     val groupingIndexes = precalculatedGroupingIndexes.getOrElse(
       body.collect{ case ga: GroupingAtom => ga }.map(ga =>
@@ -166,7 +184,7 @@ object JoinIndexes {
       ).toMap
     )
 
-    new JoinIndexes(bodyVars, constants.to(mutable.Map), projects, deps, rule, cxns, edb = false, groupingIndexes = groupingIndexes)
+    new JoinIndexes(bodyVars, constants.to(mutable.Map), projects, deps, rule, cxns, negationInfo, edb = false, groupingIndexes = groupingIndexes)
   }
 
   // used to approximate poor user-defined order

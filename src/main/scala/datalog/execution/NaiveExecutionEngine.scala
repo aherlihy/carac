@@ -39,17 +39,11 @@ class NaiveExecutionEngine(val storageManager: StorageManager, stratified: Boole
     idbs.getOrElseUpdate(rId, mutable.ArrayBuffer[IndexedSeq[Atom]]()).addOne(rule.toIndexedSeq)
     val jIdx = getOperatorKey(rule)
     prebuiltOpKeys.getOrElseUpdate(rId, mutable.ArrayBuffer[JoinIndexes]()).addOne(jIdx)
-    storageManager.addConstantsToDomain(jIdx.constIndexes.values.toSeq)
-
-    // We need to add the constants occurring in the grouping predicates of the grouping atoms
-    rule.collect{ case ga: GroupingAtom => ga}.foreach(ga =>
-      storageManager.addConstantsToDomain(jIdx.groupingIndexes(ga.hash).constIndexes.values.toSeq)
-    )
   }
 
   def insertEDB(rule: Atom): Unit = {
     if (!storageManager.edbContains(rule.rId))
-      prebuiltOpKeys.getOrElseUpdate(rule.rId, mutable.ArrayBuffer[JoinIndexes]()).addOne(JoinIndexes(IndexedSeq(), mutable.Map(), IndexedSeq(), Seq((PredicateType.POSITIVE, rule.rId)), Seq(rule), mutable.Map.empty, true))
+      prebuiltOpKeys.getOrElseUpdate(rule.rId, mutable.ArrayBuffer[JoinIndexes]()).addOne(JoinIndexes(IndexedSeq(), mutable.Map(), IndexedSeq(), Seq((PredicateType.POSITIVE, rule.rId)), Seq(rule), mutable.Map.empty, Map.empty, true))
     storageManager.insertEDB(rule)
   }
 

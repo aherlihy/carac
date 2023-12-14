@@ -24,8 +24,8 @@ trait StorageManager(val ns: NS) {
   def getAllEDBS(): mutable.Map[RelationId, Any] // if you ever just want to read the EDBs as a map, used for testing
 
   // Helpers for negation
-  def addConstantsToDomain(constants: Seq[StorageTerm]): Unit
-  def getComplement(arity: Int): CollectionsEDB
+  def getGroundOf(cols: Seq[Either[StorageConstant, Seq[(RelationId, Int)]]]): EDB
+  def zeroOut(input: EDB, cols: Seq[Boolean]): EDB
 
   def getKnownDerivedDB(rId: RelationId): EDB
   def getNewDerivedDB(rId: RelationId): EDB
