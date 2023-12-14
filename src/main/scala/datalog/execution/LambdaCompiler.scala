@@ -201,8 +201,4 @@ class LambdaCompiler(val storageManager: StorageManager)(using JITOptions) exten
       val clhs = compile(children.head)
       val crhs = compile(children(1))
       sm => sm.diff(clhs(sm), crhs(sm))
-
-    case GroupingOp(child, gji) =>
-      val clh = compile(child)
-      sm => sm.groupingHelper(clh(sm), gji)
 }

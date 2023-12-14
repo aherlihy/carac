@@ -109,9 +109,6 @@ class StagedSnippetExecutionEngine(override val storageManager: StorageManager,
       case op: DiffOp =>
         op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o)))
 
-      case op: GroupingOp =>
-        op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o)))
-
       case op: DebugPeek =>
         op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o)))
 

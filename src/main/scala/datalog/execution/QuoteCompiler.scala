@@ -58,7 +58,6 @@ class QuoteCompiler(val storageManager: StorageManager)(using JITOptions) extend
       x match
         case PredicateType.POSITIVE => '{ PredicateType.POSITIVE }
         case PredicateType.NEGATED => '{ PredicateType.NEGATED }
-        case PredicateType.GROUPING => '{ PredicateType.GROUPING }
     }
   }
 
@@ -73,40 +72,6 @@ class QuoteCompiler(val storageManager: StorageManager)(using JITOptions) extend
           ${ Expr(x.atoms) },
           ${ Expr(x.cxns) },
           ${ Expr(x.edb) }
-        )
-      }
-    }
-  }
-
-  
-  given ToExpr[StorageAggOp] with {
-    def apply(x: StorageAggOp)(using Quotes) = {
-      x match
-        case StorageAggOp.SUM => '{ StorageAggOp.SUM }
-        case StorageAggOp.COUNT => '{ StorageAggOp.COUNT }
-        case StorageAggOp.MIN => '{ StorageAggOp.MIN }
-        case StorageAggOp.MAX => '{ StorageAggOp.MAX }
-    }
-  }
-
-  given ToExpr[AggOpIndex] with {
-    def apply(x: AggOpIndex)(using Quotes) = {
-      x match
-        case AggOpIndex.LV(i) => '{ AggOpIndex.LV(${ Expr(i) }) }
-        case AggOpIndex.GV(i) => '{ AggOpIndex.GV(${ Expr(i) }) }
-        case AggOpIndex.C(c) => '{ AggOpIndex.C(${ Expr(c) }) }
-      
-    }
-  }
-
-  given ToExpr[GroupingJoinIndexes] with {
-    def apply(x: GroupingJoinIndexes)(using Quotes) = {
-      '{
-        GroupingJoinIndexes(
-          ${ Expr(x.varIndexes) },
-          ${ Expr(x.constIndexes) },
-          ${ Expr(x.groupingIndexes) },
-          ${ Expr(x.aggOpInfos) }
         )
       }
     }
@@ -199,10 +164,6 @@ class QuoteCompiler(val storageManager: StorageManager)(using JITOptions) extend
         val clhs = compileIRRelOp(children.head)
         val crhs = compileIRRelOp(children(1))
         '{ $stagedSM.diff($clhs, $crhs) }
-
-      case GroupingOp(child, gji) =>
-        val clh = compileIRRelOp(child)
-        '{ $stagedSM.groupingHelper($clh, ${ Expr(gji) }) }
 
       case DebugPeek(prefix, msg, children: _*) =>
         val res = compileIRRelOp(children.head)

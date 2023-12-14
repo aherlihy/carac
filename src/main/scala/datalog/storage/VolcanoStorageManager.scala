@@ -1,8 +1,8 @@
 package datalog.storage
 
-import datalog.dsl.{Atom, GroupingAtom, Constant, Variable}
+import datalog.dsl.{Atom, Constant, Variable}
 import datalog.tools.Debug.debug
-import datalog.execution.{AllIndexes, JoinIndexes, PredicateType, GroupingJoinIndexes}
+import datalog.execution.{AllIndexes, JoinIndexes, PredicateType}
 
 import scala.collection.{immutable, mutable}
 
@@ -16,8 +16,6 @@ class VolcanoStorageManager(ns: NS = NS()) extends CollectionsStorageManager(ns)
   def projectHelper(input: EDB, k: JoinIndexes): EDB = ???
   def joinProjectHelper(inputs: Seq[EDB], k: JoinIndexes, onlineSort: Boolean): EDB = ???
   def joinProjectHelper_withHash(inputs: Seq[EDB], rId: Int, hash: String, onlineSort: Boolean): EDB = ???
-
-  def groupingHelper(base: EDB, gji: GroupingJoinIndexes): EDB = ???
 
   /**
    * Use relational operators to evaluate an IDB rule using Naive algo
@@ -46,10 +44,6 @@ class VolcanoStorageManager(ns: NS = NS()) extends CollectionsStorageManager(ns)
                     val res = Diff(Seq(Scan(compl, r), q))
                     debug(s"found negated relation, rule=", () => s"${printer.ruleToString(k.atoms)}\n\tarity=$arity")
                     res
-                  case PredicateType.GROUPING =>
-                    val ga = k.atoms(i + 1).asInstanceOf[GroupingAtom]
-                    val gji = k.groupingIndexes(ga.hash)
-                    Grouping(q, gji)
                   case _ => q
 
               ), k.varIndexes, k.constIndexes),
@@ -99,10 +93,6 @@ class VolcanoStorageManager(ns: NS = NS()) extends CollectionsStorageManager(ns)
                         val res = Diff(Seq(Scan(compl, r), q))
                         debug(s"found negated relation, rule=", () => s"${printer.ruleToString(k.atoms)}\n\tarity=$arity")
                         res
-                      case PredicateType.GROUPING =>
-                        val ga = k.atoms(i + 1).asInstanceOf[GroupingAtom]
-                        val gji = k.groupingIndexes(ga.hash)
-                        Grouping(q, gji)
                       case _ => q
                   }),
                   k.varIndexes,
