@@ -18,7 +18,7 @@ import scala.util.{Failure, Success}
 enum OpCode:
   case PROGRAM, SWAP_CLEAR, SEQ,
   SCAN, SCANEDB, SCAN_DISCOVERED,
-  COMPLEMENT,
+  NEGATION,
   SPJ, INSERT, UNION, DIFF,
   GROUPING,
   DEBUG, DEBUGP, DOWHILE, UPDATE_DISCOVERED,
@@ -196,14 +196,20 @@ case class InsertOp(rId: RelationId, db: DB, knowledge: KNOWLEDGE, override val 
     }
 }
 
-case class ComplementOp(arity: Int)(using JITOptions) extends IROp[EDB] {
-  val code: OpCode = OpCode.COMPLEMENT
+case class NegationOp(child: IROp[EDB], cols: Seq[Either[Constant, Seq[(RelationId, Int)]]])(using JITOptions) extends IROp[EDB](child) {
+  val code: OpCode = OpCode.NEGATION
 
   override def run(storageManager: StorageManager): EDB =
-    storageManager.getComplement(arity)
+    val tmp = cols.map(_.exists(_.isEmpty))
+    val compl = storageManager.getGroundOf(cols)
+    val nq = storageManager.zeroOut(child.run(storageManager), tmp)
+    storageManager.diff(compl, nq)
 
   override def run_continuation(storageManager: StorageManager, opFns: Seq[CompiledFn[EDB]]): EDB =
-    run(storageManager) // bc leaf node, no difference for continuation or run
+    val tmp = cols.map(_.exists(_.isEmpty))
+    val compl = storageManager.getGroundOf(cols)
+    val nq = storageManager.zeroOut(opFns(0)(storageManager), tmp)
+    storageManager.diff(compl, nq)
 }
 
 case class ScanOp(rId: RelationId, db: DB, knowledge: KNOWLEDGE)(using JITOptions) extends IROp[EDB] {

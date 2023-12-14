@@ -1,6 +1,6 @@
 package datalog.execution
 
-import datalog.dsl.{Atom, Constant, Term, Variable, GroupingAtom, AggOp}
+import datalog.dsl.{Atom, Constant, Term, Variable, GroupingAtom, AggOp, Constraint}
 import datalog.storage.{RelationId, CollectionsStorageManager, StorageManager, EDB, StorageAggOp}
 import datalog.tools.Debug.debug
 
@@ -34,22 +34,21 @@ class NaiveExecutionEngine(val storageManager: StorageManager, stratified: Boole
     get(storageManager.ns(name))
   }
 
-  def insertIDB(rId: RelationId, rule: Seq[Atom]): Unit = {
-    precedenceGraph.addNode(rule)
-    idbs.getOrElseUpdate(rId, mutable.ArrayBuffer[IndexedSeq[Atom]]()).addOne(rule.toIndexedSeq)
-    val jIdx = getOperatorKey(rule)
-    prebuiltOpKeys.getOrElseUpdate(rId, mutable.ArrayBuffer[JoinIndexes]()).addOne(jIdx)
-    storageManager.addConstantsToDomain(jIdx.constIndexes.values.toSeq)
+  def insertIDB(rId: RelationId, rule: Seq[Atom | Constraint]): Unit = {
+    val (atoms, constraints) = rule.partitionMap{
+      case a: Atom => Left(a)
+      case c: Constraint => Right(c)
+    }
 
-    // We need to add the constants occurring in the grouping predicates of the grouping atoms
-    rule.collect{ case ga: GroupingAtom => ga}.foreach(ga =>
-      storageManager.addConstantsToDomain(jIdx.groupingIndexes(ga.hash).constIndexes.values.toSeq)
-    )
+    precedenceGraph.addNode(atoms)
+    idbs.getOrElseUpdate(rId, mutable.ArrayBuffer[IndexedSeq[Atom]]()).addOne(atoms.toIndexedSeq)
+    val jIdx = getOperatorKey(atoms, constraints)
+    prebuiltOpKeys.getOrElseUpdate(rId, mutable.ArrayBuffer[JoinIndexes]()).addOne(jIdx)
   }
 
   def insertEDB(rule: Atom): Unit = {
     if (!storageManager.edbContains(rule.rId))
-      prebuiltOpKeys.getOrElseUpdate(rule.rId, mutable.ArrayBuffer[JoinIndexes]()).addOne(JoinIndexes(IndexedSeq(), mutable.Map(), IndexedSeq(), Seq((PredicateType.POSITIVE, rule.rId)), Seq(rule), mutable.Map.empty, true))
+      prebuiltOpKeys.getOrElseUpdate(rule.rId, mutable.ArrayBuffer[JoinIndexes]()).addOne(JoinIndexes(IndexedSeq(), mutable.Map(), IndexedSeq(), Seq((PredicateType.POSITIVE, rule.rId)), Seq(rule), mutable.Map.empty, Seq.empty, Seq.empty, Map.empty, true))
     storageManager.insertEDB(rule)
   }
 

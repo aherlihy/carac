@@ -102,10 +102,17 @@ class BytecodeCompiler(val storageManager: StorageManager)(using JITOptions) ext
             .constantInstruction(rId)
           emitSMCall(xb, meth, classOf[Int])
 
-        case ComplementOp(arity) =>
+        case NegationOp(child, cols) =>
+          val tmp = cols.map(_.exists(_.isEmpty))
           xb.aload(0)
-            .constantInstruction(arity)
-          emitSMCall(xb, "getComplement", classOf[Int])
+          xb.aload(0)
+          emitCols(xb, cols)
+          emitSMCall(xb, "getGroundOf", classOf[Seq[?]])
+          xb.aload(0)
+          traverse(xb, child)
+          emitSeq(xb, tmp.map(v => xxb => emitBoolean(xxb, v)))
+          emitSMCall(xb, "zeroOut", classOf[EDB], classOf[Seq[?]])
+          emitSMCall(xb, "diff", classOf[EDB], classOf[EDB])
 
         case ScanEDBOp(rId) =>
           xb.aload(0)

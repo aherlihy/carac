@@ -57,7 +57,7 @@ class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
           allRes = allRes :+ ScanEDBOp(rId) // TODO: potentially change this to Discovered not EDB
 //        if(allRes.length == 1) allRes.head else
         UnionOp(OpCode.EVAL_RULE_NAIVE, allRes:_*)
-      case RuleNode(head, _, atoms, k) =>
+      case RuleNode(head, _, atoms, _, k) =>
         val r = head.asInstanceOf[LogicAtom].relation
         if (k.edb)
           ScanEDBOp(r)
@@ -68,9 +68,9 @@ class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
               val q = ScanOp(r, DB.Derived, KNOWLEDGE.Known)
               typ match
                 case PredicateType.NEGATED =>
-                  val arity = k.atoms(i + 1).terms.length
-                  val res = DiffOp(ComplementOp(arity), q)
-                  debug(s"found negated relation, rule=", () => s"${ctx.storageManager.printer.ruleToString(k.atoms)}\n\tarity=$arity")
+                  val cols = k.negationInfo(k.atoms(i + 1).hash)
+                  val res = NegationOp(q, cols)
+                  debug(s"found negated relation, rule=", () => s"${ctx.storageManager.printer.ruleToString(k.atoms)}")
                   res
                 case PredicateType.GROUPING =>
                   val ga = k.atoms(i + 1).asInstanceOf[GroupingAtom]
@@ -94,7 +94,7 @@ class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
           allRes = allRes :+ ScanEDBOp(rId)
 //        if(allRes.length == 1) allRes.head else
         UnionOp(OpCode.EVAL_RULE_SN, allRes:_*) // None bc union of unions so no point in sorting
-      case RuleNode(head, body, atoms, k) =>
+      case RuleNode(head, body, atoms, _, k) =>
         val r = head.asInstanceOf[LogicAtom].relation
         if (k.edb)
           ScanEDBOp(r)
@@ -119,9 +119,9 @@ class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
                     ScanOp(r, DB.Derived, KNOWLEDGE.Known)
                   typ match
                     case PredicateType.NEGATED =>
-                      val arity = k.atoms(i + 1).terms.length
-                      val res = DiffOp(ComplementOp(arity), q)
-                      debug(s"found negated relation, rule=", () => s"${ctx.storageManager.printer.ruleToString(k.atoms)}\n\tarity=$arity")
+                      val cols = k.negationInfo(k.atoms(i + 1).hash)
+                      val res = NegationOp(q, cols)
+                      debug(s"found negated relation, rule=", () => s"${ctx.storageManager.printer.ruleToString(k.atoms)}")
                       res
                     case PredicateType.GROUPING =>
                       val ga = k.atoms(i + 1).asInstanceOf[GroupingAtom]

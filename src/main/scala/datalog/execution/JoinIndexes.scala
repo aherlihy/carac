@@ -1,8 +1,8 @@
 package datalog.execution
 
-import datalog.dsl.{Atom, Constant, Variable, GroupingAtom, AggOp}
+import datalog.dsl.{Atom, Constant, Variable, Term, GroupingAtom, AggOp, Comparison, Expression, Constraint}
 import datalog.execution.ir.{IROp, ProjectJoinFilterOp, ScanOp}
-import datalog.storage.{DB, EDB, NS, RelationId, StorageManager, StorageAggOp}
+import datalog.storage.{DB, EDB, NS, RelationId, StorageManager, StorageAggOp, StorageComparison, StorageExpression, getType, comparisons}
 import datalog.tools.Debug.debug
 
 import scala.collection.mutable
@@ -36,6 +36,7 @@ case class GroupingJoinIndexes(varIndexes: Seq[Seq[Int]],
  * @param edb - for rules that have EDBs defined on the same predicate, just read
  * @param atoms - the original atoms from the DSL
  * @param cxns - convenience data structure tracking how many variables in common each atom has with every other atom.
+ * @param negationInfo - information needed to build the complement relation of negated atoms: for each term, either a constant or a list of pairs (relationid, column) of the ocurrences of the variable in the rule (empty for anonynous variable)
  */
 case class JoinIndexes(varIndexes: Seq[Seq[Int]],
                        constIndexes: mutable.Map[Int, Constant],
@@ -43,6 +44,9 @@ case class JoinIndexes(varIndexes: Seq[Seq[Int]],
                        deps: Seq[(PredicateType, RelationId)],
                        atoms: Seq[Atom],
                        cxns: mutable.Map[String, mutable.Map[Int, Seq[String]]],
+                       cons: Seq[(Option[Boolean], StorageComparison, StorageExpression, StorageExpression, Int)],
+                       constraints: Seq[Constraint],
+                       negationInfo: Map[String, Seq[Either[Constant, Seq[(RelationId, Int)]]]],
                        edb: Boolean = false,
                        groupingIndexes: Map[String, GroupingJoinIndexes] = Map.empty
                       ) {
@@ -54,6 +58,8 @@ case class JoinIndexes(varIndexes: Seq[Seq[Int]],
       ", deps:" + depsToString(ns) +
       ", edb:" + edb +
       ", cxn: " + cxnsToString(ns) +
+      ", cons: " + consToString() +
+      ", negation: " + negationToString(ns) +
       " }"
 
   def varToString(): String = varIndexes.map(v => v.mkString("$", "==$", "")).mkString("[", ",", "]")
@@ -66,12 +72,24 @@ case class JoinIndexes(varIndexes: Seq[Seq[Int]],
         inCommon.map((count, hashs) =>
           count.toString + ": " + hashs.map(h => ns.hashToAtom(h)).mkString("", "|", "")
         ).mkString("", ", ", "")} }").mkString("[", ",\n", "]")
-  val hash: String = atoms.map(a => a.hash).mkString("", "", "")
+  def consToString(): String = cons.map((o, sc, a, b, _) => s"$o#$sc($a,$b)").mkString("{", ", ", "}")
+  def negationToString(ns: NS): String =
+    negationInfo.map((h, infos) =>
+      s"{ ${ns.hashToAtom(h)} => ${
+        infos.map{
+          case Left(value) => value
+          case Right(value) => s"[ ${value.map((r, c) => s"(${ns(r)}, $c)")} ]"
+        }} }").mkString("[", ",\n", "]")
+  val hash: String = atoms.map(a => a.hash).mkString("", "", "") + constraints.map(a => a.hash).mkString("", "", "")
+
+  val pos2Term: Int => Term = atoms.tail.flatMap(_.terms).apply
 }
 
 object JoinIndexes {
-  def apply(rule: Seq[Atom], precalculatedCxns: Option[mutable.Map[String, mutable.Map[Int, Seq[String]]]],
-            precalculatedGroupingIndexes: Option[Map[String, GroupingJoinIndexes]]) = {
+  def apply(rule: Seq[Atom], constraints: Seq[Constraint],
+    precalculatedCxns: Option[mutable.Map[String, mutable.Map[Int, Seq[String]]]],
+    consHint: Option[(Seq[(Option[Boolean], StorageComparison, StorageExpression, StorageExpression, Int)], Int => Term)],
+    precalculatedGroupingIndexes: Option[Map[String, GroupingJoinIndexes]]) = {
     val constants = mutable.Map[Int, Constant]() // position => constant
     val variables = mutable.Map[Variable, Int]() // v.oid => position
 
@@ -83,23 +101,19 @@ object JoinIndexes {
         case _ => if (a.negated) PredicateType.NEGATED else PredicateType.POSITIVE
       , a.rId))
 
-    val typeHelper = body.flatMap(a => a.terms.map(* => !a.negated))
-
     val bodyVars = body
-      .flatMap(a => a.terms)      // all terms in one seq
+      .flatMap(a => a.terms.zipWithIndex.map((t, i) => (t, (a.negated, a.isInstanceOf[GroupingAtom] && i >= a.asInstanceOf[GroupingAtom].gv.length))))  // all terms in one seq
       .zipWithIndex               // term, position
-      .groupBy(z => z._1)         // group by term
+      .groupBy(z => z._1._1)      // group by term
       .filter((term, matches) =>  // matches = Seq[(var, pos1), (var, pos2), ...]
         term match {
           case v: Variable =>
-            matches.map(_._2).find(typeHelper) match
-              case Some(pos) =>
-                variables(v) = pos
-              case None =>
-                if (v.oid != -1)
-                  throw new Exception(s"Variable with varId ${v.oid} appears only in negated rules")
-                else
-                  ()
+            val wrong = v.oid != -1 && matches.exists(_._1._2._1) && matches.forall(x => x._1._2._1 || x._1._2._2)  // Var occurs negated and all occurrences are either negated or aggregated
+            if wrong then
+              throw new Exception(s"Variable with varId ${v.oid} appears only in negated atoms (and possibly in aggregated positions of grouping atoms)")
+            else
+              if (v.oid != -1)
+                variables(v) = matches.find(!_._1._2._1).get._2
             !v.anon && matches.length >= 2
           case c: Constant =>
             matches.foreach((_, idx) => constants(idx) = c)
@@ -137,6 +151,18 @@ object JoinIndexes {
       )).to(mutable.Map)
     )
 
+
+    val variables2 = body.filterNot(_.negated).flatMap(a =>
+      a.terms.zipWithIndex.collect{ case (v: Variable, i) if !v.anon => (v, i) }.map((v, i) => (v, (a.rId, i)))
+    ).groupBy(_._1).view.mapValues(_.map(_._2))
+
+    val negationInfo = body.filter(_.negated).map(a =>
+      a.hash -> a.terms.map{
+        case c: Constant => Left(c)
+        case v: Variable => Right(if v.anon then Seq() else variables2(v))
+      }
+    ).toMap
+
     //groupings
     val groupingIndexes = precalculatedGroupingIndexes.getOrElse(
       body.collect{ case ga: GroupingAtom => ga }.map(ga =>
@@ -166,7 +192,39 @@ object JoinIndexes {
       ).toMap
     )
 
-    new JoinIndexes(bodyVars, constants.to(mutable.Map), projects, deps, rule, cxns, edb = false, groupingIndexes = groupingIndexes)
+    
+    val cons = consHint.map((c, m) => c.map((o, c, l, r, _) =>
+      val fl = fixExpression(l, variables.apply, m)
+      val fr = fixExpression(r, variables.apply, m) 
+      (o, c, fl, fr, (maxIndex(fl) ++ maxIndex(fr)).reduceOption(Math.max(_, _)).getOrElse(0)))
+    )
+    .getOrElse(
+      constraints.map(con =>
+        checkExpression(con.l, variables.keySet.toSet)
+        checkExpression(con.r, variables.keySet.toSet)
+        val sl = translateExpression(simplifyExpression(con.l), variables.apply)
+        val sr = translateExpression(simplifyExpression(con.r), variables.apply)
+        val sc = con.c match
+          case Comparison.EQ => StorageComparison.EQ 
+          case Comparison.NEQ => StorageComparison.NEQ
+          case Comparison.LT => StorageComparison.LT
+          case Comparison.LTE => StorageComparison.LTE
+          case Comparison.GT => StorageComparison.GT
+          case Comparison.GTE => StorageComparison.GTE
+        (
+          (sl, sr) match
+            case (StorageExpression.One(c1: Constant), StorageExpression.One(c2: Constant)) => Some(comparisons(sc)(getType(c1))(c1, c2))
+            case _ => None
+          ,
+          sc,
+          sl,
+          sr,
+          (maxIndex(sl) ++ maxIndex(sr)).reduceOption(Math.max(_, _)).getOrElse(0)
+        )
+      )
+    )
+
+    new JoinIndexes(bodyVars, constants.to(mutable.Map), projects, deps, rule, cxns, cons, constraints, negationInfo, edb = false, groupingIndexes = groupingIndexes)
   }
 
   // used to approximate poor user-defined order
@@ -197,7 +255,7 @@ object JoinIndexes {
           nextOpt = None
 
     val newAtoms = originalK.atoms.head +: newBody.map(_._1)
-    val newHash = JoinIndexes.getRuleHash(newAtoms)
+    val newHash = JoinIndexes.getRuleHash(newAtoms, originalK.constraints)
 
 //    println(s"\tOrder: ${newBody.map((a, _) => s"${sm.ns(a.rId)}:|${sortBy(a)}|").mkString("", ", ", "")}")
 //    if (originalK.atoms.length > 3)
@@ -242,7 +300,7 @@ object JoinIndexes {
 //        println(s"\t\t\t==>next cxn to add: ${nextOpt.map(next => sm.ns.hashToAtom(next._1.hash)).getOrElse("None")}")
 
     val newAtoms = originalK.atoms.head +: newBody.map(_._1)
-    val newHash = JoinIndexes.getRuleHash(newAtoms)
+    val newHash = JoinIndexes.getRuleHash(newAtoms, originalK.constraints)
 
 //    if (originalK.atoms.length > 3)
 //      print(s"Rule: ${sm.printer.ruleToString(originalK.atoms)} => ")
@@ -261,7 +319,7 @@ object JoinIndexes {
             presortSelect(sortBy, originalK, sm, -1)
         val newK = sm.allRulesAllIndexes(rId).getOrElseUpdate(
           newHash,
-          JoinIndexes(originalK.atoms.head +: newBody.map(_._1), Some(originalK.cxns), Some(originalK.groupingIndexes))
+          JoinIndexes(originalK.atoms.head +: newBody.map(_._1), originalK.constraints, Some(originalK.cxns), Some((originalK.cons, originalK.pos2Term)), Some(originalK.groupingIndexes))
         )
         (input.map(c => ProjectJoinFilterOp(rId, newK, newBody.map((_, oldP) => c.childrenSO(oldP)): _*)), newK)
   }
@@ -282,18 +340,146 @@ object JoinIndexes {
             presortSelect(sortBy, originalK, sm, deltaIdx)
         val newK = sm.allRulesAllIndexes(rId).getOrElseUpdate(
           newHash,
-          JoinIndexes(originalK.atoms.head +: newBody.map(_._1), Some(originalK.cxns), Some(originalK.groupingIndexes))
+          JoinIndexes(originalK.atoms.head +: newBody.map(_._1), originalK.constraints, Some(originalK.cxns), Some((originalK.cons, originalK.pos2Term)), Some(originalK.groupingIndexes))
         )
         (newK.atoms.drop(1).map(a => input(originalK.atoms.drop(1).indexOf(a))), newK)
   }
 
-  def allOrders(rule: Seq[Atom]): AllIndexes = {
-    val idx = JoinIndexes(rule, None, None)
-    mutable.Map[String, JoinIndexes](rule.drop(1).permutations.map(r =>
-      val toRet = JoinIndexes(rule.head +: r, Some(idx.cxns), Some(idx.groupingIndexes))
+  def allOrders(rule: Seq[Atom], constraints: Seq[Constraint]): AllIndexes = {
+    val idx = JoinIndexes(rule, constraints, None, None, None)
+    mutable.Map[String, JoinIndexes](idx.atoms.drop(1).permutations.map(r =>
+      val toRet = JoinIndexes(rule.head +: r, idx.constraints, Some(idx.cxns), Some(idx.cons, idx.pos2Term), Some(idx.groupingIndexes))
       toRet.hash -> toRet
     ).toSeq:_*)
   }
 
-  def getRuleHash(rule: Seq[Atom]): String = rule.map(r => r.hash).mkString("", "", "")
+  def getRuleHash(rule: Seq[Atom], constraints: Seq[Constraint]): String = rule.map(r => r.hash).mkString("", "", "") + constraints.map(a => a.hash).mkString("", "", "")
 }
+
+// ---
+
+private def simplifyExpression(e: Expression): Expression =
+  enum ReduceOP:
+    case ADD, SUB, MUL, DIV, MOD
+  def reduceConstants(c1: Constant, c2: Constant, rop: ReduceOP): Constant = (c1, c2) match
+    case (i1: Int, i2: Int) => rop match
+      case ReduceOP.ADD => i1 + i2
+      case ReduceOP.SUB => i1 - i2
+      case ReduceOP.MUL => i1 * i2
+      case ReduceOP.DIV => i1 / i2
+      case ReduceOP.MOD => i1 % i2
+    case (i1: String, i2: String) => rop match
+      case ReduceOP.ADD => i1 + i2
+      case _ => ???
+    case _ => ???      
+  import Expression.*
+  e match
+    case One(t) => e
+    case Add(l, r) => simplifyExpression(l) match
+      case ne @ One(t) => (t, r) match
+        case (c1: Constant, c2: Constant) => One(reduceConstants(c1, c2, ReduceOP.ADD))
+        case (c1: Constant, c2: Variable) => Add(One(c2), c1)
+        case _ => Add(ne, r)
+      case ne @ Add(l2, r2) => (r2, r) match
+        case (c1: Constant, c2: Constant) => Add(l2, reduceConstants(c1, c2, ReduceOP.ADD))
+        case (c1: Constant, c2: Variable) => Add(Add(l2, c2), c1)
+        case _ => Add(ne, r)
+      case ne @ Sub(l2, r2) => (r2, r) match
+        case (c1: Constant, c2: Constant) => Add(l2, reduceConstants(c2, c1, ReduceOP.SUB))
+        case (c1: Constant, c2: Variable) => Sub(Add(l2, c2), c1)
+        case _ => Add(ne, r)
+      case ne => Add(ne, r)
+    case Sub(l, r) => simplifyExpression(l) match
+      case ne @ One(t) => (t, r) match
+        case (c1: Constant, c2: Constant) => One(reduceConstants(c1, c2, ReduceOP.SUB))
+        case _ => Sub(ne, r) // Case (constant, variable) could be simplified
+      case ne @ Add(l2, r2) => (r2, r) match
+        case (c1: Constant, c2: Constant) => Add(l2, reduceConstants(c1, c2, ReduceOP.SUB))
+        case (c1: Constant, c2: Variable) => Add(Sub(l2, c2), c1)
+        case _ => Sub(ne, r)
+      case ne @ Sub(l2, r2) => (r2, r) match
+        case (c1: Constant, c2: Constant) => Sub(l2, reduceConstants(c1, c2, ReduceOP.ADD))
+        case (c1: Constant, c2: Variable) => Sub(Sub(l2, c2), c1)
+        case _ => Sub(ne, r)
+      case ne => Sub(ne, r)
+    case Mul(l, r) => simplifyExpression(l) match
+      case ne @ One(t) => (t, r) match
+        case (c1: Constant, c2: Constant) => One(reduceConstants(c1, c2, ReduceOP.MUL))
+        case (c1: Constant, c2: Variable) => Mul(One(c2), c1)
+        case _ => Mul(ne, r)
+      case ne @ Mul(l2, r2) => (r2, r) match
+        case (c1: Constant, c2: Constant) => Mul(l2, reduceConstants(c1, c2, ReduceOP.MUL))
+        case (c1: Constant, c2: Variable) => Mul(Mul(l2, c2), c1)
+        case _ => Mul(ne, r)
+      case ne @ Div(l2, r2) => (r2, r) match
+        case (c1: Constant, c2: Variable) => Div(Mul(l2, c2), c1)
+        case _ => Mul(ne, r)
+      case ne => Mul(ne, r)
+    case Div(l, r) => simplifyExpression(l) match
+      case ne @ One(t) => (t, r) match
+        case (c1: Constant, c2: Constant) => One(reduceConstants(c1, c2, ReduceOP.DIV))
+        case _ => Div(ne, r) // Case (constant, variable) could be simplified
+      case ne @ Mul(l2, r2) => (r2, r) match
+        case (c1: Constant, c2: Variable) => Mul(Div(l2, c2), c1)
+        case _ => Div(ne, r)
+      case ne @ Div(l2, r2) => (r2, r) match
+        case (c1: Constant, c2: Constant) => Div(l2, reduceConstants(c1, c2, ReduceOP.MUL))
+        case (c1: Constant, c2: Variable) => Div(Div(l2, c2), c1)
+        case _ => Div(ne, r)
+      case ne => Div(ne, r)
+    case Mod(l, r) => simplifyExpression(l) match
+      case ne @ One(t) => (t, r) match
+        case (c1: Constant, c2: Constant) => One(reduceConstants(c1, c2, ReduceOP.MOD))
+        case _ => Mod(ne, r)
+      case ne => Mod(ne, r)
+
+private def checkExpression(e: Expression, vars: Set[Variable]): Unit =
+  def checkTerm(t: Term): Unit = t match
+    case v: Variable =>
+      if (!vars.contains(v))
+        throw new Exception(s"Variable with varId ${v.oid} appears only in comparison atoms")
+    case _ => ()
+  import Expression.*
+  e match
+    case One(t) => checkTerm(t)
+    case Add(l, r) => checkExpression(l, vars); checkTerm(r)
+    case Sub(l, r) => checkExpression(l, vars); checkTerm(r)
+    case Mul(l, r) => checkExpression(l, vars); checkTerm(r)
+    case Div(l, r) => checkExpression(l, vars); checkTerm(r)
+    case Mod(l, r) => checkExpression(l, vars); checkTerm(r)
+
+
+private def translateExpression(e: Expression, m: Variable => Int): StorageExpression =
+  import Expression as E
+  import StorageExpression as SE
+  def translateTerm(t: Term): Either[Constant, Int] = t match
+    case c: Constant => Left(c)
+    case v: Variable => Right(m(v))  
+  e match
+    case E.One(t) => SE.One(translateTerm(t))
+    case E.Add(l, r) => SE.Add(translateExpression(l, m), translateTerm(r))
+    case E.Sub(l, r) => SE.Sub(translateExpression(l, m), translateTerm(r))
+    case E.Mul(l, r) => SE.Mul(translateExpression(l, m), translateTerm(r))
+    case E.Div(l, r) => SE.Div(translateExpression(l, m), translateTerm(r))
+    case E.Mod(l, r) => SE.Mod(translateExpression(l, m), translateTerm(r))
+
+private def fixExpression(se: StorageExpression, m: Variable => Int, rm: Int => Term): StorageExpression =
+  import StorageExpression.*
+  se match
+    case One(t) => One(t.map(x => m(rm(x).asInstanceOf[Variable])))
+    case Add(l, r) => Add(fixExpression(l, m, rm), r.map(x => m(rm(x).asInstanceOf[Variable])))
+    case Sub(l, r) => Sub(fixExpression(l, m, rm), r.map(x => m(rm(x).asInstanceOf[Variable])))
+    case Mul(l, r) => Mul(fixExpression(l, m, rm), r.map(x => m(rm(x).asInstanceOf[Variable])))
+    case Div(l, r) => Div(fixExpression(l, m, rm), r.map(x => m(rm(x).asInstanceOf[Variable])))
+    case Mod(l, r) => Mod(fixExpression(l, m, rm), r.map(x => m(rm(x).asInstanceOf[Variable])))
+
+private def maxIndex(se: StorageExpression): Option[Int] =
+  import StorageExpression.*
+  se match
+    case One(t) => t.toOption
+    case Add(l, r) => (maxIndex(l) ++ r.toOption).reduceOption(Math.max(_, _))
+    case Sub(l, r) => (maxIndex(l) ++ r.toOption).reduceOption(Math.max(_, _))
+    case Mul(l, r) => (maxIndex(l) ++ r.toOption).reduceOption(Math.max(_, _))
+    case Div(l, r) => (maxIndex(l) ++ r.toOption).reduceOption(Math.max(_, _))
+    case Mod(l, r) => (maxIndex(l) ++ r.toOption).reduceOption(Math.max(_, _))
+  

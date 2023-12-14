@@ -1,11 +1,11 @@
 package datalog.execution
 
-import datalog.dsl.{Atom, Constant, Term, Variable, GroupingAtom, AggOp}
+import datalog.dsl.{Atom, Constant, Term, Variable, GroupingAtom, AggOp, Comparison, Constraint}
 import datalog.execution
 import datalog.execution.ast.*
 import datalog.execution.ast.transform.{ASTTransformerContext, CopyEliminationPass, Transformer}
 import datalog.execution.ir.*
-import datalog.storage.{DB, EDB, KNOWLEDGE, StorageManager, StorageAggOp}
+import datalog.storage.{DB, EDB, KNOWLEDGE, StorageManager, StorageAggOp, StorageComparison}
 import datalog.tools.Debug.debug
 
 import java.util.concurrent.{Executors, ForkJoinPool}
@@ -53,16 +53,21 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
     get(storageManager.ns(name))
   }
 
-  def insertIDB(rId: Int, ruleSeq: Seq[Atom]): Unit = {
-    precedenceGraph.addNode(ruleSeq)
+  def insertIDB(rId: Int, ruleSeq: Seq[Atom | Constraint]): Unit = {
+    val (atoms, constraints) = ruleSeq.partitionMap{
+      case a: Atom => Left(a)
+      case c: Constraint => Right(c)
+    }
+
+    precedenceGraph.addNode(atoms)
 //    println(s"${storageManager.printer.ruleToString(ruleSeq)}")
 
-    var rule = ruleSeq
-    var k = JoinIndexes(rule, None, None)
+    var rule = atoms
+    var k = JoinIndexes(rule, constraints, None, None, None)
     storageManager.allRulesAllIndexes.getOrElseUpdate(rId, mutable.Map[String, JoinIndexes]()).addOne(k.hash, k)
 
     if (rule.length <= heuristics.max_length_cache)
-      val allK = JoinIndexes.allOrders(rule)
+      val allK = JoinIndexes.allOrders(rule, constraints)
       storageManager.allRulesAllIndexes(rId) ++= allK
 
     if (defaultJITOptions.sortOrder == SortOrder.Sel) // sort before inserting, just in case EDBs are defined
@@ -77,7 +82,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
         -1
       )
       rule = rule.head +: sortedBody.map(_._1)
-      k = JoinIndexes(rule, Some(k.cxns), Some(k.groupingIndexes))
+      k = JoinIndexes(rule, constraints, Some(k.cxns), Some((k.cons, k.pos2Term)), Some(k.groupingIndexes))
       storageManager.allRulesAllIndexes(rId).addOne(k.hash, k)
     else if (defaultJITOptions.sortOrder == SortOrder.Badluck) // mimic "bad luck" program definition, so ingest rules in a bad order and then don't update them.
       val (sortedBody, newHash) = JoinIndexes.presortSelectWorst(
@@ -91,7 +96,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
         -1
       )
       rule = rule.head +: sortedBody.map(_._1)
-      k = JoinIndexes(rule, Some(k.cxns), Some(k.groupingIndexes))
+      k = JoinIndexes(rule, constraints, Some(k.cxns), Some((k.cons, k.pos2Term)), Some(k.groupingIndexes))
       storageManager.allRulesAllIndexes(rId).addOne(k.hash, k)
 
     //    println(s"${storageManager.printer.ruleToString(rule)}")
@@ -133,8 +138,11 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
                 case x: Variable => VarTerm(x)
                 case x: Constant => ConstTerm(x)
               }, b.negated)
+        ) ++ constraints.map(c =>
+          ConstraintAtom(c.c, c.l, c.r)
         ),
         rule,
+        constraints,
         k
       ))
   }
@@ -349,8 +357,8 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
       case op: ScanEDBOp =>
         op.run(storageManager)
 
-      case op: ComplementOp =>
-        op.run(storageManager)
+      case op: NegationOp =>
+        op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o)))
 
       case op: ProjectJoinFilterOp =>
         op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o)))

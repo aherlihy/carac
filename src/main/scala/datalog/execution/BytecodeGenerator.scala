@@ -179,6 +179,12 @@ object BytecodeGenerator {
     else
       xb.constantInstruction(0)
 
+  /** Emit `Boolean.valueOf($value)`. */
+  def emitBoolean(xb: CodeBuilder, value: Boolean): Unit =
+    xb.constantInstruction(if value then 1 else 0)
+      .invokestatic(clsDesc(classOf[java.lang.Boolean]), "valueOf",
+        MethodTypeDesc.of(clsDesc(classOf[java.lang.Boolean]), clsDesc(classOf[Boolean])))
+
   def emitSeqInt(xb: CodeBuilder, value: Seq[Int]): Unit =
     emitSeq(xb, value.map(v => xxb => emitInteger(xxb, v)))
 
@@ -248,6 +254,17 @@ object BytecodeGenerator {
     }
   }
 
+  def emitEither[A, B](xb: CodeBuilder, either: Either[A, B], emitA: (CodeBuilder, A) => Unit, emitB: (CodeBuilder, B) => Unit): Unit =
+    either match
+      case Left(value) =>
+        emitNew(xb, classOf[Left[A, B]], { xxb =>
+          emitA(xxb, value)
+        })
+      case Right(value) =>
+        emitNew(xb, classOf[Right[A, B]], { xxb =>
+          emitB(xxb, value)
+        })
+
   def emitProjIndexes(xb: CodeBuilder, value: Seq[(String, Constant)]): Unit =
     emitSeq(xb, value.map(v => xxb => emitStringConstantTuple2(xxb, v)))
 
@@ -268,6 +285,7 @@ object BytecodeGenerator {
   def emitCxns(xb: CodeBuilder, value: collection.mutable.Map[String, collection.mutable.Map[Int, Seq[String]]]): Unit =
     emitMap(xb, value.toSeq, emitString, emitCxnElement)
 
+  /*
   def emitJoinIndexes(xb: CodeBuilder, value: JoinIndexes): Unit =
     emitNew(xb, classOf[JoinIndexes], xxb =>
       emitVarIndexes(xxb, value.varIndexes)
@@ -277,7 +295,11 @@ object BytecodeGenerator {
 //      emitArrayAtoms(xxb, value.atoms)
       emitSeq(xb, value.atoms.map(a => xxb => emitAtom(xxb, a)))
       emitCxns(xxb, value.cxns)
-      emitBool(xxb, value.edb))
+      // TODO: Missing negationInfo!
+      emitBool(xxb, value.edb),
+      // TODO: Missing groupingInfos!
+      )
+  */
 
   def emitStorageAggOp(xb: CodeBuilder, sao: StorageAggOp): Unit =
     val enumCompanionCls = classOf[StorageAggOp.type]
@@ -314,6 +336,18 @@ object BytecodeGenerator {
       emitConstIndexes(xxb, value.constIndexes)
       emitSeqInt(xxb, value.groupingIndexes)
       emitAggOpInfos(xxb, value.aggOpInfos))
+
+  def emitCols(xb: CodeBuilder, value: Seq[Either[Constant, Seq[(RelationId, Int)]]]): Unit =
+    emitSeq(xb, value.map(v => xxb =>
+      emitEither(xxb, v, emitConstant, (xxxb, s) =>
+        emitSeq(xxxb, s.map(vv => xxxxb =>
+          emitNew(xxxxb, classOf[(Int, Int)], xxxxxb =>
+            emitInteger(xxxxxb, vv._1)
+            emitInteger(xxxxxb, vv._2)
+          )
+        ))
+      )
+    ))
 
   val CD_BoxedUnit = clsDesc(classOf[scala.runtime.BoxedUnit])
 

@@ -1,8 +1,8 @@
 package datalog.execution
 
-import datalog.dsl.{Atom, Constant, Term, Variable}
+import datalog.dsl.{Atom, Constant, Term, Variable, Comparison, Expression, Constraint}
 import datalog.execution.ir.*
-import datalog.storage.{DB, EDB, KNOWLEDGE, StorageManager, StorageAggOp}
+import datalog.storage.{DB, EDB, KNOWLEDGE, StorageManager, StorageAggOp, StorageComparison, StorageExpression}
 import datalog.tools.Debug.debug
 
 import scala.collection.mutable
@@ -56,6 +56,48 @@ class StagedSnippetCompiler(val storageManager: StorageManager)(using val jitOpt
     }
   }
 
+  given ToExpr[StorageComparison] with {
+    def apply(x: StorageComparison)(using Quotes) = {
+      x match
+        case StorageComparison.EQ => '{ StorageComparison.EQ } 
+        case StorageComparison.NEQ => '{ StorageComparison.NEQ }
+        case StorageComparison.LT => '{ StorageComparison.LT }
+        case StorageComparison.LTE => '{ StorageComparison.LTE }
+        case StorageComparison.GT => '{ StorageComparison.GT }
+        case StorageComparison.GTE => '{ StorageComparison.GTE }
+      
+    }
+  }
+
+  given ToExpr[Expression] with {
+    def apply(x: Expression)(using Quotes) = {
+      x match
+        case Expression.One(t) => '{ Expression.One( ${ Expr(t) } ) }
+        case Expression.Add(l, r) => '{ Expression.Add( ${ Expr(l) }, ${ Expr(r) } ) }
+        case Expression.Sub(l, r) => '{ Expression.Sub( ${ Expr(l) }, ${ Expr(r) } ) }
+        case Expression.Mul(l, r) => '{ Expression.Mul( ${ Expr(l) }, ${ Expr(r) } ) }
+        case Expression.Div(l, r) => '{ Expression.Div( ${ Expr(l) }, ${ Expr(r) } ) }
+        case Expression.Mod(l, r) => '{ Expression.Mod( ${ Expr(l) }, ${ Expr(r) } ) }      
+    }
+  }
+
+  given ToExpr[StorageExpression] with {
+    def apply(x: StorageExpression)(using Quotes) = {
+      x match
+        case StorageExpression.One(t) => '{ StorageExpression.One( ${ Expr(t) } ) }
+        case StorageExpression.Add(l, r) => '{ StorageExpression.Add( ${ Expr(l) }, ${ Expr(r) } ) }
+        case StorageExpression.Sub(l, r) => '{ StorageExpression.Sub( ${ Expr(l) }, ${ Expr(r) } ) }
+        case StorageExpression.Mul(l, r) => '{ StorageExpression.Mul( ${ Expr(l) }, ${ Expr(r) } ) }
+        case StorageExpression.Div(l, r) => '{ StorageExpression.Div( ${ Expr(l) }, ${ Expr(r) } ) }
+        case StorageExpression.Mod(l, r) => '{ StorageExpression.Mod( ${ Expr(l) }, ${ Expr(r) } ) }      
+    }
+  }
+
+  given ToExpr[Constraint] with {
+    def apply(x: Constraint)(using Quotes) = {
+      '{ Constraint( Comparison.fromOrdinal( ${ Expr(x.c.ordinal) } ), ${ Expr(x.l) }, ${ Expr(x.r) } ) }
+    }
+  }
 
   given ToExpr[JoinIndexes] with {
     def apply(x: JoinIndexes)(using Quotes) = {
@@ -67,6 +109,9 @@ class StagedSnippetCompiler(val storageManager: StorageManager)(using val jitOpt
           ${ Expr(x.deps) },
           ${ Expr(x.atoms) },
           ${ Expr(x.cxns) },
+          ${ Expr(x.cons) },
+          ${ Expr(x.constraints) },
+          ${ Expr(x.negationInfo) },
           ${ Expr(x.edb) },
         ) }
     }
@@ -127,8 +172,13 @@ class StagedSnippetCompiler(val storageManager: StorageManager)(using val jitOpt
             }
         }
 
-      case ComplementOp(arity) =>
-        '{ $stagedSM.getComplement(${ Expr(arity) }) }
+      case NegationOp(child, cols) =>
+        val tmp = cols.map(_.exists(_.isEmpty))
+        '{ 
+          val compl = $stagedSM.getGroundOf(${ Expr(cols) })
+          val nq = $stagedSM.zeroOut($stagedFns.head($stagedSM), ${ Expr(tmp) })
+          $stagedSM.diff(compl, nq)
+        }
 
       case ScanEDBOp(rId) =>
         if (storageManager.edbContains(rId))

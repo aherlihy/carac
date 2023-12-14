@@ -26,7 +26,7 @@ def not(atom: Atom): Atom = !atom
 
 class Atom(val rId: Int, val terms: Seq[Term], val negated: Boolean) {
   def unary_! : Atom = ???
-  def :- (body: Atom*): Unit = ???
+  def :- (body: (Atom | Constraint)*): Unit = ???
   def :- (body: Unit): Unit = ???
   val hash: String = s"${if (negated) "!" else ""}$rId.${terms.mkString("", "", "")}"
 }
@@ -40,7 +40,7 @@ case class Relation[T <: Constant](id: Int, name: String)(using ee: ExecutionEng
                     ) extends Atom(id, terms, negated) { // extend Atom so :- can accept atom of any Relation
     override def unary_! : Atom = copy(negated = !negated)
     // IDB tuple
-    override def :-(body: Atom*): Unit =
+    override def :-(body: (Atom | Constraint)*): Unit =
       if (negated)
         throw new Exception("Cannot have negated predicates in the head of a rule")
       ee.insertIDB(rId, this +: body)
@@ -69,7 +69,7 @@ enum AggOp(val t: Term):
 case class GroupingAtom(gp: Atom, gv: Seq[Variable], ags: Seq[(AggOp, Variable)])
   extends Atom(gp.rId, gv ++ ags.map(_._2), false):
     // We set the relation id of the grouping predicate because the 'virtual' relation will be computed from it and also because we need it to be so for certain logic: dep in JoinIndexes, node id in DependencyGraph, etc.
-    override val hash: String = s"GB${gp.hash}-${gv.mkString("", "", "")}-${ags.mkString("", "", "")}"
+    override val hash: String = s"G#${gp.hash}-${gv.mkString("", "", "")}-${ags.mkString("", "", "")}"
 
 object groupBy:
   def apply(gp: Atom, gv: Seq[Variable], ags: (AggOp, Variable)*): GroupingAtom =
@@ -90,3 +90,70 @@ object groupBy:
     if (!(aggdVars ++ gVars).subsetOf(gpVars))
       throw new Exception("The aggregated variables and the grouping variables must occurr in the grouping predicate")
     GroupingAtom(gp, gv, ags)
+
+
+enum Comparison:
+  case EQ, NEQ, LT, LTE, GT, GTE
+
+enum Expression:
+  case One(t: Term)
+  case Add(l: Expression, r: Term)
+  case Sub(l: Expression, r: Term)
+  case Mul(l: Expression, r: Term)
+  case Div(l: Expression, r: Term)
+  case Mod(l: Expression, r: Term)
+
+
+case class Constraint(c: Comparison, l: Expression, r: Expression):
+  val hash: String = s"C|$l$c$r}"
+
+private def checkExpression(e: Expression): Unit =
+  inline def isAnonVariable(t: Term): Boolean = t.isInstanceOf[Variable] && t.asInstanceOf[Variable].anon
+  def aux(e: Expression): Boolean = e match
+    case Expression.One(t) => isAnonVariable(t)
+    case Expression.Add(l, r) => aux(l) || isAnonVariable(r)
+    case Expression.Sub(l, r) => aux(l) || isAnonVariable(r)
+    case Expression.Mul(l, r) => aux(l) || isAnonVariable(r)
+    case Expression.Div(l, r) => aux(l) || isAnonVariable(r)
+    case Expression.Mod(l, r) => aux(l) || isAnonVariable(r)
+  if (aux(e))
+      throw new Exception("Anonymous variable ('__') not allowed in comparison atoms")
+
+implicit def term2ExpressionOne(x: Term): Expression.One = Expression.One(x)
+
+extension (e: Expression)
+  def +(t: Term): Expression.Add =
+    Expression.Add(e, t)
+  def -(t: Term): Expression.Sub =
+    Expression.Sub(e, t)
+  def *(t: Term): Expression.Mul =
+    Expression.Mul(e, t)
+  def /(t: Term): Expression.Div =
+    Expression.Div(e, t)
+  def %(t: Term): Expression.Mod =
+    Expression.Mod(e, t)
+
+  def |=|(o: Expression): Constraint =
+    checkExpression(e)
+    checkExpression(o)
+    Constraint(Comparison.EQ, e, o)
+  def |!=|(o: Expression): Constraint =
+    checkExpression(e)
+    checkExpression(o)
+    Constraint(Comparison.NEQ, e, o)
+  def |<|(o: Expression): Constraint =
+    checkExpression(e)
+    checkExpression(o)
+    Constraint(Comparison.LT, e, o)
+  def |<=|(o: Expression): Constraint =
+    checkExpression(e)
+    checkExpression(o)
+    Constraint(Comparison.LTE, e, o)
+  def |>|(o: Expression): Constraint =
+    checkExpression(e)
+    checkExpression(o)
+    Constraint(Comparison.GT, e, o)
+  def |>=|(o: Expression): Constraint =
+    checkExpression(e)
+    checkExpression(o)
+    Constraint(Comparison.GTE, e, o)

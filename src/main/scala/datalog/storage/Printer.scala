@@ -104,7 +104,7 @@ class Printer[S <: StorageManager](val sm: S) {
     node match {
       case ProgramNode(allRules) => "PROGRAM\n" + allRules.map((rId, rules) => s"  ${sm.ns(rId)} => ${printAST(rules)}").mkString("", "\n", "")
       case AllRulesNode(rules, rId, edb) => s"${if (edb) "{EDB}"+factToString(sm.getEDB(rId))+"{IDB}" else ""}${rules.map(printAST).mkString("[", "\n\t", "  ]")}"
-      case RuleNode(head, body, atoms, k) =>
+      case RuleNode(head, body, atoms, constraints, k) =>
         s"\n\t${printAST(head)} :- ${body.map(printAST).mkString("(", ", ", ")")}" +
           s" => idx=${k.toStringWithNS(sm.ns)}\n"
       case n: AtomNode => n match {
@@ -141,7 +141,7 @@ class Printer[S <: StorageManager](val sm: S) {
           k.toStringWithNS(sm.ns)}::${
           children.map(o => printIR(o, ident+1)).mkString("(\n", ",\n", ")")}"
       case DiffOp(children:_*) => s"DIFF\n${printIR(children.head, ident+1)}\n-${printIR(children(1), ident+1)}"
-      case ComplementOp(arity) => s"COMPL|$arity|"
+      case NegationOp(child, cols) => s"NEG|${printIR(child, ident+1)}| [$cols]"
       case DebugNode(prefix, dbg) => s"DEBUG: $prefix"
       case DebugPeek(prefix, dbg, children:_*) => s"DEBUG PEEK: $prefix into: ${printIR(children.head)}"
     })

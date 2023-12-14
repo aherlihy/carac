@@ -94,3 +94,66 @@ val aggOps: Map[StorageAggOp, Map[Char, (StorageConstant, StorageConstant) => St
     's' -> ((a, b) => if a.asInstanceOf[String] > b.asInstanceOf[String] then a.asInstanceOf[String] else b.asInstanceOf[String])
   )
 )
+
+enum StorageComparison:
+  case EQ, NEQ, LT, LTE, GT, GTE
+
+val comparisons: Map[StorageComparison, Map[Char, (StorageConstant, StorageConstant) => Boolean]] = Map(
+  StorageComparison.EQ -> Map(
+    'i' -> ((x, y) => x.asInstanceOf[Int] == y.asInstanceOf[Int]),
+    's' -> ((x, y) => x.asInstanceOf[String] == y.asInstanceOf[String])
+  ),
+  StorageComparison.NEQ -> Map(
+    'i' -> ((x, y) => x.asInstanceOf[Int] != y.asInstanceOf[Int]),
+    's' -> ((x, y) => x.asInstanceOf[String] != y.asInstanceOf[String])
+  ),
+  StorageComparison.LT -> Map(
+    'i' -> ((x, y) => x.asInstanceOf[Int] < y.asInstanceOf[Int]),
+    's' -> ((x, y) => x.asInstanceOf[String] < y.asInstanceOf[String])
+  ),
+  StorageComparison.LTE -> Map(
+    'i' -> ((x, y) => x.asInstanceOf[Int] <= y.asInstanceOf[Int]),
+    's' -> ((x, y) => x.asInstanceOf[String] <= y.asInstanceOf[String])
+  ),
+  StorageComparison.GT -> Map(
+    'i' -> ((x, y) => x.asInstanceOf[Int] > y.asInstanceOf[Int]),
+    's' -> ((x, y) => x.asInstanceOf[String] > y.asInstanceOf[String])
+  ),
+  StorageComparison.GTE -> Map(
+    'i' -> ((x, y) => x.asInstanceOf[Int] >= y.asInstanceOf[Int]),
+    's' -> ((x, y) => x.asInstanceOf[String] >= y.asInstanceOf[String])
+  )
+)
+
+enum StorageExpression:
+  case One(t: Either[StorageConstant, Int])
+  case Add(l: StorageExpression, r: Either[StorageConstant, Int])
+  case Sub(l: StorageExpression, r: Either[StorageConstant, Int])
+  case Mul(l: StorageExpression, r: Either[StorageConstant, Int])
+  case Div(l: StorageExpression, r: Either[StorageConstant, Int])
+  case Mod(l: StorageExpression, r: Either[StorageConstant, Int])
+
+def buildExpression(se: StorageExpression, tpe: Char): (Int => StorageTerm) => StorageConstant =
+  import StorageExpression.*
+  tpe match
+    case 'i' =>
+      def aux(se: StorageExpression, get: Int => StorageTerm): Int =
+        se match
+          case One(t) => t.fold(x => x.asInstanceOf[Int], x => get(x).asInstanceOf[Int])
+          case Add(l, r) => aux(l, get) + r.fold(x => x.asInstanceOf[Int], x => get(x).asInstanceOf[Int])
+          case Sub(l, r) => aux(l, get) - r.fold(x => x.asInstanceOf[Int], x => get(x).asInstanceOf[Int])
+          case Mul(l, r) => aux(l, get) * r.fold(x => x.asInstanceOf[Int], x => get(x).asInstanceOf[Int])
+          case Div(l, r) => aux(l, get) / r.fold(x => x.asInstanceOf[Int], x => get(x).asInstanceOf[Int])
+          case Mod(l, r) => aux(l, get) % r.fold(x => x.asInstanceOf[Int], x => get(x).asInstanceOf[Int])
+      g => aux(se, g)
+    case 's' =>
+      def aux(se: StorageExpression, get: Int => StorageTerm): String =
+        se match
+          case One(t) => t.fold(x => x.asInstanceOf[String], x => get(x).asInstanceOf[String])
+          case Add(l, r) => aux(l, get) + r.fold(x => x.asInstanceOf[String], x => get(x).asInstanceOf[String])
+          case Sub(l, r) => ???
+          case Mul(l, r) => ???
+          case Div(l, r) => ???
+          case Mod(l, r) => ???
+      g => aux(se, g)
+            

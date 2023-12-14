@@ -148,8 +148,13 @@ class LambdaCompiler(val storageManager: StorageManager)(using JITOptions) exten
           }
       }
 
-    case ComplementOp(arity) =>
-      _.getComplement(arity)
+    case NegationOp(child, cols) =>
+      val tmp = cols.map(_.exists(_.isEmpty))
+      val clh = compile(child)
+      sm =>
+        val compl = sm.getGroundOf(cols)
+        val nq = sm.zeroOut(clh(sm), tmp)
+        sm.diff(compl, nq)
 
     case ScanEDBOp(rId) =>
       if (storageManager.edbContains(rId))
