@@ -14,7 +14,7 @@ import datalog.tools.Debug.debug
  */
 class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager(ns) {
 
-  private inline def scanFilter(k: JoinIndexes, maxIdx: Int)(get: Int => StorageTerm = x => x) = {
+  private /*inline*/ def scanFilter(k: JoinIndexes, maxIdx: Int)(get: Int => StorageTerm = x => x) = {
     val vCmp = k.varIndexes.isEmpty || k.varIndexes.forall(condition =>
       if (condition.head >= maxIdx)
         true
@@ -60,13 +60,13 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
     )
   }
 
-  private inline def prefilter(consts: mutable.Map[Int, Constant], skip: Int, row: CollectionsRow): Boolean = {
+  private /*inline*/ def prefilter(consts: mutable.Map[Int, Constant], skip: Int, row: CollectionsRow): Boolean = {
     consts.isEmpty || consts.forall((idx, const) => // for each filter // TODO: make sure out of range fails
       row(idx - skip) == const
     )
   }
 
-  private inline def toJoin(k: JoinIndexes, innerTuple: CollectionsRow, outerTuple: CollectionsRow): Boolean = {
+  private /*inline*/ def toJoin(k: JoinIndexes, innerTuple: CollectionsRow, outerTuple: CollectionsRow): Boolean = {
     k.varIndexes.isEmpty || k.varIndexes.forall(condition =>
       if (condition.head >= innerTuple.length + outerTuple.length)
         true
