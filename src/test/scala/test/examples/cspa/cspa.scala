@@ -23,5 +23,17 @@ trait cspa {
 
     ValueFlow(y, x) :- Assign(y, x)
     ValueFlow(x, y) :- (Assign(x, z), MemoryAlias(z, y))
+    ValueFlow(x, y) :- (ValueFlow(x, z), ValueFlow(z, y))
+
+    MemoryAlias(x, w) :- (Dereference(y, x), ValueAlias(y, z), Dereference(z, w))
+
+    ValueAlias(x, y) :- (ValueFlow(z, x), ValueFlow(z, y))
+    ValueAlias(x, y) :- (ValueFlow(z, x), MemoryAlias(z, w), ValueFlow(w, y))
+
+    ValueFlow(x, x) :- Assign(x, y)
+    ValueFlow(x, x) :- Assign(y, x)
+
+    MemoryAlias(x, x) :- Assign(y, x)
+    MemoryAlias(x, x) :- Assign(x, y)
   }
 }
