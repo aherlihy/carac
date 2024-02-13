@@ -63,7 +63,10 @@ case class CollectionsRow(wrapped: Seq[StorageTerm]) extends Row[StorageTerm] {
   def length: Int = wrapped.length
   def concat(suffix: Row[StorageTerm]): CollectionsRow =
     CollectionsRow(wrapped.concat(asCollectionsRow(suffix).wrapped))
-  export wrapped.{ apply, applyOrElse, iterator, lift, mkString }
+  export wrapped.{ apply, iterator, lift, mkString }
+  // Inlined and specialized applyOrElse to avoid significant boxing overhead.
+  inline def applyOrElse(i: Int, inline default: Int => StorageTerm): StorageTerm =
+    if i >= length then default(i) else apply(i)
 }
 
 /**
