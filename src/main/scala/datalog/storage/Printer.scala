@@ -14,12 +14,14 @@ class Printer[S <: StorageManager](val sm: S) {
     r.factToString
   }
 
+  def bodyToString(body: Seq[Atom]): String = {
+    body.map(b => (if (b.negated) "!" else "") + sm.ns(b.rId) + b.terms.mkString("(", ", ", ")")).mkString("", ", ", "")
+  }
+
   def ruleToString(a: Seq[Atom]): String = {
     s"${sm.ns(a.head.rId)}${
       a.head.terms.mkString("(", ", ", ")")
-    } :- ${
-      a.drop(1).map(b => (if (b.negated) "!" else "") + sm.ns(b.rId) + b.terms.mkString("(", ", ", ")")).mkString("", ", ", "")
-    }"
+    } :- ${bodyToString(a.drop(1))}"
   }
 
   def rulesToString(r: mutable.ArrayBuffer[Seq[Atom]]): String = {

@@ -152,8 +152,8 @@ object JoinIndexes {
     val newAtoms = originalK.atoms.head +: newBody.map(_._1)
     val newHash = JoinIndexes.getRuleHash(newAtoms)
 
-//    println(s"\tOrder: ${newBody.map((a, _) => s"${sm.ns(a.rId)}:|${sortBy(a)}|").mkString("", ", ", "")}")
-//    if (originalK.atoms.length > 3)
+//    println(s"\tOrder: ${newBody.map((a, idx) => s"${sm.ns(a.rId)}:|${sortBy(a, idx == deltaIdx)}|").mkString("", ", ", "")}")
+//    if (originalK.atoms.length > 2)
 //      print(s"Rule: ${sm.printer.ruleToString(originalK.atoms)} => ")
 //      println(s"${sm.printer.ruleToString(originalK.atoms.head +: newBody.map(_._1))}")
 
@@ -164,7 +164,7 @@ object JoinIndexes {
 
 //    val sortedBody = originalK.atoms.drop(1).zipWithIndex.sortBy((a, _) => (sm.allRulesAllIndexes.contains(a.rId), sortBy(a)))
     val sortedBody = originalK.atoms.drop(1).zipWithIndex.sortBy((a, idx) => sortBy(a, idx == deltaIdx))
-//    println(s"\tOrder: ${sortedBody.map((a, _) => s"${sm.ns.hashToAtom(a.hash)}:|${sortBy(a)}|${if (sm.edbContains(a.rId)) "edb" else "idb"}").mkString("", ", ", "")}")
+//    println(s"\tOrder: ${sortedBody.map((a, idx) => s"${sm.ns.hashToAtom(a.hash)}:|${sortBy(a, idx == deltaIdx)}|${if (sm.edbContains(a.rId)) "edb" else "idb"}").mkString("", ", ", "")}")
     //    if (input.length > 2)
 //    println(s"Rule: ${sm.printer.ruleToString(originalK.atoms)}\n")
 //    println(s"Rule cxn: ${originalK.cxnsToString(sm.ns)}\n")
@@ -198,6 +198,15 @@ object JoinIndexes {
     val newHash = JoinIndexes.getRuleHash(newAtoms)
 
 //    if (originalK.atoms.length > 3)
+//    print(s"Rule: ${sm.printer.bodyToString(originalK.atoms.drop(1))} => ")
+//    println(s"${sm.printer.bodyToString(newBody.map(_._1))}")
+//    println(s"test, compare ${newBody.map(_._1.rId)} to ${originalK.atoms.drop(1).toList.map(_.rId)}")
+//    if (newBody.map(_._1.rId) == originalK.atoms.drop(1).toList.map(_.rId))
+////      println("=> unchanged")
+//      ()
+//    else
+//      println(s"\n\t${newBody.map((a, idx) => s"${sm.ns.hashToAtom(a.hash)}:|${sortBy(a, idx == deltaIdx)}|${if (sm.edbContains(a.rId)) "edb" else "idb"}").mkString("", ", ", "")}")
+//    if (originalK.atoms.length > 2)
 //      print(s"Rule: ${sm.printer.ruleToString(originalK.atoms)} => ")
 //      println(s"${sm.printer.ruleToString(originalK.atoms.head +: newBody.map(_._1))}")
     (newBody, newHash)
