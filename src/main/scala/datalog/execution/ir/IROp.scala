@@ -306,7 +306,7 @@ case class UnionSPJOp(rId: RelationId, var k: JoinIndexes, override val children
 //      k,
 //      storageManager
 //    )
-
+    // TODO: change children.length from 3
     if (jitOptions.sortOrder == SortOrder.Unordered || jitOptions.sortOrder == SortOrder.Badluck || children.length < 3 || jitOptions.granularity != OpCode.OTHER) // If not only interpreting, then don't optimize since we are waiting for the optimized version to compile
       storageManager.union(children.map((s: ProjectJoinFilterOp) => s.run(storageManager)))
     else
