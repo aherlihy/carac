@@ -25,7 +25,7 @@ trait StorageManager(val ns: NS) {
 
   // Helpers for negation
   def addConstantsToDomain(constants: Seq[StorageTerm]): Unit
-  def getComplement(arity: Int): CollectionsEDB
+  def getComplement(arity: Int): EDB
 
   def getKnownDerivedDB(rId: RelationId): EDB
   def getNewDerivedDB(rId: RelationId): EDB

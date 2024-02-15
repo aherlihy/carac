@@ -139,6 +139,7 @@ case class UpdateDiscoveredOp()(using JITOptions) extends IROp[Any] {
 case class SwapAndClearOp()(using JITOptions) extends IROp[Any] {
   val code: OpCode = OpCode.SWAP_CLEAR
   override def run(storageManager: StorageManager): Any =
+    println(s"DBs start of iteration: ${storageManager.toString}")
     storageManager.swapKnowledge()
     storageManager.clearNewDerived()
 
