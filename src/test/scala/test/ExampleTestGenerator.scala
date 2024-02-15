@@ -2,7 +2,7 @@ package test
 
 import datalog.dsl.{Constant, Program, Relation, Term}
 import datalog.execution.{Backend, CompileSync, Granularity, JITOptions, Mode, NaiveExecutionEngine, NaiveStagedExecutionEngine, SemiNaiveExecutionEngine, SortOrder, StagedExecutionEngine, ir}
-import datalog.storage.{DefaultStorageManager, StorageTerm, VolcanoStorageManager}
+import datalog.storage.{DefaultStorageManager, IndexedStorageManager, StorageTerm, VolcanoStorageManager}
 
 import java.nio.file.{Files, Path, Paths}
 import scala.collection.mutable
@@ -114,7 +114,11 @@ abstract class TestGenerator(directory: Path,
             Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions()))
           case "InterpretedStaged_selDefault" =>
             Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(sortOrder = SortOrder.Sel)))
-//          case "InterpretedStaged_badluckDefault" =>
+          case "InterpretedStagedIndexed" =>
+            Program(StagedExecutionEngine(IndexedStorageManager(), JITOptions()))
+          case "InterpretedStaged_selIndexed" =>
+            Program(StagedExecutionEngine(IndexedStorageManager(), JITOptions(sortOrder = SortOrder.Sel)))
+          //          case "InterpretedStaged_badluckDefault" =>
 //            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(sortOrder = SortOrder.Badluck)))
 
           // blocking
@@ -134,10 +138,12 @@ abstract class TestGenerator(directory: Path,
 //            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.RULE, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)))
 //          case "JITStaged_Sel_ALL_Block_LambdaDefault" =>
 //            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.ALL, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)))
-//          case "JITStaged_Sel_DELTA_Block_LambdaDefault" =>
-//            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.DELTA, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)))
+          case "JITStaged_Sel_DELTA_Block_LambdaDefault" =>
+            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.DELTA, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)))
+          case "JITStaged_Sel_DELTA_Block_LambdaIndexed" =>
+            Program(StagedExecutionEngine(IndexedStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.DELTA, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)))
 
-/*
+          /*
           // async
           case "JITStaged_Sel_RULE_Async_QuotesDefault" =>
             Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.RULE, dotty = dotty, compileSync = CompileSync.Async, sortOrder = SortOrder.Sel, backend = Backend.Quotes)))
@@ -173,7 +179,8 @@ abstract class TestGenerator(directory: Path,
 //      "SemiNaive",
 //      "CompiledStaged", // TODO: for longer tests, can throw MethodTooLarge
       "InterpretedStaged",
-//      "InterpretedStaged_sel"
+//      "InterpretedStaged_sel",
+//      "JITStaged_Sel_DELTA_Block_Lambda",
 //        "InterpretedStaged_badluck"
 //      "JITStaged_Sel_RULE_Block_BC",
 //      "JITStaged_Sel_DELTA_Block_BC",
@@ -184,14 +191,13 @@ abstract class TestGenerator(directory: Path,
 //      "JITStaged_Sel_RULE_Async_Quotes",
 //      "JITStaged_Sel_ALL_Async_Quotes",
 //      "JITStaged_Sel_ALL_Block_Lambda",
-//      "JITStaged_Sel_DELTA_Block_Lambda",
 //      "JITStaged_Sel_RULE_Block_Lambda",
 //      "JITStaged_Sel_ALL_Async_Lambda",
 //      "JITStaged_Sel_RULE_Async_Lambda",
 //      "JITStaged_Sel_RULE_Async_BC",
 //      "JITStaged_Sel_ALL_Async_BC",
     ).foreach(execution => {
-      Seq("Volcano", "Default").foreach(storage => {
+      Seq(/*"Volcano", "Default", */"Indexed").foreach(storage => {
         if ((execution.contains("Staged") || execution.contains("BytecodeGenerated") || execution.contains("Lambda")) && storage == "Volcano") {} // skip and don't report as skipped
         else if (
             skip.contains(execution) || skip.contains(storage) ||
