@@ -14,7 +14,7 @@ import scala.collection.{immutable, mutable}
  */
 class IndexedStorageManager(ns: NS = new NS()) extends IndexedCollectionsStorageManager(ns) {
 
-  private /*inline*/ def scanFilter(k: JoinIndexes, maxIdx: Int)(get: Int => StorageTerm = x => x) = {
+  private /*inline*/ def scanFilter(k: JoinIndexes, maxIdx: Int)(get: Int => StorageTerm = x => x) = ??? /*{
     val vCmp = k.varIndexes.isEmpty || k.varIndexes.forall(condition =>
       if (condition.head >= maxIdx)
         true
@@ -28,9 +28,9 @@ class IndexedStorageManager(ns: NS = new NS()) extends IndexedCollectionsStorage
       idx >= maxIdx || get(idx) == const
     )
     vCmp && kCmp
-  }
+  }*/
 
-  override def joinHelper(inputEDB: Seq[EDB], k: JoinIndexes): IndexedCollectionsEDB = {
+  override def joinHelper(inputEDB: Seq[EDB], k: JoinIndexes): IndexedCollectionsEDB = ??? /*{
     val inputs = asIndexedCollectionsSeqEDB(inputEDB)
     inputs
       .reduceLeft((outer: IndexedCollectionsEDB, inner: IndexedCollectionsEDB) => {
@@ -47,9 +47,9 @@ class IndexedStorageManager(ns: NS = new NS()) extends IndexedCollectionsStorage
         })
       })
       .filter(r => scanFilter(k, r.length)(r.apply))
-  }
+  }*/
 
-  override def projectHelper(input: EDB, k: JoinIndexes): IndexedCollectionsEDB = {
+  override def projectHelper(input: EDB, k: JoinIndexes): IndexedCollectionsEDB = ??? /*{
     asIndexedCollectionsEDB(input).map(t =>
       IndexedCollectionsRow(k.projIndexes.flatMap((typ, idx) =>
         typ match {
@@ -58,7 +58,7 @@ class IndexedStorageManager(ns: NS = new NS()) extends IndexedCollectionsStorage
           case _ => throw new Exception("Internal error: projecting something that is not a constant nor a variable")
         }))
     )
-  }
+  }*/
 
   private /*inline*/ def prefilter(consts: mutable.Map[Int, Constant], skip: Int, row: IndexedCollectionsRow): Boolean = {
     consts.isEmpty || consts.forall((idx, const) => // for each filter // TODO: make sure out of range fails
@@ -81,25 +81,20 @@ class IndexedStorageManager(ns: NS = new NS()) extends IndexedCollectionsStorage
 
   override def joinProjectHelper_withHash(inputsEDB: Seq[EDB], rId: Int, hash: String, onlineSort: Boolean): IndexedCollectionsEDB = {
     val originalK = allRulesAllIndexes(rId)(hash)
-//    println(s"jph jidx=${originalK.toStringWithNS(ns)}")
+//    println(s"JoinIndexes=${originalK.toStringWithNS(ns)}")
     val inputs = asIndexedCollectionsSeqEDB(inputsEDB)
+//    println(s"input arity: ${inputs.map(e => s"${e.name}:${e.arity}").mkString("[", ", ", "]")}")
 //    var intermediateCardinalities = Seq[Int]()
-    if (inputs.length == 1) // just filter
-      inputs.head
-        .filter(e =>
-          val filteredC = originalK.constIndexes.filter((ind, _) => ind < e.length)
-          prefilter(filteredC, 0, e) && filteredC.size == originalK.constIndexes.size)
-        .map(t =>
-          IndexedCollectionsRow(originalK.projIndexes.flatMap((typ, idx) =>
-            typ match {
-              case "v" => t.lift(idx.asInstanceOf[Int])
-              case "c" => Some(idx)
-              case _ => throw new Exception("Internal error: projecting something that is not a constant nor a variable")
-            })))
-    else
+    val fResult = if (inputs.length == 1) {// just filter + project
+      inputs.head.filterProjectWithIndex(
+        originalK.constIndexes,
+        originalK.projIndexes,
+        0
+      )
+    } else {
       val result = inputs
         .foldLeft(
-          (IndexedCollectionsEDB(), 0, originalK) // initialize intermediate indexed-collection
+          (IndexedCollectionsEDB.empty(), 0, originalK) // initialize intermediate indexed-collection
         )((combo: (IndexedCollectionsEDB, Int, JoinIndexes), innerT: IndexedCollectionsEDB) =>
           val outerT = combo._1
           val atomI = combo._2
@@ -116,35 +111,31 @@ class IndexedStorageManager(ns: NS = new NS()) extends IndexedCollectionsStorage
               else
                 (innerT, outerT)
             // outer = outer relation, inner = inner relation
-            val edbResult = outer
-              .filter(o =>
-                prefilter(k.constIndexes.filter((i, _) => i < o.length), 0, o)
-              ) // filter outer tuple
-              .flatMap(outerTuple =>
-                inner
-                  .filter(i =>
-                    prefilter(k.constIndexes.filter((ind, _) => ind >= outerTuple.length && ind < (outerTuple.length + i.length)), outerTuple.length, i) && toJoin(k, outerTuple, i)
-                  )
-                  .map(innerTuple => outerTuple.concat(innerTuple)))
-//            intermediateCardinalities = intermediateCardinalities :+ edbResult.length
+            val edbResult = outer.joinFilterWithIndex(k, 0, inner)
+            //            intermediateCardinalities = intermediateCardinalities :+ edbResult.length
             (edbResult, atomI + 1, k)
         )
+      result._1.filterProjectWithIndex(result._3.constIndexes, result._3.projIndexes, 0)
+    }
+    fResult.name = ns(rId)
+    fResult
+
 //      if (inputs.length > 2) println(s"${intermediateCardinalities.dropRight(1).mkString("", "\n", "")}")
-      result._1
-        .filter(edb => result._3.constIndexes.filter((i, _) => i >= edb.length).isEmpty)
-        .map(t =>
-          IndexedCollectionsRow(
-            result._3.projIndexes.flatMap((typ, idx) =>
-              typ match {
-                case "v" => t.lift(idx.asInstanceOf[Int])
-                case "c" => Some(idx)
-                case _ => throw new Exception("Internal error: projecting something that is not a constant nor a variable")
-              })
-          )
-        )
+//      result._1
+//        .filter(edb => result._3.constIndexes.filter((i, _) => i >= edb.length).isEmpty)
+//        .map(t =>
+//          IndexedCollectionsRow(
+//            result._3.projIndexes.flatMap((typ, idx) =>
+//              typ match {
+//                case "v" => t.lift(idx.asInstanceOf[Int])
+//                case "c" => Some(idx)
+//                case _ => throw new Exception("Internal error: projecting something that is not a constant nor a variable")
+//              })
+//          )
+//        )
   }
 
-  override def joinProjectHelper(inputsEDB: Seq[EDB], originalK: JoinIndexes, onlineSort: Boolean): IndexedCollectionsEDB = { // OLD, only keep around for benchmarks
+  override def joinProjectHelper(inputsEDB: Seq[EDB], originalK: JoinIndexes, onlineSort: Boolean): IndexedCollectionsEDB = ??? /*{ // OLD, only keep around for benchmarks
     val inputs = asIndexedCollectionsSeqEDB(inputsEDB)
     if (inputs.length == 1) // just filter
       inputs.head
@@ -203,7 +194,7 @@ class IndexedStorageManager(ns: NS = new NS()) extends IndexedCollectionsStorage
               })
           )
         )
-  }
+  }*/
 
   /**
    * Use iterative collection operators to evaluate an IDB rule using Semi-Naive algo
@@ -212,7 +203,7 @@ class IndexedStorageManager(ns: NS = new NS()) extends IndexedCollectionsStorage
    * @param keys - a JoinIndexes object to join on
    * @return
    */
-  override def SPJU(rId: RelationId, keys: mutable.ArrayBuffer[JoinIndexes]): IndexedCollectionsEDB = {
+  override def SPJU(rId: RelationId, keys: mutable.ArrayBuffer[JoinIndexes]): IndexedCollectionsEDB = ??? /*{
     println(s"keys= $keys")
     debug("SPJU:", () => s"r=${ns(rId)} keys=${printer.snPlanToString(keys)} knownDBId $knownDbId")
       IndexedCollectionsEDB(keys.flatMap(k => // union of each definition of rId
@@ -247,8 +238,9 @@ class IndexedStorageManager(ns: NS = new NS()) extends IndexedCollectionsStorage
           }).distinct
       ))
   }
+  */
 
-  override def naiveSPJU(rId: RelationId, keys: mutable.ArrayBuffer[JoinIndexes]): IndexedCollectionsEDB = {
+  override def naiveSPJU(rId: RelationId, keys: mutable.ArrayBuffer[JoinIndexes]): IndexedCollectionsEDB = ??? /*{
     debug("NaiveSPJU:", () => s"r=${ns(rId)} keys=${printer.naivePlanToString(keys)} knownDBId $knownDbId")
     IndexedCollectionsEDB(
       keys.flatMap(k => { // for each idb rule
@@ -273,5 +265,5 @@ class IndexedStorageManager(ns: NS = new NS()) extends IndexedCollectionsStorage
           ).wrapped.distinct
       })
     )
-  }
+  }*/
 }

@@ -1,6 +1,6 @@
 package datalog.storage
 
-import datalog.dsl.Atom
+import datalog.dsl.{Atom, Term}
 import datalog.execution.ast.*
 import datalog.execution.JoinIndexes
 import datalog.execution.ir.*
@@ -38,6 +38,9 @@ class Printer[S <: StorageManager](val sm: S) {
       .map((k, v) => (sm.ns(k), factToString(v)))
       .mkString("[\n  ", ",\n  ", "]")
   }
+
+  def indexToString(name: String, indexes: mutable.Map[Int, mutable.SortedMap[Term, mutable.ArrayBuffer[IndexedCollectionsRow]]]): String =
+    s"$name: ${indexes.map((pos, tMap) => s"i$pos|${tMap.size}|").mkString("[", ", ", "]")}"
   
   def naivePlanToString(keys: mutable.ArrayBuffer[JoinIndexes]): String = {
     "Union( " +

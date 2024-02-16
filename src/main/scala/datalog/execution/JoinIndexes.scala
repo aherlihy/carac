@@ -46,7 +46,7 @@ case class JoinIndexes(varIndexes: Seq[Seq[Int]],
   def varToString(): String = varIndexes.map(v => v.mkString("$", "==$", "")).mkString("[", ",", "]")
   def constToString(): String = constIndexes.map((k, v) => s"$k==$v").mkString("{", "&&", "}")
   def projToString(): String = projIndexes.map((typ, v) => s"$typ$v").mkString("[", " ", "]")
-  def depsToString(ns: NS): String = deps.map((typ, rId) => s"$typ${ns(rId)}").mkString("[", ", ", "]")
+  def depsToString(ns: NS): String = deps.map((typ, rId) => s"${if (typ == PredicateType.POSITIVE) "+" else "-"}${ns(rId)}").mkString("[", ", ", "]")
   def cxnsToString(ns: NS): String =
     cxns.map((h, inCommon) =>
       s"{ ${ns.hashToAtom(h)} => ${
@@ -66,6 +66,7 @@ object JoinIndexes {
     val deps = body.map(a => (if (a.negated) PredicateType.NEGATED else PredicateType.POSITIVE, a.rId))
 
     val typeHelper = body.flatMap(a => a.terms.map(* => !a.negated))
+
 
     val bodyVars = body
       .flatMap(a => a.terms)      // all terms in one seq
