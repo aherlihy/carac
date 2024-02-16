@@ -14,6 +14,7 @@ import datalog.tools.Debug.debug
  */
 class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager(ns) {
 
+  def registerIndexCandidates(cands: mutable.Map[RelationId, mutable.Set[Int]]): Unit = () // no indexes to register
   private /*inline*/ def scanFilter(k: JoinIndexes, maxIdx: Int)(get: Int => StorageTerm = x => x) = {
     val vCmp = k.varIndexes.isEmpty || k.varIndexes.forall(condition =>
       if (condition.head >= maxIdx)

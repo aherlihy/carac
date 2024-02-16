@@ -21,7 +21,13 @@ abstract class IndexedCollectionsStorageManager(override val ns: NS) extends Sto
   protected val derivedDB: mutable.Map[KnowledgeId, IndexedCollectionsDatabase] = mutable.Map[KnowledgeId, IndexedCollectionsDatabase]()
   protected val deltaDB: mutable.Map[KnowledgeId, IndexedCollectionsDatabase] = mutable.Map[KnowledgeId, IndexedCollectionsDatabase]()
 
-  val allRulesAllIndexes: mutable.Map[RelationId, AllIndexes] = mutable.Map.empty
+  val allRulesAllIndexes: mutable.Map[RelationId, AllIndexes] = mutable.Map.empty // Index => position
+  val indexCandidates: mutable.Map[RelationId, mutable.Set[Int]] = mutable.Map[RelationId, mutable.Set[Int]]().withDefaultValue(mutable.Set[Int]()) // relative position of atoms with constant or variable locations
+
+  def registerIndexCandidates(cands: mutable.Map[RelationId, mutable.Set[Int]]): Unit = {
+    edbs.foreach((rId, edb) => edb.bulkRegisterIndex(cands(rId)))
+    cands.foreach((rId, cs) => indexCandidates(rId).addAll(cs))
+  }
   val printer: Printer[this.type] = Printer[this.type](this)
 
   val relOps: VolcanoOperators[this.type] = VolcanoOperators(this)
@@ -42,9 +48,9 @@ abstract class IndexedCollectionsStorageManager(override val ns: NS) extends Sto
     derivedDB.addOne(dbId, IndexedCollectionsDatabase())
     deltaDB.addOne(dbId, IndexedCollectionsDatabase())
 
-    edbs.foreach((k, relation) => {
-      deltaDB(dbId)(k) = IndexedCollectionsEDB()
-      discoveredFacts(k) = relation
+    edbs.foreach((rId, relation) => {
+      deltaDB(dbId)(rId) = IndexedCollectionsEDB.empty(indexCandidates(rId), ns(rId))
+      discoveredFacts(rId) = relation
     }) // Delta-EDB is just empty sets
     dbId += 1
 
@@ -52,8 +58,8 @@ abstract class IndexedCollectionsStorageManager(override val ns: NS) extends Sto
     derivedDB.addOne(dbId, IndexedCollectionsDatabase())
     deltaDB.addOne(dbId, IndexedCollectionsDatabase())
 
-    edbs.foreach((k, relation) => {
-      deltaDB(dbId)(k) = IndexedCollectionsEDB()
+    edbs.foreach((rId, relation) => {
+      deltaDB(dbId)(rId) = IndexedCollectionsEDB.empty(indexCandidates(rId), ns(rId))
     }) // Delta-EDB is just empty sets
     dbId += 1
   }
@@ -63,7 +69,7 @@ abstract class IndexedCollectionsStorageManager(override val ns: NS) extends Sto
     if (edbs.contains(rule.rId))
       edbs(rule.rId).addOne(IndexedCollectionsRow(rule.terms))
     else
-      edbs(rule.rId) = IndexedCollectionsEDB()
+      edbs(rule.rId) = IndexedCollectionsEDB.empty(indexCandidates(rule.rId), ns(rule.rId))
       edbs(rule.rId).addOne(IndexedCollectionsRow(rule.terms))
     edbDomain.addAll(rule.terms)
   }
@@ -71,7 +77,7 @@ abstract class IndexedCollectionsStorageManager(override val ns: NS) extends Sto
   override def addConstantsToDomain(constants: Seq[StorageTerm]): Unit = {
     edbDomain.addAll(constants)
   }
-  def getEmptyEDB(): IndexedCollectionsEDB = IndexedCollectionsEDB()
+  def getEmptyEDB(): IndexedCollectionsEDB = IndexedCollectionsEDB.empty()
   def getEDB(rId: RelationId): IndexedCollectionsEDB = edbs(rId)
   def edbContains(rId: RelationId): Boolean = edbs.contains(rId)
   def getAllEDBS(): mutable.Map[RelationId, Any] = edbs.wrapped.asInstanceOf[mutable.Map[RelationId, Any]]
@@ -98,23 +104,23 @@ abstract class IndexedCollectionsStorageManager(override val ns: NS) extends Sto
   /**
    * Compute Dom * Dom * ... arity # times
    */
-  override def getComplement(arity: Int): IndexedCollectionsEDB = {
+  override def getComplement(arity: Int): IndexedCollectionsEDB = ??? //{
     // short but inefficient
-    val res = List.fill(arity)(edbDomain).flatten.combinations(arity).flatMap(_.permutations).toSeq
-    IndexedCollectionsEDB(
-      res.map(r => IndexedCollectionsRow(r.toSeq)):_*
-    )
-  }
+//    val res = List.fill(arity)(edbDomain).flatten.combinations(arity).flatMap(_.permutations).toSeq
+//    IndexedCollectionsEDB( // TODO: fix
+//      res.map(r => IndexedCollectionsRow(r.toSeq)):_*
+//    )
+//  }
 
   // Read intermediate results
   def getKnownDerivedDB(rId: RelationId): IndexedCollectionsEDB =
-    derivedDB(knownDbId).getOrElse(rId, discoveredFacts.getOrElse(rId, IndexedCollectionsEDB()))
+    derivedDB(knownDbId).getOrElse(rId, discoveredFacts.getOrElse(rId, IndexedCollectionsEDB.empty(indexCandidates(rId), ns(rId))))
   def getNewDerivedDB(rId: RelationId): IndexedCollectionsEDB =
-    derivedDB(newDbId).getOrElse(rId, discoveredFacts.getOrElse(rId, IndexedCollectionsEDB()))
+    derivedDB(newDbId).getOrElse(rId, discoveredFacts.getOrElse(rId, IndexedCollectionsEDB.empty(indexCandidates(rId), ns(rId))))
   def getKnownDeltaDB(rId: RelationId): IndexedCollectionsEDB =
-    deltaDB(knownDbId).getOrElse(rId, discoveredFacts.getOrElse(rId, IndexedCollectionsEDB()))
+    deltaDB(knownDbId).getOrElse(rId, discoveredFacts.getOrElse(rId, IndexedCollectionsEDB.empty(indexCandidates(rId), ns(rId))))
   def getNewDeltaDB(rId: RelationId): IndexedCollectionsEDB =
-    deltaDB(newDbId).getOrElse(rId, discoveredFacts.getOrElse(rId, IndexedCollectionsEDB()))
+    deltaDB(newDbId).getOrElse(rId, discoveredFacts.getOrElse(rId, IndexedCollectionsEDB.empty(indexCandidates(rId), ns(rId))))
 
   // Read final results
   def getKnownIDBResult(rId: RelationId): Set[Seq[Term]] =
@@ -124,18 +130,20 @@ abstract class IndexedCollectionsStorageManager(override val ns: NS) extends Sto
     debug(s"Final IDB Result[new]", () => s" at iteration $iteration: @$newDbId, count=${getNewDerivedDB(rId).length}")
     getNewDerivedDB(rId).getSetOfSeq
   def getEDBResult(rId: RelationId): Set[Seq[Term]] =
-    edbs.getOrElse(rId, IndexedCollectionsEDB()).getSetOfSeq
+    edbs.getOrElse(rId, IndexedCollectionsEDB.empty()).getSetOfSeq
 
   // Write intermediate results
-  def resetKnownDerived(rId: RelationId, rulesEDB: EDB, prevEDB: EDB = IndexedCollectionsEDB()): Unit =
+  def resetKnownDerived(rId: RelationId, rulesEDB: EDB, prevEDB: EDB = IndexedCollectionsEDB.empty()): Unit = // TODO: verify it's ok there's no indexes on rev
     val rules = asIndexedCollectionsEDB(rulesEDB)
     val prev = asIndexedCollectionsEDB(prevEDB)
+    prev.name = ns(rId)
     derivedDB(knownDbId)(rId) = rules.concat(prev)
   def resetKnownDelta(rId: RelationId, rules: EDB): Unit =
     deltaDB(knownDbId)(rId) = asIndexedCollectionsEDB(rules)
-  def resetNewDerived(rId: RelationId, rulesEDB: EDB, prevEDB: EDB = IndexedCollectionsEDB()): Unit =
+  def resetNewDerived(rId: RelationId, rulesEDB: EDB, prevEDB: EDB = IndexedCollectionsEDB.empty()): Unit =
     val rules = asIndexedCollectionsEDB(rulesEDB)
     val prev = asIndexedCollectionsEDB(prevEDB)
+    prev.name = ns(rId)
     derivedDB(newDbId)(rId) = rules.concat(prev) // TODO: maybe use insert not concat
   def resetNewDelta(rId: RelationId, rules: EDB): Unit =
     deltaDB(newDbId)(rId) = asIndexedCollectionsEDB(rules)
@@ -165,7 +173,7 @@ abstract class IndexedCollectionsStorageManager(override val ns: NS) extends Sto
   def verifyEDBs(idbList: mutable.Set[RelationId]): Unit = {
     ns.rIds().foreach(rId =>
       if (!edbs.contains(rId) && !idbList.contains(rId)) // treat undefined relations as empty edbs
-        edbs(rId) = IndexedCollectionsEDB()
+        edbs(rId) = IndexedCollectionsEDB.empty(indexCandidates(rId), ns(rId))
     )
   }
 
@@ -181,13 +189,14 @@ abstract class IndexedCollectionsStorageManager(override val ns: NS) extends Sto
 
   override def toString() = {
     def printHelperRelation(i: Int, db: IndexedCollectionsDatabase): String = {
+      val indexes = db.toSeq.map((rId, idxC) => printer.indexToString(ns(rId), idxC.indexes)).mkString("$indexes: [", ", ", "]")
       val name = if (i == knownDbId) "known" else if (i == newDbId) "new" else s"!!!OTHER($i)"
-      "\n" + name + ": " + printer.edbToString(db)
+      s"\n $name : \n\t$indexes ${printer.edbToString(db)}"
     }
 
     "+++++\n" +
       "EDB:" + printer.edbToString(edbs) +
-      "\nFACTS:" + printer.edbToString(discoveredFacts) +
+      "\nDISCOV:" + printer.edbToString(discoveredFacts) +
       "\nDERIVED:" + derivedDB.map(printHelperRelation).mkString("[", ", ", "]") +
       "\nDELTA:" + deltaDB.map(printHelperRelation).mkString("[", ", ", "]") +
       "\n+++++"

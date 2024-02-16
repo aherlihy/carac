@@ -5,7 +5,7 @@ import datalog.execution
 import datalog.execution.ast.*
 import datalog.execution.ast.transform.{ASTTransformerContext, CopyEliminationPass, Transformer}
 import datalog.execution.ir.*
-import datalog.storage.{DB, EDB, KNOWLEDGE, StorageManager}
+import datalog.storage.{DB, EDB, KNOWLEDGE, StorageManager, RelationId}
 import datalog.tools.Debug.debug
 
 import java.util.concurrent.{Executors, ForkJoinPool}
@@ -55,11 +55,23 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
 
   def insertIDB(rId: Int, ruleSeq: Seq[Atom]): Unit = {
     precedenceGraph.addNode(ruleSeq)
-//    println(s"${storageManager.printer.ruleToString(ruleSeq)}")
+    //    println(s"${storageManager.printer.ruleToString(ruleSeq)}")
 
     var rule = ruleSeq
     var k = JoinIndexes(rule, None)
     storageManager.allRulesAllIndexes.getOrElseUpdate(rId, mutable.Map[String, JoinIndexes]()).addOne(k.hash, k)
+
+    val relationCands = mutable.Map[RelationId, mutable.Set[Int]]().withDefaultValue(mutable.Set[Int]())
+    val allLocs = k.varIndexes.flatten ++ k.constIndexes.keys
+    var start = 0
+    for atom <- ruleSeq do {
+      for i <- atom.terms.indices do {
+        if (allLocs.contains(start + i))
+          relationCands(rId).addOne(i)
+      }
+      start += atom.terms.size
+    }
+    storageManager.registerIndexCandidates(relationCands) // add at once to deduplicate ahead of time and avoid repeated calls
 
     if (rule.length <= heuristics.max_length_cache)
       val allK = JoinIndexes.allOrders(rule)
