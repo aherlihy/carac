@@ -127,6 +127,7 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
                     prefilter(k.constIndexes.filter((ind, _) => ind >= outerTuple.length && ind < (outerTuple.length + i.length)), outerTuple.length, i) && toJoin(k, outerTuple, i)
                   )
                   .map(innerTuple => outerTuple.concat(innerTuple)))
+            println(s"\tintermediateR=${edbResult}")
 //            intermediateCardinalities = intermediateCardinalities :+ edbResult.length
             (edbResult, atomI + 1, k)
         )

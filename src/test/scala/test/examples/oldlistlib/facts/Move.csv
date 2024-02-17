@@ -1,7 +1,0 @@
-String	String
-listlib.Main.main.range.i	listlib.Main.main.range.from
-listlib.SimpleList.reverse.rec.temp	listlib.SimpleList.reverse.rec.acc
-listlib.IntWrap.c	listlib.IntWrap.<init>.c
-listlib.Cons.first	listlib.Cons.<init>.first
-listlib.Cons.cons	listlib.Cons.<init>.cons
-listlib.Cons.get.temp	listlib.Cons.first

@@ -74,7 +74,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
       }
       if relationCands.nonEmpty then storageManager.registerIndexCandidates(relationCands) // add at once to deduplicate ahead of time and avoid repeated calls
     }
-    storageManager.registerRelationArity(rule.head.rId, rule.head.terms.length)
+    ruleSeq.foreach(r => storageManager.registerRelationArity(r.rId, r.terms.length))
 
     if (rule.length <= heuristics.max_length_cache)
       val allK = JoinIndexes.allOrders(rule)

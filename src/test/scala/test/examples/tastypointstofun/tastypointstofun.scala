@@ -30,20 +30,20 @@ trait tastypointstofun {
     val Load = program.relation[String]("Load")
 
     val StaticCall = program.relation[String]("StaticCall")
-    val StaticLookUp = program.relation[String]("StaticLookUp")
+//    val StaticLookUp = program.relation[String]("StaticLookUp")
 
     val VarPointsTo = program.relation[String]("VarPointsTo")
     val CallGraph = program.relation[String]()
     val FldPointsTo = program.relation[String]()
     val InterProcAssign = program.relation[String]()
 
-    val Delegate = program.relation[String]("Delegate")
+//    val Delegate = program.relation[String]("Delegate")
     val SuperCall = program.relation[String]("SuperCall")
     val FieldValDef = program.relation[String]("FieldValDef")
 
-    val Refers = program.relation[String]("Refers")
-    val Overrides = program.relation[String]("Overrides")
-    val TopLevel = program.relation[String]("TopLevel")
+//    val Refers = program.relation[String]("Refers")
+//    val Overrides = program.relation[String]("Overrides")
+//    val TopLevel = program.relation[String]("TopLevel")
     val Defines = program.relation[String]("Defines")
 
     val varr, heap, meth, to, from, base, baseH, fld, ref = program.variable()

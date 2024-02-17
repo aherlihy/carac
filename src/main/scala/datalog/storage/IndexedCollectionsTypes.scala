@@ -169,8 +169,8 @@ case class IndexedCollectionsEDB(wrapped: mutable.ArrayBuffer[IndexedCollections
       val (position, constant) = constFilter.head // constFilter.map((idx, const) => (idx, indexes(idx)(const).size)).minBy(_._2)._1
       val rest = constFilter.drop(1)
 
+      println(s"filtering on r=$name, at pos=$position, indexK=${indexes.keys.mkString("[", ", ", "]")} to be put in $newName which should have ${newIndexes.mkString("[", ", ", "]")}")
       val result = indexes(position).getOrElse(constant, ArrayBuffer.empty).collect{// copy matching EBDs
-        // TODO: verify lowerBound == skip
         case edb if IndexedCollectionsEDB.filtertest(rest, skip, edb) => edb.project(projIndexes)
       }
 //      TODO: this will make a copy with the indexes
@@ -200,7 +200,7 @@ case class IndexedCollectionsEDB(wrapped: mutable.ArrayBuffer[IndexedCollections
     // if any of the indexes are past the end of the current tuple, ignore and wait til later
     // TODO: potentially do join with only the in-range indexes?
     val joinKeys = joinIndexes.varIndexes.filter(shared => shared.forall(_ < outer.arity + inner.arity))
-    println(s"\t2-way join($name*${toJoin.name}), relevant keys=${joinKeys.mkString("[", ", ", "]")}, outerConstants=${outerConstantFilters.mkString("{", ", ", "}")}, innerConstants=${innerConstantFilters.mkString("{", ", ", "}")}")
+    println(s"\t2-way join($name*${toJoin.name}), allKeys=${joinIndexes.varIndexes},  relKeys=${joinKeys.mkString("[", ", ", "]")}, outerConstants=${outerConstantFilters.mkString("{", ", ", "}")}, innerConstants=${innerConstantFilters.mkString("{", ", ", "}")}")
 
     //    println(s"$name*${toJoin.name}: on ${joinKeys}, outerArity=${outer.arity}, innerArity=${inner.arity}")
 
@@ -223,53 +223,107 @@ case class IndexedCollectionsEDB(wrapped: mutable.ArrayBuffer[IndexedCollections
     val result = if (joinKeys.isEmpty) // join without keys, so just loop over everything without index
       println("\t\tjoin without condition, -> product")
       filteredOuter.wrapped.flatMap(outerTuple => filteredInner.wrapped.map( innerTuple => outerTuple.concat(innerTuple)))
-    else if (joinKeys.length == 1) // most of the time
-      val joinKey = joinKeys.head
-
-      val outerKeys = joinKey.filter(_ < outer.arity)
-      val innerKeys = joinKey.collect{ case x if x >= outer.arity => x - outer.arity }
-      if outerKeys.isEmpty || innerKeys.isEmpty then throw new Exception("TODO: join key only on one side?")
-
-      println(s"outerKeys=$outerKeys, innerKeys=$innerKeys")
-
-      filteredOuter.wrapped.flatMap(outerTuple =>
-        val indexVal = outerTuple(outerKeys.head) // TODO: could pick the key with the smallest index in innerTup?
-        // If there are multiple join keys within one relation, essentially self-constraint so can ignore any tuples that fail:
-        if (outerKeys.drop(1).nonEmpty && !outerKeys.drop(1).forall(idxToMatch =>
-          indexVal == outerTuple(idxToMatch)
-        ))
-          ArrayBuffer.empty
-        else
-          val matchingInners = filteredInner.indexes(innerKeys.head).getOrElse(indexVal, ArrayBuffer.empty)
-
-          matchingInners.collect {
-            // check for self-constraint, but with inner this time:
-            case innerTuple if (
-              innerKeys.drop(1).isEmpty ||
-                innerKeys.drop(1).forall(idxToMatch =>
-                  innerTuple(innerKeys.head) == innerTuple(idxToMatch)
-                )
-              ) => {
-              // TODO: rebuild index or just iterate through?
-              println("test")
-              outerTuple.concat(innerTuple)
-            }
-          }
-      )
+//    else if (joinKeys.length == 1) // most of the time
+//      val joinKey = joinKeys.head
+//
+//      val outerKeys = joinKey.filter(_ < outer.arity)
+//      val innerKeys = joinKey.collect{ case x if x >= outer.arity => x - outer.arity }
+//      if outerKeys.isEmpty || innerKeys.isEmpty then throw new Exception("TODO: join key only on one side?")
+//
+//      println(s"outerKeys=$outerKeys, innerKeys=$innerKeys")
+//
+//      filteredOuter.wrapped.flatMap(outerTuple =>
+//        val indexVal = outerTuple(outerKeys.head) // TODO: could pick the key with the smallest index in innerTup?
+//        // If there are multiple join keys within one relation, essentially self-constraint so can ignore any tuples that fail:
+//        if (outerKeys.drop(1).nonEmpty && !outerKeys.drop(1).forall(idxToMatch =>
+//          indexVal == outerTuple(idxToMatch)
+//        ))
+//          ArrayBuffer.empty
+//        else
+//          val matchingInners = filteredInner.indexes(innerKeys.head).getOrElse(indexVal, ArrayBuffer.empty)
+//
+//          matchingInners.collect {
+//            // check for self-constraint, but with inner this time:
+//            case innerTuple if (
+//              innerKeys.drop(1).isEmpty ||
+//                innerKeys.drop(1).forall(idxToMatch =>
+//                  innerTuple(innerKeys.head) == innerTuple(idxToMatch)
+//                )
+//              ) => {
+//              // TODO: rebuild index or just iterate through?
+//              println("test")
+//              outerTuple.concat(innerTuple)
+//            }
+//          }
+//      )
     else
-//      println("==============> bad join")
-      throw new Exception("here")
-      // multi-key join, so TODO: pick most selective index?
-      // TODO: for now revert to `toJoin`
-      filteredOuter.wrapped.flatMap(outerTuple =>
-        // TODO: write more efficiently, using indexes
-        filteredInner.wrapped.filter(innerTuple =>
-          IndexedCollectionsEDB.tojoin(joinKeys, innerTuple, outerTuple)
-        ).map(
-          innerTuple => outerTuple.concat(innerTuple)
+      // store relative positions: [ (innerPos, outerPos), ...]
+      val keys = joinKeys.map(k =>
+        (k.filter(_ < outer.arity), k.collect{ case i if i >= outer.arity && i < outer.arity + inner.arity => i - outer.arity })
+      ).filter((outerPos, innerPos) => outerPos.size + innerPos.size > 1)
+      println(s"\t\trelative join positions = ${keys.map((o, i) => s"(outers: ${o.mkString("", ".", "")}, inners: ${i.mkString("", ".", "")})").mkString("[", ", ", "]")}")
+
+      val indexToUse = keys.find((o, i) => o.nonEmpty && i.nonEmpty)
+      if (indexToUse.isEmpty) { // no shared join keys, so just filter by internal constraint
+        filteredOuter.wrapped.flatMap(outerTuple =>
+          filteredInner.wrapped.collect{
+            case innerTuple if (
+              keys.forall((outerKeys, innerKeys) =>
+                (innerKeys.drop(1).isEmpty ||              // there is no self-constraint, OR
+                  innerKeys.drop(1).forall(idxToMatch =>  // all the self constraints hold
+                    innerTuple(innerKeys.head) == innerTuple(idxToMatch)
+                  )
+                ) && (
+                  (outerKeys.drop(1).isEmpty ||             // there is no self-constraint, OR
+                    outerKeys.drop(1).forall(idxToMatch => // all the self constraints hold
+                      outerTuple(outerKeys.head) == outerTuple(idxToMatch)
+                    )
+                  )
+                )
+              )) => outerTuple.concat(innerTuple)
+          }
         )
-      )
-    // TODO: only re-add indexes after this point? Or all?
+      } else {
+        val outerPosToUse = indexToUse.get._1.head // TODO: could pick the key with the smallest index in innerTup?
+        val innerPosToUse = indexToUse.get._2.head
+        println(s"\t\t\tusing outer pos=$outerPosToUse and inner idx=$innerPosToUse")
+        // remove keys that do not have at least one condition in each tuple, and keep only the first condition (since self-constraints already filtered out)
+        val secondaryKeys = keys.drop(1).collect {
+          case (outerPos, innerPos) if outerPos.nonEmpty && innerPos.nonEmpty => (outerPos.head, innerPos.head)
+        }
+        println(s"\t\tsecondary join positions: $secondaryKeys")
+
+        filteredOuter.wrapped.flatMap(outerTuple =>
+          val indexVal = outerTuple(outerPosToUse)
+          // If there are multiple join keys within one relation, essentially self-constraint so can ignore any tuples that fail:
+          if (keys.exists((outerKeys, _) => // if for any of the keys of the outer tuple:
+            outerKeys.drop(1).nonEmpty && // there is a self-constraint, AND
+              !outerKeys.drop(1).forall(idxToMatch => // if it is not the case that every self-constraint holds
+                outerTuple(outerKeys.head) == outerTuple(idxToMatch)
+              )
+          ))
+            println("returned nothing bc self-constraint on outer")
+            ArrayBuffer[IndexedCollectionsRow]()
+          else
+            val matchingInners = filteredInner.indexes(innerPosToUse).getOrElse(indexVal, ArrayBuffer.empty)
+            matchingInners.collect {
+              // check for self-constraint, but with inner this time:
+              case innerTuple if (
+                keys.forall((_, innerKeys) => // if for all of the keys of the inner tuple
+                  innerKeys.drop(1).isEmpty || // there is no self-constraint, OR
+                    innerKeys.drop(1).forall(idxToMatch => // all the self constraints hold
+                      innerTuple(innerKeys.head) == innerTuple(idxToMatch)
+                    )
+                )
+                ) && (secondaryKeys.forall((outerPos, innerPos) => outerTuple(outerPos) == innerTuple(innerPos))) => {
+                // TODO: rebuild index or just iterate through?
+                outerTuple.concat(innerTuple)
+              }
+            }
+        )
+      }
+
+    println(s"\tintermediateR=${result}")
     IndexedCollectionsEDB(result, indexes.keys, s"${outer.name}x${inner.name}", arity + toJoin.arity)
 
   def map(f: IndexedCollectionsRow => IndexedCollectionsRow): IndexedCollectionsEDB = ???
