@@ -2,9 +2,13 @@ package test.examples.cspa
 
 import buildinfo.BuildInfo
 import datalog.dsl.{Constant, Program}
-import test.ExampleTestGenerator
+import test.{ExampleTestGenerator, Tags}
 
-class cspa_optimized_test extends ExampleTestGenerator("cspa") with cspa
+class cspa_optimized_test extends ExampleTestGenerator(
+  "cspa",
+  Set(Tags.Naive, Tags.Volcano),
+  Set(Tags.Slow, Tags.CI)
+) with cspa
 
 trait cspa_optimized {
   val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/cspa/facts"

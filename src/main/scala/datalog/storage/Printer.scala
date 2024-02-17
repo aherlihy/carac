@@ -39,9 +39,6 @@ class Printer[S <: StorageManager](val sm: S) {
       .mkString("[\n  ", ",\n  ", "]")
   }
 
-  def indexToString(name: String, indexes: mutable.Map[Int, mutable.SortedMap[Term, mutable.ArrayBuffer[IndexedCollectionsRow]]]): String =
-    s"$name: ${indexes.map((pos, tMap) => s"i$pos|${tMap.size}|").mkString("[", ", ", "]")}"
-  
   def naivePlanToString(keys: mutable.ArrayBuffer[JoinIndexes]): String = {
     "Union( " +
       keys.map(k =>

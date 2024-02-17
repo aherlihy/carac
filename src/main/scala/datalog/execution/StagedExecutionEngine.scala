@@ -55,23 +55,26 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
 
   def insertIDB(rId: Int, ruleSeq: Seq[Atom]): Unit = {
     precedenceGraph.addNode(ruleSeq)
-    //    println(s"${storageManager.printer.ruleToString(ruleSeq)}")
+//    println(s"adding IDB ${storageManager.printer.ruleToString(ruleSeq)}")
 
     var rule = ruleSeq
     var k = JoinIndexes(rule, None)
     storageManager.allRulesAllIndexes.getOrElseUpdate(rId, mutable.Map[String, JoinIndexes]()).addOne(k.hash, k)
 
-    val relationCands = mutable.Map[RelationId, mutable.Set[Int]]().withDefaultValue(mutable.Set[Int]())
     val allLocs = k.varIndexes.flatten ++ k.constIndexes.keys
-    var start = 0
-    for atom <- ruleSeq do {
-      for i <- atom.terms.indices do {
-        if (allLocs.contains(start + i))
-          relationCands(rId).addOne(i)
+    if (allLocs.nonEmpty) {
+      val relationCands = mutable.Map[RelationId, mutable.Set[Int]]()
+      var start = 0
+      for atom <- ruleSeq.drop(1) do {
+        for i <- atom.terms.indices do {
+          if (allLocs.contains(start + i))
+            relationCands.getOrElseUpdate(atom.rId, mutable.Set[Int]()).addOne(i)
+        }
+        start += atom.terms.size
       }
-      start += atom.terms.size
+      if relationCands.nonEmpty then storageManager.registerIndexCandidates(relationCands) // add at once to deduplicate ahead of time and avoid repeated calls
     }
-    storageManager.registerIndexCandidates(relationCands) // add at once to deduplicate ahead of time and avoid repeated calls
+    storageManager.registerRelationArity(rule.head.rId, rule.head.terms.length)
 
     if (rule.length <= heuristics.max_length_cache)
       val allK = JoinIndexes.allOrders(rule)
@@ -408,6 +411,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
     val irTree = createIR(transformedAST)
 
     debug("IRTree: ", () => storageManager.printer.printIR(irTree))
+    println(s"INIT STORAGE: ${storageManager.toString}")
     defaultJITOptions.mode match
       case Mode.Interpreted => solveInterpreted(irTree, irCtx)
       case Mode.Compiled => solveCompiled(irTree, irCtx)

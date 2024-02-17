@@ -60,9 +60,9 @@ class NaiveExecutionEngine(val storageManager: StorageManager, stratified: Boole
     relations.foreach(r => {
       val res = evalRuleNaive(r)
       debug("result of evalRule=", () => storageManager.printer.factToString(res))
-      storageManager.resetNewDerived(r, res, storageManager.getEmptyEDB()) // overwrite res to the new derived DB
+      storageManager.setNewDerived(r, res) // overwrite res to the new derived DB
       if (copyToDelta) {
-        storageManager.resetNewDelta(r, res) // copy delta[new] = derived[new], if this is called from SN
+        storageManager.setNewDelta(r, res) // copy delta[new] = derived[new], if this is called from SN
       }
     })
   }

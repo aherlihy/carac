@@ -81,11 +81,15 @@ class IndexedStorageManager(ns: NS = new NS()) extends IndexedCollectionsStorage
 
   override def joinProjectHelper_withHash(inputsEDB: Seq[EDB], rId: Int, hash: String, onlineSort: Boolean): IndexedCollectionsEDB = {
     val originalK = allRulesAllIndexes(rId)(hash)
-//    println(s"JoinIndexes=${originalK.toStringWithNS(ns)}")
     val inputs = asIndexedCollectionsSeqEDB(inputsEDB)
-//    println(s"input arity: ${inputs.map(e => s"${e.name}:${e.arity}").mkString("[", ", ", "]")}")
+//    println(s"input aritys: ${inputs.map(e => s"${e.name}|${e.arity}|").mkString("[", "*", "]")}")
+    println(s"input rels: ${inputs.map(e => e.factToString).mkString("[", "*", "]")}")
+
+    println(s"input indexes: ${inputs.map(IndexedCollectionsEDB.allIndexesToString).mkString("\n[", ",\n", "]")}")
+
 //    var intermediateCardinalities = Seq[Int]()
     val fResult = if (inputs.length == 1) {// just filter + project
+      println("\tonly filter + project")
       inputs.head.filterProjectWithIndex(
         originalK.constIndexes,
         originalK.projIndexes,
@@ -94,7 +98,7 @@ class IndexedStorageManager(ns: NS = new NS()) extends IndexedCollectionsStorage
     } else {
       val result = inputs
         .foldLeft(
-          (IndexedCollectionsEDB.empty(), 0, originalK) // initialize intermediate indexed-collection
+          (IndexedCollectionsEDB.empty(0), 0, originalK) // initialize intermediate indexed-collection
         )((combo: (IndexedCollectionsEDB, Int, JoinIndexes), innerT: IndexedCollectionsEDB) =>
           val outerT = combo._1
           val atomI = combo._2
@@ -102,22 +106,23 @@ class IndexedStorageManager(ns: NS = new NS()) extends IndexedCollectionsStorage
           if (atomI == 0) // not a monad :(
             (innerT, atomI + 1, k)
           else
-            val (inner, outer) = // on the fly swapping of join order
-              if (atomI > 1 && onlineSort && outerT.length > innerT.length)
-                val body = k.atoms.drop(1)
-                val newerHash = JoinIndexes.getRuleHash(Seq(k.atoms.head, body(atomI)) ++ body.dropRight(body.length - atomI) ++ body.drop(atomI + 1))
-                k = allRulesAllIndexes(rId).getOrElseUpdate(newerHash, JoinIndexes(originalK.atoms.head +: body, Some(originalK.cxns)))
-                (outerT, innerT)
-              else
-                (innerT, outerT)
+//            val (inner, outer) = // on the fly swapping of join order
+//              if (atomI > 1 && onlineSort && outerT.length > innerT.length)
+//                val body = k.atoms.drop(1)
+//                val newerHash = JoinIndexes.getRuleHash(Seq(k.atoms.head, body(atomI)) ++ body.dropRight(body.length - atomI) ++ body.drop(atomI + 1))
+//                k = allRulesAllIndexes(rId).getOrElseUpdate(newerHash, JoinIndexes(originalK.atoms.head +: body, Some(originalK.cxns)))
+//                (outerT, innerT)
+//              else
+//                (innerT, outerT)
             // outer = outer relation, inner = inner relation
-            val edbResult = outer.joinFilterWithIndex(k, 0, inner)
+            val edbResult = outerT.joinFilterWithIndex(k, 0, innerT)
             //            intermediateCardinalities = intermediateCardinalities :+ edbResult.length
             (edbResult, atomI + 1, k)
         )
       result._1.filterProjectWithIndex(result._3.constIndexes, result._3.projIndexes, 0)
     }
     fResult.name = ns(rId)
+//    println(s"=> SPJU result: ${fResult.factToString}")
     fResult
 
 //      if (inputs.length > 2) println(s"${intermediateCardinalities.dropRight(1).mkString("", "\n", "")}")

@@ -112,12 +112,12 @@ abstract class TestGenerator(directory: Path,
 //            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(mode = Mode.Compiled)))
           case "InterpretedStagedDefault" =>
             Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions()))
-          case "InterpretedStaged_selDefault" =>
-            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(sortOrder = SortOrder.Sel)))
+//          case "InterpretedStaged_selDefault" =>
+//            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(sortOrder = SortOrder.Sel)))
           case "InterpretedStagedIndexed" =>
             Program(StagedExecutionEngine(IndexedStorageManager(), JITOptions()))
-          case "InterpretedStaged_selIndexed" =>
-            Program(StagedExecutionEngine(IndexedStorageManager(), JITOptions(sortOrder = SortOrder.Sel)))
+//          case "InterpretedStaged_selIndexed" =>
+//            Program(StagedExecutionEngine(IndexedStorageManager(), JITOptions(sortOrder = SortOrder.Sel)))
           //          case "InterpretedStaged_badluckDefault" =>
 //            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(sortOrder = SortOrder.Badluck)))
 
@@ -138,10 +138,10 @@ abstract class TestGenerator(directory: Path,
 //            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.RULE, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)))
 //          case "JITStaged_Sel_ALL_Block_LambdaDefault" =>
 //            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.ALL, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)))
-          case "JITStaged_Sel_DELTA_Block_LambdaDefault" =>
-            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.DELTA, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)))
-          case "JITStaged_Sel_DELTA_Block_LambdaIndexed" =>
-            Program(StagedExecutionEngine(IndexedStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.DELTA, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)))
+//          case "JITStaged_Sel_DELTA_Block_LambdaDefault" =>
+//            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.DELTA, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)))
+//          case "JITStaged_Sel_DELTA_Block_LambdaIndexed" =>
+//            Program(StagedExecutionEngine(IndexedStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.DELTA, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)))
 
           /*
           // async
@@ -197,7 +197,7 @@ abstract class TestGenerator(directory: Path,
 //      "JITStaged_Sel_RULE_Async_BC",
 //      "JITStaged_Sel_ALL_Async_BC",
     ).foreach(execution => {
-      Seq(/*"Volcano", "Default", */"Indexed").foreach(storage => {
+      Seq(/*"Volcano", */"Default", "Indexed").foreach(storage => {
         if ((execution.contains("Staged") || execution.contains("BytecodeGenerated") || execution.contains("Lambda")) && storage == "Volcano") {} // skip and don't report as skipped
         else if (
             skip.contains(execution) || skip.contains(storage) ||

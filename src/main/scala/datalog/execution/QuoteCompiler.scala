@@ -226,16 +226,24 @@ class QuoteCompiler(val storageManager: StorageManager)(using JITOptions) extend
           case DB.Derived =>
             knowledge match {
               case KNOWLEDGE.New =>
-                '{ $stagedSM.resetNewDerived(${ Expr(rId) }, $res, $res2) }
+                if (children.length == 1)
+                  '{ $stagedSM.setNewDerived(${ Expr(rId) }, $res) }
+                else
+                  val res2 = compileIRRelOp(children(1).asInstanceOf[IROp[EDB]])
+                  '{ $stagedSM.resetNewDerived(${ Expr(rId) }, $res, $res2) }
               case KNOWLEDGE.Known =>
-                '{ $stagedSM.resetKnownDerived(${ Expr(rId) }, $res, $res2) }
+                if (children.length == 1)
+                  '{ $stagedSM.setKnownDerived(${ Expr(rId) }, $res) }
+                else
+                  val res2 = compileIRRelOp(children(1).asInstanceOf[IROp[EDB]])
+                  '{ $stagedSM.resetKnownDerived(${ Expr(rId) }, $res, $res2) }
             }
           case DB.Delta =>
             knowledge match {
               case KNOWLEDGE.New =>
-                '{ $stagedSM.resetNewDelta(${ Expr(rId) }, $res) }
+                '{ $stagedSM.setNewDelta(${ Expr(rId) }, $res) }
               case KNOWLEDGE.Known =>
-                '{ $stagedSM.resetKnownDelta(${ Expr(rId) }, $res) }
+                '{ $stagedSM.setKnownDelta(${ Expr(rId) }, $res) }
             }
         }
 

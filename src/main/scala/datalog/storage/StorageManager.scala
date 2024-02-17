@@ -18,11 +18,12 @@ trait StorageManager(val ns: NS) {
   def initEvaluation(): Unit
 
   def insertEDB(rule: Atom): Unit
-  def getEmptyEDB(): EDB
+  def getEmptyEDB(rId: RelationId): EDB
   def edbContains(rId: RelationId): Boolean
   def getEDB(rId: RelationId): EDB
   def getAllEDBS(): mutable.Map[RelationId, Any] // if you ever just want to read the EDBs as a map, used for testing
   def registerIndexCandidates(cands: mutable.Map[RelationId, mutable.Set[Int]]): Unit
+  def registerRelationArity(rId: RelationId, arity: Int): Unit
 
   // Helpers for negation
   def addConstantsToDomain(constants: Seq[StorageTerm]): Unit
@@ -38,8 +39,12 @@ trait StorageManager(val ns: NS) {
 
   def resetKnownDerived(rId: RelationId, rules: EDB, prev: EDB): Unit
   def resetNewDerived(rId: RelationId, rules: EDB, prev: EDB): Unit
-  def resetNewDelta(rId: RelationId, rules: EDB): Unit
-  def resetKnownDelta(rId: RelationId, rules: EDB): Unit
+
+  def setKnownDerived(rId: RelationId, rules: EDB): Unit
+  def setNewDerived(rId: RelationId, rules: EDB): Unit
+
+  def setNewDelta(rId: RelationId, rules: EDB): Unit
+  def setKnownDelta(rId: RelationId, rules: EDB): Unit
   def clearNewDerived(): Unit
 
   def swapKnowledge(): Unit
