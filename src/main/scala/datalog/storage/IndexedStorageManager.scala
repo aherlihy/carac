@@ -82,14 +82,15 @@ class IndexedStorageManager(ns: NS = new NS()) extends IndexedCollectionsStorage
   override def joinProjectHelper_withHash(inputsEDB: Seq[EDB], rId: Int, hash: String, onlineSort: Boolean): IndexedCollectionsEDB = {
     val originalK = allRulesAllIndexes(rId)(hash)
     val inputs = asIndexedCollectionsSeqEDB(inputsEDB)
+    println(s"Rule: ${printer.ruleToString(originalK.atoms)}")
 //    println(s"input aritys: ${inputs.map(e => s"${e.name}|${e.arity}|").mkString("[", "*", "]")}")
-    println(s"input rels: ${inputs.map(e => e.factToString).mkString("[", "*", "]")}")
+//    println(s"input rels: ${inputs.map(e => e.factToString).mkString("[", "*", "]")}")
 
-    println(s"input indexes: ${inputs.map(IndexedCollectionsEDB.allIndexesToString).mkString("\n[", ",\n", "]")}")
+//    println(s"input indexes: ${inputs.map(IndexedCollectionsEDB.allIndexesToString).mkString("\n[", ",\n", "]")}")
 
 //    var intermediateCardinalities = Seq[Int]()
     val fResult = if (inputs.length == 1) {// just filter + project
-      println("\tonly filter + project")
+//      println("\tonly filter + project")
       inputs.head.projectFilterWithIndex(
         originalK.constIndexes,
         originalK.projIndexes,
@@ -121,13 +122,14 @@ class IndexedStorageManager(ns: NS = new NS()) extends IndexedCollectionsStorage
             //            intermediateCardinalities = intermediateCardinalities :+ edbResult.length
             (edbResult, atomI + 1, k)
         )
-      result._1.projectFilterWithIndex(
-        result._3.constIndexes,
-        result._3.projIndexes,
-        ns(rId),
-        indexCandidates.getOrElse(rId, mutable.Set()),
-        0
-      )
+//      result._1.projectFilterWithIndex(
+//        result._3.constIndexes,
+//        result._3.projIndexes,
+//        ns(rId),
+//        indexCandidates.getOrElse(rId, mutable.Set()),
+//        0
+//      )
+      IndexedCollectionsEDB(result._1.wrapped.mapInPlace(_.project(result._3.projIndexes)), indexCandidates.getOrElse(rId, mutable.Set()), ns(rId), result._3.projIndexes.length)
     }
 //    println(s"=> SPJU result: ${fResult.factToString}")
     fResult

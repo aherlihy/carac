@@ -109,7 +109,7 @@ case class DoWhileOp(toCmp: DB, override val children:IROp[Any]*)(using JITOptio
     while ( {
       println(s"DBs start of semi-naive iteration $i: ${storageManager.toString}")
       i += 1
-//      if i > 5 then System.exit(0)
+      if i > 10 then System.exit(0)
       children.head.run(storageManager)
       toCmp match {
         case DB.Derived =>
