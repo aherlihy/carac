@@ -12,7 +12,6 @@ import scala.collection.{immutable, mutable}
  * @param ns
  */
 class VolcanoStorageManager(ns: NS = NS()) extends CollectionsStorageManager(ns) {
-  def registerIndexCandidates(cands: mutable.Map[RelationId, mutable.Set[Int]]): Unit = () // no indexes to register
   def joinHelper(inputs: Seq[EDB], k: JoinIndexes): EDB = ???
   def projectHelper(input: EDB, k: JoinIndexes): EDB = ???
   def joinProjectHelper(inputs: Seq[EDB], k: JoinIndexes, onlineSort: Boolean): EDB = ???

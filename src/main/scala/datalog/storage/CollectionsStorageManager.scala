@@ -26,6 +26,10 @@ abstract class CollectionsStorageManager(override val ns: NS) extends StorageMan
 
   val relOps: VolcanoOperators[this.type] = VolcanoOperators(this)
 
+  def registerIndexCandidates(cands: mutable.Map[RelationId, mutable.Set[Int]]): Unit = () // no indexes to register
+
+  def registerRelationArity(rId: RelationId, arity: Int): Unit = ()
+
   def initRelation(rId: RelationId, name: String): Unit = {
     ns(rId) = name
   }
@@ -71,7 +75,7 @@ abstract class CollectionsStorageManager(override val ns: NS) extends StorageMan
   override def addConstantsToDomain(constants: Seq[StorageTerm]): Unit = {
     edbDomain.addAll(constants)
   }
-  def getEmptyEDB(): CollectionsEDB = CollectionsEDB()
+  def getEmptyEDB(rId: RelationId): CollectionsEDB = CollectionsEDB()
   def getEDB(rId: RelationId): CollectionsEDB = edbs(rId)
   def edbContains(rId: RelationId): Boolean = edbs.contains(rId)
   def getAllEDBS(): mutable.Map[RelationId, Any] = edbs.wrapped.asInstanceOf[mutable.Map[RelationId, Any]]
@@ -127,20 +131,31 @@ abstract class CollectionsStorageManager(override val ns: NS) extends StorageMan
     edbs.getOrElse(rId, CollectionsEDB()).getSetOfSeq
 
   // Write intermediate results
-  def resetKnownDerived(rId: RelationId, rulesEDB: EDB, prevEDB: EDB = CollectionsEDB()): Unit =
+  def resetKnownDerived(rId: RelationId, rulesEDB: EDB, prevEDB: EDB): Unit =
     val rules = asCollectionsEDB(rulesEDB)
     val prev = asCollectionsEDB(prevEDB)
     derivedDB(knownDbId)(rId) = rules.concat(prev)
-  def resetKnownDelta(rId: RelationId, rules: EDB): Unit =
+
+  def setKnownDerived(rId: RelationId, rulesEDB: EDB): Unit =
+    derivedDB(knownDbId)(rId) = asCollectionsEDB(rulesEDB) // TODO: copy?
+
+  def setKnownDelta(rId: RelationId, rules: EDB): Unit =
     deltaDB(knownDbId)(rId) = asCollectionsEDB(rules)
-  def resetNewDerived(rId: RelationId, rulesEDB: EDB, prevEDB: EDB = CollectionsEDB()): Unit =
+
+  def resetNewDerived(rId: RelationId, rulesEDB: EDB, prevEDB: EDB): Unit =
     val rules = asCollectionsEDB(rulesEDB)
     val prev = asCollectionsEDB(prevEDB)
     derivedDB(newDbId)(rId) = rules.concat(prev) // TODO: maybe use insert not concat
-  def resetNewDelta(rId: RelationId, rules: EDB): Unit =
+
+  def setNewDerived(rId: RelationId, rulesEDB: EDB): Unit =
+    derivedDB(newDbId)(rId) = asCollectionsEDB(rulesEDB) // TODO: copy?
+
+  def setNewDelta(rId: RelationId, rules: EDB): Unit =
     deltaDB(newDbId)(rId) = asCollectionsEDB(rules)
+
   def clearNewDerived(): Unit =
     derivedDB(newDbId) = CollectionsDatabase()
+
   // Compare & Swap
   def swapKnowledge(): Unit = {
     iteration += 1

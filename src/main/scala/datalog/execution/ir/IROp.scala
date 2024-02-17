@@ -105,7 +105,11 @@ case class DoWhileOp(toCmp: DB, override val children:IROp[Any]*)(using JITOptio
       }
     }) ()
   override def run(storageManager: StorageManager): Any =
+    var i = 0
     while ( {
+      println(s"DBs start of semi-naive iteration $i: ${storageManager.toString}")
+      i += 1
+//      if i > 5 then System.exit(0)
       children.head.run(storageManager)
       toCmp match {
         case DB.Derived =>
@@ -139,7 +143,6 @@ case class UpdateDiscoveredOp()(using JITOptions) extends IROp[Any] {
 case class SwapAndClearOp()(using JITOptions) extends IROp[Any] {
   val code: OpCode = OpCode.SWAP_CLEAR
   override def run(storageManager: StorageManager): Any =
-    println(s"DBs start of iteration: ${storageManager.toString}")
     storageManager.swapKnowledge()
     storageManager.clearNewDerived()
 
@@ -157,40 +160,55 @@ case class InsertOp(rId: RelationId, db: DB, knowledge: KNOWLEDGE, override val 
   val code: OpCode = OpCode.INSERT
   override def run_continuation(storageManager:  StorageManager, opFns: Seq[CompiledFn[Any]]): Any =
     val res = opFns.head.asInstanceOf[CompiledFn[EDB]](storageManager)
-    val res2 = if (opFns.length == 1) storageManager.getEmptyEDB() else opFns(1).asInstanceOf[CompiledFn[EDB]](storageManager)
     db match {
       case DB.Derived =>
         knowledge match {
           case KNOWLEDGE.Known =>
-            storageManager.resetKnownDerived(rId, res, res2)
+            if (opFns.length == 1)
+              storageManager.setKnownDerived(rId, res)
+            else
+              val res2 = opFns(1).asInstanceOf[CompiledFn[EDB]](storageManager)
+              storageManager.resetKnownDerived(rId, res, res2)
           case KNOWLEDGE.New =>
-            storageManager.resetNewDerived(rId, res, res2)
+            if (opFns.length == 1)
+              storageManager.setNewDerived(rId, res)
+            else
+              val res2 = opFns(1).asInstanceOf[CompiledFn[EDB]](storageManager)
+              storageManager.resetNewDerived(rId, res, res2)
         }
       case DB.Delta =>
         knowledge match {
           case KNOWLEDGE.Known =>
-            storageManager.resetKnownDelta(rId, res)
+            storageManager.setKnownDelta(rId, res)
           case KNOWLEDGE.New =>
-            storageManager.resetNewDelta(rId, res)
+            storageManager.setNewDelta(rId, res)
         }
     }
   override def run(storageManager: StorageManager): Any =
     val res = children.head.run(storageManager).asInstanceOf[EDB]
-    val res2 = if (children.length > 1) children(1).run(storageManager).asInstanceOf[EDB] else storageManager.getEmptyEDB()
+//    val res2 = if (children.length > 1)  else storageManager.getEmptyEDB()
     db match {
       case DB.Derived =>
         knowledge match {
           case KNOWLEDGE.Known =>
-            storageManager.resetKnownDerived(rId, res, res2)
+            if (children.length == 1)
+              storageManager.setKnownDerived(rId, res)
+            else
+              val res2 = children(1).run(storageManager).asInstanceOf[EDB]
+              storageManager.resetKnownDerived(rId, res, res2)
           case KNOWLEDGE.New =>
-            storageManager.resetNewDerived(rId, res, res2)
+            if (children.length == 1)
+              storageManager.setNewDerived(rId, res)
+            else
+              val res2 = children(1).run(storageManager).asInstanceOf[EDB]
+              storageManager.resetNewDerived(rId, res, res2)
         }
       case DB.Delta =>
         knowledge match {
           case KNOWLEDGE.Known =>
-            storageManager.resetKnownDelta(rId, res)
+            storageManager.setKnownDelta(rId, res)
           case KNOWLEDGE.New =>
-            storageManager.resetNewDelta(rId, res)
+            storageManager.setNewDelta(rId, res)
         }
     }
 }
@@ -235,7 +253,7 @@ case class ScanEDBOp(rId: RelationId)(using JITOptions) extends IROp[EDB] {
     if (storageManager.edbContains(rId))
       storageManager.getEDB(rId)
     else
-      storageManager.getEmptyEDB()
+      storageManager.getEmptyEDB(rId)
 
   override def run_continuation(storageManager: StorageManager, opFns: Seq[CompiledFn[EDB]]): EDB =
     run(storageManager)
@@ -258,12 +276,14 @@ case class ProjectJoinFilterOp(rId: RelationId, var k: JoinIndexes, override val
     )
   override def run(storageManager: StorageManager): EDB =
     val inputs = children.map(s => s.run(storageManager))
-    storageManager.joinProjectHelper_withHash(
+    val res = storageManager.joinProjectHelper_withHash(
         inputs,
         rId,
         k.hash,
         jitOptions.onlineSort
       )
+    println(s"=> result of SPJU on ${storageManager.printer.ruleToString(k.atoms)}: ${storageManager.ns(rId)}=${res.factToString}")
+    res
 }
 
 /**
@@ -328,7 +348,9 @@ case class DiffOp(override val children:IROp[EDB]*)(using JITOptions) extends IR
   override def run_continuation(storageManager: StorageManager, opFns: Seq[CompiledFn[EDB]]): EDB =
     storageManager.diff(opFns(0)(storageManager), opFns(1)(storageManager))
   override def run(storageManager: StorageManager): EDB =
-    storageManager.diff(children.head.run(storageManager), children(1).run(storageManager))
+    val res = storageManager.diff(children.head.run(storageManager), children(1).run(storageManager))
+    println(s"in IROp: diff=${res.factToString}")
+    res
 }
 
 case class DebugNode(prefix: String, dbg: () => String)(using JITOptions) extends IROp[Any] {

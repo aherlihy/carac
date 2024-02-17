@@ -18,6 +18,8 @@ trait tc {
 
     val tcr = program.relation[Constant]("tcr")
 
+//    val wConst = program.relation[Constant]("wConst")
+
     val X, Y, Z = program.variable()
     
     tcl(X, Y) :- ( base(X,Y) )
@@ -32,5 +34,7 @@ trait tc {
     base("a","b") :- ()
     base("b","c") :- ()
     base("c","d") :- ()
+
+//    wConst(X) :- (tc("a", X), base(X, X))
   }
 }

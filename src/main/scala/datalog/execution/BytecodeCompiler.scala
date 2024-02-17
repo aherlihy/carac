@@ -66,19 +66,21 @@ class BytecodeCompiler(val storageManager: StorageManager)(using JITOptions) ext
           traverse(xb, children.head)
           db match
             case DB.Derived =>
-              if children.length > 1 then
-                traverse(xb, children(1))
+              if (children.length == 1)
+                val methName = knowledge match
+                  case KNOWLEDGE.New => "setNewDerived"
+                  case KNOWLEDGE.Known => "setKnownDerived"
+                emitSMCall(xb, methName, classOf[Int], classOf[EDB])
               else
-                xb.aload(0)
-                emitSMCall(xb, "getEmptyEDB")
-              val methName = knowledge match
-                case KNOWLEDGE.New => "resetNewDerived"
-                case KNOWLEDGE.Known => "resetKnownDerived"
-              emitSMCall(xb, methName, classOf[Int], classOf[EDB], classOf[EDB])
+                traverse(xb, children(1))
+                val methName = knowledge match
+                  case KNOWLEDGE.New => "resetNewDerived"
+                  case KNOWLEDGE.Known => "resetKnownDerived"
+                emitSMCall(xb, methName, classOf[Int], classOf[EDB], classOf[EDB])
             case DB.Delta =>
               val methName = knowledge match
-                case KNOWLEDGE.New => "resetNewDelta"
-                case KNOWLEDGE.Known => "resetKnownDelta"
+                case KNOWLEDGE.New => "setNewDelta"
+                case KNOWLEDGE.Known => "setKnownDelta"
               emitSMCall(xb, methName, classOf[Int], classOf[EDB])
 
         case ScanOp(rId, db, knowledge) =>

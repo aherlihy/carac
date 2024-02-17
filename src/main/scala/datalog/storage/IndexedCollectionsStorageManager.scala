@@ -23,11 +23,20 @@ abstract class IndexedCollectionsStorageManager(override val ns: NS) extends Sto
 
   val allRulesAllIndexes: mutable.Map[RelationId, AllIndexes] = mutable.Map.empty // Index => position
   val indexCandidates: mutable.Map[RelationId, mutable.Set[Int]] = mutable.Map[RelationId, mutable.Set[Int]]().withDefaultValue(mutable.Set[Int]()) // relative position of atoms with constant or variable locations
+  val relationArity: mutable.Map[RelationId, Int] = mutable.Map[RelationId, Int]()
 
   def registerIndexCandidates(cands: mutable.Map[RelationId, mutable.Set[Int]]): Unit = {
-    edbs.foreach((rId, edb) => edb.bulkRegisterIndex(cands(rId)))
-    cands.foreach((rId, cs) => indexCandidates(rId).addAll(cs))
+    cands.foreach((rId, idxs) =>
+      // adds indexes to any the EDBs
+      if edbs.contains(rId) then edbs(rId).bulkRegisterIndex(idxs)
+      // tells intermediate relations to build indexes
+      indexCandidates(rId).addAll(idxs)
+    )
   }
+  def registerRelationArity(rId: RelationId, arity: Int): Unit =
+    if relationArity.contains(rId) then if arity != relationArity(rId) then throw new Exception(s"Derived relation $rId (${ns(rId)}) declared with arity $arity but previously declared with arity ${relationArity(rId)}")
+    relationArity(rId) = arity
+
   val printer: Printer[this.type] = Printer[this.type](this)
 
   val relOps: VolcanoOperators[this.type] = VolcanoOperators(this)
@@ -49,7 +58,7 @@ abstract class IndexedCollectionsStorageManager(override val ns: NS) extends Sto
     deltaDB.addOne(dbId, IndexedCollectionsDatabase())
 
     edbs.foreach((rId, relation) => {
-      deltaDB(dbId)(rId) = IndexedCollectionsEDB.empty(indexCandidates(rId), ns(rId))
+      deltaDB(dbId)(rId) = IndexedCollectionsEDB.empty(relation.arity, indexCandidates(rId), ns(rId))
       discoveredFacts(rId) = relation
     }) // Delta-EDB is just empty sets
     dbId += 1
@@ -59,7 +68,7 @@ abstract class IndexedCollectionsStorageManager(override val ns: NS) extends Sto
     deltaDB.addOne(dbId, IndexedCollectionsDatabase())
 
     edbs.foreach((rId, relation) => {
-      deltaDB(dbId)(rId) = IndexedCollectionsEDB.empty(indexCandidates(rId), ns(rId))
+      deltaDB(dbId)(rId) = IndexedCollectionsEDB.empty(relation.arity, indexCandidates(rId), ns(rId))
     }) // Delta-EDB is just empty sets
     dbId += 1
   }
@@ -67,9 +76,11 @@ abstract class IndexedCollectionsStorageManager(override val ns: NS) extends Sto
   // Read & Write EDBs
   override def insertEDB(rule: Atom): Unit = {
     if (edbs.contains(rule.rId))
+      if (rule.terms.length != relationArity(rule.rId)) throw new Exception(s"Inserted arity not equal to expected arity for relation #${rule.rId} ${ns(rule.rId)}")
       edbs(rule.rId).addOne(IndexedCollectionsRow(rule.terms))
     else
-      edbs(rule.rId) = IndexedCollectionsEDB.empty(indexCandidates(rule.rId), ns(rule.rId))
+      relationArity(rule.rId) = rule.terms.length
+      edbs(rule.rId) = IndexedCollectionsEDB.empty(rule.terms.length, indexCandidates(rule.rId), ns(rule.rId))
       edbs(rule.rId).addOne(IndexedCollectionsRow(rule.terms))
     edbDomain.addAll(rule.terms)
   }
@@ -77,7 +88,11 @@ abstract class IndexedCollectionsStorageManager(override val ns: NS) extends Sto
   override def addConstantsToDomain(constants: Seq[StorageTerm]): Unit = {
     edbDomain.addAll(constants)
   }
-  def getEmptyEDB(): IndexedCollectionsEDB = IndexedCollectionsEDB.empty()
+  // Only used when querying for a completely empty EDB that hasn't been declared/added yet.
+  def getEmptyEDB(rId: RelationId): IndexedCollectionsEDB =
+    if (!relationArity.contains(rId))
+      throw new Exception(s"Getting empty relation $rId (${ns(rId)}) but undefined")
+    IndexedCollectionsEDB.empty(relationArity(rId), indexCandidates.getOrElse(rId, Set.empty), ns(rId))
   def getEDB(rId: RelationId): IndexedCollectionsEDB = edbs(rId)
   def edbContains(rId: RelationId): Boolean = edbs.contains(rId)
   def getAllEDBS(): mutable.Map[RelationId, Any] = edbs.wrapped.asInstanceOf[mutable.Map[RelationId, Any]]
@@ -114,13 +129,17 @@ abstract class IndexedCollectionsStorageManager(override val ns: NS) extends Sto
 
   // Read intermediate results
   def getKnownDerivedDB(rId: RelationId): IndexedCollectionsEDB =
-    derivedDB(knownDbId).getOrElse(rId, discoveredFacts.getOrElse(rId, IndexedCollectionsEDB.empty(indexCandidates(rId), ns(rId))))
+    if !relationArity.contains(rId) then throw new Exception(s"Internal error: relation $rId (${ns(rId)}) has no arity")
+    derivedDB(knownDbId).getOrElse(rId, discoveredFacts.getOrElse(rId, IndexedCollectionsEDB.empty(relationArity(rId), indexCandidates(rId), ns(rId))))
   def getNewDerivedDB(rId: RelationId): IndexedCollectionsEDB =
-    derivedDB(newDbId).getOrElse(rId, discoveredFacts.getOrElse(rId, IndexedCollectionsEDB.empty(indexCandidates(rId), ns(rId))))
+    if !relationArity.contains(rId) then throw new Exception(s"Internal error: relation $rId (${ns(rId)}) has no arity")
+    derivedDB(newDbId).getOrElse(rId, discoveredFacts.getOrElse(rId, IndexedCollectionsEDB.empty(relationArity(rId), indexCandidates(rId), ns(rId))))
   def getKnownDeltaDB(rId: RelationId): IndexedCollectionsEDB =
-    deltaDB(knownDbId).getOrElse(rId, discoveredFacts.getOrElse(rId, IndexedCollectionsEDB.empty(indexCandidates(rId), ns(rId))))
+    if !relationArity.contains(rId) then throw new Exception(s"Internal error: relation $rId (${ns(rId)}) has no arity")
+    deltaDB(knownDbId).getOrElse(rId, discoveredFacts.getOrElse(rId, IndexedCollectionsEDB.empty(relationArity(rId), indexCandidates(rId), ns(rId))))
   def getNewDeltaDB(rId: RelationId): IndexedCollectionsEDB =
-    deltaDB(newDbId).getOrElse(rId, discoveredFacts.getOrElse(rId, IndexedCollectionsEDB.empty(indexCandidates(rId), ns(rId))))
+    if !relationArity.contains(rId) then throw new Exception(s"Internal error: relation $rId (${ns(rId)}) has no arity")
+    deltaDB(newDbId).getOrElse(rId, discoveredFacts.getOrElse(rId, IndexedCollectionsEDB.empty(relationArity(rId), indexCandidates(rId), ns(rId))))
 
   // Read final results
   def getKnownIDBResult(rId: RelationId): Set[Seq[Term]] =
@@ -130,23 +149,31 @@ abstract class IndexedCollectionsStorageManager(override val ns: NS) extends Sto
     debug(s"Final IDB Result[new]", () => s" at iteration $iteration: @$newDbId, count=${getNewDerivedDB(rId).length}")
     getNewDerivedDB(rId).getSetOfSeq
   def getEDBResult(rId: RelationId): Set[Seq[Term]] =
-    edbs.getOrElse(rId, IndexedCollectionsEDB.empty()).getSetOfSeq
+    edbs.getOrElse(rId, IndexedCollectionsEDB.empty(relationArity.getOrElse(rId, 0))).getSetOfSeq
 
   // Write intermediate results
-  def resetKnownDerived(rId: RelationId, rulesEDB: EDB, prevEDB: EDB = IndexedCollectionsEDB.empty()): Unit = // TODO: verify it's ok there's no indexes on rev
+  def setKnownDerived(rId: RelationId, rules: EDB): Unit =
+    derivedDB(knownDbId)(rId) = asIndexedCollectionsEDB(rules) // TODO: need copy??
+
+  def resetKnownDerived(rId: RelationId, rulesEDB: EDB, prevEDB: EDB): Unit =
     val rules = asIndexedCollectionsEDB(rulesEDB)
     val prev = asIndexedCollectionsEDB(prevEDB)
-    prev.name = ns(rId)
-    derivedDB(knownDbId)(rId) = rules.concat(prev)
-  def resetKnownDelta(rId: RelationId, rules: EDB): Unit =
+    derivedDB(knownDbId)(rId) = rules.concat(prev) // TODO: maybe use insert not concat
+
+  def setKnownDelta(rId: RelationId, rules: EDB): Unit =
     deltaDB(knownDbId)(rId) = asIndexedCollectionsEDB(rules)
-  def resetNewDerived(rId: RelationId, rulesEDB: EDB, prevEDB: EDB = IndexedCollectionsEDB.empty()): Unit =
+
+  def setNewDerived(rId: RelationId, rules: EDB): Unit =
+    derivedDB(newDbId)(rId) = asIndexedCollectionsEDB(rules) // TODO: need copy??
+
+  def resetNewDerived(rId: RelationId, rulesEDB: EDB, prevEDB: EDB): Unit =
     val rules = asIndexedCollectionsEDB(rulesEDB)
     val prev = asIndexedCollectionsEDB(prevEDB)
-    prev.name = ns(rId)
     derivedDB(newDbId)(rId) = rules.concat(prev) // TODO: maybe use insert not concat
-  def resetNewDelta(rId: RelationId, rules: EDB): Unit =
+
+  def setNewDelta(rId: RelationId, rules: EDB): Unit =
     deltaDB(newDbId)(rId) = asIndexedCollectionsEDB(rules)
+
   def clearNewDerived(): Unit =
     derivedDB(newDbId) = IndexedCollectionsDatabase()
   // Compare & Swap
@@ -157,7 +184,7 @@ abstract class IndexedCollectionsStorageManager(override val ns: NS) extends Sto
     newDbId = t
   }
   def compareNewDeltaDBs(): Boolean =
-    deltaDB(newDbId).exists((k, v) => v.nonEmpty)
+    deltaDB(newDbId).exists((k, v) => v.nonEmpty())
   def compareDerivedDBs(): Boolean =
     derivedDB(knownDbId) == derivedDB(newDbId)
 
@@ -172,8 +199,10 @@ abstract class IndexedCollectionsStorageManager(override val ns: NS) extends Sto
 
   def verifyEDBs(idbList: mutable.Set[RelationId]): Unit = {
     ns.rIds().foreach(rId =>
-      if (!edbs.contains(rId) && !idbList.contains(rId)) // treat undefined relations as empty edbs
-        edbs(rId) = IndexedCollectionsEDB.empty(indexCandidates(rId), ns(rId))
+      if (!edbs.contains(rId) && !idbList.contains(rId)) // treat undefined relations as empty edbs, with arity 0
+        if (!relationArity.contains(rId))
+          throw new Exception(s"Error: using EDB $rId (${ns(rId)}) but no known arity")
+        edbs(rId) = IndexedCollectionsEDB.empty(relationArity(rId), indexCandidates(rId), ns(rId))
     )
   }
 
@@ -188,15 +217,18 @@ abstract class IndexedCollectionsStorageManager(override val ns: NS) extends Sto
     lhs diff rhs
 
   override def toString() = {
+    def printIndexes(db: IndexedCollectionsDatabase): String = {
+      db.toSeq.map((rId, idxC) => IndexedCollectionsEDB.indexSizeToString(ns(rId), idxC.indexes) + s"(arity=${idxC.arity})").mkString("$indexes: [", ", ", "]")
+    }
     def printHelperRelation(i: Int, db: IndexedCollectionsDatabase): String = {
-      val indexes = db.toSeq.map((rId, idxC) => printer.indexToString(ns(rId), idxC.indexes)).mkString("$indexes: [", ", ", "]")
+      val indexes = printIndexes(db)
       val name = if (i == knownDbId) "known" else if (i == newDbId) "new" else s"!!!OTHER($i)"
-      s"\n $name : \n\t$indexes ${printer.edbToString(db)}"
+      s"\n $name : \n  $indexes ${printer.edbToString(db)}"
     }
 
     "+++++\n" +
-      "EDB:" + printer.edbToString(edbs) +
-      "\nDISCOV:" + printer.edbToString(discoveredFacts) +
+      "EDB:\n  " + printIndexes(edbs) + "  " + printer.edbToString(edbs) +
+      "\nDISCOV:\n  " + printIndexes(discoveredFacts) + "  " + printer.edbToString(discoveredFacts) +
       "\nDERIVED:" + derivedDB.map(printHelperRelation).mkString("[", ", ", "]") +
       "\nDELTA:" + deltaDB.map(printHelperRelation).mkString("[", ", ", "]") +
       "\n+++++"

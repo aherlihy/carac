@@ -14,7 +14,6 @@ import datalog.tools.Debug.debug
  */
 class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager(ns) {
 
-  def registerIndexCandidates(cands: mutable.Map[RelationId, mutable.Set[Int]]): Unit = () // no indexes to register
   private /*inline*/ def scanFilter(k: JoinIndexes, maxIdx: Int)(get: Int => StorageTerm = x => x) = {
     val vCmp = k.varIndexes.isEmpty || k.varIndexes.forall(condition =>
       if (condition.head >= maxIdx)
@@ -84,6 +83,8 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
     val originalK = allRulesAllIndexes(rId)(hash)
     val inputs = asCollectionsSeqEDB(inputsEDB)
 //    var intermediateCardinalities = Seq[Int]()
+//    println(s"input rels: ${originalK.atoms.drop(1).map(a => ns(a.rId)).mkString("[", "*", "]")}")
+    println(s"input rels: ${inputs.map(e => e.factToString).mkString("[", "*", "]")}")
     if (inputs.length == 1) // just filter
       inputs.head
         .filter(e =>
