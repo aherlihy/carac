@@ -22,7 +22,7 @@ abstract class IndexedCollectionsStorageManager(override val ns: NS) extends Sto
   protected val deltaDB: mutable.Map[KnowledgeId, IndexedCollectionsDatabase] = mutable.Map[KnowledgeId, IndexedCollectionsDatabase]()
 
   val allRulesAllIndexes: mutable.Map[RelationId, AllIndexes] = mutable.Map.empty // Index => position
-  val indexCandidates: mutable.Map[RelationId, mutable.Set[Int]] = mutable.Map[RelationId, mutable.Set[Int]]().withDefaultValue(mutable.Set[Int]()) // relative position of atoms with constant or variable locations
+  val indexCandidates: mutable.Map[RelationId, mutable.Set[Int]] = mutable.Map[RelationId, mutable.Set[Int]]() // relative position of atoms with constant or variable locations
   val relationArity: mutable.Map[RelationId, Int] = mutable.Map[RelationId, Int]()
 
   def registerIndexCandidates(cands: mutable.Map[RelationId, mutable.Set[Int]]): Unit = {
@@ -30,7 +30,7 @@ abstract class IndexedCollectionsStorageManager(override val ns: NS) extends Sto
       // adds indexes to any the EDBs
       if edbs.contains(rId) then edbs(rId).bulkRegisterIndex(idxs)
       // tells intermediate relations to build indexes
-      indexCandidates(rId).addAll(idxs)
+      indexCandidates.getOrElseUpdate(rId, mutable.Set[Int]()).addAll(idxs)
     )
   }
   def registerRelationArity(rId: RelationId, arity: Int): Unit =
@@ -80,6 +80,7 @@ abstract class IndexedCollectionsStorageManager(override val ns: NS) extends Sto
       edbs(rule.rId).addOne(IndexedCollectionsRow(rule.terms))
     else
       relationArity(rule.rId) = rule.terms.length
+      indexCandidates.getOrElseUpdate(rule.rId, mutable.Set[Int]())
       edbs(rule.rId) = IndexedCollectionsEDB.empty(rule.terms.length, indexCandidates(rule.rId), ns(rule.rId))
       edbs(rule.rId).addOne(IndexedCollectionsRow(rule.terms))
     edbDomain.addAll(rule.terms)
@@ -119,13 +120,13 @@ abstract class IndexedCollectionsStorageManager(override val ns: NS) extends Sto
   /**
    * Compute Dom * Dom * ... arity # times
    */
-  override def getComplement(arity: Int): IndexedCollectionsEDB = ??? //{
+  override def getComplement(arity: Int): IndexedCollectionsEDB = {
     // short but inefficient
-//    val res = List.fill(arity)(edbDomain).flatten.combinations(arity).flatMap(_.permutations).toSeq
-//    IndexedCollectionsEDB( // TODO: fix
-//      res.map(r => IndexedCollectionsRow(r.toSeq)):_*
-//    )
-//  }
+    val res = List.fill(arity)(edbDomain).flatten.combinations(arity).flatMap(_.permutations).toSeq
+    IndexedCollectionsEDB(
+      mutable.ArrayBuffer.from(res.map(r => IndexedCollectionsRow(r.toSeq))), Set.empty, "?", arity
+    )
+  }
 
   // Read intermediate results
   def getKnownDerivedDB(rId: RelationId): IndexedCollectionsEDB =
@@ -218,7 +219,7 @@ abstract class IndexedCollectionsStorageManager(override val ns: NS) extends Sto
 
   override def toString() = {
     def printIndexes(db: IndexedCollectionsDatabase): String = {
-      db.toSeq.map((rId, idxC) => IndexedCollectionsEDB.indexSizeToString(ns(rId), idxC.indexes) + s"(arity=${idxC.arity})").mkString("$indexes: [", ", ", "]")
+      db.toSeq.map((rId, idxC) => IndexedCollectionsEDB.indexSizeToString(ns(rId), idxC.indexes)/* + s"(arity=${idxC.arity})"*/).mkString("$indexes: [", ", ", "]")
     }
     def printHelperRelation(i: Int, db: IndexedCollectionsDatabase): String = {
       val indexes = printIndexes(db)

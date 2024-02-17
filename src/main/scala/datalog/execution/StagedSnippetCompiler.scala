@@ -99,7 +99,7 @@ class StagedSnippetCompiler(val storageManager: StorageManager)(using val jitOpt
         if (storageManager.edbContains(rId))
           '{ $stagedSM.getEDB(${ Expr(rId) }) }
         else
-          '{ $stagedSM.getEmptyEDB() }
+          '{ $stagedSM.getEmptyEDB(${ Expr(rId) }) }
 
       case ProjectJoinFilterOp(rId, k, children:_*) =>
         val compiledOps = '{ $stagedFns.map(s => s($stagedSM)) }
@@ -160,21 +160,28 @@ class StagedSnippetCompiler(val storageManager: StorageManager)(using val jitOpt
 
       case InsertOp(rId, db, knowledge, children:_*) =>
         val res = '{ $stagedFns(0)($stagedSM).asInstanceOf[EDB] }
-        val res2 = if (children.length > 1) '{ $stagedFns(1)($stagedSM).asInstanceOf[EDB] } else '{ $stagedSM.getEmptyEDB() }
         db match {
           case DB.Derived =>
             knowledge match {
               case KNOWLEDGE.New =>
-                '{ $stagedSM.resetNewDerived(${ Expr(rId) }, $res, $res2) }
+                if (children.length == 1)
+                  '{ $stagedSM.setNewDerived(${ Expr(rId) }, $res) }
+                else
+                  val res2 = '{ $stagedFns(1)($stagedSM).asInstanceOf[EDB] }
+                  '{ $stagedSM.resetNewDerived(${ Expr(rId) }, $res, $res2) }
               case KNOWLEDGE.Known =>
-                '{ $stagedSM.resetKnownDerived(${ Expr(rId) }, $res, $res2) }
+                if (children.length == 1)
+                  '{ $stagedSM.setKnownDerived(${ Expr(rId) }, $res) }
+                else
+                  val res2 = '{ $stagedFns(1)($stagedSM).asInstanceOf[EDB] }
+                  '{ $stagedSM.resetKnownDerived(${ Expr(rId) }, $res, $res2) }
             }
           case DB.Delta =>
             knowledge match {
               case KNOWLEDGE.New =>
-                '{ $stagedSM.resetNewDelta(${ Expr(rId) }, $res) }
+                '{ $stagedSM.setNewDelta(${ Expr(rId) }, $res) }
               case KNOWLEDGE.Known =>
-                '{ $stagedSM.resetKnownDelta(${ Expr(rId) }, $res) }
+                '{ $stagedSM.setKnownDelta(${ Expr(rId) }, $res) }
             }
         }
 
