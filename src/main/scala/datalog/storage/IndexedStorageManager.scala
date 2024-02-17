@@ -90,9 +90,11 @@ class IndexedStorageManager(ns: NS = new NS()) extends IndexedCollectionsStorage
 //    var intermediateCardinalities = Seq[Int]()
     val fResult = if (inputs.length == 1) {// just filter + project
       println("\tonly filter + project")
-      inputs.head.filterProjectWithIndex(
+      inputs.head.projectFilterWithIndex(
         originalK.constIndexes,
         originalK.projIndexes,
+        ns(rId),
+        indexCandidates.getOrElse(rId, mutable.Set[Int]()),
         0
       )
     } else {
@@ -119,9 +121,14 @@ class IndexedStorageManager(ns: NS = new NS()) extends IndexedCollectionsStorage
             //            intermediateCardinalities = intermediateCardinalities :+ edbResult.length
             (edbResult, atomI + 1, k)
         )
-      result._1.filterProjectWithIndex(result._3.constIndexes, result._3.projIndexes, 0)
+      result._1.projectFilterWithIndex(
+        result._3.constIndexes,
+        result._3.projIndexes,
+        ns(rId),
+        indexCandidates.getOrElse(rId, mutable.Set()),
+        0
+      )
     }
-    fResult.name = ns(rId)
 //    println(s"=> SPJU result: ${fResult.factToString}")
     fResult
 

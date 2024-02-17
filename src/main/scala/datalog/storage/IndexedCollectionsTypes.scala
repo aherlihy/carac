@@ -42,13 +42,13 @@ given Ordering[StorageTerm] with
  */
 case class IndexedCollectionsEDB(wrapped: mutable.ArrayBuffer[IndexedCollectionsRow],
                                  indexKeys: Iterable[Int],
-                                 rName: String,
+                                 name: String,
                                  arity: Int) extends EDB with IterableOnce[IndexedCollectionsRow] {
+  if indexKeys.exists(_ >= arity) then throw new Exception(s"Error: creating edb $name with indexes ${indexKeys.mkString("[", ", ", "]")} but arity $arity")
   // position => index, where index is term => tuple
   // TODO: distinguish between primary (one sortedMap of tuples), and secondary (one map of indexes)
   // TODO: for now keep all indexes updated, but add flag to not bother rebuilding
 
-  var name: String = rName // TODO: clean up, for now used for debugging
   val indexes: mutable.Map[Int, mutable.SortedMap[StorageTerm, ArrayBuffer[IndexedCollectionsRow]]] = mutable.Map[Int, mutable.SortedMap[StorageTerm, mutable.ArrayBuffer[IndexedCollectionsRow]]]()
   bulkRegisterIndex(indexKeys)
 
@@ -93,6 +93,7 @@ case class IndexedCollectionsEDB(wrapped: mutable.ArrayBuffer[IndexedCollections
    * @return
    */
   def addOne(edb: IndexedCollectionsRow): this.type =
+    if (edb.length != arity) throw new Exception(s"Adding row with length ${edb.length} to EDB $name with arity $arity")
     wrapped.addOne(edb)
     indexes.foreach((idx, index) =>
       // TODO: what to do with duplicates?
@@ -133,7 +134,6 @@ case class IndexedCollectionsEDB(wrapped: mutable.ArrayBuffer[IndexedCollections
   def concat(suffix: IndexedCollectionsEDB): IndexedCollectionsEDB =
     val copy = IndexedCollectionsEDB.copyWithIndexes(this, suffix.indexes.keys) // TODO: do we really need a new copy here? do we need both indexes?
     copy.addAll(suffix.wrapped)
-    copy.name = name
     copy
 
   /**
@@ -152,31 +152,32 @@ case class IndexedCollectionsEDB(wrapped: mutable.ArrayBuffer[IndexedCollections
    * @param skip
    * @return
    */
-  def filterProjectWithIndex(constIndexes: mutable.Map[Int, Constant],
+  def projectFilterWithIndex(constIndexes: mutable.Map[Int, Constant],
                              projIndexes: Seq[(String, Constant)],
+                             newName: String,
+                             newIndexes: mutable.Set[Int],
                              skip: Int): IndexedCollectionsEDB =
     val constFilter = constIndexes.filter((ind, _) => ind < arity)
     if (constFilter.isEmpty)
       if (projIndexes.isEmpty)
         this // TODO: no need to make a copy if no filter or project needed, so retain indexes?
       else
-        IndexedCollectionsEDB(wrapped.map(_.project(projIndexes)), indexes.keys, name, projIndexes.length) // TODO: only project so just copy, no indexes
+        IndexedCollectionsEDB(wrapped.map(_.project(projIndexes)), newIndexes, newName, projIndexes.length) // TODO: only project so just copy, no indexes
     else
-      // TODO: If multiple pick the most selective (smallest), but for now just pick first until i can verify not too expensive to check
-      // mostSelectiveIdx = constFilter.map((idx, const) => (idx, indexes(idx)(const).size)).minBy(_._2)._1
       // TODO: is it better to use index on each condition and get intersection?
-      val index = constFilter.head
+      // TODO: If multiple pick the most selective (smallest), but for now just pick first until i can verify not too expensive to check
+      val (position, constant) = constFilter.head // constFilter.map((idx, const) => (idx, indexes(idx)(const).size)).minBy(_._2)._1
       val rest = constFilter.drop(1)
 
-      val result = indexes(index._1)(index._2).collect{// copy matching EBDs
+      val result = indexes(position).getOrElse(constant, ArrayBuffer.empty).collect{// copy matching EBDs
         // TODO: verify lowerBound == skip
         case edb if IndexedCollectionsEDB.filtertest(rest, skip, edb) => edb.project(projIndexes)
       }
 //      TODO: this will make a copy with the indexes
       val newArity = if projIndexes.isEmpty then arity else projIndexes.length
-      IndexedCollectionsEDB(result, indexes.keys, name, newArity)
+      IndexedCollectionsEDB(result, newIndexes, newName, newArity)
 //      TODO: this will make a copy with NO indexes
-//      IndexedCollectionsEDB(result, Seq[Int](), name)
+//      IndexedCollectionsEDB(result, Seq[Int](), newName)
 
   /**
    * Assume this is the outer relation, toJoin is inner relation.
@@ -194,47 +195,66 @@ case class IndexedCollectionsEDB(wrapped: mutable.ArrayBuffer[IndexedCollections
     var inner = toJoin
     // TODO: check and potentially swap inner + outer, if onlineSort
 
-    val outerConstantFilter = joinIndexes.constIndexes.filter((ind, _) => ind < outer.arity)
-    val innerConstantFilter = joinIndexes.constIndexes.filter((ind, _) => ind >= outer.arity && ind < outer.arity + inner.arity)
+    val outerConstantFilters = joinIndexes.constIndexes.filter((ind, _) => ind < outer.arity)
+    val innerConstantFilters = joinIndexes.constIndexes.collect{ case (ind, c) if ind >= outer.arity && ind < outer.arity + inner.arity => (ind - outer.arity, c) }
     // if any of the indexes are past the end of the current tuple, ignore and wait til later
     // TODO: potentially do join with only the in-range indexes?
     val joinKeys = joinIndexes.varIndexes.filter(shared => shared.forall(_ < outer.arity + inner.arity))
-    println(s"\t2-way join($name*${toJoin.name}), relevant keys=${joinKeys.mkString("[", ", ", "]")}, outerConstants=${outerConstantFilter.mkString("{", ", ", "}")}, innerConstants=${innerConstantFilter.mkString("{", ", ", "}")}")
+    println(s"\t2-way join($name*${toJoin.name}), relevant keys=${joinKeys.mkString("[", ", ", "]")}, outerConstants=${outerConstantFilters.mkString("{", ", ", "}")}, innerConstants=${innerConstantFilters.mkString("{", ", ", "}")}")
 
-//    println(s"$name*${toJoin.name}: on ${joinKeys}, outerArity=${outer.arity}, innerArity=${inner.arity}")
+    //    println(s"$name*${toJoin.name}: on ${joinKeys}, outerArity=${outer.arity}, innerArity=${inner.arity}")
 
     // TODO: filter first to cut down size, but have to rebuild indexes, below. Alternatively could join and filter as we go
     val filteredOuter =
-      if (outerConstantFilter.isEmpty)
+      if (outerConstantFilters.isEmpty)
         this
       else
-        val filtered = outer.indexes(outerConstantFilter.head._1)(outerConstantFilter.head._2).
-          filter(e => IndexedCollectionsEDB.filtertest(outerConstantFilter.drop(1), 0, e))
+        val filtered = outer.indexes(outerConstantFilters.head._1).getOrElse(outerConstantFilters.head._2, ArrayBuffer.empty).
+          filter(e => IndexedCollectionsEDB.filtertest(outerConstantFilters.drop(1), 0, e))
         IndexedCollectionsEDB(filtered, outer.indexes.keys, outer.name, outer.arity) // TODO: Do not actually need indexes on outer relation
     val filteredInner =
-      if (innerConstantFilter.isEmpty)
+      if (innerConstantFilters.isEmpty)
         toJoin
       else
-        val filtered = inner.indexes(innerConstantFilter.head._1)(innerConstantFilter.head._2).
-          filter(e => IndexedCollectionsEDB.filtertest(innerConstantFilter.drop(1), outer.arity, e))
+        val filtered = inner.indexes(innerConstantFilters.head._1).getOrElse(innerConstantFilters.head._2, ArrayBuffer.empty).
+          filter(e => IndexedCollectionsEDB.filtertest(innerConstantFilters.drop(1), outer.arity, e))
         IndexedCollectionsEDB(filtered, inner.indexes.keys, inner.name, inner.arity)
 
     val result = if (joinKeys.isEmpty) // join without keys, so just loop over everything without index
       println("\t\tjoin without condition, -> product")
       filteredOuter.wrapped.flatMap(outerTuple => filteredInner.wrapped.map( innerTuple => outerTuple.concat(innerTuple)))
-    else if (joinKeys.length == 1 && joinKeys.head.length == 2) // most of the time
-      val outerKey = joinKeys.head.head
-      val innerKey = joinKeys.head(1) - outer.arity
-      println(s"\t\tsingle condition: joinKeys relative position 1:$outerKey, 2:$innerKey")
+    else if (joinKeys.length == 1) // most of the time
+      val joinKey = joinKeys.head
+
+      val outerKeys = joinKey.filter(_ < outer.arity)
+      val innerKeys = joinKey.collect{ case x if x >= outer.arity => x - outer.arity }
+      if outerKeys.isEmpty || innerKeys.isEmpty then throw new Exception("TODO: join key only on one side?")
+
+      println(s"outerKeys=$outerKeys, innerKeys=$innerKeys")
 
       filteredOuter.wrapped.flatMap(outerTuple =>
-        // TODO: handle when join indexes are both past the end of the first tuple
-        val indexVal = outerTuple(outerKey)
-        val matchingInners = filteredInner.indexes(innerKey).getOrElse(indexVal, ArrayBuffer.empty)
-        println(s"outerTuple[$outerKey]=$indexVal, matching innerTuple[$innerKey]=${matchingInners.mkString("[", ", ", "]")}")
-        matchingInners.map(innerTuple =>
-          outerTuple.concat(innerTuple)
-        )
+        val indexVal = outerTuple(outerKeys.head) // TODO: could pick the key with the smallest index in innerTup?
+        // If there are multiple join keys within one relation, essentially self-constraint so can ignore any tuples that fail:
+        if (outerKeys.drop(1).nonEmpty && !outerKeys.drop(1).forall(idxToMatch =>
+          indexVal == outerTuple(idxToMatch)
+        ))
+          ArrayBuffer.empty
+        else
+          val matchingInners = filteredInner.indexes(innerKeys.head).getOrElse(indexVal, ArrayBuffer.empty)
+
+          matchingInners.collect {
+            // check for self-constraint, but with inner this time:
+            case innerTuple if (
+              innerKeys.drop(1).isEmpty ||
+                innerKeys.drop(1).forall(idxToMatch =>
+                  innerTuple(innerKeys.head) == innerTuple(idxToMatch)
+                )
+              ) => {
+              // TODO: rebuild index or just iterate through?
+              println("test")
+              outerTuple.concat(innerTuple)
+            }
+          }
       )
     else
 //      println("==============> bad join")
@@ -263,8 +283,8 @@ case class IndexedCollectionsEDB(wrapped: mutable.ArrayBuffer[IndexedCollections
 
   def factToString: String =
     val inner = wrapped.map(s => s.mkString("(", ", ", ")")).mkString("[", ", ", "]")
-    val indexStr = indexes.map((pos, tMap) => s"i$pos|${tMap.keys.size}|").mkString("{", ", ", "}")
-    s"$indexStr:$inner"
+    val indexStr = ""//indexes.map((pos, tMap) => s"i$pos|${tMap.keys.size}|").mkString("{", ", ", "}") + ":"
+    s"$indexStr$inner"
 
   // TODO: potentially remove IterableOnce, or restructure to use indexes with iterable ops "automatically"
   def length = ???
@@ -274,7 +294,6 @@ case class IndexedCollectionsEDB(wrapped: mutable.ArrayBuffer[IndexedCollections
   def mkString = ???
   def iterator = ???
   def nonEmpty(): Boolean =
-    println(s"checking empty on $name, wrapped=${wrapped.length}")
     wrapped.nonEmpty
 }
 

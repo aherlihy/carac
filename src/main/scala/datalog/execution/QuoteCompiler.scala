@@ -107,7 +107,7 @@ class QuoteCompiler(val storageManager: StorageManager)(using JITOptions) extend
         if (storageManager.edbContains(rId))
           '{ $stagedSM.getEDB(${ Expr(rId) }) }
         else
-          '{ $stagedSM.getEmptyEDB() }
+          '{ $stagedSM.getEmptyEDB(${ Expr(rId) }) }
 
       case ProjectJoinFilterOp(rId, k, children: _*) =>
         val (sortedChildren, newK) =
@@ -221,7 +221,6 @@ class QuoteCompiler(val storageManager: StorageManager)(using JITOptions) extend
 
       case InsertOp(rId, db, knowledge, children:_*) =>
         val res = compileIRRelOp(children.head.asInstanceOf[IROp[EDB]])
-        val res2 = if (children.length > 1) compileIRRelOp(children(1).asInstanceOf[IROp[EDB]]) else '{ $stagedSM.getEmptyEDB() }
         db match {
           case DB.Derived =>
             knowledge match {
