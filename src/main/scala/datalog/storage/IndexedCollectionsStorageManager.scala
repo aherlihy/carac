@@ -25,6 +25,7 @@ abstract class IndexedCollectionsStorageManager(override val ns: NS) extends Sto
   val indexCandidates: mutable.Map[RelationId, mutable.Set[Int]] = mutable.Map[RelationId, mutable.Set[Int]]() // relative position of atoms with constant or variable locations
   val relationArity: mutable.Map[RelationId, Int] = mutable.Map[RelationId, Int]()
 
+  // Update metadata if aliases are discovered
   def updateAliases(aliases: mutable.Map[RelationId, RelationId]): Unit = {
     aliases.foreach((k, v) =>
       if (relationArity.contains(k) && relationArity.contains(v) && relationArity(k) != relationArity(v))
@@ -35,6 +36,7 @@ abstract class IndexedCollectionsStorageManager(override val ns: NS) extends Sto
     )
   }
 
+  // Store relative positions of shared variables as candidates for potential indexes
   def registerIndexCandidates(cands: mutable.Map[RelationId, mutable.Set[Int]]): Unit = {
     cands.foreach((rId, idxs) =>
       // adds indexes to any the EDBs
@@ -43,6 +45,7 @@ abstract class IndexedCollectionsStorageManager(override val ns: NS) extends Sto
       indexCandidates.getOrElseUpdate(rId, mutable.Set[Int]()).addAll(idxs)
     )
   }
+  // Store relation arity. In the future can require it to be declared, but for now derived.
   def registerRelationArity(rId: RelationId, arity: Int): Unit =
     if relationArity.contains(rId) then if arity != relationArity(rId) then throw new Exception(s"Derived relation $rId (${ns(rId)}) declared with arity $arity but previously declared with arity ${relationArity(rId)}")
     relationArity(rId) = arity
@@ -210,11 +213,10 @@ abstract class IndexedCollectionsStorageManager(override val ns: NS) extends Sto
 
   def verifyEDBs(idbList: mutable.Set[RelationId]): Unit = {
     ns.rIds().foreach(rId =>
-      if (!edbs.contains(rId) && !idbList.contains(rId)) // treat undefined relations as empty edbs, with arity 0
+      if (!edbs.contains(rId) && !idbList.contains(rId))
+        // NOTE: no longer treat undefined relations as empty edbs, instead error
         if (!relationArity.contains(rId))
           throw new Exception(s"Error: using EDB $rId (${ns(rId)}) but no known arity")
-//        if (!indexCandidates.contains(rId))
-//          throw new Exception(s"Error: using EDB $rId (${ns(rId)}) but no known indexes")
         edbs(rId) = IndexedCollectionsEDB.empty(
           relationArity(rId),
           indexCandidates.getOrElseUpdate(rId, mutable.Set[Int]()),
