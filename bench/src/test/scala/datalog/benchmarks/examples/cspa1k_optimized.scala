@@ -4,7 +4,7 @@ import datalog.benchmarks.ExampleBenchmarkGenerator
 import datalog.dsl.{Constant, Program}
 import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.Blackhole
-import test.examples.cspa.cspa_optimized as cspa_optimized_test
+import test.examples.cspa1k.cspa1k_optimized as cspa_optimized_test
 
 import java.util.concurrent.TimeUnit
 
@@ -13,8 +13,8 @@ import java.util.concurrent.TimeUnit
 @Measurement(iterations = 1, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
-class cspa_optimized() extends ExampleBenchmarkGenerator(
-  "cspa"
+class cspa1k_optimized() extends ExampleBenchmarkGenerator(
+  "cspa1k"
 ) with cspa_optimized_test {
 
   @Setup

@@ -88,18 +88,21 @@ abstract class DLBenchmark {
           fuzzySortOpts.foreach(fuzzy =>
             blocking.foreach(block =>
               backends.foreach(bc =>
-                val jo = JITOptions(
-                  mode = Mode.JIT,
-                  granularity = gran,
-                  compileSync = block,
-                  sortOrder = sort,
-                  onlineSort = onlineSort,
-                  backend = bc,
-                  fuzzy = fuzzy,
-                  dotty = dotty,
-                )
-                programs(jo.toBenchmark) = Program(
-                  StagedExecutionEngine(DefaultStorageManager(), jo)
+                storageEngines.filter(_._1 != "volcano").foreach(storageEngine =>
+                  val jo = JITOptions(
+                    mode = Mode.JIT,
+                    granularity = gran,
+                    compileSync = block,
+                    sortOrder = sort,
+                    onlineSort = onlineSort,
+                    backend = bc,
+                    fuzzy = fuzzy,
+                    dotty = dotty,
+                    storage = storageEngine._1
+                  )
+                  programs(jo.toBenchmark) = Program(
+                    StagedExecutionEngine(storageEngine._2(), jo)
+                  )
                 )
               )
             )
