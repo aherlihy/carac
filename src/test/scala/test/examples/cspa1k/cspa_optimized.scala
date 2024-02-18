@@ -1,17 +1,17 @@
-package test.examples.cspa
+package test.examples.cspa1k
 
 import buildinfo.BuildInfo
 import datalog.dsl.{Constant, Program}
 import test.{ExampleTestGenerator, Tags}
 
-class cspa_optimized_test extends ExampleTestGenerator(
-  "cspa",
+class cspa1k_optimized_test extends ExampleTestGenerator(
+  "cspa1k",
   Set(Tags.Naive, Tags.Volcano),
   Set(Tags.Slow, Tags.CI)
-) with cspa
+) with cspa1k
 
-trait cspa_optimized {
-  val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/cspa/facts"
+trait cspa1k_optimized {
+  val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/cspa1k/facts"
   val toSolve = "ValueFlow"
 
   // Adapted from https://github.com/Hacker0912/RecStep/blob/e4107c814c7b24ae787dddb4af7e3238303f13ab/benchmark_datalog_programs/cspa.datalog
