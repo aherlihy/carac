@@ -393,6 +393,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
 
     // generate and transform tree
     val transformedAST = transforms.foldLeft(ast: ASTNode)((t, pass) => pass.transform(t)(using storageManager))
+    storageManager.updateAliases(tCtx.aliases)
     var toSolve = rId
     if (tCtx.aliases.contains(rId)) {
       toSolve = tCtx.aliases.getOrElse(rId, rId)
@@ -411,7 +412,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
     val irTree = createIR(transformedAST)
 
     debug("IRTree: ", () => storageManager.printer.printIR(irTree))
-    println(s"INIT STORAGE: ${storageManager.toString}")
+//    println(s"INIT STORAGE: ${storageManager.toString}")
     defaultJITOptions.mode match
       case Mode.Interpreted => solveInterpreted(irTree, irCtx)
       case Mode.Compiled => solveCompiled(irTree, irCtx)

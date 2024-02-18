@@ -84,7 +84,7 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
     val inputs = asCollectionsSeqEDB(inputsEDB)
 //    var intermediateCardinalities = Seq[Int]()
 //    println(s"input rels: ${originalK.atoms.drop(1).map(a => ns(a.rId)).mkString("[", "*", "]")}")
-    println(s"input rels: ${inputs.map(e => e.factToString).mkString("[", "*", "]")}")
+//    println(s"input rels: ${inputs.map(e => e.factToString).mkString("[", "*", "]")}")
     if (inputs.length == 1) // just filter
       inputs.head
         .filter(e =>
@@ -122,12 +122,17 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
                 prefilter(k.constIndexes.filter((i, _) => i < o.length), 0, o)
               ) // filter outer tuple
               .flatMap(outerTuple =>
+//                println(s"about to final join, comparing ${outerTuple.mkString("(", ", ", ")")} to inners ${inner.factToString}")
                 inner
                   .filter(i =>
                     prefilter(k.constIndexes.filter((ind, _) => ind >= outerTuple.length && ind < (outerTuple.length + i.length)), outerTuple.length, i) && toJoin(k, outerTuple, i)
                   )
-                  .map(innerTuple => outerTuple.concat(innerTuple)))
-            println(s"\tintermediateR=${edbResult}")
+                  .map(innerTuple =>
+//                    println(s"=> emitting ${outerTuple.concat(innerTuple).toString()}")
+                    outerTuple.concat(innerTuple)
+                  )
+              )
+//            println(s"\tintermediateR=${edbResult.factToString}")
 //            intermediateCardinalities = intermediateCardinalities :+ edbResult.length
             (edbResult, atomI + 1, k)
         )
@@ -239,7 +244,7 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
                 typ match
                   case PredicateType.NEGATED =>
                     val arity = k.atoms(i + 1).terms.length
-                    val compl = getComplement(arity)
+                    val compl = getComplement(r, arity)
                     val res = diff(compl, q)
                     debug("found negated relation, rule=", () => s"${printer.ruleToString(k.atoms)}\n\tarity=$arity, compl=${printer.factToString(compl)}, Q=${printer.factToString(q)}, final res=${printer.factToString(res)}")
                     res
@@ -264,7 +269,7 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
                 typ match
                   case PredicateType.NEGATED =>
                     val arity = k.atoms(i + 1).terms.length
-                    val compl = getComplement(arity)
+                    val compl = getComplement(r, arity)
                     val res = diff(compl, q)
                     debug(s"found negated relation, rule=", () => s"${printer.ruleToString(k.atoms)}\n\tarity=$arity, compl=${printer.factToString(compl)}, Q=${printer.factToString(q)}, final res=${printer.factToString(res)}")
                     res

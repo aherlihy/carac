@@ -104,10 +104,12 @@ class BytecodeCompiler(val storageManager: StorageManager)(using JITOptions) ext
             .constantInstruction(rId)
           emitSMCall(xb, meth, classOf[Int])
 
-        case ComplementOp(arity) =>
+        case ComplementOp(rId, arity) =>
+          xb.aload(0)
+            .constantInstruction(rId)
           xb.aload(0)
             .constantInstruction(arity)
-          emitSMCall(xb, "getComplement", classOf[Int])
+          emitSMCall(xb, "getComplement", classOf[Int], classOf[Int])
 
         case ScanEDBOp(rId) =>
           xb.aload(0)

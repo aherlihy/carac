@@ -30,6 +30,8 @@ abstract class CollectionsStorageManager(override val ns: NS) extends StorageMan
 
   def registerRelationArity(rId: RelationId, arity: Int): Unit = ()
 
+  def updateAliases(aliases: mutable.Map[RelationId, RelationId]): Unit = ()
+
   def initRelation(rId: RelationId, name: String): Unit = {
     ns(rId) = name
   }
@@ -102,7 +104,7 @@ abstract class CollectionsStorageManager(override val ns: NS) extends StorageMan
   /**
    * Compute Dom * Dom * ... arity # times
    */
-  override def getComplement(arity: Int): CollectionsEDB = {
+  override def getComplement(rId: RelationId, arity: Int): CollectionsEDB = {
     // short but inefficient
     val res = List.fill(arity)(edbDomain).flatten.combinations(arity).flatMap(_.permutations).toSeq
     CollectionsEDB(

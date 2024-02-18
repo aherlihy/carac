@@ -25,6 +25,16 @@ abstract class IndexedCollectionsStorageManager(override val ns: NS) extends Sto
   val indexCandidates: mutable.Map[RelationId, mutable.Set[Int]] = mutable.Map[RelationId, mutable.Set[Int]]() // relative position of atoms with constant or variable locations
   val relationArity: mutable.Map[RelationId, Int] = mutable.Map[RelationId, Int]()
 
+  def updateAliases(aliases: mutable.Map[RelationId, RelationId]): Unit = {
+    aliases.foreach((k, v) =>
+      if (relationArity.contains(k) && relationArity.contains(v) && relationArity(k) != relationArity(v))
+        throw new Exception(s"Error: registering relations ${ns(k)} and ${ns(v)} as aliases but have different arity (${relationArity(k)} vs. ${relationArity(v)})")
+      relationArity.getOrElseUpdate(k, relationArity.getOrElse(v, throw new Exception(s"No arity available for either ${ns(k)} or ${ns(v)}")))
+      indexCandidates(k) = indexCandidates.getOrElseUpdate(k, mutable.Set[Int]()).addAll(indexCandidates.getOrElse(v, mutable.Set[Int]()))
+      indexCandidates(v) = indexCandidates(k)
+    )
+  }
+
   def registerIndexCandidates(cands: mutable.Map[RelationId, mutable.Set[Int]]): Unit = {
     cands.foreach((rId, idxs) =>
       // adds indexes to any the EDBs
@@ -120,11 +130,11 @@ abstract class IndexedCollectionsStorageManager(override val ns: NS) extends Sto
   /**
    * Compute Dom * Dom * ... arity # times
    */
-  override def getComplement(arity: Int): IndexedCollectionsEDB = {
+  override def getComplement(rId: RelationId, arity: Int): IndexedCollectionsEDB = {
     // short but inefficient
     val res = List.fill(arity)(edbDomain).flatten.combinations(arity).flatMap(_.permutations).toSeq
     IndexedCollectionsEDB(
-      mutable.ArrayBuffer.from(res.map(r => IndexedCollectionsRow(r.toSeq))), Set.empty, "?", arity
+      mutable.ArrayBuffer.from(res.map(r => IndexedCollectionsRow(r.toSeq))), indexCandidates(rId), ns(rId), arity
     )
   }
 
@@ -203,7 +213,13 @@ abstract class IndexedCollectionsStorageManager(override val ns: NS) extends Sto
       if (!edbs.contains(rId) && !idbList.contains(rId)) // treat undefined relations as empty edbs, with arity 0
         if (!relationArity.contains(rId))
           throw new Exception(s"Error: using EDB $rId (${ns(rId)}) but no known arity")
-        edbs(rId) = IndexedCollectionsEDB.empty(relationArity(rId), indexCandidates(rId), ns(rId))
+//        if (!indexCandidates.contains(rId))
+//          throw new Exception(s"Error: using EDB $rId (${ns(rId)}) but no known indexes")
+        edbs(rId) = IndexedCollectionsEDB.empty(
+          relationArity(rId),
+          indexCandidates.getOrElseUpdate(rId, mutable.Set[Int]()),
+          ns(rId)
+        )
     )
   }
 

@@ -40,7 +40,7 @@ class VolcanoStorageManager(ns: NS = NS()) extends CollectionsStorageManager(ns)
                 typ match
                   case PredicateType.NEGATED =>
                     val arity = k.atoms(i + 1).terms.length
-                    val compl = getComplement(arity)
+                    val compl = getComplement(r, arity)
                     val res = Diff(Seq(Scan(compl, r), q))
                     debug(s"found negated relation, rule=", () => s"${printer.ruleToString(k.atoms)}\n\tarity=$arity")
                     res
@@ -89,7 +89,7 @@ class VolcanoStorageManager(ns: NS = NS()) extends CollectionsStorageManager(ns)
                     typ match
                       case PredicateType.NEGATED =>
                         val arity = k.atoms(i + 1).terms.length
-                        val compl = getComplement(arity)
+                        val compl = getComplement(r, arity)
                         val res = Diff(Seq(Scan(compl, r), q))
                         debug(s"found negated relation, rule=", () => s"${printer.ruleToString(k.atoms)}\n\tarity=$arity")
                         res

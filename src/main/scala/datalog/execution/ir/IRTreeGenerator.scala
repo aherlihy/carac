@@ -68,7 +68,7 @@ class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
               typ match
                 case PredicateType.NEGATED =>
                   val arity = k.atoms(i + 1).terms.length
-                  val res = DiffOp(ComplementOp(arity), q)
+                  val res = DiffOp(ComplementOp(k.atoms(i+1).rId, arity), q)
                   debug(s"found negated relation, rule=", () => s"${ctx.storageManager.printer.ruleToString(k.atoms)}\n\tarity=$arity")
                   res
                 case _ => q
@@ -114,7 +114,7 @@ class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
                   typ match
                     case PredicateType.NEGATED =>
                       val arity = k.atoms(i + 1).terms.length
-                      val res = DiffOp(ComplementOp(arity), q)
+                      val res = DiffOp(ComplementOp(k.atoms(i+1).rId, arity), q)
                       debug(s"found negated relation, rule=", () => s"${ctx.storageManager.printer.ruleToString(k.atoms)}\n\tarity=$arity")
                       res
                     case _ => q
