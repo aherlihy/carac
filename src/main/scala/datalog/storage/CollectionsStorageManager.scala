@@ -118,6 +118,7 @@ abstract class CollectionsStorageManager(override val ns: NS) extends StorageMan
   def getNewDerivedDB(rId: RelationId): CollectionsEDB =
     derivedDB(newDbId).getOrElse(rId, discoveredFacts.getOrElse(rId, CollectionsEDB()))
   def getKnownDeltaDB(rId: RelationId): CollectionsEDB =
+//    println(s"getting relation ID $rId")
     deltaDB(knownDbId).getOrElse(rId, discoveredFacts.getOrElse(rId, CollectionsEDB()))
   def getNewDeltaDB(rId: RelationId): CollectionsEDB =
     deltaDB(newDbId).getOrElse(rId, discoveredFacts.getOrElse(rId, CollectionsEDB()))
