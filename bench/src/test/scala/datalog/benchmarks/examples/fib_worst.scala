@@ -78,6 +78,20 @@ class XXfib_worst() extends ExampleBenchmarkGenerator(
     blackhole.consume(run(programs(p), result))
   }
 
+  @Benchmark def interpreted_indexed_sel__0____EOL(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  @Benchmark def interpreted_indexed_unordered__0____EOL(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
   // compiled
   @Benchmark def compiled_default_unordered__0___quotes_EOL(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"

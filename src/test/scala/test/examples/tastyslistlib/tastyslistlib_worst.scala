@@ -34,7 +34,7 @@ trait tastyslistlib_worst {
     val Load = program.namedRelation[String]("Load")
 
     val StaticCall = program.namedRelation[String]("StaticCall")
-    val StaticLookUp = program.relation[String]("StaticLookUp")
+//    val StaticLookUp = program.relation[String]("StaticLookUp")
 
     val VarPointsTo = program.relation[String]("VarPointsTo")
     val CallGraph = program.relation[String]("CallGraph")

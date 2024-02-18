@@ -29,7 +29,8 @@ abstract class DLBenchmark {
     // Non-Staged combinations
     val storageEngines = immutable.Map[String, () => StorageManager](
       "volcano" -> (() => new VolcanoStorageManager()),
-      "default" -> (() => new DefaultStorageManager())
+      "default" -> (() => new DefaultStorageManager()),
+      "indexed" -> (() => new IndexedStorageManager())
     )
     val shallowAlgo = immutable.Map[String, StorageManager => ExecutionEngine](
       "seminaive" -> (sm => new SemiNaiveExecutionEngine(sm)),
@@ -61,14 +62,17 @@ abstract class DLBenchmark {
   // --> uncomment for interpreted
     interpSortOpts.foreach(sort =>
         onlineSortOpts.foreach(onlineSort =>
-          val jo = JITOptions(
-            mode = Mode.Interpreted,
-//            granularity = if (sort == SortOrder.Sel) Granularity.RULE else Granularity.NEVER, // TODO: eventually sort at other grans
-            sortOrder = sort,
-            onlineSort = onlineSort,
-            dotty = dotty)
-          programs(jo.toBenchmark) = Program(StagedExecutionEngine(DefaultStorageManager(), jo))
-        ))
+          storageEngines.filter((k, v) => k != "volcano").foreach((k, storage) =>
+            val jo = JITOptions(
+              mode = Mode.Interpreted,
+  //            granularity = if (sort == SortOrder.Sel) Granularity.RULE else Granularity.NEVER, // TODO: eventually sort at other grans
+              sortOrder = sort,
+              onlineSort = onlineSort,
+              dotty = dotty,
+              storage = k
+            )
+            programs(jo.toBenchmark) = Program(StagedExecutionEngine(storage(), jo))
+          )))
 
     // JIT options
     val jitGranularities = Seq(

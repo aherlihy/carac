@@ -35,7 +35,8 @@ case class JITOptions(
                        backend: Backend = Backend.Quotes,
                        fuzzy: Int = DEFAULT_FUZZY,
                        dotty: staging.Compiler = staging.Compiler.make(getClass.getClassLoader),
-                       useGlobalContext: Boolean = true
+                       useGlobalContext: Boolean = true,
+                       storage: String = "default"
                      ) {
   if ((mode == Mode.Compiled || mode == Mode.Interpreted) &&
     (compileSync != CompileSync.Blocking || granularity != Granularity.NEVER || fuzzy != 0))
@@ -52,7 +53,7 @@ case class JITOptions(
     val granStr = if (granularity == Granularity.NEVER) "" else granularity.toString
     val onlineSortStr = if (onlineSort) "Online" else ""
     val blockingStr = if (mode == Mode.JIT) compileSync else ""
-    val programStr = s"${mode}_default_${sortOrder}_${onlineSortStr}_${fuzzy}_${blockingStr}".toLowerCase()
+    val programStr = s"${mode}_${storage}_${sortOrder}_${onlineSortStr}_${fuzzy}_${blockingStr}".toLowerCase()
     val backendStr = if (mode == Mode.Interpreted) "" else backend.toString.toLowerCase()
     s"${programStr}_${granStr}_$backendStr"
 
