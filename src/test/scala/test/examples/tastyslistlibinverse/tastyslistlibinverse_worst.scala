@@ -34,20 +34,20 @@ trait tastyslistlibinverse_worst {
     val Load = program.namedRelation[String]("Load")
 
     val StaticCall = program.namedRelation[String]("StaticCall")
-    val StaticLookUp = program.relation[String]("StaticLookUp")
+//    val StaticLookUp = program.relation[String]("StaticLookUp")
 
     val VarPointsTo = program.relation[String]("VarPointsTo")
     val CallGraph = program.relation[String]("CallGraph")
     val FldPointsTo = program.relation[String]("FldPointsTo")
     val InterProcAssign = program.relation[String]("InterProcAssign")
 
-    val Delegate = program.relation[String]("Delegate")
+//    val Delegate = program.relation[String]("Delegate")
     val SuperCall = program.relation[String]("SuperCall")
     val FieldValDef = program.namedRelation[String]("FieldValDef")
 
-    val Refers = program.relation[String]("Refers")
-    val Overrides = program.relation[String]("Overrides")
-    val TopLevel = program.relation[String]("TopLevel")
+//    val Refers = program.relation[String]("Refers")
+//    val Overrides = program.relation[String]("Overrides")
+//    val TopLevel = program.relation[String]("TopLevel")
 
     val varr, heap, meth, to, from, base, baseH, fld, ref = program.variable()
     val toMeth, thiss, thisFrom, invo, sig, inMeth, heapT, m, n, actualFld = program.variable()

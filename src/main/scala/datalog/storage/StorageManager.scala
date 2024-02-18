@@ -17,6 +17,8 @@ trait StorageManager(val ns: NS) {
   def initRelation(rId: RelationId, name: String): Unit
   def initEvaluation(): Unit
 
+  def updateAliases(aliases: mutable.Map[RelationId, RelationId]): Unit
+
   def insertEDB(rule: Atom): Unit
   def getEmptyEDB(rId: RelationId): EDB
   def edbContains(rId: RelationId): Boolean
@@ -27,7 +29,7 @@ trait StorageManager(val ns: NS) {
 
   // Helpers for negation
   def addConstantsToDomain(constants: Seq[StorageTerm]): Unit
-  def getComplement(arity: Int): EDB
+  def getComplement(rId: RelationId, arity: Int): EDB
 
   def getKnownDerivedDB(rId: RelationId): EDB
   def getNewDerivedDB(rId: RelationId): EDB

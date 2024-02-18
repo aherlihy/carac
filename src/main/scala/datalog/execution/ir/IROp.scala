@@ -107,9 +107,9 @@ case class DoWhileOp(toCmp: DB, override val children:IROp[Any]*)(using JITOptio
   override def run(storageManager: StorageManager): Any =
     var i = 0
     while ( {
-      println(s"DBs start of semi-naive iteration $i: ${storageManager.toString}")
+//      println(s"DBs start of semi-naive iteration $i: ${storageManager.toString}")
       i += 1
-      if i > 10 then System.exit(0)
+//      if i > 10 then System.exit(0)
       children.head.run(storageManager)
       toCmp match {
         case DB.Derived =>
@@ -213,11 +213,11 @@ case class InsertOp(rId: RelationId, db: DB, knowledge: KNOWLEDGE, override val 
     }
 }
 
-case class ComplementOp(arity: Int)(using JITOptions) extends IROp[EDB] {
+case class ComplementOp(rId: RelationId, arity: Int)(using JITOptions) extends IROp[EDB] {
   val code: OpCode = OpCode.COMPLEMENT
 
   override def run(storageManager: StorageManager): EDB =
-    storageManager.getComplement(arity)
+    storageManager.getComplement(rId, arity)
 
   override def run_continuation(storageManager: StorageManager, opFns: Seq[CompiledFn[EDB]]): EDB =
     run(storageManager) // bc leaf node, no difference for continuation or run
@@ -282,7 +282,7 @@ case class ProjectJoinFilterOp(rId: RelationId, var k: JoinIndexes, override val
         k.hash,
         jitOptions.onlineSort
       )
-    println(s"=> result of SPJU on ${storageManager.printer.ruleToString(k.atoms)}: ${storageManager.ns(rId)}=${res.factToString}")
+//    println(s"=> result of SPJU on ${storageManager.printer.ruleToString(k.atoms)}: ${storageManager.ns(rId)}=${res.factToString}")
     res
 }
 
@@ -348,9 +348,7 @@ case class DiffOp(override val children:IROp[EDB]*)(using JITOptions) extends IR
   override def run_continuation(storageManager: StorageManager, opFns: Seq[CompiledFn[EDB]]): EDB =
     storageManager.diff(opFns(0)(storageManager), opFns(1)(storageManager))
   override def run(storageManager: StorageManager): EDB =
-    val res = storageManager.diff(children.head.run(storageManager), children(1).run(storageManager))
-    println(s"in IROp: diff=${res.factToString}")
-    res
+    storageManager.diff(children.head.run(storageManager), children(1).run(storageManager))
 }
 
 case class DebugNode(prefix: String, dbg: () => String)(using JITOptions) extends IROp[Any] {

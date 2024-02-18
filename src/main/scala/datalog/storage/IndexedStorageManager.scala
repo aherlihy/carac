@@ -82,7 +82,7 @@ class IndexedStorageManager(ns: NS = new NS()) extends IndexedCollectionsStorage
   override def joinProjectHelper_withHash(inputsEDB: Seq[EDB], rId: Int, hash: String, onlineSort: Boolean): IndexedCollectionsEDB = {
     val originalK = allRulesAllIndexes(rId)(hash)
     val inputs = asIndexedCollectionsSeqEDB(inputsEDB)
-    println(s"Rule: ${printer.ruleToString(originalK.atoms)}")
+//    println(s"Rule: ${printer.ruleToString(originalK.atoms)}")
 //    println(s"input aritys: ${inputs.map(e => s"${e.name}|${e.arity}|").mkString("[", "*", "]")}")
 //    println(s"input rels: ${inputs.map(e => e.factToString).mkString("[", "*", "]")}")
 
