@@ -83,7 +83,7 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
     val originalK = allRulesAllIndexes(rId)(hash)
     val inputs = asCollectionsSeqEDB(inputsEDB)
 //    var intermediateCardinalities = Seq[Int]()
-//    println(s"input rels: ${originalK.atoms.drop(1).map(a => ns(a.rId)).mkString("[", "*", "]")}")
+//    println(s"Rule: ${printer.ruleToString(originalK.atoms)}")
 //    println(s"input rels: ${inputs.map(e => e.factToString).mkString("[", "*", "]")}")
     if (inputs.length == 1) // just filter
       inputs.head
@@ -122,13 +122,11 @@ class DefaultStorageManager(ns: NS = new NS()) extends CollectionsStorageManager
                 prefilter(k.constIndexes.filter((i, _) => i < o.length), 0, o)
               ) // filter outer tuple
               .flatMap(outerTuple =>
-//                println(s"about to final join, comparing ${outerTuple.mkString("(", ", ", ")")} to inners ${inner.factToString}")
                 inner
                   .filter(i =>
                     prefilter(k.constIndexes.filter((ind, _) => ind >= outerTuple.length && ind < (outerTuple.length + i.length)), outerTuple.length, i) && toJoin(k, outerTuple, i)
                   )
                   .map(innerTuple =>
-//                    println(s"=> emitting ${outerTuple.concat(innerTuple).toString()}")
                     outerTuple.concat(innerTuple)
                   )
               )
