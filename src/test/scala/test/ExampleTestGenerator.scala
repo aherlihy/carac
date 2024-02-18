@@ -116,8 +116,8 @@ abstract class TestGenerator(directory: Path,
             Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(sortOrder = SortOrder.Sel)))
           case "InterpretedStagedIndexed" =>
             Program(StagedExecutionEngine(IndexedStorageManager(), JITOptions()))
-//          case "InterpretedStaged_selIndexed" =>
-//            Program(StagedExecutionEngine(IndexedStorageManager(), JITOptions(sortOrder = SortOrder.Sel)))
+          case "InterpretedStaged_selIndexed" =>
+            Program(StagedExecutionEngine(IndexedStorageManager(), JITOptions(sortOrder = SortOrder.Sel)))
 //          case "InterpretedStaged_badluckDefault" =>
 //            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(sortOrder = SortOrder.Badluck)))
 
@@ -179,9 +179,8 @@ abstract class TestGenerator(directory: Path,
 //      "SemiNaive",
 //      "CompiledStaged", // TODO: for longer tests, can throw MethodTooLarge
       "InterpretedStaged",
-//      "InterpretedStaged_sel",
+      "InterpretedStaged_sel",
 //      "JITStaged_Sel_DELTA_Block_Lambda",
-//        "InterpretedStaged_badluck"
 //      "JITStaged_Sel_RULE_Block_BC",
 //      "JITStaged_Sel_DELTA_Block_BC",
 //      "JITStaged_Sel_ALL_Block_BC",
