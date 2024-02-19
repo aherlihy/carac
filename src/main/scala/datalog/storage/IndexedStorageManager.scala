@@ -40,7 +40,7 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
   def registerIndexCandidates(cands: mutable.Map[RelationId, mutable.Set[Int]]): Unit = {
     cands.foreach((rId, idxs) =>
       // adds indexes to any the EDBs
-      if edbs.contains(rId) then edbs(rId).bulkRegisterIndex(idxs)
+      if edbs.contains(rId) then edbs(rId).bulkRegisterIndex(idxs.toSet)
       // tells intermediate relations to build indexes
       indexCandidates.getOrElseUpdate(rId, mutable.Set[Int]()).addAll(idxs)
     )
@@ -71,7 +71,7 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
     deltaDB.addOne(dbId, IndexedCollectionsDatabase())
 
     edbs.foreach((rId, relation) => {
-      deltaDB(dbId)(rId) = IndexedCollectionsEDB.empty(relation.arity, indexCandidates(rId), ns(rId))
+      deltaDB(dbId)(rId) = IndexedCollectionsEDB.empty(relation.arity, indexCandidates(rId), ns(rId), mutable.Set[Int]())
       discoveredFacts(rId) = relation
     }) // Delta-EDB is just empty sets
     dbId += 1
@@ -81,7 +81,7 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
     deltaDB.addOne(dbId, IndexedCollectionsDatabase())
 
     edbs.foreach((rId, relation) => {
-      deltaDB(dbId)(rId) = IndexedCollectionsEDB.empty(relation.arity, indexCandidates(rId), ns(rId))
+      deltaDB(dbId)(rId) = IndexedCollectionsEDB.empty(relation.arity, indexCandidates(rId), ns(rId), mutable.Set[Int]())
     }) // Delta-EDB is just empty sets
     dbId += 1
   }
@@ -94,7 +94,7 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
     else
       relationArity(rule.rId) = rule.terms.length
       indexCandidates.getOrElseUpdate(rule.rId, mutable.Set[Int]())
-      edbs(rule.rId) = IndexedCollectionsEDB.empty(rule.terms.length, indexCandidates(rule.rId), ns(rule.rId))
+      edbs(rule.rId) = IndexedCollectionsEDB.empty(rule.terms.length, indexCandidates(rule.rId), ns(rule.rId), mutable.Set[Int]())
       edbs(rule.rId).addOne(IndexedCollectionsRow(rule.terms))
     edbDomain.addAll(rule.terms)
   }
@@ -106,7 +106,7 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
   def getEmptyEDB(rId: RelationId): IndexedCollectionsEDB =
     if (!relationArity.contains(rId))
       throw new Exception(s"Getting empty relation $rId (${ns(rId)}) but undefined")
-    IndexedCollectionsEDB.empty(relationArity(rId), indexCandidates.getOrElse(rId, Set.empty), ns(rId))
+    IndexedCollectionsEDB.empty(relationArity(rId), indexCandidates.getOrElse(rId, Set.empty), ns(rId), mutable.Set[Int]())
   def getEDB(rId: RelationId): IndexedCollectionsEDB = edbs(rId)
   def edbContains(rId: RelationId): Boolean = edbs.contains(rId)
   def getAllEDBS(): mutable.Map[RelationId, Any] = edbs.wrapped.asInstanceOf[mutable.Map[RelationId, Any]]
@@ -137,23 +137,23 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
     // short but inefficient
     val res = List.fill(arity)(edbDomain).flatten.combinations(arity).flatMap(_.permutations).toSeq
     IndexedCollectionsEDB(
-      mutable.ArrayBuffer.from(res.map(r => IndexedCollectionsRow(r.toSeq))), indexCandidates(rId), ns(rId), arity
+      mutable.ArrayBuffer.from(res.map(r => IndexedCollectionsRow(r.toSeq))), indexCandidates(rId), ns(rId), arity, mutable.Set()
     )
   }
 
   // Read intermediate results
   def getKnownDerivedDB(rId: RelationId): IndexedCollectionsEDB =
     if !relationArity.contains(rId) then throw new Exception(s"Internal error: relation $rId (${ns(rId)}) has no arity")
-    derivedDB(knownDbId).getOrElse(rId, discoveredFacts.getOrElse(rId, IndexedCollectionsEDB.empty(relationArity(rId), indexCandidates(rId), ns(rId))))
+    derivedDB(knownDbId).getOrElse(rId, discoveredFacts.getOrElse(rId, IndexedCollectionsEDB.empty(relationArity(rId), indexCandidates(rId), ns(rId), mutable.Set[Int]())))
   def getNewDerivedDB(rId: RelationId): IndexedCollectionsEDB =
     if !relationArity.contains(rId) then throw new Exception(s"Internal error: relation $rId (${ns(rId)}) has no arity")
-    derivedDB(newDbId).getOrElse(rId, discoveredFacts.getOrElse(rId, IndexedCollectionsEDB.empty(relationArity(rId), indexCandidates(rId), ns(rId))))
+    derivedDB(newDbId).getOrElse(rId, discoveredFacts.getOrElse(rId, IndexedCollectionsEDB.empty(relationArity(rId), indexCandidates(rId), ns(rId), mutable.Set[Int]())))
   def getKnownDeltaDB(rId: RelationId): IndexedCollectionsEDB =
     if !relationArity.contains(rId) then throw new Exception(s"Internal error: relation $rId (${ns(rId)}) has no arity")
-    deltaDB(knownDbId).getOrElse(rId, discoveredFacts.getOrElse(rId, IndexedCollectionsEDB.empty(relationArity(rId), indexCandidates(rId), ns(rId))))
+    deltaDB(knownDbId).getOrElse(rId, discoveredFacts.getOrElse(rId, IndexedCollectionsEDB.empty(relationArity(rId), indexCandidates(rId), ns(rId), mutable.Set[Int]())))
   def getNewDeltaDB(rId: RelationId): IndexedCollectionsEDB =
     if !relationArity.contains(rId) then throw new Exception(s"Internal error: relation $rId (${ns(rId)}) has no arity")
-    deltaDB(newDbId).getOrElse(rId, discoveredFacts.getOrElse(rId, IndexedCollectionsEDB.empty(relationArity(rId), indexCandidates(rId), ns(rId))))
+    deltaDB(newDbId).getOrElse(rId, discoveredFacts.getOrElse(rId, IndexedCollectionsEDB.empty(relationArity(rId), indexCandidates(rId), ns(rId), mutable.Set[Int]())))
 
   // Read final results
   def getKnownIDBResult(rId: RelationId): Set[Seq[Term]] =
@@ -163,27 +163,29 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
     debug(s"Final IDB Result[new]", () => s" at iteration $iteration: @$newDbId, count=${getNewDerivedDB(rId).length}")
     getNewDerivedDB(rId).getSetOfSeq
   def getEDBResult(rId: RelationId): Set[Seq[Term]] =
-    edbs.getOrElse(rId, IndexedCollectionsEDB.empty(relationArity.getOrElse(rId, 0))).getSetOfSeq
+    edbs.getOrElse(rId, IndexedCollectionsEDB.empty(relationArity.getOrElse(rId, 0), skipIndexes = mutable.Set[Int]())).getSetOfSeq
 
   // Write intermediate results
   def setKnownDerived(rId: RelationId, rules: EDB): Unit =
-    derivedDB(knownDbId)(rId) = asIndexedCollectionsEDB(rules) // TODO: need copy??
+    derivedDB(knownDbId)(rId) = asIndexedCollectionsEDB(rules)
 
   def resetKnownDerived(rId: RelationId, rulesEDB: EDB, prevEDB: EDB): Unit =
     val rules = asIndexedCollectionsEDB(rulesEDB)
     val prev = asIndexedCollectionsEDB(prevEDB)
-    derivedDB(knownDbId)(rId) = rules.concat(prev) // TODO: maybe use insert not concat
+    // TODO: maybe use insert not copy, except problem is that rules is delta.new, and prev is derived.known. Delta cannot mutate because needed for the end-of-iteration check, and derived cannot mutate (?) because needed to be read by other rules potentially
+    derivedDB(knownDbId)(rId) = rules.copyAndAdd(prev)
 
   def setKnownDelta(rId: RelationId, rules: EDB): Unit =
     deltaDB(knownDbId)(rId) = asIndexedCollectionsEDB(rules)
 
   def setNewDerived(rId: RelationId, rules: EDB): Unit =
-    derivedDB(newDbId)(rId) = asIndexedCollectionsEDB(rules) // TODO: need copy??
+    derivedDB(newDbId)(rId) = asIndexedCollectionsEDB(rules)
 
   def resetNewDerived(rId: RelationId, rulesEDB: EDB, prevEDB: EDB): Unit =
     val rules = asIndexedCollectionsEDB(rulesEDB)
     val prev = asIndexedCollectionsEDB(prevEDB)
-    derivedDB(newDbId)(rId) = rules.concat(prev) // TODO: maybe use insert not concat
+    // TODO: maybe use insert not copy, except problem is that rules is delta.new, and prev is derived.known. Delta cannot mutate because needed for the end-of-iteration check, and derived cannot mutate (?) because needed to be read by other rules potentially
+    derivedDB(newDbId)(rId) = rules.copyAndAdd(prev)
 
   def setNewDelta(rId: RelationId, rules: EDB): Unit =
     deltaDB(newDbId)(rId) = asIndexedCollectionsEDB(rules)
@@ -220,20 +222,21 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
         edbs(rId) = IndexedCollectionsEDB.empty(
           relationArity(rId),
           indexCandidates.getOrElseUpdate(rId, mutable.Set[Int]()),
-          ns(rId)
+          ns(rId),
+          mutable.Set[Int]()
         )
     )
   }
 
   // Volcano helpers
   def union(edbs: Seq[EDB]): EDB =
-    import IndexedCollectionsEDB.unionEDB
-    edbs.unionEDB
+    import IndexedCollectionsEDB.{unionEDB, unionInPlace}
+    edbs.unionEDB // unionInPlace is slower!
 
   def diff(lhsEDB: EDB, rhsEDB: EDB): EDB =
     val lhs = asIndexedCollectionsEDB(lhsEDB)
     val rhs = asIndexedCollectionsEDB(rhsEDB)
-    lhs diff rhs
+    lhs.diff(rhs) // diffInPlace is slower!
 
   override def joinProjectHelper_withHash(inputsEDB: Seq[EDB], rId: Int, hash: String, onlineSort: Boolean): IndexedCollectionsEDB = {
     if onlineSort then throw new Exception("Unimplemented: online sort with indexes")
@@ -255,7 +258,7 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
     } else {
       val result = inputs
         .foldLeft(
-          (IndexedCollectionsEDB.empty(0), 0, originalK) // initialize intermediate indexed-collection
+          (IndexedCollectionsEDB.empty(0, skipIndexes = mutable.Set[Int]()), 0, originalK) // initialize intermediate indexed-collection
         )((combo: (IndexedCollectionsEDB, Int, JoinIndexes), innerT: IndexedCollectionsEDB) =>
           val outerT = combo._1
           val atomI = combo._2
@@ -276,7 +279,13 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
             //            intermediateCardinalities = intermediateCardinalities :+ edbResult.length
             (edbResult, atomI + 1, k)
         )
-      IndexedCollectionsEDB(result._1.wrapped.mapInPlace(_.project(result._3.projIndexes)), indexCandidates.getOrElse(rId, mutable.Set()), ns(rId), result._3.projIndexes.length)
+      IndexedCollectionsEDB(
+        result._1.wrapped.mapInPlace(_.project(result._3.projIndexes)),
+        indexCandidates.getOrElse(rId, mutable.Set()),
+        ns(rId),
+        result._3.projIndexes.length,
+        mutable.Set() // TODO: remove all indices after proj/ going into union
+      )
     }
     fResult
   }
