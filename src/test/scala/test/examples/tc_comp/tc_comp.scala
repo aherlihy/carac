@@ -2,9 +2,9 @@ package test.examples.tc_comp
 
 import buildinfo.BuildInfo
 import datalog.dsl.{Constant, Program, __, not}
-import test.ExampleTestGenerator
+import test.{ExampleTestGenerator, Tags}
 
-class tc_comp_test extends ExampleTestGenerator("tc_comp") with tc_comp
+class tc_comp_test extends ExampleTestGenerator("tc_comp", tags = Set(Tags.Negated)) with tc_comp
 
 trait tc_comp {
   val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/tc/facts"

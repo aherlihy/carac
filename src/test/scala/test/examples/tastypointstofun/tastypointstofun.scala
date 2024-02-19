@@ -2,9 +2,9 @@ package test.examples.tastypointstofun
 
 import buildinfo.BuildInfo
 import datalog.dsl.{Constant, Program}
-import test.ExampleTestGenerator
+import test.{ExampleTestGenerator, Tags}
 
-class tastypointstofun_test extends ExampleTestGenerator("tastypointstofun") with tastypointstofun
+class tastypointstofun_test extends ExampleTestGenerator("tastypointstofun", tags = Set(Tags.Negated)) with tastypointstofun
 
 trait tastypointstofun {
   val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/tastypointstofun/facts"
