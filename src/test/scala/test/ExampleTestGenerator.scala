@@ -194,7 +194,7 @@ abstract class TestGenerator(directory: Path,
 //      "JITStaged_Sel_RULE_Async_BC",
 //      "JITStaged_Sel_ALL_Async_BC",
     ).foreach(execution => {
-      Seq(/*"Volcano", "Default", */"Indexed").foreach(storage => {
+      Seq(/*"Volcano", "Default",*/ "Indexed").foreach(storage => {
         if ((execution.contains("Staged") || execution.contains("BytecodeGenerated") || execution.contains("Lambda")) && storage == "Volcano") {} // skip and don't report as skipped
         else if (
             skip.contains(execution) || skip.contains(storage) ||

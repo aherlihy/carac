@@ -107,7 +107,7 @@ case class DoWhileOp(toCmp: DB, override val children:IROp[Any]*)(using JITOptio
   override def run(storageManager: StorageManager): Any =
     var i = 0
     while ( {
-//      println(s"DBs start of semi-naive iteration $i: ${storageManager.toString}")
+      println(s"DBs start of semi-naive iteration $i: ${storageManager.toString}")
       i += 1
 //      if i > 2 then System.exit(0)
       children.head.run(storageManager)
@@ -283,7 +283,7 @@ case class ProjectJoinFilterOp(rId: RelationId, var k: JoinIndexes, override val
         k.hash,
         jitOptions.onlineSort
       )
-//    println(s"=> result of SPJU on ${storageManager.printer.ruleToString(k.atoms)}: ${storageManager.ns(rId)}=${res.factToString}")
+    println(s"=> result of SPJU on ${storageManager.printer.ruleToString(k.atoms)}: ${storageManager.ns(rId)}=${res.factToString}")
     res
 }
 
