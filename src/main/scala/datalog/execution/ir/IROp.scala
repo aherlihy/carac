@@ -109,7 +109,7 @@ case class DoWhileOp(toCmp: DB, override val children:IROp[Any]*)(using JITOptio
     while ( {
 //      println(s"DBs start of semi-naive iteration $i: ${storageManager.toString}")
       i += 1
-//      if i > 10 then System.exit(0)
+//      if i > 2 then System.exit(0)
       children.head.run(storageManager)
       toCmp match {
         case DB.Derived =>
@@ -144,7 +144,8 @@ case class SwapAndClearOp()(using JITOptions) extends IROp[Any] {
   val code: OpCode = OpCode.SWAP_CLEAR
   override def run(storageManager: StorageManager): Any =
     storageManager.swapKnowledge()
-    storageManager.clearNewDerived()
+    storageManager.clearNewDerived() // because after swap, this is actually clearing deltas
+    // TODO: rebuild indexes on derived
 
   override def run_continuation(storageManager: StorageManager, opFns: Seq[CompiledFn[Any]]): Any =
     run(storageManager)
@@ -345,10 +346,12 @@ case class UnionSPJOp(rId: RelationId, var k: JoinIndexes, override val children
  */
 case class DiffOp(override val children:IROp[EDB]*)(using JITOptions) extends IROp[EDB](children:_*) {
   val code: OpCode = OpCode.DIFF
+  private val queryResult = children.head
+  private val derivedKnownRead = children(1)
   override def run_continuation(storageManager: StorageManager, opFns: Seq[CompiledFn[EDB]]): EDB =
-    storageManager.diff(opFns(0)(storageManager), opFns(1)(storageManager))
+    storageManager.diff(opFns.head(storageManager), opFns(1)(storageManager)) // TODO: diffInPlace
   override def run(storageManager: StorageManager): EDB =
-    storageManager.diff(children.head.run(storageManager), children(1).run(storageManager))
+    storageManager.diff(queryResult.run(storageManager), derivedKnownRead.run(storageManager))
 }
 
 case class DebugNode(prefix: String, dbg: () => String)(using JITOptions) extends IROp[Any] {
