@@ -243,7 +243,7 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
 
     val originalK = allRulesAllIndexes(rId)(hash)
     val inputs = asIndexedCollectionsSeqEDB(inputsEDB)
-//     println(s"Rule: ${printer.ruleToString(originalK.atoms)}")
+     println(s"Rule: ${printer.ruleToString(originalK.atoms)}")
 //     println(s"input rels: ${inputs.map(e => e.factToString).mkString("[", "*", "]")}")
 
     // var intermediateCardinalities = Seq[Int]()
@@ -252,8 +252,7 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
         originalK.constIndexes,
         originalK.projIndexes,
         ns(rId),
-        indexCandidates.getOrElse(rId, mutable.Set[Int]()),
-        0
+        indexCandidates.getOrElse(rId, mutable.Set[Int]())
       )
     } else {
       val result = inputs
@@ -262,7 +261,7 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
         )((combo: (IndexedCollectionsEDB, Int, JoinIndexes), innerT: IndexedCollectionsEDB) =>
           val outerT = combo._1
           val atomI = combo._2
-          var k = combo._3
+          var k = combo._3 // not currently used bc not online sorting
           if (atomI == 0) // not a monad :(
             (innerT, atomI + 1, k)
           else
@@ -274,14 +273,14 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
             //                (outerT, innerT)
             //              else
             //                (innerT, outerT)
-            // outer = outer relation, inner = inner relation
-            val edbResult = outerT.joinFilterWithIndex(k, 0, innerT)
+            val edbResult = outerT.joinFilterWithIndex(k, atomI, innerT)
             //            intermediateCardinalities = intermediateCardinalities :+ edbResult.length
             (edbResult, atomI + 1, k)
         )
+      val indexesToIgnore = indexCandidates.getOrElse(rId, mutable.Set())
       IndexedCollectionsEDB(
         result._1.wrapped.mapInPlace(_.project(result._3.projIndexes)),
-        indexCandidates.getOrElse(rId, mutable.Set()),
+        indexesToIgnore,
         ns(rId),
         result._3.projIndexes.length,
         mutable.Set() // TODO: remove all indices after proj/ going into union
