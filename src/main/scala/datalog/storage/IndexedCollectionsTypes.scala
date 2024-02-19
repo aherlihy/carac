@@ -58,7 +58,7 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
     indexes(idx)
 
   def bulkRegisterIndex(idxs: mutable.Set[Int]): this.type =
-    idxs.map(registerIndex)
+    idxs.foreach(registerIndex)
     this
   /**
    * Add new index key. If data already exists, build the index immediately
@@ -161,7 +161,7 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
   def diffInPlace(that: IndexedCollectionsEDB): IndexedCollectionsEDB =
     this.wrapped = wrapped.diff(that.wrapped)
     indexes.foreach((idx, index) =>
-      index.map((term, tuples) =>
+      index.foreach((term, tuples) =>
         tuples.filterInPlace(tuple =>
           val include = !that.contains(tuple)
           include
