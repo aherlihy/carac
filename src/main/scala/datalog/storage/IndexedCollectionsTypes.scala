@@ -199,11 +199,17 @@ case class IndexedCollectionsEDB(wrapped: mutable.ArrayBuffer[IndexedCollections
 //     println(s"\t2-way join($name*${toJoin.name}), allKeys=${joinIndexes.varIndexes},  relKeys=${joinKeys.mkString("[", ", ", "]")}, outerConstants=${outerConstantFilters.mkString("{", ", ", "}")}, innerConstants=${innerConstantFilters.mkString("{", ", ", "}")}")
 //     println(s"outerIndexes=${IndexedCollectionsEDB.allIndexesToString(this)}")
 //     println(s"innerIndexes=${IndexedCollectionsEDB.allIndexesToString(toJoin)}")
+//    print(s"\t\t[outer]${IndexedCollectionsEDB.indexSizeToString(name, indexes)}")
+//    println(s" [inner]${IndexedCollectionsEDB.indexSizeToString(toJoin.name, toJoin.indexes)}")
 
-    // store relative positions: [ (innerPos, outerPos), ...]
+    // store relative positions: [ (innerPos, outerPos), ...] including self-constraints
     val relativeKeys = joinKeys.map(k =>
       (k.filter(_ < outer.arity), k.collect { case i if i >= outer.arity && i < outer.arity + inner.arity => i - outer.arity })
     ).filter((outerPos, innerPos) => outerPos.size + innerPos.size > 1)
+    // relative positions of only keys shared between relations, drop all but 1 key (TODO: use best index, for now use head)
+    val relativeJoinKeys = relativeKeys.collect {
+      case (outerPos, innerPos) if outerPos.nonEmpty && innerPos.nonEmpty => (outerPos.head, innerPos.head)
+    }
 
 //     println(s"\t\trelative join positions = ${relativeKeys.map((o, i) => s"(outers: ${o.mkString("", ".", "")}, inners: ${i.mkString("", ".", "")})").mkString("[", ", ", "]")}")
 
@@ -243,19 +249,17 @@ case class IndexedCollectionsEDB(wrapped: mutable.ArrayBuffer[IndexedCollections
     val result = if (joinKeys.isEmpty) // join without keys, so just loop over everything without index
       filteredOuter.wrapped.flatMap(outerTuple => filteredInner.wrapped.map( innerTuple => outerTuple.concat(innerTuple)))
     else
-      val indexToUse = relativeKeys.find((o, i) => o.nonEmpty && i.nonEmpty) // TODO: pick "best" index
-      if (indexToUse.isEmpty) { // no shared join keys, so just filter by internal constraint
+      if (relativeJoinKeys.isEmpty) { // no shared join keys, so just filter by internal constraint
         // TODO: if no shared keys don't bother building indexes on intermediate result
         filteredOuter.wrapped.flatMap(outerTuple => filteredInner.wrapped.map( innerTuple => outerTuple.concat(innerTuple)))
       } else {
-        val outerPosToUse = indexToUse.get._1.head
-        val innerPosToUse = indexToUse.get._2.head
+        // TODO: picking first constraint, should pick best constraint
+        val outerPosToUse = relativeJoinKeys.head._1
+        val innerPosToUse = relativeJoinKeys.head._2
 
         // remove keys that do not have at least one condition in each tuple, and keep only the first condition (since self-constraints already filtered out)
-        val secondaryKeys = relativeKeys.drop(1).collect {
-          case (outerPos, innerPos) if outerPos.nonEmpty && innerPos.nonEmpty => (outerPos.head, innerPos.head)
-        }
-//        println(s"\t\tsecondary join positions: $secondaryKeys")
+        val secondaryKeys = relativeJoinKeys.drop(1) // TODO: remove indexToUse if not first
+//        println(s"\t\tprimary join outer[$outerPosToUse], inner[$innerPosToUse], secondary join positions: $secondaryKeys")
 
         filteredOuter.wrapped.flatMap(outerTuple =>
           val indexVal = outerTuple(outerPosToUse)
@@ -270,8 +274,10 @@ case class IndexedCollectionsEDB(wrapped: mutable.ArrayBuffer[IndexedCollections
         )
       }
 
+//    println(s"\tintermediateR=${result.size}")
 //    println(s"\tintermediateR=${result.map(_.mkString("(", ", ", ")")).mkString("[", ", ", "]")}")
     val combinedIndexes = indexes.keys ++ toJoin.indexes.keys.map(_ + arity)
+//    println(s"\tcombined new indexes=${combinedIndexes.mkString("[", ", ", "]")}")
     // TODO: filter out indexes that are no longer needed
     IndexedCollectionsEDB(result, combinedIndexes, s"${outer.name}x${inner.name}", arity + toJoin.arity)
 
