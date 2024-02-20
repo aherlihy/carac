@@ -1,11 +1,11 @@
 package datalog.execution
 
-import datalog.dsl.{Atom, Constant, Term, Variable}
+import datalog.dsl.{Atom, Constant, StorageAtom, Term, Variable}
 import datalog.execution
 import datalog.execution.ast.*
 import datalog.execution.ast.transform.{ASTTransformerContext, CopyEliminationPass, Transformer}
 import datalog.execution.ir.*
-import datalog.storage.{DB, EDB, KNOWLEDGE, StorageManager, RelationId}
+import datalog.storage.{DB, EDB, KNOWLEDGE, StorageManager, StorageTerm, RelationId}
 import datalog.tools.Debug.debug
 
 import java.util.concurrent.{Executors, ForkJoinPool}
@@ -40,7 +40,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
     storageManager.initRelation(rId, name)
   }
 
-  def get(rId: Int): Set[Seq[Term]] = {
+  def get(rId: Int): Set[Seq[StorageTerm]] = {
     if (storageManager.knownDbId == -1)
       throw new Exception("Solve() has not yet been called")
     if (precedenceGraph.idbs.contains(rId))
@@ -49,7 +49,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
       storageManager.getEDBResult(rId)
   }
 
-  def get(name: String): Set[Seq[Term]] = {
+  def get(name: String): Set[Seq[StorageTerm]] = {
     get(storageManager.ns(name))
   }
 
@@ -133,7 +133,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
       ))
   }
 
-  def insertEDB(rule: Atom): Unit = {
+  def insertEDB(rule: StorageAtom): Unit = {
     storageManager.insertEDB(rule)
     val allRules = ast.rules.getOrElseUpdate(rule.rId, AllRulesNode(mutable.ArrayBuffer.empty, rule.rId)).asInstanceOf[AllRulesNode]
     allRules.edb = true
@@ -164,19 +164,19 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
   }
 
   // Separate out for easier benchmarking tree stuff vs. compilation
-  def solveCompiled(irTree: IROp[Any], ctx: InterpreterContext): Set[Seq[Term]] = {
+  def solveCompiled(irTree: IROp[Any], ctx: InterpreterContext): Set[Seq[StorageTerm]] = {
     val compiled = compiler.compile(irTree)
     compiled(storageManager)
     storageManager.getNewIDBResult(ctx.toSolve)
   }
 
-  def solveInterpreted[T](irTree: IROp[Any], ctx: InterpreterContext):  Set[Seq[Term]] = {
+  def solveInterpreted[T](irTree: IROp[Any], ctx: InterpreterContext):  Set[Seq[StorageTerm]] = {
     debug("", () => "interpret-only mode")
     irTree.run(storageManager)
     storageManager.getNewIDBResult(ctx.toSolve)
   }
 
-  def solveJIT(irTree: IROp[Any], ctx: InterpreterContext)(using jitOptions: JITOptions): Set[Seq[Term]] = {
+  def solveJIT(irTree: IROp[Any], ctx: InterpreterContext)(using jitOptions: JITOptions): Set[Seq[StorageTerm]] = {
     debug("", () => s"JIT with options $jitOptions")
     val executionContext = if (jitOptions.compileSync == CompileSync.Async && !jitOptions.useGlobalContext)
 //      threadpool = Executors.newFixedThreadPool(Runtime.getRuntime.availableProcessors())
@@ -377,7 +377,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
     stragglers.clear()
   }
 
-  override def solve(rId: Int): Set[Seq[Term]] = {
+  override def solve(rId: Int): Set[Seq[StorageTerm]] = {
     given JITOptions = defaultJITOptions
 //    println(s"jit opts==${defaultJITOptions.toBenchmark}")
     debug("", () => s"solve $rId with options $defaultJITOptions")

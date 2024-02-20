@@ -1,7 +1,7 @@
 package datalog.execution
 
-import datalog.dsl.{Atom, Constant, Term, Variable}
-import datalog.storage.{RelationId, CollectionsStorageManager, StorageManager, EDB}
+import datalog.dsl.{Atom, StorageAtom, Constant, Term, Variable}
+import datalog.storage.{RelationId, CollectionsStorageManager, StorageManager, StorageTerm, EDB}
 import datalog.tools.Debug.debug
 
 import scala.collection.mutable
@@ -21,7 +21,7 @@ class NaiveExecutionEngine(val storageManager: StorageManager, stratified: Boole
     storageManager.initRelation(rId, name)
   }
 
-  def get(rId: RelationId): Set[Seq[Term]] = {
+  def get(rId: RelationId): Set[Seq[StorageTerm]] = {
     if (storageManager.knownDbId == -1)
       throw new Exception("Solve() has not yet been called")
     val edbs = storageManager.getEDBResult(rId)
@@ -30,7 +30,7 @@ class NaiveExecutionEngine(val storageManager: StorageManager, stratified: Boole
     else
       edbs
   }
-  def get(name: String): Set[Seq[Term]] = {
+  def get(name: String): Set[Seq[StorageTerm]] = {
     get(storageManager.ns(name))
   }
 
@@ -42,7 +42,7 @@ class NaiveExecutionEngine(val storageManager: StorageManager, stratified: Boole
     storageManager.addConstantsToDomain(jIdx.constIndexes.values.toSeq)
   }
 
-  def insertEDB(rule: Atom): Unit = {
+  def insertEDB(rule: StorageAtom): Unit = {
     if (!storageManager.edbContains(rule.rId))
       prebuiltOpKeys.getOrElseUpdate(rule.rId, mutable.ArrayBuffer[JoinIndexes]()).addOne(JoinIndexes(IndexedSeq(), mutable.Map(), IndexedSeq(), Seq((PredicateType.POSITIVE, rule.rId)), Seq(rule), mutable.Map.empty, true))
     storageManager.insertEDB(rule)
@@ -82,7 +82,7 @@ class NaiveExecutionEngine(val storageManager: StorageManager, stratified: Boole
     }
   }
 
-  def solve(toSolve: RelationId): Set[Seq[Term]] = {
+  def solve(toSolve: RelationId): Set[Seq[StorageTerm]] = {
     storageManager.verifyEDBs(idbs.keys.to(mutable.Set))
     if (storageManager.edbContains(toSolve) && !idbs.contains(toSolve)) { // if just an edb predicate then return
       return storageManager.getEDBResult(toSolve)

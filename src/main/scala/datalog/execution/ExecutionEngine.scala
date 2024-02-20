@@ -1,7 +1,7 @@
 package datalog.execution
 
-import datalog.dsl.{Atom, Constant, Term, Variable}
-import datalog.storage.{RelationId, StorageManager}
+import datalog.dsl.{Atom, Constant, Term, Variable, StorageAtom}
+import datalog.storage.{RelationId, StorageManager, StorageTerm}
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
@@ -13,11 +13,11 @@ trait ExecutionEngine {
   def initRelation(rId: RelationId, name: String): Unit
 
   def insertIDB(rId: RelationId, rule: Seq[Atom]): Unit
-  def insertEDB(body: Atom): Unit
+  def insertEDB(body: StorageAtom): Unit
 
-  def solve(rId: RelationId): Set[Seq[Term]]
-  def get(rId: RelationId): Set[Seq[Term]]
-  def get(name: String): Set[Seq[Term]]
+  def solve(rId: RelationId): Set[Seq[StorageTerm]]
+  def get(rId: RelationId): Set[Seq[StorageTerm]]
+  def get(name: String): Set[Seq[StorageTerm]]
 
   /**
    * For a single rule, get (1) the indexes of repeated variables within the body,

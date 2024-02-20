@@ -1,7 +1,9 @@
 package datalog.dsl
 
 import datalog.execution.ExecutionEngine
+import datalog.storage.StorageTerm
 
+import scala.collection.immutable.ArraySeq
 import scala.collection.mutable
 import scala.quoted.{Expr, Quotes}
 
@@ -30,6 +32,7 @@ class Atom(val rId: Int, val terms: Seq[Term], val negated: Boolean) {
   def :- (body: Unit): Unit = ???
   val hash: String = s"${if (negated) "!" else ""}$rId.${terms.mkString("", "", "")}"
 }
+type StorageAtom = Atom { val terms: Seq[StorageTerm] }
 
 case class Relation[T <: Constant](id: Int, name: String)(using ee: ExecutionEngine) {
   type RelTerm = T | Variable
@@ -48,13 +51,15 @@ case class Relation[T <: Constant](id: Int, name: String)(using ee: ExecutionEng
     override def :-(body: Unit): Unit =
       if (negated)
         throw new Exception("Cannot have negated EDB, define a new EDB")
-      ee.insertEDB(this)
+      ee.insertEDB(this.asInstanceOf[StorageAtom])
 
     override def toString = name + terms.mkString("(", ", ", ")")
   }
+
   // Create a tuple in this relation
   def apply(ts: RelTerm*): RelAtom = RelAtom(ts.toIndexedSeq)
+  //def apply(ts: RelTerm*): RelAtom = RelAtom(ts.toIndexedSeq)
 
-  def solve(): Set[Seq[Term]] = ee.solve(id).map(s => s.toSeq).toSet
-  def get(): Set[Seq[Term]] = ee.get(id)
+  def solve(): Set[Seq[StorageTerm]] = ee.solve(id).map(s => s.toSeq).toSet
+  def get(): Set[Seq[StorageTerm]] = ee.get(id)
 }

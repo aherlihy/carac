@@ -1,6 +1,6 @@
 package datalog.storage
 
-import datalog.dsl.{Atom, Constant, Term, Variable}
+import datalog.dsl.{StorageAtom, Constant, Term, Variable}
 import datalog.execution.{AllIndexes, JoinIndexes, PredicateType}
 
 import scala.collection.mutable
@@ -19,7 +19,7 @@ trait StorageManager(val ns: NS) {
 
   def updateAliases(aliases: mutable.Map[RelationId, RelationId]): Unit
 
-  def insertEDB(rule: Atom): Unit
+  def insertEDB(rule: StorageAtom): Unit
   def getEmptyEDB(rId: RelationId): EDB
   def edbContains(rId: RelationId): Boolean
   def getEDB(rId: RelationId): EDB
@@ -35,9 +35,9 @@ trait StorageManager(val ns: NS) {
   def getNewDerivedDB(rId: RelationId): EDB
   def getKnownDeltaDB(rId: RelationId): EDB
   def getNewDeltaDB(rId: RelationId): EDB
-  def getKnownIDBResult(rId: RelationId): Set[Seq[Term]]
-  def getNewIDBResult(rId: RelationId): Set[Seq[Term]]
-  def getEDBResult(rId: RelationId): Set[Seq[Term]]
+  def getKnownIDBResult(rId: RelationId): Set[Seq[StorageTerm]]
+  def getNewIDBResult(rId: RelationId): Set[Seq[StorageTerm]]
+  def getEDBResult(rId: RelationId): Set[Seq[StorageTerm]]
 
   def resetKnownDerived(rId: RelationId, rules: EDB, prev: EDB): Unit
   def resetNewDerived(rId: RelationId, rules: EDB, prev: EDB): Unit
