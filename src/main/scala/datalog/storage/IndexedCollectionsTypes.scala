@@ -46,14 +46,14 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
                                  indexKeys: mutable.BitSet,
                                  name: String,
                                  arity: Int,
-                                 var skipIndexes: mutable.Set[Int] // don't build indexes for these keys
+                                 var skipIndexes: mutable.BitSet // don't build indexes for these keys
                                 ) extends EDB with IterableOnce[IndexedCollectionsRow] {
   import IndexedCollectionsEDB.*
 
   if indexKeys.exists(_ >= arity) then throw new Exception(s"Error: creating edb $name with indexes ${indexKeys.mkString("[", ", ", "]")} but arity $arity")
   if skipIndexes.exists(_ >= arity) then throw new Exception(s"Error: creating edb $name but skiping indexes ${skipIndexes.mkString("[", ", ", "]")} but arity $arity")
   // TODO: distinguish between primary (one sortedMap of tuples), and secondary (one map of indexes)
-  private val indexes: Array[IndexMap] = new Array[IndexMap](arity)
+  private val indexes: Array[IndexMap] = new Array[IndexMap](arity) // does it make sense to have arity # of indexes if we usually only have 1 index?
   bulkRegisterIndex(indexKeys)
 
   inline def getIndex(idx: Int): IndexMap =
@@ -84,8 +84,13 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
     this
   }
 
+  def bulkSkipIndex(idxs: mutable.Set[Int]): this.type = {
+    skipIndexes.addAll(idxs)
+    this
+  }
+
   def bulkRebuildIndex(): this.type = {
-    skipIndexes = mutable.Set()
+    skipIndexes = mutable.BitSet()
     // rebuild indexes
     var i = 0
     while i < indexes.length do
@@ -259,6 +264,7 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
     }
     val keyToJoin = relativeJoinKeys.headOption // TODO: get "best" index"
 
+//    println(s"\t\trelative join keys = ${relativeJoinKeys.mkString("[", ", ", "]")}")
 //    println(s"\t\trelative join positions = ${relativeKeys.map((o, i) => s"(outers: ${o.mkString("", ".", "")}, inners: ${i.mkString("", ".", "")})").mkString("[", ", ", "]")}")
 
     // Filter first to cut down size, but have to rebuild indexes, but only in 1st round
@@ -286,14 +292,14 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
           val filtered = inner.wrapped.filter(innerTuple =>
             relativeKeys.forall((_, innerKeys) => innerTuple.filterConstraint(innerKeys))
           )
-          val withInnerKey = if keyToJoin.isEmpty then mutable.Set() else inner.indexKeys.filter(_ != keyToJoin.get._2)
+          val withInnerKey = if keyToJoin.isEmpty then mutable.BitSet() else inner.indexKeys.filter(_ != keyToJoin.get._2)
           IndexedCollectionsEDB(filtered, inner.indexKeys, inner.name, inner.arity, withInnerKey) // do not rebuild indexes on anything but join key
       else // need to both filter + maybe self constrain
         val filtered = inner.getIndex(innerConstantFilters.head._1).lookupOrCreate(innerConstantFilters.head._2).
           filter(innerTuple =>
             innerTuple.filterConstant(innerConstantFilters.drop(1)) && relativeKeys.forall((_, innerKeys) => innerTuple.filterConstraint(innerKeys))
           )
-        val withInnerKey = if keyToJoin.isEmpty then mutable.Set() else inner.indexKeys.filter(_ != keyToJoin.get._2)
+        val withInnerKey = if keyToJoin.isEmpty then mutable.BitSet() else inner.indexKeys.filter(_ != keyToJoin.get._2)
         IndexedCollectionsEDB(filtered, inner.indexKeys, inner.name, inner.arity, withInnerKey)
 
     val result = if (keyToJoin.isEmpty) // join without keys, so just loop over everything without index
@@ -336,11 +342,21 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
   def nonEmpty(): Boolean = wrapped.nonEmpty
   def length = wrapped.size
 
+  def clear(): Unit = {
+    wrapped.clear()
+    indexKeys.foreach(i => indexes(i).clear())
+//    indexKeys.clear()
+//    var i = 0
+//    while i < indexes.length do
+//      indexes(i) = null
+//     indexes(i).clear()
+//      i += 1
+  }
+
   // TODO: potentially remove IterableOnce, or restructure to use indexes with iterable ops "automatically"
   def map(f: IndexedCollectionsRow => IndexedCollectionsRow): IndexedCollectionsEDB = ???
   def filter(f: IndexedCollectionsRow => Boolean): IndexedCollectionsEDB = ???
   def flatMap(f: IndexedCollectionsRow => IterableOnce[IndexedCollectionsRow]): IndexedCollectionsEDB = ???
-  def clear = ???
   def toSet = ???
   def apply = ???
   def mkString = ???
@@ -357,6 +373,7 @@ object IndexedCollectionsEDB {
       index.containsKey(key)
     inline def foreach(f: java.util.function.BiConsumer[StorageTerm, ArrayBuffer[IndexedCollectionsRow]]): Unit =
       index.forEach(f)
+    inline def clear(): Unit = index.clear()
 
   extension (edbs: Seq[EDB])
     def unionEDB: EDB =
@@ -468,7 +485,30 @@ case class IndexedCollectionsRow(wrappedS: Seq[StorageTerm]) extends Row[Storage
  * AKA a mutable.Map[RelationId, ArrayBuffer[Seq[Term]]].
  */
 case class IndexedCollectionsDatabase(wrapped: mutable.Map[RelationId, IndexedCollectionsEDB]) extends Database[IndexedCollectionsEDB] {
-  export wrapped.{ apply, getOrElse, foreach, contains, update, exists, toSeq, forall }
+  val definedRelations = mutable.Set.from(wrapped.keys)
+  def clear(): Unit = {
+//    wrapped.clear()
+    wrapped.foreach((rId, edb) =>
+//      IndexedCollectionsEDB.empty(edb.arity, edb.indexKeys, edb.name, edb.skipIndexes)
+      edb.clear()
+    )
+    definedRelations.clear()
+  }
+  def contains(c: RelationId): Boolean = definedRelations.contains(c)
+
+  def update(key: RelationId, value: IndexedCollectionsEDB): Unit =
+    definedRelations.addOne(key)
+    wrapped(key) = value
+
+  def foreach[U](f: ((RelationId, IndexedCollectionsEDB)) => U): Unit = wrapped.filter((k, v) => definedRelations.contains(k)).foreach(f)
+
+  def exists(p: ((RelationId, IndexedCollectionsEDB)) => Boolean): Boolean = wrapped.filter((k, v) => definedRelations.contains(k)).exists(p)
+
+  def forall(p: ((RelationId, IndexedCollectionsEDB)) => Boolean): Boolean = wrapped.filter((k, v) => definedRelations.contains(k)).forall(p)
+
+  def toSeq: Seq[(RelationId, IndexedCollectionsEDB)] = wrapped.filter((k, v) => definedRelations.contains(k)).toSeq
+
+  export wrapped.{ apply, getOrElse }
 }
 object IndexedCollectionsDatabase {
   def apply(elems: (RelationId, IndexedCollectionsEDB)*): IndexedCollectionsDatabase = new IndexedCollectionsDatabase(mutable.Map[RelationId, IndexedCollectionsEDB](elems *))

@@ -8,7 +8,7 @@ import java.nio.file.Paths
 class tc_test extends ExampleTestGenerator("tc") with tc
 trait tc {
   val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/tc/facts"
-  val toSolve = "many_vars"
+  val toSolve = "tc"
   def pretest(program: Program): Unit = {
     val base = program.namedRelation[Constant]("base")
 
@@ -18,7 +18,7 @@ trait tc {
 
     val tcr = program.relation[Constant]("tcr")
 
-    val many_vars = program.relation[Constant]("many_vars")
+//    val many_vars = program.relation[Constant]("many_vars")
 
 //    val wConst = program.relation[Constant]("wConst")
 
@@ -39,7 +39,7 @@ trait tc {
     base("z", "z") :- ()
 //    base("z", "a") :- ()
 //    many_vars(X, W) :- (tc(Z, X), tc(Z, W), tc(W, Y))
-    many_vars(X) :- (tc(Z, X), tc(Z, X))
+//    many_vars(X) :- (tc(Z, X), tc(Z, X))
 
 //    wConst(X) :- (tc("a", X), base(X, X))
   }

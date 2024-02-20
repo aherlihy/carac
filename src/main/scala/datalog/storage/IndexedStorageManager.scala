@@ -94,8 +94,7 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
     else
       relationArity(rule.rId) = rule.terms.length
       indexCandidates.getOrElseUpdate(rule.rId, mutable.BitSet())
-      edbs(rule.rId) = IndexedCollectionsEDB.empty(rule.terms.length, indexCandidates(rule.rId), ns(rule.rId), mutable.BitSet())
-      edbs(rule.rId).addOne(IndexedCollectionsRow(rule.terms))
+      edbs(rule.rId) = IndexedCollectionsEDB(mutable.ArrayBuffer(IndexedCollectionsRow(rule.terms)), indexCandidates(rule.rId), ns(rule.rId), rule.terms.length, mutable.BitSet())
     edbDomain.addAll(rule.terms)
   }
   /* Call when adding an IDB rule so domain can grow incrementally */
@@ -185,13 +184,20 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
     val rules = asIndexedCollectionsEDB(rulesEDB)
     val prev = asIndexedCollectionsEDB(prevEDB)
     // TODO: maybe use insert not copy, except problem is that rules is delta.new, and prev is derived.known. Delta cannot mutate because needed for the end-of-iteration check, and derived cannot mutate (?) because needed to be read by other rules potentially
-    derivedDB(newDbId)(rId) = rules.copyAndAdd(prev)
+    if (derivedDB(newDbId).contains(rId))
+      derivedDB(newDbId)(rId).clear()
+      derivedDB(newDbId)(rId).bulkSkipIndex(rules.skipIndexes)
+      derivedDB(newDbId)(rId).bulkRegisterIndex(rules.indexKeys)
+      derivedDB(newDbId)(rId).addAll(rules.wrapped).addAll(prev.wrapped)
+    else
+      derivedDB(newDbId)(rId) = rules.copyAndAdd(prev)
 
   def setNewDelta(rId: RelationId, rules: EDB): Unit =
     deltaDB(newDbId)(rId) = asIndexedCollectionsEDB(rules)
 
   def clearNewDerived(): Unit =
-    derivedDB(newDbId) = IndexedCollectionsDatabase()
+    derivedDB(newDbId).clear()//foreach((rId, edb) => edb.clear())
+//    derivedDB(newDbId) = IndexedCollectionsDatabase()
   // Compare & Swap
   def swapKnowledge(): Unit = {
     iteration += 1
