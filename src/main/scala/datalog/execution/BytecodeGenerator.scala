@@ -190,7 +190,7 @@ object BytecodeGenerator {
   def emitConstant(xb: CodeBuilder, c: Constant): Unit =
     c match
       case e: Int => emitInteger(xb, e)
-      case s: String => emitString(xb, s)
+      // case s: String => emitString(xb, s)
 
    def emitStringConstantTuple2(xb: CodeBuilder, t: (String, Constant)): Unit =
      emitNew(xb, classOf[(String, Constant)], xxb =>

@@ -10,7 +10,7 @@ import scala.quoted.{Expr, Quotes}
 
 trait AbstractProgram // TODO: alternate program?
 
-type Constant = Int | String // TODO: other constant types?
+type Constant = Int/* | String*/ // TODO: other constant types?
 
 val __ = Variable(-1, true)
 

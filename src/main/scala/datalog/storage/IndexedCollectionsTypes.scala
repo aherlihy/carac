@@ -23,21 +23,6 @@ object IndexedCollectionsCasts {
   def asIndexedCollectionsRow(to: Row[StorageTerm]): IndexedCollectionsRow = to.asInstanceOf[IndexedCollectionsRow]
 }
 
-given Ordering[StorageTerm] with
-  def compare(x: StorageTerm, y: StorageTerm): Int = x match
-    case x: Int =>
-      y match
-        case y: Int =>
-          Ordering[Int].compare(x, y)
-        case y: String =>
-          -1
-    case x: String =>
-      y match
-        case y: String =>
-          Ordering[String].compare(x, y)
-        case y: Int =>
-          1
-
 /**
  * Precise type for the EDB type in IndexedCollectionsStorageManager.
  * Represents one EDB relation, i.e. the set of rows of tuples in a particular EDB relation.

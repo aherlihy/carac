@@ -25,7 +25,7 @@ class StagedSnippetCompiler(val storageManager: StorageManager)(using val jitOpt
     def apply(x: Constant)(using Quotes) = {
       x match {
         case i: Int => Expr(i)
-        case s: String => Expr(s)
+        // case s: String => Expr(s)
       }
     }
   }
