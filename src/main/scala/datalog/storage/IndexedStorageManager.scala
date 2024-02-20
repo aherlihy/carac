@@ -22,7 +22,7 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
   protected val deltaDB: mutable.Map[KnowledgeId, IndexedCollectionsDatabase] = mutable.Map[KnowledgeId, IndexedCollectionsDatabase]()
 
   val allRulesAllIndexes: mutable.Map[RelationId, AllIndexes] = mutable.Map.empty // Index => position
-  val indexCandidates: mutable.Map[RelationId, mutable.Set[Int]] = mutable.Map[RelationId, mutable.Set[Int]]() // relative position of atoms with constant or variable locations
+  val indexCandidates: mutable.Map[RelationId, mutable.BitSet] = mutable.Map[RelationId, mutable.BitSet]() // relative position of atoms with constant or variable locations
   val relationArity: mutable.Map[RelationId, Int] = mutable.Map[RelationId, Int]()
 
   // Update metadata if aliases are discovered
@@ -31,18 +31,18 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
       if (relationArity.contains(k) && relationArity.contains(v) && relationArity(k) != relationArity(v))
         throw new Exception(s"Error: registering relations ${ns(k)} and ${ns(v)} as aliases but have different arity (${relationArity(k)} vs. ${relationArity(v)})")
       relationArity.getOrElseUpdate(k, relationArity.getOrElse(v, throw new Exception(s"No arity available for either ${ns(k)} or ${ns(v)}")))
-      indexCandidates(k) = indexCandidates.getOrElseUpdate(k, mutable.Set[Int]()).addAll(indexCandidates.getOrElse(v, mutable.Set[Int]()))
+      indexCandidates(k) = indexCandidates.getOrElseUpdate(k, mutable.BitSet()).addAll(indexCandidates.getOrElse(v, mutable.BitSet()))
       indexCandidates(v) = indexCandidates(k)
     )
   }
 
   // Store relative positions of shared variables as candidates for potential indexes
-  def registerIndexCandidates(cands: mutable.Map[RelationId, mutable.Set[Int]]): Unit = {
+  def registerIndexCandidates(cands: mutable.Map[RelationId, mutable.BitSet]): Unit = {
     cands.foreach((rId, idxs) =>
       // adds indexes to any the EDBs
       if edbs.contains(rId) then edbs(rId).bulkRegisterIndex(idxs)
       // tells intermediate relations to build indexes
-      indexCandidates.getOrElseUpdate(rId, mutable.Set[Int]()).addAll(idxs)
+      indexCandidates.getOrElseUpdate(rId, mutable.BitSet()).addAll(idxs)
     )
   }
   // Store relation arity. In the future can require it to be declared, but for now derived.
@@ -71,7 +71,7 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
     deltaDB.addOne(knownDbId, IndexedCollectionsDatabase())
 
     edbs.foreach((rId, relation) => {
-      deltaDB(knownDbId)(rId) = IndexedCollectionsEDB.empty(relation.arity, indexCandidates(rId), ns(rId), mutable.Set())
+      deltaDB(knownDbId)(rId) = IndexedCollectionsEDB.empty(relation.arity, indexCandidates(rId), ns(rId), mutable.BitSet())
       discoveredFacts(rId) = relation
     }) // Delta-EDB is just empty sets
     dbId += 1
@@ -81,7 +81,7 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
     deltaDB.addOne(newDbId, IndexedCollectionsDatabase())
 
     edbs.foreach((rId, relation) => {
-      deltaDB(newDbId)(rId) = IndexedCollectionsEDB.empty(relation.arity, indexCandidates(rId), ns(rId), mutable.Set()) // TODO: no indexes on delta.new, bc write into?
+      deltaDB(newDbId)(rId) = IndexedCollectionsEDB.empty(relation.arity, indexCandidates(rId), ns(rId), mutable.BitSet()) // TODO: no indexes on delta.new, bc write into?
     }) // Delta-EDB is just empty sets
     dbId += 1
   }
@@ -93,8 +93,8 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
       edbs(rule.rId).addOne(IndexedCollectionsRow(rule.terms))
     else
       relationArity(rule.rId) = rule.terms.length
-      indexCandidates.getOrElseUpdate(rule.rId, mutable.Set[Int]())
-      edbs(rule.rId) = IndexedCollectionsEDB.empty(rule.terms.length, indexCandidates(rule.rId), ns(rule.rId), mutable.Set())
+      indexCandidates.getOrElseUpdate(rule.rId, mutable.BitSet())
+      edbs(rule.rId) = IndexedCollectionsEDB.empty(rule.terms.length, indexCandidates(rule.rId), ns(rule.rId), mutable.BitSet())
       edbs(rule.rId).addOne(IndexedCollectionsRow(rule.terms))
     edbDomain.addAll(rule.terms)
   }
@@ -106,7 +106,7 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
   def getEmptyEDB(rId: RelationId): IndexedCollectionsEDB =
     if (!relationArity.contains(rId))
       throw new Exception(s"Getting empty relation $rId (${ns(rId)}) but undefined")
-    IndexedCollectionsEDB.empty(relationArity(rId), indexCandidates.getOrElse(rId, mutable.Set[Int]()), ns(rId), mutable.Set())
+    IndexedCollectionsEDB.empty(relationArity(rId), indexCandidates.getOrElse(rId, mutable.BitSet()), ns(rId), mutable.BitSet())
   def getEDB(rId: RelationId): IndexedCollectionsEDB = edbs(rId)
   def edbContains(rId: RelationId): Boolean = edbs.contains(rId)
   def getAllEDBS(): mutable.Map[RelationId, Any] = edbs.wrapped.asInstanceOf[mutable.Map[RelationId, Any]]
@@ -137,23 +137,23 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
     // short but inefficient
     val res = List.fill(arity)(edbDomain).flatten.combinations(arity).flatMap(_.permutations).toSeq
     IndexedCollectionsEDB(
-      mutable.ArrayBuffer.from(res.map(r => IndexedCollectionsRow(r.toSeq))), indexCandidates(rId), ns(rId), arity, mutable.Set()
+      mutable.ArrayBuffer.from(res.map(r => IndexedCollectionsRow(r.toSeq))), indexCandidates(rId), ns(rId), arity, mutable.BitSet()
     )
   }
 
   // Read intermediate results
   def getKnownDerivedDB(rId: RelationId): IndexedCollectionsEDB =
     if !relationArity.contains(rId) then throw new Exception(s"Internal error: relation $rId (${ns(rId)}) has no arity")
-    derivedDB(knownDbId).getOrElse(rId, discoveredFacts.getOrElse(rId, IndexedCollectionsEDB.empty(relationArity(rId), indexCandidates(rId), ns(rId), mutable.Set())))
+    derivedDB(knownDbId).getOrElse(rId, discoveredFacts.getOrElse(rId, IndexedCollectionsEDB.empty(relationArity(rId), indexCandidates(rId), ns(rId), mutable.BitSet())))
   def getNewDerivedDB(rId: RelationId): IndexedCollectionsEDB =
     if !relationArity.contains(rId) then throw new Exception(s"Internal error: relation $rId (${ns(rId)}) has no arity")
-    derivedDB(newDbId).getOrElse(rId, discoveredFacts.getOrElse(rId, IndexedCollectionsEDB.empty(relationArity(rId), indexCandidates(rId), ns(rId), mutable.Set())))
+    derivedDB(newDbId).getOrElse(rId, discoveredFacts.getOrElse(rId, IndexedCollectionsEDB.empty(relationArity(rId), indexCandidates(rId), ns(rId), mutable.BitSet())))
   def getKnownDeltaDB(rId: RelationId): IndexedCollectionsEDB =
     if !relationArity.contains(rId) then throw new Exception(s"Internal error: relation $rId (${ns(rId)}) has no arity")
-    deltaDB(knownDbId).getOrElse(rId, discoveredFacts.getOrElse(rId, IndexedCollectionsEDB.empty(relationArity(rId), indexCandidates(rId), ns(rId), mutable.Set())))
+    deltaDB(knownDbId).getOrElse(rId, discoveredFacts.getOrElse(rId, IndexedCollectionsEDB.empty(relationArity(rId), indexCandidates(rId), ns(rId), mutable.BitSet())))
   def getNewDeltaDB(rId: RelationId): IndexedCollectionsEDB =
     if !relationArity.contains(rId) then throw new Exception(s"Internal error: relation $rId (${ns(rId)}) has no arity")
-    deltaDB(newDbId).getOrElse(rId, discoveredFacts.getOrElse(rId, IndexedCollectionsEDB.empty(relationArity(rId), indexCandidates(rId), ns(rId), mutable.Set())))
+    deltaDB(newDbId).getOrElse(rId, discoveredFacts.getOrElse(rId, IndexedCollectionsEDB.empty(relationArity(rId), indexCandidates(rId), ns(rId), mutable.BitSet())))
 
   // Read final results
   def getKnownIDBResult(rId: RelationId): Set[Seq[Term]] =
@@ -163,7 +163,7 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
     debug(s"Final IDB Result[new]", () => s" at iteration $iteration: @$newDbId, count=${getNewDerivedDB(rId).length}")
     getNewDerivedDB(rId).getSetOfSeq
   def getEDBResult(rId: RelationId): Set[Seq[Term]] =
-    edbs.getOrElse(rId, IndexedCollectionsEDB.empty(relationArity.getOrElse(rId, 0), skipIndexes = mutable.Set())).getSetOfSeq
+    edbs.getOrElse(rId, IndexedCollectionsEDB.empty(relationArity.getOrElse(rId, 0), skipIndexes = mutable.BitSet())).getSetOfSeq
 
   // Write intermediate results
   def setKnownDerived(rId: RelationId, rules: EDB): Unit =
@@ -226,9 +226,9 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
           throw new Exception(s"Error: using EDB $rId (${ns(rId)}) but no known arity")
         edbs(rId) = IndexedCollectionsEDB.empty(
           relationArity(rId),
-          indexCandidates.getOrElseUpdate(rId, mutable.Set()),
+          indexCandidates.getOrElseUpdate(rId, mutable.BitSet()),
           ns(rId),
-          mutable.Set()
+          mutable.BitSet()
         )
     )
   }
@@ -257,12 +257,12 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
         originalK.constIndexes,
         originalK.projIndexes,
         ns(rId),
-        indexCandidates.getOrElse(rId, mutable.Set())
+        indexCandidates.getOrElse(rId, mutable.BitSet())
       )
     } else {
       val result = inputs
         .foldLeft(
-          (IndexedCollectionsEDB.empty(0, skipIndexes = mutable.Set()), 0, originalK) // initialize intermediate indexed-collection
+          (IndexedCollectionsEDB.empty(0, skipIndexes = mutable.BitSet()), 0, originalK) // initialize intermediate indexed-collection
         )((combo: (IndexedCollectionsEDB, Int, JoinIndexes), innerT: IndexedCollectionsEDB) =>
           val outerT = combo._1
           val atomI = combo._2
@@ -282,7 +282,7 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
             //            intermediateCardinalities = intermediateCardinalities :+ edbResult.length
             (edbResult, atomI + 1, k)
         )
-      val indexesToIgnore = indexCandidates.getOrElse(rId, mutable.Set())
+      val indexesToIgnore = indexCandidates.getOrElse(rId, mutable.BitSet())
       IndexedCollectionsEDB(
         result._1.wrapped.mapInPlace(_.project(result._3.projIndexes)),
         indexesToIgnore,

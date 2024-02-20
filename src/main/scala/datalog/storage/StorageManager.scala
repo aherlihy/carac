@@ -24,7 +24,7 @@ trait StorageManager(val ns: NS) {
   def edbContains(rId: RelationId): Boolean
   def getEDB(rId: RelationId): EDB
   def getAllEDBS(): mutable.Map[RelationId, Any] // if you ever just want to read the EDBs as a map, used for testing
-  def registerIndexCandidates(cands: mutable.Map[RelationId, mutable.Set[Int]]): Unit
+  def registerIndexCandidates(cands: mutable.Map[RelationId, mutable.BitSet]): Unit
   def registerRelationArity(rId: RelationId, arity: Int): Unit
 
   // Helpers for negation

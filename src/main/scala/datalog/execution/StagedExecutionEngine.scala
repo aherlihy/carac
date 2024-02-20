@@ -63,12 +63,12 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
 
     val allLocs = k.varIndexes.flatten ++ k.constIndexes.keys
     if (allLocs.nonEmpty) {
-      val relationCands = mutable.Map[RelationId, mutable.Set[Int]]()
+      val relationCands = mutable.Map[RelationId, mutable.BitSet]()
       var start = 0
       for atom <- ruleSeq.drop(1) do {
         for i <- atom.terms.indices do {
           if (allLocs.contains(start + i))
-            relationCands.getOrElseUpdate(atom.rId, mutable.Set[Int]()).addOne(i)
+            relationCands.getOrElseUpdate(atom.rId, mutable.BitSet()).addOne(i)
         }
         start += atom.terms.size
       }

@@ -26,7 +26,7 @@ abstract class CollectionsStorageManager(override val ns: NS) extends StorageMan
 
   val relOps: VolcanoOperators[this.type] = VolcanoOperators(this)
 
-  def registerIndexCandidates(cands: mutable.Map[RelationId, mutable.Set[Int]]): Unit = () // no indexes to register
+  def registerIndexCandidates(cands: mutable.Map[RelationId, mutable.BitSet]): Unit = () // no indexes to register
 
   def registerRelationArity(rId: RelationId, arity: Int): Unit = ()
 
