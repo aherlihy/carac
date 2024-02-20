@@ -43,7 +43,7 @@ given Ordering[StorageTerm] with
  * AKA mutable.SortedMap[Term, ArrayBuffer[Seq[StorageTerm]]] for each index key, for now ignore multi-key indexes
  */
 case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollectionsRow],
-                                 indexKeys: mutable.Set[Int],
+                                 indexKeys: mutable.BitSet,
                                  name: String,
                                  arity: Int,
                                  var skipIndexes: mutable.Set[Int] // don't build indexes for these keys
@@ -200,7 +200,7 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
   def projectFilterWithIndex(constIndexes: mutable.Map[Int, Constant],
                              projIndexes: Seq[(String, Constant)],
                              newName: String,
-                             newIndexes: mutable.Set[Int]): IndexedCollectionsEDB =
+                             newIndexes: mutable.BitSet): IndexedCollectionsEDB =
     val constFilter = constIndexes.filter((ind, _) => ind < arity)
     if (constFilter.isEmpty)
       if (projIndexes.isEmpty)
@@ -384,7 +384,7 @@ object IndexedCollectionsEDB {
    * @param preIndexes
    * @return
    */
-  def empty(arity: Int, preIndexes: mutable.Set[Int] = mutable.Set[Int](), rName: String = "ANON", skipIndexes: mutable.Set[Int]): IndexedCollectionsEDB =
+  def empty(arity: Int, preIndexes: mutable.BitSet = mutable.BitSet(), rName: String = "ANON", skipIndexes: mutable.BitSet): IndexedCollectionsEDB =
     IndexedCollectionsEDB(mutable.ArrayBuffer[IndexedCollectionsRow](), preIndexes, rName, arity, skipIndexes)
 
   /**
