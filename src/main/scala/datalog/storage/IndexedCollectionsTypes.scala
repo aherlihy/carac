@@ -53,7 +53,7 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
   if indexKeys.exists(_ >= arity) then throw new Exception(s"Error: creating edb $name with indexes ${indexKeys.mkString("[", ", ", "]")} but arity $arity")
   if skipIndexes.exists(_ >= arity) then throw new Exception(s"Error: creating edb $name but skiping indexes ${skipIndexes.mkString("[", ", ", "]")} but arity $arity")
   // TODO: distinguish between primary (one sortedMap of tuples), and secondary (one map of indexes)
-  private val indexes: mutable.Map[Int, IndexMap] = mutable.Map[Int, IndexMap]()
+  private val indexes: Array[IndexMap] = new Array[IndexMap](arity)
   bulkRegisterIndex(indexKeys)
 
   inline def getIndex(idx: Int): TreeMap[StorageTerm, ArrayBuffer[IndexedCollectionsRow]] =
@@ -71,7 +71,7 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
   def registerIndex(idx: Int): this.type = {
     // TODO: potentially build indexes async
     indexKeys.addOne(idx)
-    if (!indexes.contains(idx))
+    if (indexes(idx) == null)
       val newIndex: IndexMap = TreeMap()
       if (!skipIndexes.contains(idx))
         wrapped.foreach(edb => newIndex.lookupOrCreate(edb(idx)).addOne(edb))
@@ -87,11 +87,14 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
   def bulkRebuildIndex(): this.type = {
     skipIndexes = mutable.Set()
     // rebuild indexes
-    indexes.keys.foreach(idx =>
-      val newIndex: IndexMap = TreeMap()
-      wrapped.foreach(edb => newIndex.lookupOrCreate(edb(idx)).addOne(edb))
-      indexes(idx) = newIndex
-    )
+    var i = 0
+    while i < indexes.length do
+      val oldIndex = indexes(i)
+      if oldIndex != null then
+        val newIndex: IndexMap = TreeMap()
+        wrapped.foreach(edb => newIndex.lookupOrCreate(edb(i)).addOne(edb))
+        indexes(i) = newIndex
+      i += 1
     this
   }
 
@@ -146,10 +149,11 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
     this
 
   def contains(edb: IndexedCollectionsRow): Boolean =
-    if (indexes.isEmpty)
+    var i = 0
+    while indexes(i) == null && i < indexes.length do i += 1 // for now take first index and use it to filter, TODO: use smallest
+    if i == indexes.length then
       wrapped.contains(edb)
     else
-      val i = indexes.head._1 // for now take first index and use it to filter, TODO: use smallest
       val values = indexes(i).get(edb(i))
       values != null && values.contains(edb)
 
@@ -158,14 +162,16 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
    */
   def diffInPlace(that: IndexedCollectionsEDB): IndexedCollectionsEDB =
     this.wrapped = wrapped.diff(that.wrapped)
-    indexes.foreach((idx, index) =>
-      index.foreach((term, tuples) =>
-        tuples.filterInPlace(tuple =>
-          val include = !that.contains(tuple)
-          include
+    var i = 0
+    while i < indexes.length do
+      val index = indexes(i)
+      if index != null then
+        index.foreach((term, tuples) =>
+          tuples.filterInPlace(tuple =>
+            val include = !that.contains(tuple)
+            include
+          )
         )
-      )
-    )
     this
   def diff(that: IndexedCollectionsEDB): IndexedCollectionsEDB =
     val res = wrapped.diff(that.wrapped)
@@ -409,7 +415,7 @@ object IndexedCollectionsEDB {
 
   def allIndexesToString(edb: IndexedCollectionsEDB): String = {
     s"${edb.name}:\n\t${
-      edb.indexes.toSeq.map((pos, index) =>
+      edb.indexes.zipWithIndex.filter(_._1 != null).map((index, pos) =>
         s"@$pos: ${indexToString(index)}"
       ).mkString("", "\n\t", "")
     }"
