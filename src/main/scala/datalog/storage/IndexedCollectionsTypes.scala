@@ -8,6 +8,7 @@ import datalog.execution.JoinIndexes
 import datalog.storage.IndexedCollectionsEDB.allIndexesToString
 
 import scala.collection.mutable.ArrayBuffer
+import java.util.TreeMap
 
 
 /**
@@ -47,13 +48,15 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
                                  arity: Int,
                                  var skipIndexes: mutable.Set[Int] // don't build indexes for these keys
                                 ) extends EDB with IterableOnce[IndexedCollectionsRow] {
+  import IndexedCollectionsEDB.*
+
   if indexKeys.exists(_ >= arity) then throw new Exception(s"Error: creating edb $name with indexes ${indexKeys.mkString("[", ", ", "]")} but arity $arity")
   if skipIndexes.exists(_ >= arity) then throw new Exception(s"Error: creating edb $name but skiping indexes ${skipIndexes.mkString("[", ", ", "]")} but arity $arity")
   // TODO: distinguish between primary (one sortedMap of tuples), and secondary (one map of indexes)
-  private val indexes: mutable.Map[Int, mutable.SortedMap[StorageTerm, ArrayBuffer[IndexedCollectionsRow]]] = mutable.Map[Int, mutable.SortedMap[StorageTerm, mutable.ArrayBuffer[IndexedCollectionsRow]]]()
+  private val indexes: mutable.Map[Int, IndexMap] = mutable.Map[Int, IndexMap]()
   bulkRegisterIndex(indexKeys)
 
-  inline def getIndex(inline idx: Int): mutable.SortedMap[StorageTerm, ArrayBuffer[IndexedCollectionsRow]] =
+  inline def getIndex(inline idx: Int): TreeMap[StorageTerm, ArrayBuffer[IndexedCollectionsRow]] =
     if (skipIndexes.contains(idx)) throw new Exception(s"Error: trying to access data in $name with skipped index $idx")
     indexes(idx)
 
@@ -69,9 +72,9 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
     // TODO: potentially build indexes async
     indexKeys.addOne(idx)
     if (!indexes.contains(idx))
-      val newIndex = mutable.SortedMap[StorageTerm, mutable.ArrayBuffer[IndexedCollectionsRow]]()
+      val newIndex: IndexMap = TreeMap()
       if (!skipIndexes.contains(idx))
-        wrapped.foreach(edb => newIndex.getOrElseUpdate(edb(idx), mutable.ArrayBuffer[IndexedCollectionsRow]()).addOne(edb))
+        wrapped.foreach(edb => newIndex.lookupOrCreate(edb(idx)).addOne(edb))
       indexes(idx) = newIndex
     this
   }
@@ -85,8 +88,8 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
     skipIndexes = mutable.Set()
     // rebuild indexes
     indexes.keys.foreach(idx =>
-      val newIndex = mutable.SortedMap[StorageTerm, mutable.ArrayBuffer[IndexedCollectionsRow]]()
-      wrapped.foreach(edb => newIndex.getOrElseUpdate(edb(idx), mutable.ArrayBuffer[IndexedCollectionsRow]()).addOne(edb))
+      val newIndex: IndexMap = TreeMap()
+      wrapped.foreach(edb => newIndex.lookupOrCreate(edb(idx)).addOne(edb))
       indexes(idx) = newIndex
     )
     this
@@ -103,9 +106,7 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
     val keysToRebuild = indexKeys.diff(skipIndexes)
     edbs.foreach(edb =>
       keysToRebuild.foreach(idx =>
-        indexes(idx).
-          getOrElseUpdate(edb(idx), mutable.ArrayBuffer[IndexedCollectionsRow]()). // if no term of this value exists yet, add empty buffer
-          addOne(edb)
+        indexes(idx).lookupOrCreate(edb(idx)).addOne(edb)
       )
     )
     this
@@ -123,9 +124,7 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
       if (!contains(edb)) {
         wrapped.addOne(edb)
         keysToRebuild.foreach(idx =>
-          indexes(idx).
-            getOrElseUpdate(edb(idx), mutable.ArrayBuffer[IndexedCollectionsRow]()). // if no term of this value exists yet, add empty buffer
-            addOne(edb)
+          indexes(idx).lookupOrCreate(edb(idx)).addOne(edb)
         )
       }
     )
@@ -142,9 +141,7 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
     wrapped.addOne(edb)
     val keysToRebuild = indexKeys.diff(skipIndexes)
     keysToRebuild.foreach(idx =>
-      indexes(idx).
-        getOrElseUpdate(edb(idx), mutable.ArrayBuffer[IndexedCollectionsRow]()). // if no term of this value exists yet, add empty buffer
-        addOne(edb)
+      indexes(idx).lookupOrCreate(edb(idx)).addOne(edb)
     )
     this
 
@@ -153,7 +150,8 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
       wrapped.contains(edb)
     else
       val i = indexes.head._1 // for now take first index and use it to filter, TODO: use smallest
-      indexes(i).contains(edb(i)) && indexes(i)(edb(i)).contains(edb)
+      val values = indexes(i).get(edb(i))
+      values != null && values.contains(edb)
 
   /**
    * Removes that from this. TODO: in-place ok bc only at end of iteration?
@@ -215,7 +213,7 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
       val (position, constant) = constFilter.head // constFilter.map((idx, const) => (idx, indexes(idx)(const).size)).minBy(_._2)._1
       val rest = constFilter.drop(1)
 
-      val result = indexes(position).getOrElse(constant, ArrayBuffer.empty).collect{// copy matching EBDs
+      val result = indexes(position).lookupOrCreate(constant).collect{// copy matching EBDs
         case edb if edb.filterConstant(rest) => edb.project(projIndexes)
       }
       val newArity = if projIndexes.isEmpty then arity else projIndexes.length
@@ -268,7 +266,7 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
           )
           IndexedCollectionsEDB(filtered, outer.indexKeys, outer.name, outer.arity, outer.indexKeys) // don't need index on outer
       else // need to both filter + maybe self constrain
-        val filtered = outer.getIndex(outerConstantFilters.head._1).getOrElse(outerConstantFilters.head._2, ArrayBuffer.empty).
+        val filtered = outer.getIndex(outerConstantFilters.head._1).lookupOrCreate(outerConstantFilters.head._2).
           filter(outerTuple =>
             outerTuple.filterConstant(outerConstantFilters.drop(1)) && relativeKeys.forall((outerKeys, _) => outerTuple.filterConstraint(outerKeys))
           )
@@ -285,7 +283,7 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
           val withInnerKey = if keyToJoin.isEmpty then mutable.Set() else inner.indexKeys.filter(_ != keyToJoin.get._2)
           IndexedCollectionsEDB(filtered, inner.indexKeys, inner.name, inner.arity, withInnerKey) // do not rebuild indexes on anything but join key
       else // need to both filter + maybe self constrain
-        val filtered = inner.getIndex(innerConstantFilters.head._1).getOrElse(innerConstantFilters.head._2, ArrayBuffer.empty).
+        val filtered = inner.getIndex(innerConstantFilters.head._1).lookupOrCreate(innerConstantFilters.head._2).
           filter(innerTuple =>
             innerTuple.filterConstant(innerConstantFilters.drop(1)) && relativeKeys.forall((_, innerKeys) => innerTuple.filterConstraint(innerKeys))
           )
@@ -309,7 +307,7 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
         filteredOuter.wrapped.flatMap(outerTuple =>
           val indexVal = outerTuple(outerPosToUse)
           if !filteredInner.indexKeys.contains(innerPosToUse) then throw new Exception(s"Missing index on inner ${filteredInner.name} at position $innerPosToUse, expected initial indexes=${filteredInner.indexKeys.mkString("[", ", ", "]")}, skippedIndexes=${filteredInner.skipIndexes.mkString("[", ", ", "]")}")
-          val matchingInners = filteredInner.getIndex(keyToJoin.get._2).getOrElse(indexVal, ArrayBuffer.empty)
+          val matchingInners = filteredInner.getIndex(keyToJoin.get._2).lookupOrCreate(indexVal)
           matchingInners.collect {
             // check shared keys
             case innerTuple if (secondaryKeys.forall((outerPos, innerPos) => outerTuple(outerPos) == innerTuple(innerPos))) => {
@@ -344,6 +342,16 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
 }
 
 object IndexedCollectionsEDB {
+  type IndexMap = TreeMap[StorageTerm, ArrayBuffer[IndexedCollectionsRow]]
+  extension (index: IndexMap)
+    def lookupOrCreate(key: StorageTerm): ArrayBuffer[IndexedCollectionsRow] =
+      // TODO: tune initialSize?
+      index.computeIfAbsent(key, _ => new mutable.ArrayBuffer(initialSize = 16))
+    inline def contains(key: StorageTerm): Boolean =
+      index.containsKey(key)
+    inline def foreach(f: java.util.function.BiConsumer[StorageTerm, ArrayBuffer[IndexedCollectionsRow]]): Unit =
+      index.forEach(f)
+
   extension (edbs: Seq[EDB])
     def unionEDB: EDB =
       if (edbs.isEmpty)
@@ -393,8 +401,9 @@ object IndexedCollectionsEDB {
   def indexSizeToString(name: String, indexedCollectionsEDB: IndexedCollectionsEDB): String =
     s"$name: ${indexedCollectionsEDB.indexKeys.map(pos => s"i$pos|${indexedCollectionsEDB.getIndex(pos).size}|").mkString("[", ", ", "]")}"
 
-  def indexToString(index: mutable.SortedMap[StorageTerm, mutable.ArrayBuffer[IndexedCollectionsRow]]): String =
-    index.toSeq.sortBy(_._1).map((term, matchingRows) =>
+  def indexToString(index: IndexMap): String =
+    import scala.jdk.CollectionConverters.*
+    index.asScala.toSeq.sortBy(_._1).map((term, matchingRows) =>
       s"$term => ${matchingRows.map(r => r.mkString("[", ", ", "]")).mkString("[", ", ", "]")}"
     ).mkString("{", ", ", "}")
 
