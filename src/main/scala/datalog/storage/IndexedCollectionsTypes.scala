@@ -56,7 +56,7 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
   private val indexes: mutable.Map[Int, IndexMap] = mutable.Map[Int, IndexMap]()
   bulkRegisterIndex(indexKeys)
 
-  inline def getIndex(inline idx: Int): TreeMap[StorageTerm, ArrayBuffer[IndexedCollectionsRow]] =
+  inline def getIndex(idx: Int): TreeMap[StorageTerm, ArrayBuffer[IndexedCollectionsRow]] =
     if (skipIndexes.contains(idx)) throw new Exception(s"Error: trying to access data in $name with skipped index $idx")
     indexes(idx)
 
