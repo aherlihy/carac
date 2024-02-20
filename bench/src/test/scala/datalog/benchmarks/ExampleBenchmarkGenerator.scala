@@ -3,7 +3,7 @@ package datalog.benchmarks
 import datalog.benchmarks.DLBenchmark
 import datalog.dsl.{Constant, Program, Relation, Term}
 import datalog.execution.{NaiveExecutionEngine, NaiveStagedExecutionEngine, SemiNaiveExecutionEngine, StagedExecutionEngine, ExecutionEngine, ir}
-import datalog.storage.{DefaultStorageManager, VolcanoStorageManager, StorageManager}
+import datalog.storage.{DefaultStorageManager, VolcanoStorageManager, StorageManager, StorageTerm}
 
 import java.nio.file.{Files, Path, Paths}
 import scala.collection.{immutable, mutable}
@@ -51,7 +51,7 @@ abstract class BenchmarkGenerator(val directory: Path,
                   case "Int" => s.toInt
                   case "String" => s
                   case _ => throw new Exception(s"Unknown type ${headers(i)}")
-                }).asInstanceOf[Term]
+                }).asInstanceOf[StorageTerm]
               ).toSeq
               if (factInput.size != headers.size)
                 throw new Exception(s"Input data for fact of length ${factInput.size} but should be ${headers.mkString("[", ", ", "]")}. Line='$l'")
@@ -75,7 +75,7 @@ abstract class BenchmarkGenerator(val directory: Path,
               case "Int" => s.toInt
               case "String" => s
               case _ => throw new Exception(s"Unknown type ${headers(i)}")
-            }).asInstanceOf[Term]
+            }).asInstanceOf[StorageTerm]
           ).toSeq)
           .toScala(Set)
         expectedFacts(rule) = expected

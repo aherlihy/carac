@@ -1,8 +1,9 @@
 package datalog.storage
 
-import datalog.dsl.{Atom, Constant, Term, Variable}
+import datalog.dsl.{StorageAtom, Constant, Term, Variable}
 import datalog.execution.{AllIndexes, JoinIndexes}
 import datalog.storage.IndexedCollectionsCasts.*
+import datalog.storage.StorageTerm
 import datalog.tools.Debug.debug
 
 import scala.collection.mutable.ArrayBuffer
@@ -87,7 +88,7 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
   }
 
   // Read & Write EDBs
-  override def insertEDB(rule: Atom): Unit = {
+  override def insertEDB(rule: StorageAtom): Unit = {
     if (edbs.contains(rule.rId))
       if (rule.terms.length != relationArity(rule.rId)) throw new Exception(s"Inserted arity not equal to expected arity for relation #${rule.rId} ${ns(rule.rId)}")
       edbs(rule.rId).addOne(IndexedCollectionsRow(rule.terms))
@@ -156,13 +157,13 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
     deltaDB(newDbId).getOrElse(rId, discoveredFacts.getOrElse(rId, IndexedCollectionsEDB.empty(relationArity(rId), indexCandidates(rId), ns(rId), mutable.BitSet())))
 
   // Read final results
-  def getKnownIDBResult(rId: RelationId): Set[Seq[Term]] =
+  def getKnownIDBResult(rId: RelationId): Set[Seq[StorageTerm]] =
     debug("Final IDB Result[known]: ", () => s"at iteration $iteration: @$knownDbId, count=${getKnownDerivedDB(rId).length}")
     getKnownDerivedDB(rId).getSetOfSeq
-  def getNewIDBResult(rId: RelationId): Set[Seq[Term]] =
+  def getNewIDBResult(rId: RelationId): Set[Seq[StorageTerm]] =
     debug(s"Final IDB Result[new]", () => s" at iteration $iteration: @$newDbId, count=${getNewDerivedDB(rId).length}")
     getNewDerivedDB(rId).getSetOfSeq
-  def getEDBResult(rId: RelationId): Set[Seq[Term]] =
+  def getEDBResult(rId: RelationId): Set[Seq[StorageTerm]] =
     edbs.getOrElse(rId, IndexedCollectionsEDB.empty(relationArity.getOrElse(rId, 0), skipIndexes = mutable.BitSet())).getSetOfSeq
 
   // Write intermediate results

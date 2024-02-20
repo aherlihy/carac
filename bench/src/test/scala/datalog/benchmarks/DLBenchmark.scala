@@ -17,9 +17,9 @@ abstract class DLBenchmark {
   def pretest(program: Program): Unit
   val toSolve: String
   val description: String
-  val inputFacts: mutable.Map[String, Seq[Seq[Term]]] = mutable.Map()
-  val expectedFacts: mutable.Map[String, Set[Seq[Term]]] = mutable.Map()
-  var result: mutable.Map[String, Set[Seq[Term]]] = mutable.Map()
+  val inputFacts: mutable.Map[String, Seq[Seq[StorageTerm]]] = mutable.Map()
+  val expectedFacts: mutable.Map[String, Set[Seq[StorageTerm]]] = mutable.Map()
+  var result: mutable.Map[String, Set[Seq[StorageTerm]]] = mutable.Map()
   var programs: mutable.Map[String, Program] = mutable.Map()
 
   /**
@@ -136,7 +136,7 @@ abstract class DLBenchmark {
     result.clear()
   }
 
-  def run(program: Program, result: mutable.Map[String, Set[Seq[Term]]]): Unit = {
+  def run(program: Program, result: mutable.Map[String, Set[Seq[StorageTerm]]]): Unit = {
     expectedFacts.keys.foreach(relation => {
       result(relation) = program.namedRelation(relation).solve()
     })

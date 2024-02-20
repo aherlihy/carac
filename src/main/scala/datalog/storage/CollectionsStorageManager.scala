@@ -1,6 +1,6 @@
 package datalog.storage
 
-import datalog.dsl.{Atom, Constant, Term, Variable}
+import datalog.dsl.{StorageAtom, Constant, Term, Variable}
 import datalog.execution.{AllIndexes, JoinIndexes}
 import CollectionsCasts.*
 import datalog.tools.Debug.debug
@@ -65,7 +65,7 @@ abstract class CollectionsStorageManager(override val ns: NS) extends StorageMan
   }
 
   // Read & Write EDBs
-  override def insertEDB(rule: Atom): Unit = {
+  override def insertEDB(rule: StorageAtom): Unit = {
     if (edbs.contains(rule.rId))
       edbs(rule.rId).addOne(CollectionsRow(rule.terms))
     else
@@ -124,13 +124,13 @@ abstract class CollectionsStorageManager(override val ns: NS) extends StorageMan
     deltaDB(newDbId).getOrElse(rId, discoveredFacts.getOrElse(rId, CollectionsEDB()))
 
   // Read final results
-  def getKnownIDBResult(rId: RelationId): Set[Seq[Term]] =
+  def getKnownIDBResult(rId: RelationId): Set[Seq[StorageTerm]] =
     debug("Final IDB Result[known]: ", () => s"at iteration $iteration: @$knownDbId, count=${getKnownDerivedDB(rId).length}")
     getKnownDerivedDB(rId).getSetOfSeq
-  def getNewIDBResult(rId: RelationId): Set[Seq[Term]] =
+  def getNewIDBResult(rId: RelationId): Set[Seq[StorageTerm]] =
     debug(s"Final IDB Result[new]", () => s" at iteration $iteration: @$newDbId, count=${getNewDerivedDB(rId).length}")
     getNewDerivedDB(rId).getSetOfSeq
-  def getEDBResult(rId: RelationId): Set[Seq[Term]] =
+  def getEDBResult(rId: RelationId): Set[Seq[StorageTerm]] =
     edbs.getOrElse(rId, CollectionsEDB()).getSetOfSeq
 
   // Write intermediate results

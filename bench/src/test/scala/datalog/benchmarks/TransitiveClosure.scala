@@ -2,6 +2,7 @@ package datalog.benchmarks
 
 import datalog.dsl.{Constant, Program, Relation, Term}
 import datalog.execution.ExecutionEngine
+import datalog.storage.StorageTerm
 
 import scala.collection.mutable
 import scala.util.Random
@@ -9,7 +10,7 @@ import scala.util.Random
 class TransitiveClosure extends DLBenchmark {
   val toSolve: String = "fourHops"
   override val description: String = "TransitiveClosure"
-  override val expectedFacts: mutable.Map[String, Set[Seq[Term]]] = mutable.Map(
+  override val expectedFacts: mutable.Map[String, Set[Seq[StorageTerm]]] = mutable.Map(
     "fourHops" -> Set.empty,
   )
   def pretest(program: Program): Unit = {

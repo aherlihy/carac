@@ -28,8 +28,8 @@ abstract class TestGenerator(directory: Path,
   val toSolve: String
 
   val description: String = directory.getFileName.toString
-  val inputFacts: mutable.Map[String, Seq[Seq[Term]]] = mutable.Map()
-  val expectedFacts: mutable.Map[String, Set[Seq[Term]]] = mutable.Map()
+  val inputFacts: mutable.Map[String, Seq[Seq[StorageTerm]]] = mutable.Map()
+  val expectedFacts: mutable.Map[String, Set[Seq[StorageTerm]]] = mutable.Map()
 
   def generateExpectedFiles(value: Set[Seq[Term]], filename: String): Unit = {
     val path = Paths.get(directory.toString, "expected", filename + ".csv")
@@ -58,7 +58,7 @@ abstract class TestGenerator(directory: Path,
                   case "Int" => s.toInt
                   case "String" => s
                   case _ => throw new Exception(s"Unknown type ${headers(i)}")
-                }).asInstanceOf[Term]
+                }).asInstanceOf[StorageTerm]
               ).toSeq
             if (factInput.length != headers.size)
               throw new Exception(s"Input data for fact of length ${factInput.size} but should be ${headers.mkString("[", ", ", "]")}. Line='$l'")
@@ -89,7 +89,7 @@ abstract class TestGenerator(directory: Path,
             case "Int" => s.toInt
             case "String" => s
             case _ => throw new Exception(s"Unknown type ${headers(i)} in file ${f.getFileName}")
-          }).asInstanceOf[Term]
+          }).asInstanceOf[StorageTerm]
         ).toSeq)
         .toScala(Set)
       expectedFacts(rule) = expected
