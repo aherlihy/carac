@@ -8,7 +8,7 @@ import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.Blackhole
 import test.examples.tastyslistlibinverse.tastyslistlibinverse_short as tastyslistlibinverse_short_test
 
-@Fork(examples_fork) // # of jvms that it will use
+@Fork(examples_fork, jvmArgsAppend = Array(examples_gc)) // # of jvms that it will use
 @Warmup(iterations = examples_warmup_iterations, time = examples_warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = examples_xl_batchsize)
 @Measurement(iterations = examples_iterations, time = examples_xl_time, timeUnit = TimeUnit.SECONDS, batchSize = examples_xl_batchsize)
 @State(Scope.Thread)
