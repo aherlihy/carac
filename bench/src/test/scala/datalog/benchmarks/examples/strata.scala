@@ -8,7 +8,7 @@ import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.Blackhole
 import test.examples.strata.{strata => strata_test}
 
-@Fork(examples_fork) // # of jvms that it will use
+@Fork(examples_fork, jvmArgsAppend = Array(examples_gc)) // # of jvms that it will use
 @Warmup(iterations = examples_warmup_iterations, time = examples_warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = examples_batchsize)
 @Measurement(iterations = examples_iterations, time = examples_time, timeUnit = TimeUnit.SECONDS, batchSize = examples_batchsize)
 @State(Scope.Thread)
