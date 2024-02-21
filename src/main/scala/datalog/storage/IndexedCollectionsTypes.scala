@@ -215,7 +215,7 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
     val constFilter = constIndexes.filter((ind, _) => ind < arity)
     if (constFilter.isEmpty)
       if (projIndexes.isEmpty)
-        this
+        IndexedCollectionsEDB.copyWithIndexes(this)
       else
         IndexedCollectionsEDB(wrapped.map(_.project(projIndexes)), newIndexes, newName, projIndexes.length, newIndexes) // should build no indexes bc result of project
     else
@@ -344,13 +344,13 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
 
   def clear(): Unit = {
     wrapped.clear()
-    indexKeys.foreach(i => indexes(i).clear())
+//    indexKeys.foreach(i => indexes(i).clear())
 //    indexKeys.clear()
-//    var i = 0
-//    while i < indexes.length do
-//      indexes(i) = null
+    var i = 0
+    while i < indexes.length do
+      indexes(i) = null
 //     indexes(i).clear()
-//      i += 1
+      i += 1
   }
 
   // TODO: potentially remove IterableOnce, or restructure to use indexes with iterable ops "automatically"
@@ -487,11 +487,13 @@ case class IndexedCollectionsRow(wrappedS: Seq[StorageTerm]) extends Row[Storage
 case class IndexedCollectionsDatabase(wrapped: mutable.Map[RelationId, IndexedCollectionsEDB]) extends Database[IndexedCollectionsEDB] {
   val definedRelations = mutable.Set.from(wrapped.keys)
   def clear(): Unit = {
-//    wrapped.clear()
-    wrapped.foreach((rId, edb) =>
-//      IndexedCollectionsEDB.empty(edb.arity, edb.indexKeys, edb.name, edb.skipIndexes)
-      edb.clear()
-    )
+    wrapped.clear()
+//    wrapped.foreach((rId, edb) =>
+//      wrapped(rId) = IndexedCollectionsEDB.empty(edb.arity, edb.indexKeys, edb.name, edb.skipIndexes)
+//      edb.clear()
+//      println(edb)
+//      println(IndexedCollectionsEDB.empty(edb.arity, edb.indexKeys, edb.name, edb.skipIndexes))
+//    )
     definedRelations.clear()
   }
   def contains(c: RelationId): Boolean = definedRelations.contains(c)

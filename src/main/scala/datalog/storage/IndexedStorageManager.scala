@@ -184,20 +184,34 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
     val rules = asIndexedCollectionsEDB(rulesEDB)
     val prev = asIndexedCollectionsEDB(prevEDB)
     // TODO: maybe use insert not copy, except problem is that rules is delta.new, and prev is derived.known. Delta cannot mutate because needed for the end-of-iteration check, and derived cannot mutate (?) because needed to be read by other rules potentially
-    if (derivedDB(newDbId).contains(rId))
-      derivedDB(newDbId)(rId).clear()
-      derivedDB(newDbId)(rId).bulkSkipIndex(rules.skipIndexes)
-      derivedDB(newDbId)(rId).bulkRegisterIndex(rules.indexKeys)
-      derivedDB(newDbId)(rId).addAll(rules.wrapped).addAll(prev.wrapped)
-    else
+//    if (derivedDB(newDbId).contains(rId))
+//      derivedDB(newDbId)(rId).clear()
+//      derivedDB(newDbId)(rId).bulkSkipIndex(rules.skipIndexes)
+//      derivedDB(newDbId)(rId).bulkRegisterIndex(rules.indexKeys)
+//      derivedDB(newDbId)(rId).addAll(rules.wrapped).addAll(prev.wrapped)
+//    else
       derivedDB(newDbId)(rId) = rules.copyAndAdd(prev)
 
   def setNewDelta(rId: RelationId, rules: EDB): Unit =
-    deltaDB(newDbId)(rId) = asIndexedCollectionsEDB(rules)
+    deltaDB(newDbId)(rId) = IndexedCollectionsEDB.copyWithIndexes(asIndexedCollectionsEDB(rules))
 
   def clearNewDerived(): Unit =
+//    println(s"ID derived.new=${System.identityHashCode(derivedDB(newDbId))}")
+//    println(s"ID derived.known=${System.identityHashCode(derivedDB(knownDbId))}")
+
+//    println(s"ID delta.new=${System.identityHashCode(deltaDB(newDbId))}")
+//    println(s"ID delta.known=${System.identityHashCode(deltaDB(knownDbId))}")
+    edbs.foreach((rid, edb) => println(s"EDB $rid=${System.identityHashCode(edb)}"))
+    discoveredFacts.foreach((rid, edb) => println(s"DIS $rid=${System.identityHashCode(edb)}"))
+
+    println(derivedDB(newDbId))
+    derivedDB(newDbId).foreach((rid, edb) => println(s"DER.new $rid=${System.identityHashCode(edb)}"))
+    deltaDB(newDbId).foreach((rid, edb) => println(s"DEL.new $rid=${System.identityHashCode(edb)}"))
+    derivedDB(knownDbId).foreach((rid, edb) => println(s"DER.kno $rid=${System.identityHashCode(edb)}"))
+    deltaDB(knownDbId).foreach((rid, edb) => println(s"DEL.kno $rid=${System.identityHashCode(edb)}"))
     derivedDB(newDbId).clear()//foreach((rId, edb) => edb.clear())
-//    derivedDB(newDbId) = IndexedCollectionsDatabase()
+
+  //    derivedDB(newDbId) = IndexedCollectionsDatabase()
   // Compare & Swap
   def swapKnowledge(): Unit = {
     iteration += 1
