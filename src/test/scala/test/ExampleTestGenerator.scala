@@ -31,7 +31,7 @@ abstract class TestGenerator(directory: Path,
   val inputFacts: mutable.Map[String, Seq[Seq[StorageTerm]]] = mutable.Map()
   val expectedFacts: mutable.Map[String, Set[Seq[StorageTerm]]] = mutable.Map()
 
-  def generateExpectedFiles(value: Set[Seq[Term]], filename: String): Unit = {
+  def generateExpectedFiles(value: Set[Seq[StorageTerm]], filename: String): Unit = {
     val path = Paths.get(directory.toString, "expected", filename + ".csv")
     println(s"writing ${value.size} facts to $path")
     Using(Files.newBufferedWriter(path)) { writer =>
@@ -177,7 +177,7 @@ abstract class TestGenerator(directory: Path,
 //      "SemiNaive",
 //      "CompiledStaged", // TODO: for longer tests, can throw MethodTooLarge
       "InterpretedStaged",
-//      "InterpretedStaged_sel",
+      "InterpretedStaged_sel",
 //      "JITStaged_Sel_DELTA_Block_Lambda",
 //      "JITStaged_Sel_DELTA_Block_BC",
 //      "JITStaged_Sel_DELTA_Block_Quotes",
