@@ -46,7 +46,7 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
                                  indexKeys: mutable.BitSet,
                                  name: String,
                                  arity: Int,
-                                 var skipIndexes: mutable.Set[Int] // don't build indexes for these keys
+                                 var skipIndexes: mutable.BitSet // don't build indexes for these keys
                                 ) extends EDB with IterableOnce[IndexedCollectionsRow] {
   import IndexedCollectionsEDB.*
 
@@ -60,7 +60,7 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
     if (skipIndexes.contains(idx)) throw new Exception(s"Error: trying to access data in $name with skipped index $idx")
     indexes(idx)
 
-  def bulkRegisterIndex(idxs: mutable.Set[Int]): this.type =
+  def bulkRegisterIndex(idxs: mutable.BitSet): this.type =
     idxs.foreach(registerIndex)
     this
   /**
@@ -85,7 +85,7 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
   }
 
   def bulkRebuildIndex(): this.type = {
-    skipIndexes = mutable.Set()
+    skipIndexes = mutable.BitSet()
     // rebuild indexes
     var i = 0
     while i < indexes.length do
@@ -286,14 +286,14 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
           val filtered = inner.wrapped.filter(innerTuple =>
             relativeKeys.forall((_, innerKeys) => innerTuple.filterConstraint(innerKeys))
           )
-          val withInnerKey = if keyToJoin.isEmpty then mutable.Set() else inner.indexKeys.filter(_ != keyToJoin.get._2)
+          val withInnerKey = if keyToJoin.isEmpty then mutable.BitSet() else inner.indexKeys.filter(_ != keyToJoin.get._2)
           IndexedCollectionsEDB(filtered, inner.indexKeys, inner.name, inner.arity, withInnerKey) // do not rebuild indexes on anything but join key
       else // need to both filter + maybe self constrain
         val filtered = inner.getIndex(innerConstantFilters.head._1).lookupOrCreate(innerConstantFilters.head._2).
           filter(innerTuple =>
             innerTuple.filterConstant(innerConstantFilters.drop(1)) && relativeKeys.forall((_, innerKeys) => innerTuple.filterConstraint(innerKeys))
           )
-        val withInnerKey = if keyToJoin.isEmpty then mutable.Set() else inner.indexKeys.filter(_ != keyToJoin.get._2)
+        val withInnerKey = if keyToJoin.isEmpty then mutable.BitSet() else inner.indexKeys.filter(_ != keyToJoin.get._2)
         IndexedCollectionsEDB(filtered, inner.indexKeys, inner.name, inner.arity, withInnerKey)
 
     val result = if (keyToJoin.isEmpty) // join without keys, so just loop over everything without index
