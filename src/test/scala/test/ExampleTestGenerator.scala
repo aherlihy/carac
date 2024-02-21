@@ -31,7 +31,7 @@ abstract class TestGenerator(directory: Path,
   val inputFacts: mutable.Map[String, Seq[Seq[StorageTerm]]] = mutable.Map()
   val expectedFacts: mutable.Map[String, Set[Seq[StorageTerm]]] = mutable.Map()
 
-  def generateExpectedFiles(value: Set[Seq[Term]], filename: String): Unit = {
+  def generateExpectedFiles(value: Set[Seq[StorageTerm]], filename: String): Unit = {
     val path = Paths.get(directory.toString, "expected", filename + ".csv")
     println(s"writing ${value.size} facts to $path")
     Using(Files.newBufferedWriter(path)) { writer =>
@@ -178,21 +178,21 @@ abstract class TestGenerator(directory: Path,
 //      "CompiledStaged", // TODO: for longer tests, can throw MethodTooLarge
       "InterpretedStaged",
       "InterpretedStaged_sel",
-      "JITStaged_Sel_DELTA_Block_Lambda",
-      "JITStaged_Sel_DELTA_Block_BC",
-      "JITStaged_Sel_DELTA_Block_Quotes",
-      "JITStaged_Sel_ALL_Block_BC",
-      "JITStaged_Sel_RULE_Block_BC",
-      "JITStaged_Sel_RULE_Block_Quotes",
-      "JITStaged_Sel_ALL_Block_Quotes",
-      "JITStaged_Sel_RULE_Async_Quotes",
-      "JITStaged_Sel_ALL_Async_Quotes",
-      "JITStaged_Sel_ALL_Block_Lambda",
-      "JITStaged_Sel_RULE_Block_Lambda",
-      "JITStaged_Sel_ALL_Async_Lambda",
-      "JITStaged_Sel_RULE_Async_Lambda",
-      "JITStaged_Sel_RULE_Async_BC",
-      "JITStaged_Sel_ALL_Async_BC",
+//      "JITStaged_Sel_DELTA_Block_Lambda",
+//      "JITStaged_Sel_DELTA_Block_BC",
+//      "JITStaged_Sel_DELTA_Block_Quotes",
+//      "JITStaged_Sel_ALL_Block_BC",
+//      "JITStaged_Sel_RULE_Block_BC",
+//      "JITStaged_Sel_RULE_Block_Quotes",
+//      "JITStaged_Sel_ALL_Block_Quotes",
+//      "JITStaged_Sel_RULE_Async_Quotes",
+//      "JITStaged_Sel_ALL_Async_Quotes",
+//      "JITStaged_Sel_ALL_Block_Lambda",
+//      "JITStaged_Sel_RULE_Block_Lambda",
+//      "JITStaged_Sel_ALL_Async_Lambda",
+//      "JITStaged_Sel_RULE_Async_Lambda",
+//      "JITStaged_Sel_RULE_Async_BC",
+//      "JITStaged_Sel_ALL_Async_BC",
     ).foreach(execution => {
       Seq(/*"Volcano", "Default",*/ "Indexed").foreach(storage => {
         if ((execution.contains("Staged") || execution.contains("BytecodeGenerated") || execution.contains("Lambda")) && storage == "Volcano") {} // skip and don't report as skipped

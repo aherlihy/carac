@@ -252,7 +252,7 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
 //     println(s"Rule: ${printer.ruleToString(originalK.atoms)}")
 //     println(s"input rels: ${inputs.map(e => e.factToString).mkString("[", "*", "]")}")
 
-    // var intermediateCardinalities = Seq[Int]()
+    var intermediateCardinalities = Seq[String]()
     val fResult = if (inputs.length == 1) { // just filter + project
       inputs.head.projectFilterWithIndex(
         originalK.constIndexes,
@@ -280,9 +280,11 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
             //              else
             //                (innerT, outerT)
             val edbResult = outerT.joinFilterWithIndex(k, atomI, innerT)
-            //            intermediateCardinalities = intermediateCardinalities :+ edbResult.length
+
+            intermediateCardinalities = intermediateCardinalities :+ s"${outerT.name}*${innerT.name}: ${edbResult.length}"
             (edbResult, atomI + 1, k)
         )
+      println(s"Join result, intermediate cardinalities: $intermediateCardinalities")
       val indexesToIgnore = indexCandidates.getOrElse(rId, mutable.BitSet())
       IndexedCollectionsEDB(
         result._1.wrapped.mapInPlace(_.project(result._3.projIndexes)),

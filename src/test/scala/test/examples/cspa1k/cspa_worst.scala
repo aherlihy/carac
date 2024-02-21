@@ -8,7 +8,7 @@ class cspa1k_worst_test extends ExampleTestGenerator(
   "cspa1k",
   Set(Tags.Naive, Tags.Volcano),
   Set(Tags.Slow, Tags.CI)
-) with cspa1k
+) with cspa1k_worst
 
 trait cspa1k_worst {
   val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/cspa1k/facts"
