@@ -210,6 +210,7 @@ object JoinIndexes {
 //    if (originalK.atoms.length > 2)
 //      print(s"Rule: ${sm.printer.ruleToString(originalK.atoms)} => ")
 //      println(s"${sm.printer.ruleToString(originalK.atoms.head +: newBody.map(_._1))}")
+//    if newBody.map(_._1.rId) == originalK.atoms.drop(1).toList.map(_.rId) then println("=> unchanged") else println(s"swap: ${sm.printer.bodyToString(originalK.atoms.drop(1))} => ${sm.printer.bodyToString(newBody.map(_._1))}")
     (newBody, newHash)
   }
 

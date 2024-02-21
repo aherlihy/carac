@@ -246,7 +246,7 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
 //     println(s"Rule: ${printer.ruleToString(originalK.atoms)}")
 //     println(s"input rels: ${inputs.map(e => e.factToString).mkString("[", "*", "]")}")
 
-    // var intermediateCardinalities = Seq[Int]()
+    var intermediateCardinalities = Seq[String]()
     val fResult = if (inputs.length == 1) { // need to make a copy
       if (originalK.constIndexes.isEmpty && originalK.projIndexes.isEmpty && !derivedDB.contains(rId)) // nothing to do but copy, save rebuilding index time. TODO: never happens bc project always defined?
         val edbToCopy = inputs.head
@@ -283,9 +283,11 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
             //              else
             //                (innerT, outerT)
             val edbResult = outerT.joinFilterWithIndex(k, atomI, innerT)
-            //            intermediateCardinalities = intermediateCardinalities :+ edbResult.length
+
+            intermediateCardinalities = intermediateCardinalities :+ s"${outerT.name}*${innerT.name}: ${edbResult.length}"
             (edbResult, atomI + 1, k)
         )
+      println(s"Join result, intermediate cardinalities: $intermediateCardinalities")
       val outputIndex = indexCandidates.getOrElseUpdate(rId, mutable.BitSet(0))
 
       result._1.projectAndDiff(
