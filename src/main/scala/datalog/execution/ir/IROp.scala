@@ -107,7 +107,9 @@ case class DoWhileOp(toCmp: DB, override val children:IROp[Any]*)(using JITOptio
   override def run(storageManager: StorageManager): Any =
     var i = 0
     while ( {
+      children.head.children.head.run(storageManager) // swap
       println(s"DBs start of semi-naive iteration $i: ${storageManager.toString}")
+      children.head.children(1).run(storageManager)
       i += 1
 //      if i > 2 then System.exit(0)
       children.head.run(storageManager)
