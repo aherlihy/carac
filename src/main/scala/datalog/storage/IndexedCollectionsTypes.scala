@@ -405,7 +405,9 @@ object IndexedCollectionsEDB {
 
   // Print methods
   def indexSizeToString(name: String, indexedCollectionsEDB: IndexedCollectionsEDB): String =
-    s"$name: ${indexedCollectionsEDB.indexKeys.map(pos => s"i$pos|${indexedCollectionsEDB.getIndex(pos).size}|").mkString("[", ", ", "]")}"
+    s"$name: ${indexedCollectionsEDB.indexKeys.map(pos => s"i$pos|${
+      if indexedCollectionsEDB.skipIndexes.contains(pos) then "[X]" else indexedCollectionsEDB.getIndex(pos).size
+    }|").mkString("[", ", ", "]")}"
 
   def indexToString(index: IndexMap): String =
     import scala.jdk.CollectionConverters.*
