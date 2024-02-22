@@ -7,6 +7,7 @@ import IndexedCollectionsCasts.*
 import datalog.execution.JoinIndexes
 import datalog.storage.IndexedCollectionsEDB.allIndexesToString
 
+import scala.collection.immutable.ArraySeq
 import scala.collection.mutable.ArrayBuffer
 import java.util.{HashMap, TreeMap}
 
@@ -430,8 +431,7 @@ object IndexedCollectionsEDB {
  * Represents a single tuple within a relation, either EDB or IDB.
  * AKA a Seq[StorageTerm]
  */
-case class IndexedCollectionsRow(wrappedS: Seq[StorageTerm]) extends Row[StorageTerm] { // TODO: update from Seq to ArrayBuffer?
-  val wrapped = wrappedS.toIndexedSeq // noop if already IndexedSeq
+case class IndexedCollectionsRow(wrapped: ArraySeq[StorageTerm]) extends Row[StorageTerm] { // TODO: update from Seq to ArrayBuffer?
   def toSeq = wrapped
   override def toString: String = wrapped.mkString("(", ", ", ")")
   def concat(suffix: Row[StorageTerm]): IndexedCollectionsRow =
@@ -443,13 +443,13 @@ case class IndexedCollectionsRow(wrappedS: Seq[StorageTerm]) extends Row[Storage
     if i >= wrapped.size then default(i) else apply(i)
 
   def project(projIndexes: Seq[(String, Constant)]): IndexedCollectionsRow = // make a copy
-    IndexedCollectionsRow(projIndexes.map((typ, idx) =>
+    IndexedCollectionsRow(ArraySeq.from(projIndexes.map((typ, idx) =>
       typ match {
         case "v" => wrapped(idx.asInstanceOf[Int])
         case "c" => idx
         case _ => throw new Exception("Internal error: projecting something that is not a constant nor a variable")
       }
-    ).toIndexedSeq)
+    )))
 
   /* Equality constraint $1 == $2 */
   inline def filterConstraint(keys: Seq[Int]): Boolean =

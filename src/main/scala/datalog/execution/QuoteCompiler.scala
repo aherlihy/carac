@@ -9,6 +9,7 @@ import org.glavo.classfile.CodeBuilder
 import java.lang.invoke.MethodType
 import java.util.concurrent.atomic.AtomicInteger
 import scala.collection.{immutable, mutable}
+import immutable.ArraySeq
 import scala.quoted.*
 
 /**
@@ -49,7 +50,7 @@ class QuoteCompiler(val storageManager: StorageManager)(using JITOptions) extend
 
   given ToExpr[Atom] with {
     def apply(x: Atom)(using Quotes) = {
-      '{ Atom( ${ Expr(x.rId) }, ${ Expr.ofSeq(x.terms.map(y => Expr(y))) }, ${ Expr(x.negated) } ) }
+      '{ Atom( ${ Expr(x.rId) }, ArraySeq.unsafeWrapArray(Array(${Varargs(x.terms.map(y => Expr(y)))}*)), ${ Expr(x.negated) } ) }
     }
   }
 

@@ -6,6 +6,7 @@ import datalog.storage.IndexedCollectionsCasts.*
 import datalog.storage.StorageTerm
 import datalog.tools.Debug.debug
 
+import scala.collection.immutable.ArraySeq
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.{Iterator, immutable, mutable}
 
@@ -134,7 +135,7 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
     // short but inefficient
     val res = List.fill(arity)(edbDomain).flatten.combinations(arity).flatMap(_.permutations).toSeq
     IndexedCollectionsEDB(
-      mutable.ArrayBuffer.from(res.map(r => IndexedCollectionsRow(r.toSeq))), indexCandidates(rId), ns(rId), arity, mutable.BitSet()
+      mutable.ArrayBuffer.from(res.map(r => IndexedCollectionsRow(ArraySeq.from(r)))), indexCandidates(rId), ns(rId), arity, mutable.BitSet()
     )
   }
 

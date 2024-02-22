@@ -5,6 +5,7 @@ import datalog.storage.StorageTerm
 
 import scala.collection.immutable.ArraySeq
 import scala.collection.mutable
+import scala.reflect.{classTag, ClassTag}
 import scala.quoted.{Expr, Quotes}
 
 trait AbstractProgram // TODO: alternate program?
@@ -26,19 +27,19 @@ type Term = Constant | Variable
 
 def not(atom: Atom): Atom = !atom
 
-class Atom(val rId: Int, val terms: Seq[Term], val negated: Boolean) {
+class Atom(val rId: Int, val terms: ArraySeq[Term], val negated: Boolean) {
   def unary_! : Atom = ???
   def :- (body: Atom*): Unit = ???
   def :- (body: Unit): Unit = ???
   val hash: String = s"${if (negated) "!" else ""}$rId.${terms.mkString("", "", "")}"
 }
-type StorageAtom = Atom { val terms: Seq[StorageTerm] }
+type StorageAtom = Atom { val terms: ArraySeq[StorageTerm] }
 
 case class Relation[T <: Constant](id: Int, name: String)(using ee: ExecutionEngine) {
   type RelTerm = T | Variable
   ee.initRelation(id, name)
 
-  case class RelAtom(override val terms: Seq[RelTerm],
+  case class RelAtom(override val terms: ArraySeq[RelTerm],
                      override val negated: Boolean = false,
                     ) extends Atom(id, terms, negated) { // extend Atom so :- can accept atom of any Relation
     override def unary_! : Atom = copy(negated = !negated)
@@ -57,7 +58,7 @@ case class Relation[T <: Constant](id: Int, name: String)(using ee: ExecutionEng
   }
 
   // Create a tuple in this relation
-  def apply(ts: RelTerm*): RelAtom = RelAtom(ts.toIndexedSeq)
+  def apply(ts: RelTerm*): RelAtom = RelAtom(ArraySeq.from(ts)(using classTag[AnyRef].asInstanceOf[ClassTag[RelTerm]])) // box everything for now
   //def apply(ts: RelTerm*): RelAtom = RelAtom(ts.toIndexedSeq)
 
   def solve(): Set[Seq[StorageTerm]] = ee.solve(id).map(s => s.toSeq).toSet
