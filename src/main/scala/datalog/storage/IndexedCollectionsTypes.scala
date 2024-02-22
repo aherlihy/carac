@@ -158,25 +158,7 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
       val values = indexes(i).get(edb(i))
       values != null && values.contains(edb)
 
-  /**
-   * Removes that from this. TODO: in-place ok bc only at end of iteration?
-   */
-  def diffInPlace(that: IndexedCollectionsEDB): IndexedCollectionsEDB =
-    this.wrapped = wrapped.diff(that.wrapped)
-    var i = 0
-    while i < indexes.length do
-      val index = indexes(i)
-      if index != null then
-        index.foreach((term, tuples) =>
-          tuples.filterInPlace(tuple =>
-            val include = !that.contains(tuple)
-            include
-          )
-        )
-    this
-  def diff(that: IndexedCollectionsEDB): IndexedCollectionsEDB =
-    val res = wrapped.diff(that.wrapped)
-    IndexedCollectionsEDB(res, indexKeys, name, arity, indexKeys) // should be no indexes bc will become delta.new, be checked for loop, and cleared
+  def diff(that: IndexedCollectionsEDB): IndexedCollectionsEDB = ???
 
   /**
    * Combine EDBs, maintaining the indexes of each.
@@ -338,11 +320,15 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
   def nonEmpty(): Boolean = wrapped.nonEmpty
   def length = wrapped.size
 
+  def clear(): Unit =
+    wrapped.clear()
+    indexKeys.foreach(i => indexes(i).clear())
+    skipIndexes.clear()
+
   // TODO: potentially remove IterableOnce, or restructure to use indexes with iterable ops "automatically"
   def map(f: IndexedCollectionsRow => IndexedCollectionsRow): IndexedCollectionsEDB = ???
   def filter(f: IndexedCollectionsRow => Boolean): IndexedCollectionsEDB = ???
   def flatMap(f: IndexedCollectionsRow => IterableOnce[IndexedCollectionsRow]): IndexedCollectionsEDB = ???
-  def clear = ???
   def toSet = ???
   def apply = ???
   def mkString = ???
@@ -359,6 +345,8 @@ object IndexedCollectionsEDB {
       index.containsKey(key)
     inline def foreach(f: java.util.function.BiConsumer[StorageTerm, ArrayBuffer[IndexedCollectionsRow]]): Unit =
       index.forEach(f)
+    inline def clear(): Unit =
+      index.clear()
 
   extension (edbs: Seq[EDB])
     def unionEDB: EDB =
@@ -407,7 +395,7 @@ object IndexedCollectionsEDB {
 
   // Print methods
   def indexSizeToString(name: String, indexedCollectionsEDB: IndexedCollectionsEDB): String =
-    s"$name: ${indexedCollectionsEDB.indexKeys.map(pos => s"i$pos|${
+    s"  $name: ${indexedCollectionsEDB.indexKeys.map(pos => s"i$pos|${
       if indexedCollectionsEDB.skipIndexes.contains(pos) then "[X]" else indexedCollectionsEDB.getIndex(pos).size
     }|").mkString("[", ", ", "]")}"
 
@@ -418,9 +406,14 @@ object IndexedCollectionsEDB {
     ).mkString("{", ", ", "}")
 
   def allIndexesToString(edb: IndexedCollectionsEDB): String = {
-    s"${edb.name}:\n\t${
+    s"  ${edb.name}:\n\t${
       edb.indexes.zipWithIndex.filter(_._1 != null).map((index, pos) =>
-        s"@$pos: ${indexToString(index)}"
+        s"@$pos: ${
+          if (edb.skipIndexes.contains(pos))
+            "[SKIP]"
+          else
+            indexToString(index)
+        }"
       ).mkString("", "\n\t", "")
     }"
   }
@@ -472,8 +465,48 @@ case class IndexedCollectionsRow(wrappedS: Seq[StorageTerm]) extends Row[Storage
  * AKA a mutable.Map[RelationId, ArrayBuffer[Seq[Term]]].
  */
 case class IndexedCollectionsDatabase(wrapped: mutable.Map[RelationId, IndexedCollectionsEDB]) extends Database[IndexedCollectionsEDB] {
-  export wrapped.{ apply, getOrElse, foreach, contains, update, exists, toSeq, forall, clear }
+  val definedRelations = mutable.Set.from(wrapped.keys)
+
+  def clear(): Unit = {
+    wrapped.foreach((rId, edb) =>
+      edb.clear()
+    )
+    definedRelations.clear()
+  }
+
+  def contains(c: RelationId): Boolean = definedRelations.contains(c)
+
+  def assignEDBToCopy(rId: RelationId, edbToCopy: IndexedCollectionsEDB): Unit =
+    definedRelations.addOne(rId)
+    val newEDB = getOrElseEmpty(rId, edbToCopy.arity, edbToCopy.indexKeys, edbToCopy.name, mutable.BitSet()) // when copying, don't skip any indexes
+    newEDB.addAll(edbToCopy.wrapped) // TODO: copy index structure instead of rebuilding
+    wrapped(rId) = newEDB
+
+  def assignEDBDirect(rId: RelationId, edb: IndexedCollectionsEDB): Unit =
+    definedRelations.addOne(rId)
+    wrapped(rId) = edb
+
+  def foreach[U](f: ((RelationId, IndexedCollectionsEDB)) => U): Unit = wrapped.filter((k, v) => definedRelations.contains(k)).foreach(f)
+
+  def exists(p: ((RelationId, IndexedCollectionsEDB)) => Boolean): Boolean = wrapped.filter((k, v) => definedRelations.contains(k)).exists(p)
+
+  def forall(p: ((RelationId, IndexedCollectionsEDB)) => Boolean): Boolean = wrapped.filter((k, v) => definedRelations.contains(k)).forall(p)
+
+  def toSeq: Seq[(RelationId, IndexedCollectionsEDB)] = wrapped.filter((k, v) => definedRelations.contains(k)).toSeq
+
+  def getOrElseEmpty(rId: RelationId, arity: Int, indexCandidates: mutable.BitSet, name: String, indexToSkip: mutable.BitSet): IndexedCollectionsEDB =
+    wrapped.getOrElseUpdate(rId,
+      IndexedCollectionsEDB.empty(arity, indexCandidates, name, indexToSkip)
+    )
+  def addEmpty(rId: RelationId, arity: Int, indexCandidates: mutable.BitSet, name: String, indexToSkip: mutable.BitSet): IndexedCollectionsEDB =
+    definedRelations.addOne(rId)
+    wrapped.getOrElseUpdate(rId,
+      IndexedCollectionsEDB.empty(arity, indexCandidates, name, indexToSkip)
+    )
+
+  export wrapped.apply
 }
+
 object IndexedCollectionsDatabase {
   def apply(elems: (RelationId, IndexedCollectionsEDB)*): IndexedCollectionsDatabase = new IndexedCollectionsDatabase(mutable.Map[RelationId, IndexedCollectionsEDB](elems *))
 }

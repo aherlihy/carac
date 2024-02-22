@@ -68,21 +68,17 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
     iteration = 0
     dbId = 0
     knownDbId = dbId
+    dbId += 1
+    newDbId = dbId
+
     derivedDB.clear()
     deltaDB.addOne(knownDbId, IndexedCollectionsDatabase())
-
-    edbs.foreach((rId, relation) => {
-      deltaDB(knownDbId)(rId) = IndexedCollectionsEDB.empty(relation.arity, indexCandidates(rId), ns(rId), mutable.BitSet())
-//      discoveredFacts(rId) = relation
-      derivedDB(rId) = IndexedCollectionsEDB.copyWithIndexes(relation)
-    }) // Delta-EDB is just empty sets
-    dbId += 1
-
-    newDbId = dbId
     deltaDB.addOne(newDbId, IndexedCollectionsDatabase())
 
     edbs.foreach((rId, relation) => {
-      deltaDB(newDbId)(rId) = IndexedCollectionsEDB.empty(relation.arity, indexCandidates(rId), ns(rId), mutable.BitSet()) // TODO: no indexes on delta.new, bc write into?
+      deltaDB(knownDbId).addEmpty(rId, relation.arity, indexCandidates(rId), ns(rId), mutable.BitSet())
+      deltaDB(newDbId).addEmpty(rId, relation.arity, indexCandidates(rId), ns(rId), mutable.BitSet()) // TODO: no indexes on delta.new, bc write into?
+      derivedDB.assignEDBToCopy(rId, relation)
     }) // Delta-EDB is just empty sets
     dbId += 1
   }
@@ -95,7 +91,7 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
     else
       relationArity(rule.rId) = rule.terms.length
       indexCandidates.getOrElseUpdate(rule.rId, mutable.BitSet())
-      edbs(rule.rId) = IndexedCollectionsEDB.empty(rule.terms.length, indexCandidates(rule.rId), ns(rule.rId), mutable.BitSet())
+      edbs.addEmpty(rule.rId, rule.terms.length, indexCandidates(rule.rId), ns(rule.rId), mutable.BitSet())
       edbs(rule.rId).addOne(IndexedCollectionsRow(rule.terms))
     edbDomain.addAll(rule.terms)
   }
@@ -145,41 +141,38 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
   // Read intermediate results
   def getKnownDerivedDB(rId: RelationId): IndexedCollectionsEDB =
     if !relationArity.contains(rId) then throw new Exception(s"Internal error: relation $rId (${ns(rId)}) has no arity")
-    derivedDB.getOrElse(
-      rId,
-      IndexedCollectionsEDB.empty(relationArity(rId), indexCandidates.getOrElse(rId, mutable.BitSet()), ns(rId), mutable.BitSet())
-    )
+    derivedDB.getOrElseEmpty(rId, relationArity(rId), indexCandidates.getOrElse(rId, mutable.BitSet()), ns(rId), mutable.BitSet())
   def getNewDerivedDB(rId: RelationId): IndexedCollectionsEDB = ??? // TODO: remove
 
   def getKnownDeltaDB(rId: RelationId): IndexedCollectionsEDB =
     if !relationArity.contains(rId) then throw new Exception(s"Internal error: relation $rId (${ns(rId)}) has no arity")
-    deltaDB(knownDbId).getOrElse(rId, IndexedCollectionsEDB.empty(relationArity(rId), indexCandidates.getOrElse(rId, mutable.BitSet()), ns(rId), mutable.BitSet()))
+    deltaDB(knownDbId).getOrElseEmpty(rId, relationArity(rId), indexCandidates.getOrElse(rId, mutable.BitSet()), ns(rId), mutable.BitSet())
   def getNewDeltaDB(rId: RelationId): IndexedCollectionsEDB =
     if !relationArity.contains(rId) then throw new Exception(s"Internal error: relation $rId (${ns(rId)}) has no arity")
-    deltaDB(newDbId).getOrElse(rId, IndexedCollectionsEDB.empty(relationArity(rId), indexCandidates.getOrElse(rId, mutable.BitSet()), ns(rId), mutable.BitSet()))
+    deltaDB(newDbId).getOrElseEmpty(rId, relationArity(rId), indexCandidates.getOrElse(rId, mutable.BitSet()), ns(rId), mutable.BitSet())
 
   // Read final results
   def getKnownIDBResult(rId: RelationId): Set[Seq[StorageTerm]] =
     debug("Final IDB Result[known]: ", () => s"at iteration $iteration: @$knownDbId, count=${getKnownDerivedDB(rId).length}")
     getKnownDerivedDB(rId).getSetOfSeq
   def getNewIDBResult(rId: RelationId): Set[Seq[StorageTerm]] =
-    derivedDB.getOrElse(rId, IndexedCollectionsEDB.empty(relationArity.getOrElse(rId, 0), skipIndexes = mutable.BitSet())).getSetOfSeq
+    derivedDB.getOrElseEmpty(rId, relationArity.getOrElse(rId, 0), mutable.BitSet(), ns(rId), mutable.BitSet()).getSetOfSeq
   def getEDBResult(rId: RelationId): Set[Seq[StorageTerm]] =
-    edbs.getOrElse(rId, IndexedCollectionsEDB.empty(relationArity.getOrElse(rId, 0), skipIndexes = mutable.BitSet())).getSetOfSeq
+    edbs.getOrElseEmpty(rId, relationArity.getOrElse(rId, 0), mutable.BitSet(), ns(rId), mutable.BitSet()).getSetOfSeq
 
   def insertDeltaIntoDerived(): Unit =
     deltaDB(newDbId).foreach((rId, edb) =>
       if (derivedDB.contains(rId))
         derivedDB(rId).addAll(edb.wrapped)
       else if (edb.wrapped.nonEmpty)
-        derivedDB(rId) = IndexedCollectionsEDB.copyWithIndexes(edb).bulkRebuildIndex() // TODO: don't rebuild, just copy
+        derivedDB.assignEDBToCopy(rId, edb)
     )
 
   def setNewDelta(rId: RelationId, rules: EDB): Unit =
-    deltaDB(newDbId)(rId) = asIndexedCollectionsEDB(rules)
+    deltaDB(newDbId).assignEDBToCopy(rId, asIndexedCollectionsEDB(rules))
 
   def clearNewDeltas(): Unit =
-    deltaDB(newDbId) = IndexedCollectionsDatabase()
+    deltaDB(newDbId).clear()
 
   // Write intermediate results
   def setKnownDerived(rId: RelationId, rules: EDB): Unit = ???
@@ -199,9 +192,9 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
     val t = knownDbId
     knownDbId = newDbId
     newDbId = t
-    deltaDB(knownDbId).foreach((rId, edb) =>
-      edb.bulkRebuildIndex()
-    )
+//    deltaDB(knownDbId).foreach((rId, edb) =>
+//      edb.bulkRebuildIndex()
+//    )
   }
   def compareNewDeltaDBs(): Boolean =
     deltaDB(newDbId).exists((k, v) => v.nonEmpty())
@@ -223,7 +216,7 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
         // NOTE: no longer treat undefined relations as empty edbs, instead error
         if (!relationArity.contains(rId))
           throw new Exception(s"Error: using EDB $rId (${ns(rId)}) but no known arity")
-        edbs(rId) = IndexedCollectionsEDB.empty(
+        edbs.addEmpty(rId,
           relationArity(rId),
           indexCandidates.getOrElseUpdate(rId, mutable.BitSet()),
           ns(rId),
@@ -306,7 +299,7 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
   // Printer methods
   override def toString() = {
     def printIndexes(db: IndexedCollectionsDatabase): String = {
-      db.toSeq.map((rId, idxC) => IndexedCollectionsEDB.indexSizeToString(ns(rId), idxC)/* + s"(arity=${idxC.arity})"*/).mkString("$indexes: [", ", ", "]")
+      db.toSeq.map((rId, idxC) => IndexedCollectionsEDB.allIndexesToString(idxC)/* + s"(arity=${idxC.arity})"*/).mkString("$indexes: [\n  ",",\n", "]")
     }
     def printHelperRelation(i: Int, db: IndexedCollectionsDatabase): String = {
       val indexes = printIndexes(db)
@@ -316,7 +309,6 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
 
     "+++++\n" +
       "EDB:\n  " + printIndexes(edbs) + "  " + printer.edbToString(edbs) +
-//      "\nDISCOV:\n  " + printIndexes(discoveredFacts) + "  " + printer.edbToString(discoveredFacts) +
       "\nDERIVED:" + printIndexes(derivedDB) + "  " + printer.edbToString(derivedDB) +
       "\nDELTA:" + deltaDB.map(printHelperRelation).mkString("[", ", ", "]") +
       "\n+++++"
