@@ -9,8 +9,8 @@ import test.examples.cspa10k.cspa10k_optimized as cspa10k_optimized_test
 import java.util.concurrent.TimeUnit
 
 @Fork(examples_fork, jvmArgsAppend = Array(examples_gc)) // # of jvms that it will use
-@Warmup(iterations = 1, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
-@Measurement(iterations = 1, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
+@Warmup(iterations = 3, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
+@Measurement(iterations = 10, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class cspa10k_optimized() extends ExampleBenchmarkGenerator(
