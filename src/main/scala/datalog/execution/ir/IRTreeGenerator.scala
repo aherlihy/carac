@@ -27,10 +27,8 @@ class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
     val queries = sortedRelations
       .filter(ruleMap.contains)
       .map(r =>
-        val prev = ScanOp(r, DB.Derived, KNOWLEDGE.Known)
         val res = semiNaiveEvalRule(ruleMap(r))
-        val diff = DiffOp(res, prev)
-        ResetDeltaOp(r, diff.asInstanceOf[IROp[Any]])
+        ResetDeltaOp(r, res.asInstanceOf[IROp[Any]])
       ) :+ InsertDeltaNewIntoDerived()
 
     SequenceOp(
@@ -43,8 +41,8 @@ class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
     ast match {
       case AllRulesNode(rules, rId, edb) =>
         var allRes = rules.map(naiveEvalRule).toSeq
-        if (edb)
-          allRes = allRes :+ ScanEDBOp(rId) // TODO: potentially change this to Discovered not EDB
+//        if (edb)
+//          allRes = allRes :+ ScanEDBOp(rId) // TODO: potentially change this to Discovered not EDB
 //        if(allRes.length == 1) allRes.head else
         UnionOp(OpCode.EVAL_RULE_NAIVE, allRes:_*)
       case RuleNode(head, _, atoms, k) =>
@@ -75,8 +73,8 @@ class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
     ast match {
       case AllRulesNode(rules, rId, edb) =>
         var allRes = rules.map(semiNaiveEvalRule).toSeq
-        if (edb)
-          allRes = allRes :+ ScanEDBOp(rId)
+//        if (edb)
+//          allRes = allRes :+ ScanEDBOp(rId)
 //        if(allRes.length == 1) allRes.head else
         UnionOp(OpCode.EVAL_RULE_SN, allRes:_*) // None bc union of unions so no point in sorting
       case RuleNode(head, body, atoms, k) =>

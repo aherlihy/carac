@@ -74,6 +74,7 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
     edbs.foreach((rId, relation) => {
       deltaDB(knownDbId)(rId) = IndexedCollectionsEDB.empty(relation.arity, indexCandidates(rId), ns(rId), mutable.BitSet())
       discoveredFacts(rId) = relation
+      derivedDB(rId) = IndexedCollectionsEDB.copyWithIndexes(relation)
     }) // Delta-EDB is just empty sets
     dbId += 1
 
@@ -200,11 +201,9 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
     val t = knownDbId
     knownDbId = newDbId
     newDbId = t
-    // rebuild indexes on all derived
-//    derivedDB(knownDbId).foreach((rId, edb) => edb.bulkRebuildIndex())
-//    derivedDB(newDbId).foreach((rId, edb) => edb.bulkRebuildIndex())
-    deltaDB(knownDbId).foreach((rId, edb) => edb.bulkRebuildIndex())
-//    deltaDB(newDbId).foreach((rId, edb) => edb.bulkRebuildIndex())
+    deltaDB(knownDbId).foreach((rId, edb) =>
+      edb.bulkRebuildIndex()
+    )
   }
   def compareNewDeltaDBs(): Boolean =
     deltaDB(newDbId).exists((k, v) => v.nonEmpty())
@@ -235,15 +234,11 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
     )
   }
 
-  // Volcano helpers
   def union(edbs: Seq[EDB]): EDB =
     import IndexedCollectionsEDB.{unionEDB, unionInPlace}
     edbs.unionEDB // unionInPlace is slower!
 
-  def diff(lhsEDB: EDB, rhsEDB: EDB): EDB =
-    val lhs = asIndexedCollectionsEDB(lhsEDB)
-    val rhs = asIndexedCollectionsEDB(rhsEDB)
-    lhs.diff(rhs) // diffInPlace is slower, also needs indexes to be updated!
+  def diff(lhsEDB: EDB, rhsEDB: EDB): EDB = ???
 
   override def joinProjectHelper_withHash(inputsEDB: Seq[EDB], rId: Int, hash: String, onlineSort: Boolean): IndexedCollectionsEDB = {
     if onlineSort then throw new Exception("Unimplemented: online sort with indexes")
@@ -293,6 +288,13 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
         indexesToIgnore // remove all indices after proj/ going into union
       )
     }
+    fResult.wrapped.filterInPlace(row =>
+      val res =
+        (!discoveredFacts.contains(rId) || !discoveredFacts(rId).contains(row)) &&
+          (!derivedDB.contains(rId) || !derivedDB(rId).contains(row))
+//      println(s"checking ${row.toString} is not in ${getKnownDerivedDB(rId).factToString}, res=$res")
+      res
+    ) // TODO: push further down to avoid extra it
     fResult
   }
 
