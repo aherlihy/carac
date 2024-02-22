@@ -150,7 +150,8 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
 
   def contains(edb: IndexedCollectionsRow): Boolean =
     var i = 0
-    while indexes(i) == null && i < indexes.length do i += 1 // for now take first index and use it to filter, TODO: use smallest
+    while i < indexes.length && indexes(i) == null do
+      i += 1 // for now take first index and use it to filter, TODO: use smallest
     if i == indexes.length then
       wrapped.contains(edb)
     else
