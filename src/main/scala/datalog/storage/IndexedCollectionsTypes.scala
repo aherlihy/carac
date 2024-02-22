@@ -49,7 +49,7 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
                                  arity: Int,
                                  var skipIndexes: mutable.BitSet // don't build indexes for these keys
                                 ) extends EDB with IterableOnce[IndexedCollectionsRow] {
-  import IndexedCollectionsEDB.*
+  import IndexedCollectionsEDB.{lookupOrCreate,IndexMap}
 
   if indexKeys.exists(_ >= arity) then throw new Exception(s"Error: creating edb $name with indexes ${indexKeys.mkString("[", ", ", "]")} but arity $arity")
   if skipIndexes.exists(_ >= arity) then throw new Exception(s"Error: creating edb $name but skiping indexes ${skipIndexes.mkString("[", ", ", "]")} but arity $arity")
@@ -426,44 +426,31 @@ object IndexedCollectionsEDB {
   }
 }
 
-/**
- * Precise type for the Row (aka Tuple) type in IndexedCollectionsStorageManager.
- * Represents a single tuple within a relation, either EDB or IDB.
- * AKA a Seq[StorageTerm]
- */
-case class IndexedCollectionsRow(wrapped: ArraySeq[StorageTerm]) extends Row[StorageTerm] { // TODO: update from Seq to ArrayBuffer?
-  def toSeq = wrapped
-  override def toString: String = wrapped.mkString("(", ", ", ")")
-  def concat(suffix: Row[StorageTerm]): IndexedCollectionsRow =
-    IndexedCollectionsRow(wrapped.concat(asIndexedCollectionsRow(suffix).wrapped))
-  export wrapped.{ apply, iterator, lift, mkString, size }
-
-  // Inlined and specialized applyOrElse to avoid significant boxing overhead.
-  inline def applyOrElse(i: Int, inline default: Int => StorageTerm): StorageTerm =
-    if i >= wrapped.size then default(i) else apply(i)
-
+inline def IndexedCollectionsRow(s: ArraySeq[StorageTerm]) = s
+type IndexedCollectionsRow = ArraySeq[StorageTerm]
+extension (seq: ArraySeq[StorageTerm])
   def project(projIndexes: Seq[(String, Constant)]): IndexedCollectionsRow = // make a copy
-    IndexedCollectionsRow(ArraySeq.from(projIndexes.map((typ, idx) =>
-      typ match {
-        case "v" => wrapped(idx.asInstanceOf[Int])
-        case "c" => idx
-        case _ => throw new Exception("Internal error: projecting something that is not a constant nor a variable")
-      }
-    )))
+   ArraySeq.from(projIndexes.map((typ, idx) =>
+     typ match {
+       case "v" => seq(idx.asInstanceOf[Int])
+       case "c" => idx
+       case _ => throw new Exception("Internal error: projecting something that is not a constant nor a variable")
+     }
+   ))
 
   /* Equality constraint $1 == $2 */
   inline def filterConstraint(keys: Seq[Int]): Boolean =
     keys.size <= 1 ||                    // there is no self-constraint, OR
       keys.drop(1).forall(idxToMatch =>  // all the self constraints hold
-        wrapped(keys.head) == wrapped(idxToMatch)
+        seq(keys.head) == seq(idxToMatch)
       )
 
   /* Constant filter $1 = c */
   inline def filterConstant(consts: mutable.Map[Int, Constant]): Boolean =
     consts.isEmpty || consts.forall((idx, const) => // for each filter
-      wrapped(idx) == const
+      seq(idx) == const
     )
-}
+end extension
 
 /**
  * Precise type for the Database type in IndexedCollectionsStorageManager.

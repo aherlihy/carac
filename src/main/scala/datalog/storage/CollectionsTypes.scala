@@ -53,21 +53,8 @@ object CollectionsEDB {
   def apply(elems: CollectionsRow*): CollectionsEDB = new CollectionsEDB(mutable.ArrayBuffer[CollectionsRow](elems*))
 }
 
-/**
- * Precise type for the Row (aka Tuple) type in CollectionsStorageManager.
- * Represents a single tuple within a relation, either EDB or IDB.
- * AKA a Seq[StorageTerm]
- */
-case class CollectionsRow(wrapped: Seq[StorageTerm]) extends Row[StorageTerm] {
-  def toSeq = wrapped
-  def length: Int = wrapped.length
-  def concat(suffix: Row[StorageTerm]): CollectionsRow =
-    CollectionsRow(wrapped.concat(asCollectionsRow(suffix).wrapped))
-  export wrapped.{ apply, iterator, lift, mkString }
-  // Inlined and specialized applyOrElse to avoid significant boxing overhead.
-  inline def applyOrElse(i: Int, inline default: Int => StorageTerm): StorageTerm =
-    if i >= length then default(i) else apply(i)
-}
+type CollectionsRow = Seq[StorageTerm]
+inline def CollectionsRow(s: Seq[StorageTerm]) = s
 
 /**
  * Precise type for the Database type in CollectionsStorageManager.

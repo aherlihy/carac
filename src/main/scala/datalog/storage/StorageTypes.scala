@@ -20,7 +20,7 @@ type StorageVariable = Variable
 type StorageConstant = Constant
 
 /* All methods used within storage managers for now, so methods only defined with precise types */
-trait Row[T]
+type Row[T] = Seq[T] // FIXME: Either make this ArraySeq or make it fully abstract and overridable.
 
 /* Most methods used within storage manager so are defined on the implementation, other than length (execution) and factToString (printer) */
 trait Relation[T] extends IterableOnce[Row[T]] {
