@@ -6,6 +6,7 @@ import datalog.storage.{DB, EDB, KNOWLEDGE, StorageManager}
 import datalog.tools.Debug.debug
 
 import scala.collection.mutable
+import scala.collection.immutable.ArraySeq
 import scala.quoted.*
 
 /**
@@ -46,7 +47,7 @@ class StagedSnippetCompiler(val storageManager: StorageManager)(using val jitOpt
 
   given ToExpr[Atom] with {
     def apply(x: Atom)(using Quotes) = {
-      '{ Atom( ${ Expr(x.rId) }, ${ Expr.ofSeq(x.terms.map(y => Expr(y))) }, ${ Expr(x.negated) } ) }
+      '{ Atom( ${ Expr(x.rId) }, ArraySeq.unsafeWrapArray(Array(${Varargs(x.terms.map(y => Expr(y)))}*)), ${ Expr(x.negated) } ) }
     }
   }
 

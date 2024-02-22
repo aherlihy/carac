@@ -1,6 +1,7 @@
 package test
 import datalog.execution.{ExecutionEngine, PrecedenceGraph, SemiNaiveExecutionEngine}
 
+import scala.collection.immutable.ArraySeq
 import scala.collection.mutable
 import datalog.dsl.{Program, Constant, Atom, __}
 import datalog.storage.{NS, VolcanoStorageManager}
@@ -396,7 +397,7 @@ class PrecedenceGraphTest extends munit.FunSuite {
 
     val graph = new PrecedenceGraph(using new NS())
     for ((node, deps) <- adjacency) {
-      graph.addNode(Atom(node, Seq.empty, false) +: deps.map(d => Atom(d, Seq.empty, false)))
+      graph.addNode(Atom(node, ArraySeq.empty, false) +: deps.map(d => Atom(d, ArraySeq.empty, false)))
     }
 
     assertEquals(
@@ -420,7 +421,7 @@ class PrecedenceGraphTest extends munit.FunSuite {
 
     val graph = new PrecedenceGraph(using new NS())
     for ((node, deps) <- adjacencyList) {
-      graph.addNode(Atom(node, Seq.empty, false) +: deps.map(d => Atom(d, Seq.empty, false)))
+      graph.addNode(Atom(node, ArraySeq.empty, false) +: deps.map(d => Atom(d, ArraySeq.empty, false)))
     }
 
     assertEquals(
@@ -444,10 +445,10 @@ class PrecedenceGraphTest extends munit.FunSuite {
 
     val graph = new PrecedenceGraph(using new NS())
     for ((node, deps) <- negAdjacency) {
-      graph.addNode(Atom(node, Seq.empty, false) +: deps.map(d => Atom(d, Seq.empty, true)))
+      graph.addNode(Atom(node, ArraySeq.empty, false) +: deps.map(d => Atom(d, ArraySeq.empty, true)))
     }
     for ((node, deps) <- posAdjacency) {
-      graph.addNode(Atom(node, Seq.empty, false) +: deps.map(d => Atom(d, Seq.empty, false)))
+      graph.addNode(Atom(node, ArraySeq.empty, false) +: deps.map(d => Atom(d, ArraySeq.empty, false)))
     }
 
     assertEquals(
@@ -470,7 +471,7 @@ class PrecedenceGraphTest extends munit.FunSuite {
 
     val graph = new PrecedenceGraph(using new NS())
     for ((node, deps) <- adjacency) {
-      graph.addNode(Atom(node, Seq.empty, false) +: deps.map(d => Atom(d, Seq.empty, true)))
+      graph.addNode(Atom(node, ArraySeq.empty, false) +: deps.map(d => Atom(d, ArraySeq.empty, true)))
     }
 
     assertEquals(
@@ -499,10 +500,10 @@ class PrecedenceGraphTest extends munit.FunSuite {
 
     val graph = new PrecedenceGraph(using new NS())
     for ((node, deps) <- negAdjacency) {
-      graph.addNode(Atom(node, Seq.empty, false) +: deps.map(d => Atom(d, Seq.empty, true)))
+      graph.addNode(Atom(node, ArraySeq.empty, false) +: deps.map(d => Atom(d, ArraySeq.empty, true)))
     }
     for ((node, deps) <- posAdjacency) {
-      graph.addNode(Atom(node, Seq.empty, false) +: deps.map(d => Atom(d, Seq.empty, false)))
+      graph.addNode(Atom(node, ArraySeq.empty, false) +: deps.map(d => Atom(d, ArraySeq.empty, false)))
     }
 
     assertEquals(
