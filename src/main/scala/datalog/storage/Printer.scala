@@ -134,8 +134,9 @@ class Printer[S <: StorageManager](val sm: S) {
         s"SCAN[$db.$knowledge](${ctx.storageManager.ns(srcRel)})"
       case ProjectJoinFilterOp(rId, keys, children:_*) =>
         s"JOIN${keys.varToString()}${keys.constToString()}${children.map(s => printIR(s, ident+1)).mkString("(\n", ",\n", ")")}"
-      case InsertOp(rId, db, knowledge, children:_*) =>
-        s"INSERT INTO $db.$knowledge.${ctx.storageManager.ns(rId)}\n${children.map(s => printIR(s, ident+1)).mkString("", "\n", "")}\n"
+      case ResetDeltaOp(rId, children:_*) =>
+        s"INSERT INTO delta.new.${ctx.storageManager.ns(rId)}\n${children.map(s => printIR(s, ident+1)).mkString("", "\n", "")}\n"
+      case InsertDeltaNewIntoDerived() => "COPY DELTA INTO DERIVED"
       case UnionOp(fnCode, children:_*) => s"UNION${if (fnCode != OpCode.UNION) "::" + fnCode else "_"}${children.map(o => printIR(o, ident+1)).mkString("(\n", ",\n", ")")}"
       case UnionSPJOp(rId, k, children:_*) =>
         s"UNION_SPJ::${

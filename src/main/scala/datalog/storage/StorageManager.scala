@@ -45,9 +45,12 @@ trait StorageManager(val ns: NS) {
   def setKnownDerived(rId: RelationId, rules: EDB): Unit
   def setNewDerived(rId: RelationId, rules: EDB): Unit
 
-  def setNewDelta(rId: RelationId, rules: EDB): Unit
   def setKnownDelta(rId: RelationId, rules: EDB): Unit
   def clearNewDerived(): Unit
+
+  def insertDeltaIntoDerived(): Unit
+  def setNewDelta(rId: RelationId, rules: EDB): Unit
+  def clearNewDeltas(): Unit
 
   def swapKnowledge(): Unit
   def compareNewDeltaDBs(): Boolean

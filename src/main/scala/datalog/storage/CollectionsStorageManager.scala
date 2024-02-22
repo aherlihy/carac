@@ -32,6 +32,8 @@ abstract class CollectionsStorageManager(override val ns: NS) extends StorageMan
 
   def updateAliases(aliases: mutable.Map[RelationId, RelationId]): Unit = ()
 
+  def clearNewDeltas(): Unit = ???
+  def insertDeltaIntoDerived(): Unit = ???
   def initRelation(rId: RelationId, name: String): Unit = {
     ns(rId) = name
   }

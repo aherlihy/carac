@@ -218,33 +218,12 @@ class QuoteCompiler(val storageManager: StorageManager)(using JITOptions) extend
             cOps.reduceLeft((acc, next) =>
               '{ $acc ; $next }
             )
-
-      case InsertOp(rId, db, knowledge, children:_*) =>
+      case ResetDeltaOp(rId, children: _*) =>
         val res = compileIRRelOp(children.head.asInstanceOf[IROp[EDB]])
-        db match {
-          case DB.Derived =>
-            knowledge match {
-              case KNOWLEDGE.New =>
-                if (children.length == 1)
-                  '{ $stagedSM.setNewDerived(${ Expr(rId) }, $res) }
-                else
-                  val res2 = compileIRRelOp(children(1).asInstanceOf[IROp[EDB]])
-                  '{ $stagedSM.resetNewDerived(${ Expr(rId) }, $res, $res2) }
-              case KNOWLEDGE.Known =>
-                if (children.length == 1)
-                  '{ $stagedSM.setKnownDerived(${ Expr(rId) }, $res) }
-                else
-                  val res2 = compileIRRelOp(children(1).asInstanceOf[IROp[EDB]])
-                  '{ $stagedSM.resetKnownDerived(${ Expr(rId) }, $res, $res2) }
-            }
-          case DB.Delta =>
-            knowledge match {
-              case KNOWLEDGE.New =>
-                '{ $stagedSM.setNewDelta(${ Expr(rId) }, $res) }
-              case KNOWLEDGE.Known =>
-                '{ $stagedSM.setKnownDelta(${ Expr(rId) }, $res) }
-            }
-        }
+        '{ $stagedSM.setNewDelta(${ Expr(rId) }, $res) }
+
+      case InsertDeltaNewIntoDerived() =>
+        '{ $stagedSM.insertDeltaIntoDerived() }
 
       case DebugNode(prefix, msg) =>
         '{ debug(${ Expr(prefix) }, () => $stagedSM.printer.toString()) }

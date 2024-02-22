@@ -66,13 +66,14 @@ class StagedSnippetExecutionEngine(override val storageManager: StorageManager,
       case op: SwapAndClearOp =>
         op.run(storageManager)
 
-      case op: InsertOp if jitOptions.granularity.flag == op.code =>
+      case op: InsertDeltaNewIntoDerived =>
+        op.run(storageManager)
+
+      case op: ResetDeltaOp if jitOptions.granularity.flag == op.code =>
         if (op.compiledSnippetContinuationFn == null)
           op.compiledSnippetContinuationFn = snippetCompiler.getCompiledSnippet(op)
         op.compiledSnippetContinuationFn(storageManager, op.children.map(o => (sm: StorageManager) => jit(o.asInstanceOf[IROp[EDB]])))
 
-      case op: InsertOp =>
-        op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o.asInstanceOf[IROp[EDB]])))
       case op: DebugNode =>
         op.run(storageManager)
 

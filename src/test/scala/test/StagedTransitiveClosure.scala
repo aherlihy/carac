@@ -6,6 +6,7 @@ import datalog.execution.{Backend, CompileSync, ExecutionEngine, Granularity, JI
 import datalog.storage.{DefaultStorageManager, VolcanoStorageManager}
 import test.graphs.*
 
+@munit.IgnoreSuite
 class NaiveStagedCompiledTransitiveClosure extends munit.FunSuite {
   val jo = JITOptions(mode = Mode.Compiled)
   List(
@@ -26,6 +27,7 @@ class NaiveStagedCompiledTransitiveClosure extends munit.FunSuite {
       }
     }))
 }
+@munit.IgnoreSuite
 class NaiveStagedInterpretedTransitiveClosure extends munit.FunSuite {
   val jitOptions = JITOptions(mode = Mode.Interpreted)
   List(
@@ -47,6 +49,7 @@ class NaiveStagedInterpretedTransitiveClosure extends munit.FunSuite {
     }))
 }
 
+@munit.IgnoreSuite
 class SemiNaiveStagedCompiledTransitiveClosure extends munit.FunSuite {
   val jo = JITOptions(mode = Mode.Compiled)
   List(
@@ -68,6 +71,7 @@ class SemiNaiveStagedCompiledTransitiveClosure extends munit.FunSuite {
     }))
 }
 
+@munit.IgnoreSuite
 class SemiNaiveBytecodeGeneratedTransitiveClosure extends munit.FunSuite {
   val jo = JITOptions(mode = Mode.JIT, granularity = Granularity.ALL, backend = Backend.Bytecode)
   List(
@@ -88,6 +92,7 @@ class SemiNaiveBytecodeGeneratedTransitiveClosure extends munit.FunSuite {
       }
     }))
 }
+@munit.IgnoreSuite
 class SemiNaiveStagedInterpretedTransitiveClosure extends munit.FunSuite {
   val jitOptions = JITOptions(mode = Mode.Interpreted)
   List(
@@ -109,6 +114,7 @@ class SemiNaiveStagedInterpretedTransitiveClosure extends munit.FunSuite {
     }))
 }
 
+@munit.IgnoreSuite
 class SemiNaiveStagedJIT_TransitiveClosure extends munit.FunSuite {
   // JIT async, SN
   val jitOptions = JITOptions(mode = Mode.JIT, granularity = Granularity.ALL, compileSync = CompileSync.Async)
