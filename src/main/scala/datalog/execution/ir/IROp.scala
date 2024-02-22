@@ -108,7 +108,7 @@ case class DoWhileOp(toCmp: DB, override val children:IROp[Any]*)(using JITOptio
     var i = 0
     while ( {
       children.head.children.head.run(storageManager) // swap
-      println(s"DBs start of semi-naive iteration $i: ${storageManager.toString}")
+//      println(s"DBs start of semi-naive iteration $i: ${storageManager.toString}")
       children.head.children(1).run(storageManager)
       i += 1
 //      if i > 2 then System.exit(0)
@@ -278,7 +278,7 @@ case class ProjectJoinFilterOp(rId: RelationId, var k: JoinIndexes, override val
       jitOptions.onlineSort
     )
   override def run(storageManager: StorageManager): EDB =
-    println(s"doing SPJU on children: ${children.map(c => c.asInstanceOf[ScanOp]).map(c => s"${storageManager.ns(c.rId)}.${c.db}.${c.knowledge}")}")
+//    println(s"doing SPJU on children: ${children.map(c => c.asInstanceOf[ScanOp]).map(c => s"${storageManager.ns(c.rId)}.${c.db}.${c.knowledge}")}")
     val inputs = children.map(s => s.run(storageManager))
     val res = storageManager.joinProjectHelper_withHash(
         inputs,
@@ -286,7 +286,7 @@ case class ProjectJoinFilterOp(rId: RelationId, var k: JoinIndexes, override val
         k.hash,
         jitOptions.onlineSort
       )
-    println(s"=> result of SPJU on ${storageManager.printer.ruleToString(k.atoms)}: ${storageManager.ns(rId)}=${res.factToString}")
+//    println(s"=> result of SPJU on ${storageManager.printer.ruleToString(k.atoms)}: ${storageManager.ns(rId)}=${res.factToString}")
     res
 }
 
