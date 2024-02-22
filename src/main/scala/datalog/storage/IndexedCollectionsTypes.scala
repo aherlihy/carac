@@ -440,13 +440,17 @@ inline def IndexedCollectionsRow(s: ArraySeq[StorageTerm]) = s
 type IndexedCollectionsRow = ArraySeq[StorageTerm]
 extension (seq: ArraySeq[StorageTerm])
   def project(projIndexes: Seq[(String, Constant)]): IndexedCollectionsRow = // make a copy
-   ArraySeq.from(projIndexes.map((typ, idx) =>
-     typ match {
-       case "v" => seq(idx.asInstanceOf[Int])
-       case "c" => idx
+   val arr = new Array[StorageTerm](projIndexes.length)
+   var i = 0
+   while i < arr.length do
+     val elem = projIndexes(i)
+     elem._1 match
+       case "v" => arr(i) = seq(elem._2.asInstanceOf[Int])
+       case "c" => arr(i) = elem._2
        case _ => throw new Exception("Internal error: projecting something that is not a constant nor a variable")
-     }
-   ))
+     i += 1
+   end while
+   ArraySeq.unsafeWrapArray(arr)
 
   /* Equality constraint $1 == $2 */
   inline def filterConstraint(keys: Seq[Int]): Boolean =
