@@ -8,7 +8,7 @@ import datalog.execution.JoinIndexes
 import datalog.storage.IndexedCollectionsEDB.allIndexesToString
 
 import scala.collection.mutable.ArrayBuffer
-import java.util.TreeMap
+import java.util.{HashMap, TreeMap}
 
 
 /**
@@ -60,6 +60,12 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
     if (skipIndexes.contains(idx)) throw new Exception(s"Error: trying to access data in $name with skipped index $idx")
     indexes(idx)
 
+  private def createIndexMap(): IndexMap =
+    // Customizing the initialCapacity and loadFactor parameters of the
+    // constructor do not seem to improve performance at least on
+    // datalog.benchmarks.examples.cspa10k_optimized.jit_indexed_sel__0_blocking_DELTA_lambda_EOL
+    new HashMap()
+
   def bulkRegisterIndex(idxs: mutable.BitSet): this.type =
     idxs.foreach(registerIndex)
     this
@@ -72,7 +78,7 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
     // TODO: potentially build indexes async
     indexKeys.addOne(idx)
     if (indexes(idx) == null)
-      val newIndex: IndexMap = TreeMap()
+      val newIndex: IndexMap = createIndexMap()
       if (!skipIndexes.contains(idx))
         wrapped.foreach(edb => newIndex.lookupOrCreate(edb(idx)).addOne(edb))
       indexes(idx) = newIndex
@@ -91,7 +97,7 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
     while i < indexes.length do
       val oldIndex = indexes(i)
       if oldIndex != null then
-        val newIndex: IndexMap = TreeMap()
+        val newIndex: IndexMap = createIndexMap()
         wrapped.foreach(edb => newIndex.lookupOrCreate(edb(i)).addOne(edb))
         indexes(i) = newIndex
       i += 1
@@ -336,7 +342,7 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
 }
 
 object IndexedCollectionsEDB {
-  type IndexMap = TreeMap[StorageTerm, ArrayBuffer[IndexedCollectionsRow]]
+  type IndexMap = HashMap[StorageTerm, ArrayBuffer[IndexedCollectionsRow]]
   extension (index: IndexMap)
     def lookupOrCreate(key: StorageTerm): ArrayBuffer[IndexedCollectionsRow] =
       // TODO: tune initialSize?
