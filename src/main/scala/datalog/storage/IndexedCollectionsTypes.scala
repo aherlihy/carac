@@ -11,6 +11,7 @@ import scala.collection.immutable.ArraySeq
 import scala.collection.mutable.ArrayBuffer
 import java.util.{Arrays, HashMap, TreeMap}
 
+import org.eclipse.collections.impl.map.mutable.primitive.IntObjectHashMap
 
 /**
  * This file defines the datatypes that the IndexedCollectionsStorageManager operatoes over. These are the simplest example and just wrap Scala IndexedCollections.
@@ -50,7 +51,7 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
     // Customizing the initialCapacity and loadFactor parameters of the
     // constructor do not seem to improve performance at least on
     // datalog.benchmarks.examples.cspa10k_optimized.jit_indexed_sel__0_blocking_DELTA_lambda_EOL
-    new HashMap()
+    new IntObjectHashMap()
 
   def bulkRegisterIndex(idxs: mutable.BitSet): this.type =
     idxs.foreach(registerIndex)
@@ -339,11 +340,11 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
 }
 
 object IndexedCollectionsEDB {
-  type IndexMap = HashMap[StorageTerm, ArrayBuffer[IndexedCollectionsRow]]
+  type IndexMap = IntObjectHashMap[ArrayBuffer[IndexedCollectionsRow]]
   extension (index: IndexMap)
     def lookupOrCreate(key: StorageTerm): ArrayBuffer[IndexedCollectionsRow] =
       // TODO: tune initialSize?
-      index.computeIfAbsent(key, _ => new mutable.ArrayBuffer(initialSize = 16))
+      index.getIfAbsentPutWithKey(key, _ => new mutable.ArrayBuffer(initialSize = 16))
     def lookupOrEmpty(key: StorageTerm): ArrayBuffer[IndexedCollectionsRow] =
       val valueOrNull = index.get(key)
       if valueOrNull != null then
@@ -353,8 +354,8 @@ object IndexedCollectionsEDB {
         new mutable.ArrayBuffer(initialSize = 16)
     inline def contains(key: StorageTerm): Boolean =
       index.containsKey(key)
-    inline def foreach(f: java.util.function.BiConsumer[StorageTerm, ArrayBuffer[IndexedCollectionsRow]]): Unit =
-      index.forEach(f)
+    // inline def foreach(f: java.util.function.BiConsumer[StorageTerm, ArrayBuffer[IndexedCollectionsRow]]): Unit =
+    //   index.forEach(f)
     inline def clear(): Unit =
       index.clear()
 
@@ -411,9 +412,10 @@ object IndexedCollectionsEDB {
 
   def indexToString(index: IndexMap): String =
     import scala.jdk.CollectionConverters.*
-    index.asScala.toSeq.sortBy(_._1).map((term, matchingRows) =>
-      s"$term => ${matchingRows.map(r => r.mkString("[", ", ", "]")).mkString("[", ", ", "]")}"
-    ).mkString("{", ", ", "}")
+    ???
+    // index.asScala.toSeq.sortBy(_._1).map((term, matchingRows) =>
+    //   s"$term => ${matchingRows.map(r => r.mkString("[", ", ", "]")).mkString("[", ", ", "]")}"
+    // ).mkString("{", ", ", "}")
 
   def allIndexesToString(edb: IndexedCollectionsEDB): String = {
     s"  ${edb.name}:\n\t${
