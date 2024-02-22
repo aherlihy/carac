@@ -9,7 +9,7 @@ import datalog.storage.IndexedCollectionsEDB.allIndexesToString
 
 import scala.collection.immutable.ArraySeq
 import scala.collection.mutable.ArrayBuffer
-import java.util.{HashMap, TreeMap}
+import java.util.{Arrays, HashMap, TreeMap}
 
 
 /**
@@ -160,10 +160,20 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
     while i < indexes.length && indexes(i) == null do
       i += 1 // for now take first index and use it to filter, TODO: use smallest
     if i == indexes.length then
-      wrapped.contains(edb)
+      containsRow(wrapped, edb)
     else
       val values = indexes(i).get(edb(i))
-      values != null && values.contains(edb)
+      values != null && containsRow(values, edb)
+
+  private def containsRow(container: mutable.ArrayBuffer[IndexedCollectionsRow], row: IndexedCollectionsRow): Boolean =
+    var i = 0
+    val rowLength = row.length
+    while i < container.length do
+      if Arrays.equals(container(i).unsafeArray.asInstanceOf[Array[AnyRef]], row.unsafeArray.asInstanceOf[Array[AnyRef]]) then
+        return true
+      i += 1
+    end while
+    false
 
   def diff(that: IndexedCollectionsEDB): IndexedCollectionsEDB = ???
 
