@@ -471,7 +471,7 @@ case class IndexedCollectionsRow(wrappedS: Seq[StorageTerm]) extends Row[Storage
  * AKA a mutable.Map[RelationId, ArrayBuffer[Seq[Term]]].
  */
 case class IndexedCollectionsDatabase(wrapped: mutable.Map[RelationId, IndexedCollectionsEDB]) extends Database[IndexedCollectionsEDB] {
-  val definedRelations = mutable.Set.from(wrapped.keys)
+  val definedRelations: mutable.BitSet = mutable.BitSet() ++ wrapped.keys
 
   def clear(): Unit = {
     wrapped.foreach((rId, edb) =>
