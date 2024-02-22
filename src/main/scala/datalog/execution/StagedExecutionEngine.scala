@@ -281,7 +281,10 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
       case op: SwapAndClearOp =>
         op.run(storageManager)
 
-      case op: InsertOp =>
+      case op: InsertDeltaNewIntoDerived =>
+        op.run(storageManager)
+
+      case op: ResetDeltaOp =>
         op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o.asInstanceOf[IROp[EDB]])))
 
       case op: DebugNode =>

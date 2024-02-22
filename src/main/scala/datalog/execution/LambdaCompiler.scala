@@ -86,7 +86,7 @@ class LambdaCompiler(val storageManager: StorageManager)(using JITOptions) exten
     case SwapAndClearOp() =>
       sm =>
         sm.swapKnowledge()
-        sm.clearNewDerived()
+        sm.clearNewDeltas()
 
     case SequenceOp(label, children:_*) =>
       val cOps: Array[CompiledFn[Any]] = children.map(compile).toArray
@@ -105,33 +105,12 @@ class LambdaCompiler(val storageManager: StorageManager)(using JITOptions) exten
               i += 1
             }
           }
+    case InsertDeltaNewIntoDerived() =>
+      sm => sm.insertDeltaIntoDerived()
 
-    case InsertOp(rId, db, knowledge, children:_*) =>
+    case ResetDeltaOp(rId, children:_*) =>
       val res = compile(children.head.asInstanceOf[IROp[EDB]])
-      db match {
-        case DB.Derived =>
-          knowledge match {
-            case KNOWLEDGE.New =>
-              if (children.length == 1)
-                sm => sm.setNewDerived(rId, res(sm))
-              else
-                val res2 = compile(children(1).asInstanceOf[IROp[EDB]])
-                sm => sm.resetNewDerived(rId, res(sm), res2(sm))
-            case KNOWLEDGE.Known =>
-              if (children.length == 1)
-                sm => sm.setKnownDerived(rId, res(sm))
-              else
-                val res2 = compile(children(1).asInstanceOf[IROp[EDB]])
-                sm => sm.resetKnownDerived(rId, res(sm), res2(sm))
-          }
-        case DB.Delta =>
-          knowledge match {
-            case KNOWLEDGE.New =>
-              sm => sm.setNewDelta(rId, res(sm))
-            case KNOWLEDGE.Known =>
-              sm => sm.setKnownDelta(rId, res(sm))
-          }
-      }
+      sm => sm.setNewDelta(rId, res(sm))
 
     case ScanOp(rId, db, knowledge) =>
       db match {

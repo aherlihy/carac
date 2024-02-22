@@ -19,7 +19,7 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
 
   // dbID => database, because we swap between read (known) and write (new) within iterations
   var dbId = 0
-  protected val derivedDB: mutable.Map[KnowledgeId, IndexedCollectionsDatabase] = mutable.Map[KnowledgeId, IndexedCollectionsDatabase]()
+  protected val derivedDB: IndexedCollectionsDatabase = IndexedCollectionsDatabase()
   protected val deltaDB: mutable.Map[KnowledgeId, IndexedCollectionsDatabase] = mutable.Map[KnowledgeId, IndexedCollectionsDatabase]()
 
   val allRulesAllIndexes: mutable.Map[RelationId, AllIndexes] = mutable.Map.empty // Index => position
@@ -68,7 +68,7 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
     iteration = 0
     dbId = 0
     knownDbId = dbId
-    derivedDB.addOne(knownDbId, IndexedCollectionsDatabase())
+    derivedDB.clear()
     deltaDB.addOne(knownDbId, IndexedCollectionsDatabase())
 
     edbs.foreach((rId, relation) => {
@@ -78,7 +78,6 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
     dbId += 1
 
     newDbId = dbId
-    derivedDB.addOne(newDbId, IndexedCollectionsDatabase())
     deltaDB.addOne(newDbId, IndexedCollectionsDatabase())
 
     edbs.foreach((rId, relation) => {
@@ -145,10 +144,14 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
   // Read intermediate results
   def getKnownDerivedDB(rId: RelationId): IndexedCollectionsEDB =
     if !relationArity.contains(rId) then throw new Exception(s"Internal error: relation $rId (${ns(rId)}) has no arity")
-    derivedDB(knownDbId).getOrElse(rId, discoveredFacts.getOrElse(rId, IndexedCollectionsEDB.empty(relationArity(rId), indexCandidates(rId), ns(rId), mutable.BitSet())))
-  def getNewDerivedDB(rId: RelationId): IndexedCollectionsEDB =
-    if !relationArity.contains(rId) then throw new Exception(s"Internal error: relation $rId (${ns(rId)}) has no arity")
-    derivedDB(newDbId).getOrElse(rId, discoveredFacts.getOrElse(rId, IndexedCollectionsEDB.empty(relationArity(rId), indexCandidates(rId), ns(rId), mutable.BitSet())))
+    derivedDB.getOrElse(
+      rId,
+      discoveredFacts.getOrElse(
+        rId,
+        IndexedCollectionsEDB.empty(relationArity(rId), indexCandidates.getOrElse(rId, mutable.BitSet()), ns(rId), mutable.BitSet()))
+    )
+  def getNewDerivedDB(rId: RelationId): IndexedCollectionsEDB = ??? // TODO: remove
+
   def getKnownDeltaDB(rId: RelationId): IndexedCollectionsEDB =
     if !relationArity.contains(rId) then throw new Exception(s"Internal error: relation $rId (${ns(rId)}) has no arity")
     deltaDB(knownDbId).getOrElse(rId, discoveredFacts.getOrElse(rId, IndexedCollectionsEDB.empty(relationArity(rId), indexCandidates(rId), ns(rId), mutable.BitSet())))
@@ -161,38 +164,36 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
     debug("Final IDB Result[known]: ", () => s"at iteration $iteration: @$knownDbId, count=${getKnownDerivedDB(rId).length}")
     getKnownDerivedDB(rId).getSetOfSeq
   def getNewIDBResult(rId: RelationId): Set[Seq[StorageTerm]] =
-    debug(s"Final IDB Result[new]", () => s" at iteration $iteration: @$newDbId, count=${getNewDerivedDB(rId).length}")
-    getNewDerivedDB(rId).getSetOfSeq
+    derivedDB.getOrElse(rId, IndexedCollectionsEDB.empty(relationArity.getOrElse(rId, 0), skipIndexes = mutable.BitSet())).getSetOfSeq
   def getEDBResult(rId: RelationId): Set[Seq[StorageTerm]] =
     edbs.getOrElse(rId, IndexedCollectionsEDB.empty(relationArity.getOrElse(rId, 0), skipIndexes = mutable.BitSet())).getSetOfSeq
 
-  // Write intermediate results
-  def setKnownDerived(rId: RelationId, rules: EDB): Unit =
-    derivedDB(knownDbId)(rId) = asIndexedCollectionsEDB(rules)
-
-  def resetKnownDerived(rId: RelationId, rulesEDB: EDB, prevEDB: EDB): Unit =
-    val rules = asIndexedCollectionsEDB(rulesEDB)
-    val prev = asIndexedCollectionsEDB(prevEDB)
-    // TODO: maybe use insert not copy, except problem is that rules is delta.new, and prev is derived.known. Delta cannot mutate because needed for the end-of-iteration check, and derived cannot mutate (?) because needed to be read by other rules potentially
-    derivedDB(knownDbId)(rId) = rules.copyAndAdd(prev)
-
-  def setKnownDelta(rId: RelationId, rules: EDB): Unit =
-    deltaDB(knownDbId)(rId) = asIndexedCollectionsEDB(rules)
-
-  def setNewDerived(rId: RelationId, rules: EDB): Unit =
-    derivedDB(newDbId)(rId) = asIndexedCollectionsEDB(rules)
-
-  def resetNewDerived(rId: RelationId, rulesEDB: EDB, prevEDB: EDB): Unit =
-    val rules = asIndexedCollectionsEDB(rulesEDB)
-    val prev = asIndexedCollectionsEDB(prevEDB)
-    // TODO: maybe use insert not copy, except problem is that rules is delta.new, and prev is derived.known. Delta cannot mutate because needed for the end-of-iteration check, and derived cannot mutate (?) because needed to be read by other rules potentially
-    derivedDB(newDbId)(rId) = rules.copyAndAdd(prev)
+  def insertDeltaIntoDerived(): Unit =
+    deltaDB(newDbId).foreach((rId, edb) =>
+      if (derivedDB.contains(rId))
+        derivedDB(rId).addAll(edb.wrapped)
+      else if (edb.wrapped.nonEmpty) // TODO: maybe copy once from discovered instead of ad-hoc
+        derivedDB(rId) = IndexedCollectionsEDB.copyWithIndexes(edb).bulkRebuildIndex() // TODO: don't rebuild, just copy
+    )
 
   def setNewDelta(rId: RelationId, rules: EDB): Unit =
     deltaDB(newDbId)(rId) = asIndexedCollectionsEDB(rules)
 
-  def clearNewDerived(): Unit =
-    derivedDB(newDbId) = IndexedCollectionsDatabase()
+  def clearNewDeltas(): Unit =
+    deltaDB(newDbId) = IndexedCollectionsDatabase()
+
+  // Write intermediate results
+  def setKnownDerived(rId: RelationId, rules: EDB): Unit = ???
+
+  def resetKnownDerived(rId: RelationId, rulesEDB: EDB, prevEDB: EDB): Unit = ???
+
+  def setKnownDelta(rId: RelationId, rules: EDB): Unit = ???
+
+  def setNewDerived(rId: RelationId, rules: EDB): Unit = ???
+
+  def resetNewDerived(rId: RelationId, rulesEDB: EDB, prevEDB: EDB): Unit = ???
+
+  def clearNewDerived(): Unit = ???
   // Compare & Swap
   def swapKnowledge(): Unit = {
     iteration += 1
@@ -207,15 +208,15 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
   }
   def compareNewDeltaDBs(): Boolean =
     deltaDB(newDbId).exists((k, v) => v.nonEmpty())
-  def compareDerivedDBs(): Boolean =
-    derivedDB(knownDbId) == derivedDB(newDbId)
+  def compareDerivedDBs(): Boolean = ???
+//    derivedDB(knownDbId) == derivedDB(newDbId)
 
   /**
    * Copy all the derived facts at the end of the current strata into discoveredFacts
    * to be fed into the next strata as EDBs
     */
   def updateDiscovered(): Unit =
-    derivedDB(knownDbId).foreach((relation, facts) =>
+    derivedDB.foreach((relation, facts) =>
       discoveredFacts(relation) = facts
     )
 
@@ -316,7 +317,7 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
     "+++++\n" +
       "EDB:\n  " + printIndexes(edbs) + "  " + printer.edbToString(edbs) +
       "\nDISCOV:\n  " + printIndexes(discoveredFacts) + "  " + printer.edbToString(discoveredFacts) +
-      "\nDERIVED:" + derivedDB.map(printHelperRelation).mkString("[", ", ", "]") +
+      "\nDERIVED:" + printIndexes(derivedDB) + "  " + printer.edbToString(derivedDB) +
       "\nDELTA:" + deltaDB.map(printHelperRelation).mkString("[", ", ", "]") +
       "\n+++++"
   }

@@ -153,37 +153,17 @@ class StagedSnippetCompiler(val storageManager: StorageManager)(using val jitOpt
         '{ $stagedSM.updateDiscovered() }
 
       case SwapAndClearOp() =>
-        '{ $stagedSM.swapKnowledge() ; $stagedSM.clearNewDerived() }
+        '{ $stagedSM.swapKnowledge() ; $stagedSM.clearNewDeltas() }
 
       case SequenceOp(label, children:_*) =>
         '{ $stagedFns.foreach(s => s($stagedSM)) } // no need to generate lambdas bc already there!
 
-      case InsertOp(rId, db, knowledge, children:_*) =>
+      case ResetDeltaOp(rId, children:_*) =>
         val res = '{ $stagedFns(0)($stagedSM).asInstanceOf[EDB] }
-        db match {
-          case DB.Derived =>
-            knowledge match {
-              case KNOWLEDGE.New =>
-                if (children.length == 1)
-                  '{ $stagedSM.setNewDerived(${ Expr(rId) }, $res) }
-                else
-                  val res2 = '{ $stagedFns(1)($stagedSM).asInstanceOf[EDB] }
-                  '{ $stagedSM.resetNewDerived(${ Expr(rId) }, $res, $res2) }
-              case KNOWLEDGE.Known =>
-                if (children.length == 1)
-                  '{ $stagedSM.setKnownDerived(${ Expr(rId) }, $res) }
-                else
-                  val res2 = '{ $stagedFns(1)($stagedSM).asInstanceOf[EDB] }
-                  '{ $stagedSM.resetKnownDerived(${ Expr(rId) }, $res, $res2) }
-            }
-          case DB.Delta =>
-            knowledge match {
-              case KNOWLEDGE.New =>
-                '{ $stagedSM.setNewDelta(${ Expr(rId) }, $res) }
-              case KNOWLEDGE.Known =>
-                '{ $stagedSM.setKnownDelta(${ Expr(rId) }, $res) }
-            }
-        }
+        '{ $stagedSM.setNewDelta(${ Expr(rId) }, $res) }
+
+      case InsertDeltaNewIntoDerived() =>
+        '{ $stagedSM.insertDeltaIntoDerived() }
 
       case DebugNode(prefix, msg) =>
         '{ debug(${ Expr(prefix) }, () => $stagedSM.printer.toString()) }

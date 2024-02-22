@@ -53,35 +53,22 @@ class BytecodeCompiler(val storageManager: StorageManager)(using JITOptions) ext
           xb.aload(0)
           emitSMCall(xb, "swapKnowledge")
           xb.aload(0)
-          emitSMCall(xb, "clearNewDerived")
+          emitSMCall(xb, "clearNewDeltas")
 
         case SequenceOp(label, children:_*) =>
           // TODO: take into account heuristics.max_relations? We could create a
           // CodeBuilder for one or more new methods we would immediately call.
           children.foreach(c => discardResult(xb, traverse(xb, c)))
 
-        case InsertOp(rId, db, knowledge, children:_*) =>
+        case InsertDeltaNewIntoDerived() =>
+          xb.aload(0)
+          emitSMCall(xb, "insertDeltaIntoDerived")
+
+        case ResetDeltaOp(rId, db, knowledge, children:_*) =>
           xb.aload(0)
             .constantInstruction(rId)
           traverse(xb, children.head)
-          db match
-            case DB.Derived =>
-              if (children.length == 1)
-                val methName = knowledge match
-                  case KNOWLEDGE.New => "setNewDerived"
-                  case KNOWLEDGE.Known => "setKnownDerived"
-                emitSMCall(xb, methName, classOf[Int], classOf[EDB])
-              else
-                traverse(xb, children(1))
-                val methName = knowledge match
-                  case KNOWLEDGE.New => "resetNewDerived"
-                  case KNOWLEDGE.Known => "resetKnownDerived"
-                emitSMCall(xb, methName, classOf[Int], classOf[EDB], classOf[EDB])
-            case DB.Delta =>
-              val methName = knowledge match
-                case KNOWLEDGE.New => "setNewDelta"
-                case KNOWLEDGE.Known => "setKnownDelta"
-              emitSMCall(xb, methName, classOf[Int], classOf[EDB])
+          emitSMCall(xb, "setNewDelta", classOf[Int], classOf[EDB])
 
         case ScanOp(rId, db, knowledge) =>
           val meth = db match {

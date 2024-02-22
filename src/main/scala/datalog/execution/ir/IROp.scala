@@ -19,7 +19,8 @@ enum OpCode:
   case PROGRAM, SWAP_CLEAR, SEQ,
   SCAN, SCANEDB, SCAN_DISCOVERED,
   COMPLEMENT,
-  SPJ, INSERT, UNION, DIFF,
+  SPJ, UNION, DIFF,
+  INSERT_INTO, RESET_DELTA,
   DEBUG, DEBUGP, DOWHILE, UPDATE_DISCOVERED,
   EVAL_STRATUM, EVAL_RULE_NAIVE, EVAL_RULE_SN, EVAL_RULE_BODY, EVAL_NAIVE, EVAL_SN, LOOP_BODY, OTHER // convenience labels for generating functions
 object OpCode {
@@ -107,11 +108,12 @@ case class DoWhileOp(toCmp: DB, override val children:IROp[Any]*)(using JITOptio
   override def run(storageManager: StorageManager): Any =
     var i = 0
     while ( {
-      children.head.children.head.run(storageManager) // swap
+//      children.head.children.head.run(storageManager) // swap
 //      println(s"DBs start of semi-naive iteration $i: ${storageManager.toString}")
-      children.head.children(1).run(storageManager)
+//      children.head.children(1).run(storageManager)
+      children.head.run(storageManager)
       i += 1
-//      if i > 2 then System.exit(0)
+//      if i > 3 then System.exit(0)
       children.head.run(storageManager)
       toCmp match {
         case DB.Derived =>
@@ -146,74 +148,28 @@ case class SwapAndClearOp()(using JITOptions) extends IROp[Any] {
   val code: OpCode = OpCode.SWAP_CLEAR
   override def run(storageManager: StorageManager): Any =
     storageManager.swapKnowledge()
-    storageManager.clearNewDerived() // because after swap, this is actually clearing deltas
-    // TODO: rebuild indexes on derived
+    storageManager.clearNewDeltas()
 
   override def run_continuation(storageManager: StorageManager, opFns: Seq[CompiledFn[Any]]): Any =
     run(storageManager)
 }
 
-/**
- * @param rId
- * @param db
- * @param knowledge
- * @param children: [Scan|Union, Scan?]
- */
-case class InsertOp(rId: RelationId, db: DB, knowledge: KNOWLEDGE, override val children:IROp[Any]*)(using JITOptions) extends IROp[Any](children:_*) {
-  val code: OpCode = OpCode.INSERT
+case class InsertDeltaNewIntoDerived()(using JITOptions) extends IROp[Any]() {
+  val code: OpCode = OpCode.INSERT_INTO
+  override def run_continuation(storageManager:  StorageManager, opFns: Seq[CompiledFn[Any]]): Any =
+    run(storageManager)
+
+  override def run(storageManager: StorageManager): Any =
+    storageManager.insertDeltaIntoDerived()
+}
+case class ResetDeltaOp(rId: RelationId, override val children:IROp[Any]*)(using JITOptions) extends IROp[Any](children:_*) {
+  val code: OpCode = OpCode.RESET_DELTA
   override def run_continuation(storageManager:  StorageManager, opFns: Seq[CompiledFn[Any]]): Any =
     val res = opFns.head.asInstanceOf[CompiledFn[EDB]](storageManager)
-    db match {
-      case DB.Derived =>
-        knowledge match {
-          case KNOWLEDGE.Known =>
-            if (opFns.length == 1)
-              storageManager.setKnownDerived(rId, res)
-            else
-              val res2 = opFns(1).asInstanceOf[CompiledFn[EDB]](storageManager)
-              storageManager.resetKnownDerived(rId, res, res2)
-          case KNOWLEDGE.New =>
-            if (opFns.length == 1)
-              storageManager.setNewDerived(rId, res)
-            else
-              val res2 = opFns(1).asInstanceOf[CompiledFn[EDB]](storageManager)
-              storageManager.resetNewDerived(rId, res, res2)
-        }
-      case DB.Delta =>
-        knowledge match {
-          case KNOWLEDGE.Known =>
-            storageManager.setKnownDelta(rId, res)
-          case KNOWLEDGE.New =>
-            storageManager.setNewDelta(rId, res)
-        }
-    }
+    storageManager.setNewDelta(rId, res)
   override def run(storageManager: StorageManager): Any =
     val res = children.head.run(storageManager).asInstanceOf[EDB]
-//    val res2 = if (children.length > 1)  else storageManager.getEmptyEDB()
-    db match {
-      case DB.Derived =>
-        knowledge match {
-          case KNOWLEDGE.Known =>
-            if (children.length == 1)
-              storageManager.setKnownDerived(rId, res)
-            else
-              val res2 = children(1).run(storageManager).asInstanceOf[EDB]
-              storageManager.resetKnownDerived(rId, res, res2)
-          case KNOWLEDGE.New =>
-            if (children.length == 1)
-              storageManager.setNewDerived(rId, res)
-            else
-              val res2 = children(1).run(storageManager).asInstanceOf[EDB]
-              storageManager.resetNewDerived(rId, res, res2)
-        }
-      case DB.Delta =>
-        knowledge match {
-          case KNOWLEDGE.Known =>
-            storageManager.setKnownDelta(rId, res)
-          case KNOWLEDGE.New =>
-            storageManager.setNewDelta(rId, res)
-        }
-    }
+    storageManager.setNewDelta(rId, res)
 }
 
 case class ComplementOp(rId: RelationId, arity: Int)(using JITOptions) extends IROp[EDB] {

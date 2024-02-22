@@ -471,7 +471,7 @@ case class IndexedCollectionsRow(wrappedS: Seq[StorageTerm]) extends Row[Storage
  * AKA a mutable.Map[RelationId, ArrayBuffer[Seq[Term]]].
  */
 case class IndexedCollectionsDatabase(wrapped: mutable.Map[RelationId, IndexedCollectionsEDB]) extends Database[IndexedCollectionsEDB] {
-  export wrapped.{ apply, getOrElse, foreach, contains, update, exists, toSeq, forall }
+  export wrapped.{ apply, getOrElse, foreach, contains, update, exists, toSeq, forall, clear }
 }
 object IndexedCollectionsDatabase {
   def apply(elems: (RelationId, IndexedCollectionsEDB)*): IndexedCollectionsDatabase = new IndexedCollectionsDatabase(mutable.Map[RelationId, IndexedCollectionsEDB](elems *))

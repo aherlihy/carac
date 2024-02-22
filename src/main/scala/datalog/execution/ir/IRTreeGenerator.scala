@@ -10,41 +10,32 @@ import scala.collection.mutable
 
 class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
   def naiveEval(ruleMap: mutable.Map[RelationId, ASTNode], sortedRelations: Seq[RelationId], copyToDelta: Boolean = false): IROp[Any] = {
+    val queries = sortedRelations
+      .filter(ruleMap.contains)
+      .map(r =>
+          ResetDeltaOp(r, naiveEvalRule(ruleMap(r)).asInstanceOf[IROp[Any]])
+      ) :+ InsertDeltaNewIntoDerived()
+
     SequenceOp(
       OpCode.EVAL_NAIVE,
       //      DebugNode("in eval:", () => s"rId=${ctx.storageManager.ns(rId)} relations=${ctx.relations.map(r => ctx.storageManager.ns(r)).mkString("[", ", ", "]")}  incr=${ctx.newDbId} src=${ctx.knownDbId}") +:
-      sortedRelations
-        .filter(ruleMap.contains)
-        .flatMap(r =>
-          if (copyToDelta)
-            Seq( // TODO: un-flatten to generate for loops if better
-              InsertOp(r, DB.Derived, KNOWLEDGE.New, naiveEvalRule(ruleMap(r)).asInstanceOf[IROp[Any]]),
-              InsertOp(r, DB.Delta, KNOWLEDGE.New, ScanOp(r, DB.Derived, KNOWLEDGE.New).asInstanceOf[IROp[Any]])
-            )
-          else
-            Seq(InsertOp(r, DB.Derived, KNOWLEDGE.New, naiveEvalRule(ruleMap(r)).asInstanceOf[IROp[Any]]))
-        ):_*
+      queries:_*
     )
   }
 
   def semiNaiveEval(ruleMap: mutable.Map[RelationId, ASTNode], sortedRelations: Seq[RelationId]): IROp[Any] = {
+    val queries = sortedRelations
+      .filter(ruleMap.contains)
+      .map(r =>
+        val prev = ScanOp(r, DB.Derived, KNOWLEDGE.Known)
+        val res = semiNaiveEvalRule(ruleMap(r))
+        val diff = DiffOp(res, prev)
+        ResetDeltaOp(r, diff.asInstanceOf[IROp[Any]])
+      ) :+ InsertDeltaNewIntoDerived()
+
     SequenceOp(
       OpCode.EVAL_SN,
-      sortedRelations
-        .filter(ruleMap.contains)
-//        .flatMap(r =>
-        .map(r =>
-          val prev = ScanOp(r, DB.Derived, KNOWLEDGE.Known)
-          val res = semiNaiveEvalRule(ruleMap(r))
-          val diff = DiffOp(res, prev)
-
-          SequenceOp( // TODO: could flatten, but then potentially can't generate loop if needed
-            OpCode.SEQ,
-//          Seq(
-            InsertOp(r, DB.Delta, KNOWLEDGE.New, diff.asInstanceOf[IROp[Any]]),
-            InsertOp(r, DB.Derived, KNOWLEDGE.New, prev.asInstanceOf[IROp[Any]], ScanOp(r, DB.Delta, KNOWLEDGE.New).asInstanceOf[IROp[Any]]),
-          )
-        ):_*,
+      queries:_*,
     )
   }
 
