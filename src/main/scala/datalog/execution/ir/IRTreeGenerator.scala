@@ -148,7 +148,7 @@ class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
         if (idx < stratifiedAST.length - 1)
           SequenceOp(OpCode.EVAL_STRATUM,
             innerP,
-            UpdateDiscoveredOp()
+//            UpdateDiscoveredOp()
           )
         else
           innerP

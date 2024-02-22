@@ -13,7 +13,7 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
   // "database", i.e. relationID => Relation
   protected val edbs: IndexedCollectionsDatabase = IndexedCollectionsDatabase() // raw user-supplied EDBs from initialization.
   val edbDomain: mutable.Set[StorageTerm] = mutable.Set.empty // incrementally grow the total domain of all EDBs, used for calculating complement of negated predicates
-  protected val discoveredFacts: IndexedCollectionsDatabase = IndexedCollectionsDatabase() // all EDBs + facts discovered in previous strata
+//  protected val discoveredFacts: IndexedCollectionsDatabase = IndexedCollectionsDatabase() // all EDBs + facts discovered in previous strata
   var knownDbId: KnowledgeId = -1
   var newDbId: KnowledgeId = -1
 
@@ -73,7 +73,7 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
 
     edbs.foreach((rId, relation) => {
       deltaDB(knownDbId)(rId) = IndexedCollectionsEDB.empty(relation.arity, indexCandidates(rId), ns(rId), mutable.BitSet())
-      discoveredFacts(rId) = relation
+//      discoveredFacts(rId) = relation
       derivedDB(rId) = IndexedCollectionsEDB.copyWithIndexes(relation)
     }) // Delta-EDB is just empty sets
     dbId += 1
@@ -147,18 +147,16 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
     if !relationArity.contains(rId) then throw new Exception(s"Internal error: relation $rId (${ns(rId)}) has no arity")
     derivedDB.getOrElse(
       rId,
-      discoveredFacts.getOrElse(
-        rId,
-        IndexedCollectionsEDB.empty(relationArity(rId), indexCandidates.getOrElse(rId, mutable.BitSet()), ns(rId), mutable.BitSet()))
+      IndexedCollectionsEDB.empty(relationArity(rId), indexCandidates.getOrElse(rId, mutable.BitSet()), ns(rId), mutable.BitSet())
     )
   def getNewDerivedDB(rId: RelationId): IndexedCollectionsEDB = ??? // TODO: remove
 
   def getKnownDeltaDB(rId: RelationId): IndexedCollectionsEDB =
     if !relationArity.contains(rId) then throw new Exception(s"Internal error: relation $rId (${ns(rId)}) has no arity")
-    deltaDB(knownDbId).getOrElse(rId, discoveredFacts.getOrElse(rId, IndexedCollectionsEDB.empty(relationArity(rId), indexCandidates(rId), ns(rId), mutable.BitSet())))
+    deltaDB(knownDbId).getOrElse(rId, IndexedCollectionsEDB.empty(relationArity(rId), indexCandidates.getOrElse(rId, mutable.BitSet()), ns(rId), mutable.BitSet()))
   def getNewDeltaDB(rId: RelationId): IndexedCollectionsEDB =
     if !relationArity.contains(rId) then throw new Exception(s"Internal error: relation $rId (${ns(rId)}) has no arity")
-    deltaDB(newDbId).getOrElse(rId, discoveredFacts.getOrElse(rId, IndexedCollectionsEDB.empty(relationArity(rId), indexCandidates(rId), ns(rId), mutable.BitSet())))
+    deltaDB(newDbId).getOrElse(rId, IndexedCollectionsEDB.empty(relationArity(rId), indexCandidates.getOrElse(rId, mutable.BitSet()), ns(rId), mutable.BitSet()))
 
   // Read final results
   def getKnownIDBResult(rId: RelationId): Set[Seq[StorageTerm]] =
@@ -173,7 +171,7 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
     deltaDB(newDbId).foreach((rId, edb) =>
       if (derivedDB.contains(rId))
         derivedDB(rId).addAll(edb.wrapped)
-      else if (edb.wrapped.nonEmpty) // TODO: maybe copy once from discovered instead of ad-hoc
+      else if (edb.wrapped.nonEmpty)
         derivedDB(rId) = IndexedCollectionsEDB.copyWithIndexes(edb).bulkRebuildIndex() // TODO: don't rebuild, just copy
     )
 
@@ -214,10 +212,10 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
    * Copy all the derived facts at the end of the current strata into discoveredFacts
    * to be fed into the next strata as EDBs
     */
-  def updateDiscovered(): Unit =
-    derivedDB.foreach((relation, facts) =>
-      discoveredFacts(relation) = facts
-    )
+  def updateDiscovered(): Unit = ???
+//    derivedDB.foreach((relation, facts) =>
+//      discoveredFacts(relation) = facts
+//    )
 
   def verifyEDBs(idbList: mutable.Set[RelationId]): Unit = {
     ns.rIds().foreach(rId =>
@@ -290,7 +288,7 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
     }
     fResult.wrapped.filterInPlace(row =>
       val res =
-        (!discoveredFacts.contains(rId) || !discoveredFacts(rId).contains(row)) &&
+//        (!discoveredFacts.contains(rId) || !discoveredFacts(rId).contains(row)) &&
           (!derivedDB.contains(rId) || !derivedDB(rId).contains(row))
 //      println(s"checking ${row.toString} is not in ${getKnownDerivedDB(rId).factToString}, res=$res")
       res
@@ -318,7 +316,7 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
 
     "+++++\n" +
       "EDB:\n  " + printIndexes(edbs) + "  " + printer.edbToString(edbs) +
-      "\nDISCOV:\n  " + printIndexes(discoveredFacts) + "  " + printer.edbToString(discoveredFacts) +
+//      "\nDISCOV:\n  " + printIndexes(discoveredFacts) + "  " + printer.edbToString(discoveredFacts) +
       "\nDERIVED:" + printIndexes(derivedDB) + "  " + printer.edbToString(derivedDB) +
       "\nDELTA:" + deltaDB.map(printHelperRelation).mkString("[", ", ", "]") +
       "\n+++++"
