@@ -40,6 +40,9 @@ abstract class IROp[T](val children: IROp[T]*)(using val jitOptions: JITOptions,
   var blockingCompiledFn: CompiledFn[T] = null // for when we're blocking and not ahead-of-time, so might as well skip the future
   var compiledSnippetContinuationFn: (StorageManager, Seq[StorageManager => T]) => T = null
 
+  /** Should the children of this op be run in parallel? */
+  val runInParallel: Boolean = false
+
   /**
    * Add continuation to revert control flow to the interpret method, which checks for optimizations/deoptimizations
    */
@@ -148,12 +151,12 @@ case class DoWhileOp(toCmp: DB, override val children:IROp[Any]*)(using JITOptio
  * @param children: [Any*]
  */
 case class SequenceOp(override val code: OpCode, override val children:IROp[Any]*)(using JITOptions) extends IROp[Any](children:_*) {
-  val inParallel: Boolean = code == OpCode.EVAL_SN
+  override val runInParallel: Boolean = code == OpCode.EVAL_SN
 
   override def run_continuation(storageManager: StorageManager, opFns: Seq[CompiledFn[Any]]): Any =
-    runFns(storageManager, opFns, inParallel = inParallel)
+    runFns(storageManager, opFns, inParallel = runInParallel)
   override def run(storageManager: StorageManager): Any =
-    runFns(storageManager, children.map(_.run), inParallel = inParallel)
+    runFns(storageManager, children.map(_.run), inParallel = runInParallel)
 }
 
 case class UpdateDiscoveredOp()(using JITOptions) extends IROp[Any] {
@@ -276,12 +279,12 @@ case class UnionOp(override val code: OpCode, override val children:IROp[EDB]*)(
   var compiledFnIndexed: Future[CompiledFnIndexed[EDB]] = null
   var blockingCompiledFnIndexed: CompiledFnIndexed[EDB] = null
 
-  val inParallel = false
+  override val runInParallel = true
 
   override def run_continuation(storageManager: StorageManager, opFns: Seq[CompiledFn[EDB]]): EDB =
-    storageManager.union(runFns(storageManager, opFns, inParallel = inParallel))
+    storageManager.union(runFns(storageManager, opFns, inParallel = runInParallel))
   override def run(storageManager: StorageManager): EDB =
-    storageManager.union(runFns(storageManager, children.map(_.run), inParallel = inParallel))
+    storageManager.union(runFns(storageManager, children.map(_.run), inParallel = runInParallel))
 }
 
 /**
@@ -294,10 +297,11 @@ case class UnionSPJOp(rId: RelationId, var k: JoinIndexes, override val children
   var compiledFnIndexed: Future[CompiledFnIndexed[EDB]] = null
 //  var compiledFnIndexed: java.util.concurrent.Future[CompiledFnIndexed[EDB]] = null
   // for now not filled out bc not planning on compiling higher than this
-  val inParallel: Boolean = false
+
+  override val runInParallel = true
 
   override def run_continuation(storageManager: StorageManager, opFns: Seq[CompiledFn[EDB]]): EDB =
-    storageManager.union(runFns(storageManager, opFns, inParallel = inParallel))
+    storageManager.union(runFns(storageManager, opFns, inParallel = runInParallel))
 
   override def run(storageManager: StorageManager): EDB =
 
@@ -314,7 +318,7 @@ case class UnionSPJOp(rId: RelationId, var k: JoinIndexes, override val children
 //    )
     // TODO: change children.length from 3
     if (jitOptions.sortOrder == SortOrder.Unordered || jitOptions.sortOrder == SortOrder.Badluck || children.length < 3 || jitOptions.granularity.flag != OpCode.OTHER) // If not only interpreting, then don't optimize since we are waiting for the optimized version to compile
-      storageManager.union(runFns(storageManager, children.map(_.run), inParallel = inParallel))
+      storageManager.union(runFns(storageManager, children.map(_.run), inParallel = runInParallel))
     else
       val (sortedChildren, newK) = JoinIndexes.getPresort(
         children,
@@ -323,7 +327,7 @@ case class UnionSPJOp(rId: RelationId, var k: JoinIndexes, override val children
         k,
         storageManager
       )
-      storageManager.union(runFns(storageManager, sortedChildren.map(_.run), inParallel = inParallel))
+      storageManager.union(runFns(storageManager, sortedChildren.map(_.run), inParallel = runInParallel))
 }
 /**
  * @param children: [Union|Scan, Scan]
