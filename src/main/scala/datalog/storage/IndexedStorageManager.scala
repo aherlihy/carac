@@ -21,7 +21,7 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
   // dbID => database, because we swap between read (known) and write (new) within iterations
   var dbId = 0
   protected val derivedDB: IndexedCollectionsDatabase = IndexedCollectionsDatabase()
-  protected val deltaDB: mutable.Map[KnowledgeId, IndexedCollectionsDatabase] = mutable.Map[KnowledgeId, IndexedCollectionsDatabase]()
+  protected val deltaDB: Array[IndexedCollectionsDatabase] = new Array[IndexedCollectionsDatabase](2)
 
   val allRulesAllIndexes: mutable.Map[RelationId, AllIndexes] = mutable.Map.empty // Index => position
   val indexCandidates: mutable.Map[RelationId, mutable.BitSet] = mutable.Map[RelationId, mutable.BitSet]() // relative position of atoms with constant or variable locations
@@ -73,8 +73,8 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
     newDbId = dbId
 
     derivedDB.clear()
-    deltaDB.addOne(knownDbId, IndexedCollectionsDatabase())
-    deltaDB.addOne(newDbId, IndexedCollectionsDatabase())
+    deltaDB(knownDbId) = IndexedCollectionsDatabase()
+    deltaDB(newDbId) = IndexedCollectionsDatabase()
 
     edbs.foreach((rId, relation) => {
       deltaDB(knownDbId).addEmpty(rId, relation.arity, indexCandidates(rId), ns(rId), mutable.BitSet())
@@ -302,7 +302,7 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
     def printIndexes(db: IndexedCollectionsDatabase): String = {
       db.toSeq.map((rId, idxC) => IndexedCollectionsEDB.allIndexesToString(idxC)/* + s"(arity=${idxC.arity})"*/).mkString("$indexes: [\n  ",",\n", "]")
     }
-    def printHelperRelation(i: Int, db: IndexedCollectionsDatabase): String = {
+    def printHelperRelation(db: IndexedCollectionsDatabase, i: Int): String = {
       val indexes = printIndexes(db)
       val name = if (i == knownDbId) "known" else if (i == newDbId) "new" else s"!!!OTHER($i)"
       s"\n $name : \n  $indexes ${printer.edbToString(db)}"
@@ -311,7 +311,7 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
     "+++++\n" +
       "EDB:\n  " + printIndexes(edbs) + "  " + printer.edbToString(edbs) +
       "\nDERIVED:" + printIndexes(derivedDB) + "  " + printer.edbToString(derivedDB) +
-      "\nDELTA:" + deltaDB.map(printHelperRelation).mkString("[", ", ", "]") +
+      "\nDELTA:" + deltaDB.zipWithIndex.map(printHelperRelation).mkString("[", ", ", "]") +
       "\n+++++"
   }
 }
