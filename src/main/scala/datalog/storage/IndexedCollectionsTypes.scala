@@ -7,6 +7,7 @@ import IndexedCollectionsCasts.*
 import datalog.execution.JoinIndexes
 import datalog.storage.IndexedCollectionsEDB.allIndexesToString
 
+import scala.collection.immutable
 import scala.collection.immutable.ArraySeq
 import scala.collection.mutable.ArrayBuffer
 import java.util.{Arrays, HashMap, TreeMap}
@@ -466,51 +467,77 @@ end extension
  * Represents a DB containing a set of rows, i.e. tuples of terms.
  * AKA a mutable.Map[RelationId, ArrayBuffer[Seq[Term]]].
  */
-case class IndexedCollectionsDatabase(wrapped: mutable.Map[RelationId, IndexedCollectionsEDB]) extends Database[IndexedCollectionsEDB] {
-  val definedRelations: mutable.BitSet = mutable.BitSet() ++ wrapped.keys
+class IndexedCollectionsDatabase(private val wrapped: Array[IndexedCollectionsEDB]) extends Database[IndexedCollectionsEDB] {
+  override def equals(that: Any): Boolean = that match
+    case that: IndexedCollectionsDatabase =>
+      (this eq that) || Arrays.deepEquals(wrapped.asInstanceOf[Array[AnyRef]], that.wrapped.asInstanceOf[Array[AnyRef]])
+    case _ =>
+      false
+  override def hashCode: Int =
+    Arrays.deepHashCode(wrapped.asInstanceOf[Array[AnyRef]])
 
-  def clear(): Unit = {
-    wrapped.foreach((rId, edb) =>
-      edb.clear()
-    )
-    definedRelations.clear()
-  }
+  def clear(): Unit = Arrays.fill(wrapped.asInstanceOf[Array[AnyRef]], null)
 
-  def contains(c: RelationId): Boolean = definedRelations.contains(c)
+  def toMap: immutable.Map[RelationId, IndexedCollectionsEDB] =
+    val builder = immutable.Map.newBuilder[RelationId, IndexedCollectionsEDB]
+    var i = 0
+    while i < wrapped.length do
+      if wrapped(i) != null then builder.addOne(i, wrapped(i))
+      i += 1
+    builder.result()
+
+  def contains(c: RelationId): Boolean = wrapped(c) != null
 
   def assignEDBToCopy(rId: RelationId, edbToCopy: IndexedCollectionsEDB): Unit =
-    definedRelations.addOne(rId)
     val newEDB = getOrElseEmpty(rId, edbToCopy.arity, edbToCopy.indexKeys, edbToCopy.name, mutable.BitSet()) // when copying, don't skip any indexes
     newEDB.addAll(edbToCopy.wrapped) // TODO: copy index structure instead of rebuilding
     wrapped(rId) = newEDB
 
   def assignEDBDirect(rId: RelationId, edb: IndexedCollectionsEDB): Unit =
-    definedRelations.addOne(rId)
     wrapped(rId) = edb
 
-  def foreach[U](f: ((RelationId, IndexedCollectionsEDB)) => U): Unit = wrapped.filter((k, v) => definedRelations.contains(k)).foreach(f)
+  def foreach[U](f: ((RelationId, IndexedCollectionsEDB)) => U): Unit =
+    var i = 0
+    while i < wrapped.length do
+      if wrapped(i) != null then f(i, wrapped(i))
+      i += 1
 
-  def exists(p: ((RelationId, IndexedCollectionsEDB)) => Boolean): Boolean = wrapped.filter((k, v) => definedRelations.contains(k)).exists(p)
+  def exists(p: ((RelationId, IndexedCollectionsEDB)) => Boolean): Boolean =
+    var i = 0
+    while i < wrapped.length do
+      if wrapped(i) != null && p(i, wrapped(i)) then
+        return true
+      i += 1
+    end while
+    false
 
-  def forall(p: ((RelationId, IndexedCollectionsEDB)) => Boolean): Boolean = wrapped.filter((k, v) => definedRelations.contains(k)).forall(p)
+  def forall(p: ((RelationId, IndexedCollectionsEDB)) => Boolean): Boolean = ???
 
-  def toSeq: Seq[(RelationId, IndexedCollectionsEDB)] = wrapped.filter((k, v) => definedRelations.contains(k)).toSeq
+  def toSeq: Seq[(RelationId, IndexedCollectionsEDB)] = ???
+
+  // Is it useful to have both getOrElseEmpty and addEmpty?
 
   def getOrElseEmpty(rId: RelationId, arity: Int, indexCandidates: mutable.BitSet, name: String, indexToSkip: mutable.BitSet): IndexedCollectionsEDB =
-    wrapped.getOrElseUpdate(rId,
+    val existingOrNull = wrapped(rId)
+    if existingOrNull != null then
+      existingOrNull
+    else
       IndexedCollectionsEDB.empty(arity, indexCandidates, name, indexToSkip)
-    )
+
   def addEmpty(rId: RelationId, arity: Int, indexCandidates: mutable.BitSet, name: String, indexToSkip: mutable.BitSet): IndexedCollectionsEDB =
-    definedRelations.addOne(rId)
-    wrapped.getOrElseUpdate(rId,
-      IndexedCollectionsEDB.empty(arity, indexCandidates, name, indexToSkip)
-    )
+    val existingOrNull = wrapped(rId)
+    if existingOrNull != null then
+      existingOrNull
+    else
+      val empty = IndexedCollectionsEDB.empty(arity, indexCandidates, name, indexToSkip)
+      wrapped(rId) = empty
+      empty
 
   export wrapped.apply
 }
 
 object IndexedCollectionsDatabase {
-  def apply(elems: (RelationId, IndexedCollectionsEDB)*): IndexedCollectionsDatabase = new IndexedCollectionsDatabase(mutable.Map[RelationId, IndexedCollectionsEDB](elems *))
+  def apply(): IndexedCollectionsDatabase = new IndexedCollectionsDatabase(new Array(16))
 }
 
 

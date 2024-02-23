@@ -107,7 +107,7 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
     IndexedCollectionsEDB.empty(relationArity(rId), indexCandidates.getOrElse(rId, mutable.BitSet()), ns(rId), mutable.BitSet())
   def getEDB(rId: RelationId): IndexedCollectionsEDB = edbs(rId)
   def edbContains(rId: RelationId): Boolean = edbs.contains(rId)
-  def getAllEDBS(): mutable.Map[RelationId, Any] = edbs.wrapped.asInstanceOf[mutable.Map[RelationId, Any]]
+  def getAllEDBS(): Map[RelationId, Any] = edbs.toMap
 
   /**
    * Used for computing DOM(k) of a negated relation. Returns the (unchanging) set of possible EDB values +
