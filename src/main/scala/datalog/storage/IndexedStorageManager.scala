@@ -94,11 +94,11 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
       indexCandidates.getOrElseUpdate(rule.rId, mutable.BitSet())
       edbs.addEmpty(rule.rId, rule.terms.length, indexCandidates(rule.rId), ns(rule.rId), mutable.BitSet())
       edbs(rule.rId).addOne(IndexedCollectionsRow(rule.terms))
-    edbDomain.addAll(rule.terms)
+    // edbDomain.addAll(rule.terms)
   }
   /* Call when adding an IDB rule so domain can grow incrementally */
   override def addConstantsToDomain(constants: Seq[StorageTerm]): Unit = {
-    edbDomain.addAll(constants)
+    // edbDomain.addAll(constants)
   }
   // Only used when querying for a completely empty EDB that hasn't been declared/added yet.
   def getEmptyEDB(rId: RelationId): IndexedCollectionsEDB =
