@@ -124,6 +124,10 @@ case class DoWhileOp(toCmp: DB, override val children:IROp[Any]*)(using JITOptio
     }) ()
 }
 
+import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.duration.Duration
+given ExecutionContext = ExecutionContext.global
+
 /**
  * @param code
  * @param children: [Any*]
@@ -132,7 +136,10 @@ case class SequenceOp(override val code: OpCode, override val children:IROp[Any]
   override def run_continuation(storageManager: StorageManager, opFns: Seq[CompiledFn[Any]]): Any =
     opFns.map(o => o(storageManager))
   override def run(storageManager: StorageManager): Any =
-    children.map(o => o.run(storageManager))
+    if code == OpCode.EVAL_SN then
+      Await.result(Future.sequence(children.map(o => Future(o.run(storageManager)))), Duration.Inf)
+    else
+      children.map(o => o.run(storageManager))
 }
 
 case class UpdateDiscoveredOp()(using JITOptions) extends IROp[Any] {

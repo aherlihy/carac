@@ -29,11 +29,15 @@ class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
       .map(r =>
         val res = semiNaiveEvalRule(ruleMap(r))
         ResetDeltaOp(r, res.asInstanceOf[IROp[Any]])
-      ) :+ InsertDeltaNewIntoDerived()
+      )
 
     SequenceOp(
-      OpCode.EVAL_SN,
-      queries:_*,
+      OpCode.SEQ,
+      SequenceOp(
+        OpCode.EVAL_SN,
+        queries:_*,
+      ),
+      InsertDeltaNewIntoDerived()
     )
   }
 
