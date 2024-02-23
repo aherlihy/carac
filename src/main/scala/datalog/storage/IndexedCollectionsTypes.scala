@@ -49,7 +49,7 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
                                  arity: Int,
                                  var skipIndexes: mutable.BitSet // don't build indexes for these keys
                                 ) extends EDB with IterableOnce[IndexedCollectionsRow] {
-  import IndexedCollectionsEDB.{lookupOrCreate,IndexMap}
+  import IndexedCollectionsEDB.{lookupOrCreate,lookupOrEmpty,IndexMap}
 
   if indexKeys.exists(_ >= arity) then throw new Exception(s"Error: creating edb $name with indexes ${indexKeys.mkString("[", ", ", "]")} but arity $arity")
   if skipIndexes.exists(_ >= arity) then throw new Exception(s"Error: creating edb $name but skiping indexes ${skipIndexes.mkString("[", ", ", "]")} but arity $arity")
@@ -219,7 +219,7 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
       val (position, constant) = constFilter.head // constFilter.map((idx, const) => (idx, indexes(idx)(const).size)).minBy(_._2)._1
       val rest = constFilter.drop(1)
 
-      val result = indexes(position).lookupOrCreate(constant).collect{// copy matching EBDs
+      val result = indexes(position).lookupOrEmpty(constant).collect{// copy matching EBDs
         case edb if edb.filterConstant(rest) => edb.project(projIndexes)
       }
       val newArity = if projIndexes.isEmpty then arity else projIndexes.length
@@ -273,7 +273,7 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
           )
           IndexedCollectionsEDB(filtered, outer.indexKeys, outer.name, outer.arity, outer.indexKeys) // don't need index on outer
       else // need to both filter + maybe self constrain
-        val filtered = outer.getIndex(outerConstantFilters.head._1).lookupOrCreate(outerConstantFilters.head._2).
+        val filtered = outer.getIndex(outerConstantFilters.head._1).lookupOrEmpty(outerConstantFilters.head._2).
           filter(outerTuple =>
             outerTuple.filterConstant(outerConstantFilters.drop(1)) && relativeKeys.forall((outerKeys, _) => outerTuple.filterConstraint(outerKeys))
           )
@@ -290,7 +290,7 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
           val withInnerKey = if keyToJoin.isEmpty then mutable.BitSet() else inner.indexKeys.filter(_ != keyToJoin.get._2)
           IndexedCollectionsEDB(filtered, inner.indexKeys, inner.name, inner.arity, withInnerKey) // do not rebuild indexes on anything but join key
       else // need to both filter + maybe self constrain
-        val filtered = inner.getIndex(innerConstantFilters.head._1).lookupOrCreate(innerConstantFilters.head._2).
+        val filtered = inner.getIndex(innerConstantFilters.head._1).lookupOrEmpty(innerConstantFilters.head._2).
           filter(innerTuple =>
             innerTuple.filterConstant(innerConstantFilters.drop(1)) && relativeKeys.forall((_, innerKeys) => innerTuple.filterConstraint(innerKeys))
           )
@@ -314,7 +314,7 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
         filteredOuter.wrapped.flatMap(outerTuple =>
           val indexVal = outerTuple(outerPosToUse)
           if !filteredInner.indexKeys.contains(innerPosToUse) then throw new Exception(s"Missing index on inner ${filteredInner.name} at position $innerPosToUse, expected initial indexes=${filteredInner.indexKeys.mkString("[", ", ", "]")}, skippedIndexes=${filteredInner.skipIndexes.mkString("[", ", ", "]")}")
-          val matchingInners = filteredInner.getIndex(keyToJoin.get._2).lookupOrCreate(indexVal)
+          val matchingInners = filteredInner.getIndex(keyToJoin.get._2).lookupOrEmpty(indexVal)
           matchingInners.collect {
             // check shared keys
             case innerTuple if (secondaryKeys.forall((outerPos, innerPos) => outerTuple(outerPos) == innerTuple(innerPos))) => {
@@ -358,6 +358,13 @@ object IndexedCollectionsEDB {
     def lookupOrCreate(key: StorageTerm): ArrayBuffer[IndexedCollectionsRow] =
       // TODO: tune initialSize?
       index.computeIfAbsent(key, _ => new mutable.ArrayBuffer(initialSize = 16))
+    def lookupOrEmpty(key: StorageTerm): ArrayBuffer[IndexedCollectionsRow] =
+      val valueOrNull = index.get(key)
+      if valueOrNull != null then
+        valueOrNull
+      else
+        // TODO: tune initialSize?
+        new mutable.ArrayBuffer(initialSize = 16)
     inline def contains(key: StorageTerm): Boolean =
       index.containsKey(key)
     inline def foreach(f: java.util.function.BiConsumer[StorageTerm, ArrayBuffer[IndexedCollectionsRow]]): Unit =
