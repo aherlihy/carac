@@ -8,7 +8,7 @@ import datalog.tools.Debug
 import datalog.tools.Debug.debug
 
 import java.util.concurrent.atomic.AtomicReference
-import scala.collection.mutable
+import scala.collection.{immutable, mutable}
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.reflect.ClassTag
@@ -55,11 +55,20 @@ abstract class IROp[T](val children: IROp[T]*)(using val jitOptions: JITOptions,
 }
 object IROp {
   given ExecutionContext = ExecutionContext.global
-  def runSequence[T](storageManager: StorageManager, seq: Seq[IROp[T]], inParallel: Boolean = false): Seq[T] =
+  def runSequence[T: ClassTag](storageManager: StorageManager, seq: Seq[IROp[T]], inParallel: Boolean = false): Seq[T] =
+    if seq.length == 1 then
+      return immutable.ArraySeq.unsafeWrapArray(Array(seq.head.run(storageManager)))
     if inParallel == false then
-      seq.map(o => o.run(storageManager))
-    else
-      Await.result(Future.sequence(seq.map(o => Future(o.run(storageManager)))), Duration.Inf)
+      return seq.map(_.run(storageManager))
+    val futures = immutable.ArraySeq.newBuilder[Future[T]]
+    futures.sizeHint(seq.length)
+    // Spawn threads for the N - 1 first children
+    seq.view.init.foreach: irOp =>
+      futures += Future(irOp.run(storageManager))
+    // Run the last child on the current thread.
+    val last = seq.last.run(storageManager)
+    futures += Future(last)
+    Await.result(Future.sequence(futures.result()), Duration.Inf)
 }
 import IROp.*
 
