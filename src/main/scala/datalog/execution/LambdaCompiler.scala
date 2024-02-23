@@ -12,6 +12,7 @@ import scala.collection.{immutable, mutable}
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.quoted.*
+import scala.reflect.{classTag, ClassTag}
 
 /**
  * Separate out compile logic from StagedExecutionEngine
@@ -19,7 +20,9 @@ import scala.quoted.*
 class LambdaCompiler(val storageManager: StorageManager)(using JITOptions) extends StagedCompiler(storageManager) {
   given staging.Compiler = jitOptions.dotty
   /** Convert a Seq of lambdas into a lambda returning a Seq. */
-  def seqToLambda[T](seq: Seq[StorageManager => T]): StorageManager => Seq[T] =
+  def seqToLambda[T](seq: Seq[StorageManager => T], inParallel: Boolean = false): StorageManager => Seq[T] =
+    if inParallel then
+      return sm => IROp.runFns(sm, seq, inParallel)(using classTag[AnyRef].asInstanceOf[ClassTag[T]])
     seq match
       case seq: immutable.ArraySeq.ofRef[_] =>
         val arr = unsafeArrayToLambda(seq.unsafeArray)
@@ -93,18 +96,9 @@ class LambdaCompiler(val storageManager: StorageManager)(using JITOptions) exten
     case SequenceOp(label, children:_*) =>
       val cOps: Array[CompiledFn[Any]] = children.map(compile).toArray
       assert(false, "This is never triggered")
-      if label == OpCode.EVAL_SN then
+      if irTree.runInParallel then
         // TODO: optimize by directly using the underlying Java stuff.
-        sm => {
-          given ExecutionContext = ExecutionContext.global
-          val futures = new mutable.ArraySeq.ofRef(new Array[Future[Any]](cOps.length))
-          var i = 0
-          while (i < cOps.length) {
-            futures(i) = Future(cOps(i)(sm))
-            i += 1
-          }
-          Await.result(Future.sequence(futures), Duration.Inf)
-        }
+        sm => IROp.runFns(sm, immutable.ArraySeq.unsafeWrapArray(cOps), inParallel = true)
       else cOps.length match
         case 1 =>
           cOps(0)
@@ -187,11 +181,11 @@ class LambdaCompiler(val storageManager: StorageManager)(using JITOptions) exten
         else
           (children, k)
 
-      val compiledOps = seqToLambda(sortedChildren.map(compile))
+      val compiledOps = seqToLambda(sortedChildren.map(compile), inParallel = irTree.runInParallel)
       sm => sm.union(compiledOps(sm))
 
     case UnionOp(label, children: _*) =>
-      val compiledOps = seqToLambda(children.map(compile))
+      val compiledOps = seqToLambda(children.map(compile), inParallel = irTree.runInParallel)
       sm => sm.union(compiledOps(sm))
 
     case DiffOp(children: _*) =>
