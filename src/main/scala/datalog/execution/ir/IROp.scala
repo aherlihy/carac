@@ -10,7 +10,7 @@ import datalog.tools.Debug.debug
 import java.util.concurrent.atomic.AtomicReference
 import scala.collection.mutable
 import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.reflect.ClassTag
 import scala.quoted.*
 import scala.util.{Failure, Success}
@@ -51,7 +51,17 @@ abstract class IROp[T](val children: IROp[T]*)(using val jitOptions: JITOptions,
    */
   def run(storageManager: StorageManager): T =
     throw new Exception(s"Error: calling run on likely rel op: $code")
+
 }
+object IROp {
+  given ExecutionContext = ExecutionContext.global
+  def runSequence[T](storageManager: StorageManager, seq: Seq[IROp[T]], inParallel: Boolean = false): Seq[T] =
+    if inParallel == false then
+      seq.map(o => o.run(storageManager))
+    else
+      Await.result(Future.sequence(seq.map(o => Future(o.run(storageManager)))), Duration.Inf)
+}
+import IROp.*
 
 /**
  * @param children: SequenceOp[SequenceOp.NaiveEval, DoWhileOp]
@@ -124,10 +134,6 @@ case class DoWhileOp(toCmp: DB, override val children:IROp[Any]*)(using JITOptio
     }) ()
 }
 
-import scala.concurrent.{ ExecutionContext, Future }
-import scala.concurrent.duration.Duration
-given ExecutionContext = ExecutionContext.global
-
 /**
  * @param code
  * @param children: [Any*]
@@ -136,10 +142,7 @@ case class SequenceOp(override val code: OpCode, override val children:IROp[Any]
   override def run_continuation(storageManager: StorageManager, opFns: Seq[CompiledFn[Any]]): Any =
     opFns.map(o => o(storageManager))
   override def run(storageManager: StorageManager): Any =
-    if code == OpCode.EVAL_SN then
-      Await.result(Future.sequence(children.map(o => Future(o.run(storageManager)))), Duration.Inf)
-    else
-      children.map(o => o.run(storageManager))
+    runSequence(storageManager, children, inParallel = code == OpCode.EVAL_SN)
 }
 
 case class UpdateDiscoveredOp()(using JITOptions) extends IROp[Any] {
@@ -265,7 +268,7 @@ case class UnionOp(override val code: OpCode, override val children:IROp[EDB]*)(
   override def run_continuation(storageManager: StorageManager, opFns: Seq[CompiledFn[EDB]]): EDB =
     storageManager.union(opFns.map(o => o(storageManager)))
   override def run(storageManager: StorageManager): EDB =
-    storageManager.union(children.map(o => o.run(storageManager)))
+    storageManager.union(runSequence(storageManager, children, inParallel = false))
 }
 
 /**
@@ -296,7 +299,7 @@ case class UnionSPJOp(rId: RelationId, var k: JoinIndexes, override val children
 //    )
     // TODO: change children.length from 3
     if (jitOptions.sortOrder == SortOrder.Unordered || jitOptions.sortOrder == SortOrder.Badluck || children.length < 3 || jitOptions.granularity.flag != OpCode.OTHER) // If not only interpreting, then don't optimize since we are waiting for the optimized version to compile
-      storageManager.union(children.map((s: ProjectJoinFilterOp) => s.run(storageManager)))
+      storageManager.union(runSequence(storageManager, children, inParallel = false))
     else
       val (sortedChildren, newK) = JoinIndexes.getPresort(
         children,
@@ -305,7 +308,7 @@ case class UnionSPJOp(rId: RelationId, var k: JoinIndexes, override val children
         k,
         storageManager
       )
-      storageManager.union(sortedChildren.map((s: ProjectJoinFilterOp) => s.run(storageManager)))
+      storageManager.union(runSequence(storageManager, sortedChildren, inParallel = false))
 }
 /**
  * @param children: [Union|Scan, Scan]
