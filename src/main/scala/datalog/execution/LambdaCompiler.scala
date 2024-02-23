@@ -9,6 +9,8 @@ import org.glavo.classfile.CodeBuilder
 import java.lang.invoke.MethodType
 import java.util.concurrent.atomic.AtomicInteger
 import scala.collection.{immutable, mutable}
+import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.quoted.*
 
 /**
@@ -90,7 +92,20 @@ class LambdaCompiler(val storageManager: StorageManager)(using JITOptions) exten
 
     case SequenceOp(label, children:_*) =>
       val cOps: Array[CompiledFn[Any]] = children.map(compile).toArray
-      cOps.length match
+      assert(false, "This is never triggered")
+      if label == OpCode.EVAL_SN then
+        // TODO: optimize by directly using the underlying Java stuff.
+        sm => {
+          given ExecutionContext = ExecutionContext.global
+          val futures = new mutable.ArraySeq.ofRef(new Array[Future[Any]](cOps.length))
+          var i = 0
+          while (i < cOps.length) {
+            futures(i) = Future(cOps(i)(sm))
+            i += 1
+          }
+          Await.result(Future.sequence(futures), Duration.Inf)
+        }
+      else cOps.length match
         case 1 =>
           cOps(0)
         case 2 =>
