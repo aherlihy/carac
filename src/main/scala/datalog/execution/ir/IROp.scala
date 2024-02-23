@@ -55,18 +55,18 @@ abstract class IROp[T](val children: IROp[T]*)(using val jitOptions: JITOptions,
 }
 object IROp {
   given ExecutionContext = ExecutionContext.global
-  def runSequence[T: ClassTag](storageManager: StorageManager, seq: Seq[IROp[T]], inParallel: Boolean = false): Seq[T] =
+  def runFns[T: ClassTag](storageManager: StorageManager, seq: Seq[StorageManager => T], inParallel: Boolean = false): Seq[T] =
     if seq.length == 1 then
-      return immutable.ArraySeq.unsafeWrapArray(Array(seq.head.run(storageManager)))
+      return immutable.ArraySeq.unsafeWrapArray(Array(seq.head(storageManager)))
     if inParallel == false then
-      return seq.map(_.run(storageManager))
+      return seq.map(_(storageManager))
     val futures = immutable.ArraySeq.newBuilder[Future[T]]
     futures.sizeHint(seq.length)
     // Spawn threads for the N - 1 first children
-    seq.view.init.foreach: irOp =>
-      futures += Future(irOp.run(storageManager))
+    seq.view.init.foreach: op =>
+      futures += Future(op(storageManager))
     // Run the last child on the current thread.
-    val last = seq.last.run(storageManager)
+    val last = seq.last(storageManager)
     futures += Future(last)
     Await.result(Future.sequence(futures.result()), Duration.Inf)
 }
@@ -148,10 +148,12 @@ case class DoWhileOp(toCmp: DB, override val children:IROp[Any]*)(using JITOptio
  * @param children: [Any*]
  */
 case class SequenceOp(override val code: OpCode, override val children:IROp[Any]*)(using JITOptions) extends IROp[Any](children:_*) {
+  val inParallel: Boolean = code == OpCode.EVAL_SN
+
   override def run_continuation(storageManager: StorageManager, opFns: Seq[CompiledFn[Any]]): Any =
-    opFns.map(o => o(storageManager))
+    runFns(storageManager, opFns, inParallel = inParallel)
   override def run(storageManager: StorageManager): Any =
-    runSequence(storageManager, children, inParallel = code == OpCode.EVAL_SN)
+    runFns(storageManager, children.map(_.run), inParallel = inParallel)
 }
 
 case class UpdateDiscoveredOp()(using JITOptions) extends IROp[Any] {
@@ -274,10 +276,12 @@ case class UnionOp(override val code: OpCode, override val children:IROp[EDB]*)(
   var compiledFnIndexed: Future[CompiledFnIndexed[EDB]] = null
   var blockingCompiledFnIndexed: CompiledFnIndexed[EDB] = null
 
+  val inParallel = false
+
   override def run_continuation(storageManager: StorageManager, opFns: Seq[CompiledFn[EDB]]): EDB =
-    storageManager.union(opFns.map(o => o(storageManager)))
+    storageManager.union(runFns(storageManager, opFns, inParallel = inParallel))
   override def run(storageManager: StorageManager): EDB =
-    storageManager.union(runSequence(storageManager, children, inParallel = false))
+    storageManager.union(runFns(storageManager, children.map(_.run), inParallel = inParallel))
 }
 
 /**
@@ -290,8 +294,10 @@ case class UnionSPJOp(rId: RelationId, var k: JoinIndexes, override val children
   var compiledFnIndexed: Future[CompiledFnIndexed[EDB]] = null
 //  var compiledFnIndexed: java.util.concurrent.Future[CompiledFnIndexed[EDB]] = null
   // for now not filled out bc not planning on compiling higher than this
+  val inParallel: Boolean = false
+
   override def run_continuation(storageManager: StorageManager, opFns: Seq[CompiledFn[EDB]]): EDB =
-    storageManager.union(opFns.map(o => o(storageManager)))
+    storageManager.union(runFns(storageManager, opFns, inParallel = inParallel))
 
   override def run(storageManager: StorageManager): EDB =
 
@@ -308,7 +314,7 @@ case class UnionSPJOp(rId: RelationId, var k: JoinIndexes, override val children
 //    )
     // TODO: change children.length from 3
     if (jitOptions.sortOrder == SortOrder.Unordered || jitOptions.sortOrder == SortOrder.Badluck || children.length < 3 || jitOptions.granularity.flag != OpCode.OTHER) // If not only interpreting, then don't optimize since we are waiting for the optimized version to compile
-      storageManager.union(runSequence(storageManager, children, inParallel = false))
+      storageManager.union(runFns(storageManager, children.map(_.run), inParallel = inParallel))
     else
       val (sortedChildren, newK) = JoinIndexes.getPresort(
         children,
@@ -317,7 +323,7 @@ case class UnionSPJOp(rId: RelationId, var k: JoinIndexes, override val children
         k,
         storageManager
       )
-      storageManager.union(runSequence(storageManager, sortedChildren, inParallel = false))
+      storageManager.union(runFns(storageManager, sortedChildren.map(_.run), inParallel = inParallel))
 }
 /**
  * @param children: [Union|Scan, Scan]
