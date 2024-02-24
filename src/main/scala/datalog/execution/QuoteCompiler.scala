@@ -116,6 +116,7 @@ class QuoteCompiler(val storageManager: StorageManager)(using JITOptions) extend
             JoinIndexes.getOnlineSort(
               children,
               jitOptions.getSortFn(storageManager),
+              jitOptions.getUniqueKeysFn(storageManager),
               rId,
               k,
               storageManager
@@ -139,6 +140,7 @@ class QuoteCompiler(val storageManager: StorageManager)(using JITOptions) extend
             JoinIndexes.getPresort(
               children,
               jitOptions.getSortFn(storageManager),
+              jitOptions.getUniqueKeysFn(storageManager),
               rId,
               k,
               storageManager
@@ -272,6 +274,7 @@ class QuoteCompiler(val storageManager: StorageManager)(using JITOptions) extend
             JoinIndexes.getPresort(
               uSPJOp.children,
               jitOptions.getSortFn(storageManager),
+              jitOptions.getUniqueKeysFn(storageManager),
               uSPJOp.rId,
               uSPJOp.k,
               storageManager

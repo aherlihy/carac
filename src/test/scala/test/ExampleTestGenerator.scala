@@ -117,7 +117,7 @@ abstract class TestGenerator(directory: Path,
           case "InterpretedStagedIndexed" =>
             Program(StagedExecutionEngine(IndexedStorageManager(), JITOptions()))
           case "InterpretedStaged_selIndexed" =>
-            Program(StagedExecutionEngine(IndexedStorageManager(), JITOptions(sortOrder = SortOrder.Sel)))
+            Program(StagedExecutionEngine(IndexedStorageManager(), JITOptions(sortOrder = SortOrder.VariableR)))
 //          case "InterpretedStaged_badluckDefault" =>
 //            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(sortOrder = SortOrder.Badluck)))
 

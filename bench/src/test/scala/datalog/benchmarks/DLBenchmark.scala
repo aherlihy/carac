@@ -54,8 +54,8 @@ abstract class DLBenchmark {
       programs(jo.toBenchmark) = Program(StagedExecutionEngine(DefaultStorageManager(), jo))
     )
 
-    val jitSortOpts = Seq(SortOrder.Unordered, SortOrder.Sel)
-    val interpSortOpts = Seq(SortOrder.Unordered, SortOrder.Sel, SortOrder.Badluck)
+    val jitSortOpts = Seq(SortOrder.Unordered, SortOrder.Sel, SortOrder.VariableR)
+    val interpSortOpts = Seq(SortOrder.Unordered, SortOrder.Sel, SortOrder.VariableR)
     val fuzzySortOpts = Seq(0)
     val onlineSortOpts = Seq(false) // add 1 to bench online sort
     val blocking = Seq(CompileSync.Blocking, CompileSync.Async)

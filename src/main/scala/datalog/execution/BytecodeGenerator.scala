@@ -261,10 +261,10 @@ object BytecodeGenerator {
   def emitConstIndexes(xb: CodeBuilder, value: collection.mutable.Map[Int, Constant]): Unit =
     emitMap(xb, value.toSeq, emitInteger, emitConstant)
 
-  def emitCxnElement(xb: CodeBuilder, value: collection.mutable.Map[Int, Seq[String]]): Unit =
-    emitMap(xb, value.toSeq, emitInteger, emitSeqString)
+  def emitCxnElement(xb: CodeBuilder, value: Seq[( String, Seq[(Int, Int)] )]): Unit = ???
+//    emitSeq(xb, value.toSeq, emitInteger, emitSeqString)
 
-  def emitCxns(xb: CodeBuilder, value: collection.mutable.Map[String, collection.mutable.Map[Int, Seq[String]]]): Unit =
+  def emitCxns(xb: CodeBuilder, value: collection.mutable.Map[String, Seq[( String, Seq[(Int, Int)] )]]): Unit =
     emitMap(xb, value.toSeq, emitString, emitCxnElement)
 
   def emitJoinIndexes(xb: CodeBuilder, value: JoinIndexes): Unit =
