@@ -190,7 +190,6 @@ object JoinIndexes {
     //    if (input.length > 2)
     //    println(s"Rule: ${sm.printer.ruleToString(originalK.atoms)}\n")
     //    println(s"Rule cxn: ${originalK.cxnsToString(sm.ns)}\n")
-
     val rStack = sortedBody.to(mutable.ListBuffer)
     var newBody = Seq[(Atom, Int)]()
 //    println("START, stack=" + rStack.map(_._1).mkString("[", ", ", "]"))
@@ -251,7 +250,7 @@ object JoinIndexes {
     //    if (input.length > 2)
 //    println(s"Rule: ${sm.printer.ruleToString(originalK.atoms)}\n")
 //    println(s"Rule cxn: ${originalK.cxnsToString(sm.ns)}\n")
-
+//    println("SEL")
     val rStack = sortedBody.to(mutable.ListBuffer)
     var newBody = Seq[(Atom, Int)]()
 //    println("START, stack=" + rStack.map(_._1).mkString("[", ", ", "]"))
@@ -306,8 +305,10 @@ object JoinIndexes {
         val (newBody, newHash) =
           if (jitOptions.sortOrder == SortOrder.Worst)
             presortSelectWorst(sortBy, originalK, sm, -1)
-          else
+          else if (jitOptions.sortOrder == SortOrder.VariableR)
             presortSelectReduction(sortBy, getUniqueKeys, originalK, sm, -1)
+          else
+            presortSelect(sortBy, originalK, sm, -1)
         val newK = sm.allRulesAllIndexes(rId).getOrElseUpdate(
           newHash,
           JoinIndexes(originalK.atoms.head +: newBody.map(_._1), Some(originalK.cxns))
@@ -331,8 +332,10 @@ object JoinIndexes {
         val (newBody, newHash) =
           if (jitOptions.sortOrder == SortOrder.Worst)
             presortSelectWorst(sortBy, originalK, sm, deltaIdx)
-          else
+          else if (jitOptions.sortOrder == SortOrder.VariableR)
             presortSelectReduction(sortBy, getUniqueKeys, originalK, sm, deltaIdx)
+          else
+            presortSelect(sortBy, originalK, sm, deltaIdx)
         val newK = sm.allRulesAllIndexes(rId).getOrElseUpdate(
           newHash,
           JoinIndexes(originalK.atoms.head +: newBody.map(_._1), Some(originalK.cxns))
