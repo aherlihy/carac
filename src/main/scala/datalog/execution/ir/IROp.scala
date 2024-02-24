@@ -117,8 +117,12 @@ case class ProgramOp(override val children:IROp[Any]*)(using JITOptions) extends
 case class DoWhileOp(toCmp: DB, override val children:IROp[Any]*)(using JITOptions) extends IROp[Any](children:_*) {
   val code: OpCode = OpCode.DOWHILE
   override def run_continuation(storageManager: StorageManager, opFns: Seq[CompiledFn[Any]]): Any =
+    var i = 0
     while ( {
       opFns.head(storageManager)
+//      println(s"DBs start of semi-naive iteration $i: ${storageManager.toString}")
+//      opFns(1)(storageManager)
+      i += 1
 //      ctx.count += 1 // TODO: do we need this outside debugging?
       toCmp match {
         case DB.Derived =>

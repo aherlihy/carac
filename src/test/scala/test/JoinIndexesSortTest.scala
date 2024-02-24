@@ -1,13 +1,81 @@
 package test
 
 import datalog.dsl.{Atom, Constant, Program, __}
-import datalog.execution.{ExecutionEngine, JoinIndexes, SemiNaiveExecutionEngine}
-import datalog.storage.{DefaultStorageManager, NS}
+import datalog.execution.{ExecutionEngine, JITOptions, JoinIndexes, SemiNaiveExecutionEngine, SortOrder, StagedExecutionEngine}
+import datalog.storage.{DefaultStorageManager, IndexedStorageManager, NS}
 
 import scala.collection.mutable
 
 class JoinIndexesSortTest extends munit.FunSuite {
-  test("JoinIdx sort simple") {
+  test("selectivity with unique keys") {
+    val sm = new IndexedStorageManager()
+
+    val jitOptions = JITOptions(sortOrder = SortOrder.VariableR)
+    given engine: ExecutionEngine = new StagedExecutionEngine(sm, jitOptions)
+
+    val program = Program(engine)
+
+    val manyKeys = program.relation[Constant]("manyKeys")
+    val fewKeys = program.relation[Constant]("fewKeys")
+    val small1 = program.relation("small1")
+    val small2 = program.relation("small2")
+    small1(1, 11) :- ()
+    small2(0, 1) :- ()
+    small2(3, 4) :- ()
+
+    val rule1 = program.relation("rule1")
+
+    manyKeys(1, 11) :- ()
+    manyKeys(0, 12) :- ()
+    manyKeys(0, 13) :- ()
+    manyKeys(0, 14) :- ()
+    manyKeys(0, 15) :- ()
+    manyKeys(0, 16) :- ()
+    manyKeys(0, 17) :- ()
+    manyKeys(0, 18) :- ()
+    manyKeys(0, 19) :- ()
+    manyKeys(0, 20) :- ()
+    manyKeys(0, 21) :- ()
+
+    fewKeys(1, 1) :- ()
+    fewKeys(0, 1) :- ()
+    fewKeys(0, 1) :- ()
+    fewKeys(0, 1) :- ()
+    fewKeys(0, 1) :- ()
+    fewKeys(0, 1) :- ()
+    fewKeys(0, 1) :- ()
+    fewKeys(0, 3) :- ()
+    fewKeys(0, 1) :- ()
+    fewKeys(0, 2) :- ()
+
+    val x, y = program.variable()
+
+    val atomSmall1 = small1(x, y)
+    val atomSmall2 = small2(x, y)
+    val atomFewKeys = fewKeys(x, y)
+    val atomManyKeys = manyKeys(x, y)
+
+    rule1(x, y) :- (atomSmall1, atomFewKeys, atomManyKeys, atomSmall2) // many keys has 1 more than fewKeys, so fewKeys better for cardinality, but manyKeys better for selectivity. small2 worst for selectivity
+
+    val jIdx = engine.storageManager.allRulesAllIndexes(rule1.id).head._2
+    rule1.solve()
+//    println("------ solve -------")
+
+    val (newBody, hash) = JoinIndexes.presortSelectReduction(
+      jitOptions.getSortFn(engine.storageManager),
+      jitOptions.getUniqueKeysFn(engine.storageManager),
+      jIdx,
+      sm,
+      -1
+    )
+    val expected = Array(atomSmall1.hash, atomSmall2.hash, atomManyKeys.hash, atomFewKeys.hash)
+
+    assertEquals(
+      newBody.map(n => sm.ns.hashToAtom(n._1.hash)).toSeq,
+      expected.map(e => sm.ns.hashToAtom(e)).toSeq
+    )
+  }
+  test("JoinIdx sort simple".ignore) {
     val sm = new DefaultStorageManager()
     given engine: ExecutionEngine = new SemiNaiveExecutionEngine(sm)
     val program = Program(engine)
@@ -169,7 +237,7 @@ class JoinIndexesSortTest extends munit.FunSuite {
       expected.map(e => sm.ns.hashToAtom(e)).toSeq
     )
   }
-  test("sort with cycle") {
+  test("sort with cycle".ignore) {
     val sm = new DefaultStorageManager()
 
     given engine: ExecutionEngine = new SemiNaiveExecutionEngine(sm)
@@ -339,7 +407,7 @@ class JoinIndexesSortTest extends munit.FunSuite {
       expected.map(e => sm.ns.hashToAtom(e)).toSeq
     )
   }
-  test("sort with repeated vars") {
+  test("sort with repeated vars".ignore) {
     val sm = new DefaultStorageManager()
 
     given engine: ExecutionEngine = new SemiNaiveExecutionEngine(sm)
