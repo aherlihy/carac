@@ -77,6 +77,10 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
     deltaDB(newDbId) = IndexedCollectionsDatabase()
 
     edbs.foreach((rId, relation) => {
+      // All relations get at least 1 index
+      if indexCandidates(rId).isEmpty && relation.arity > 0 then
+        relation.registerIndex(0)
+        indexCandidates(rId) = mutable.BitSet(0)
       deltaDB(knownDbId).addEmpty(rId, relation.arity, indexCandidates(rId), ns(rId), mutable.BitSet())
       deltaDB(newDbId).addEmpty(rId, relation.arity, indexCandidates(rId), ns(rId), mutable.BitSet()) // TODO: no indexes on delta.new, bc write into?
       derivedDB.assignEDBToCopy(rId, relation)
