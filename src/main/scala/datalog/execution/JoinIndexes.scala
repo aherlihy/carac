@@ -184,47 +184,56 @@ object JoinIndexes {
                              sm: StorageManager,
                              deltaIdx: Int): (Seq[(Atom, Int)], String) = {
 //    println(sm.printer.ruleToString(originalK.atoms))
-    //    val sortedBody = originalK.atoms.drop(1).zipWithIndex.sortBy((a, _) => (sm.allRulesAllIndexes.contains(a.rId), sortBy(a)))
-    val sortedBody = originalK.atoms.drop(1).zipWithIndex.sortBy((a, idx) => sortBy(a, idx == deltaIdx))
-//    println(s"\tOrder: ${sortedBody.map((a, idx) => s"${sm.ns.hashToAtom(a.hash)}:|${sortBy(a, idx == deltaIdx)}|${if (sm.edbContains(a.rId)) "edb" else "idb"}").mkString("", ", ", "")}")
+    val sortedBody = originalK.atoms.drop(1).zipWithIndex.map((a, idx) => (a, idx, sortBy(a, idx == deltaIdx))).sortBy(_._3)
+    val rStack = mutable.LinkedHashMap.from(sortedBody.map((atom, idx, cardinality) => (atom.hash, (atom, idx, cardinality._2))))
+//    println(s"\tOrder: ${rStack.map((hash, r) => s"${sm.ns.hashToAtom(hash)}:|${sortBy(r._1, r._2 == deltaIdx)}|${if (sm.edbContains(r._1.rId)) "edb" else "idb"}").mkString("", ", ", "")}")
     //    if (input.length > 2)
     //    println(s"Rule: ${sm.printer.ruleToString(originalK.atoms)}\n")
     //    println(s"Rule cxn: ${originalK.cxnsToString(sm.ns)}\n")
-    val rStack = sortedBody.to(mutable.ListBuffer)
-    var newBody = Seq[(Atom, Int)]()
+    val newBody = mutable.ArrayBuffer[(Atom, Int)]()
 //    println("START, stack=" + rStack.map(_._1).mkString("[", ", ", "]"))
     while (rStack.nonEmpty)
       var nextOpt = rStack.headOption
-//      println(s"\tpicking head ${sm.ns.hashToAtom(nextOpt.get._1.hash)} off stack")
+//      println(s"\tpicking head ${sm.ns.hashToAtom(nextOpt.get._1)} off stack")
       while (nextOpt.nonEmpty)
-        val next = nextOpt.get
-        val r1RId = next._1.rId
-        val r1IsDelta = next._2 == deltaIdx
-        newBody = newBody :+ next
-        rStack.remove(rStack.indexOf(next))
+        val next = nextOpt.get // hash, (atom, idx)
+        val r1 = next._2._1
+        val r1IsDelta = next._2._2 == deltaIdx
+        val r1cardinality = next._2._3
+        newBody.addOne((r1, next._2._2))
+        rStack.remove(next._1)
 //        println(s"\t\tbody now: ${newBody.map(_._1).map(a => sm.ns.hashToAtom(a.hash)).mkString("[", ", ", "]")}")
 
-        val cxns = originalK.cxns(next._1.hash) // [(hash, [(i1, i2)+])+]
+        val cxns = originalK.cxns(next._1) // [(hash, [(i1, i2)+])+]
         if (cxns.nonEmpty)
           val reductionFactors = cxns
-            .map((atomHash2, idxs) => (rStack.find((sAtom, _) => sAtom.hash == atomHash2), idxs)) // get Atom + index
-            .collect{ case (r2Opt, idxs) if r2Opt.nonEmpty => (r2Opt.get, idxs)}
-            .map((r2, idxs) =>
-              (r2, idxs.
-                map((r1Pos: Int, r2Pos: Int) =>
-                  (1/getUniqueKeys(r1RId, r1Pos, r1IsDelta)).max(1/getUniqueKeys(r2._1.rId, r2Pos, r2._2 == deltaIdx))
+            .collect{ case (atomHash2, idxs) if rStack.contains(atomHash2) =>
+              val r2tup = rStack(atomHash2)  // get next Atom + index (for delta check)
+              val r2 = r2tup._1
+              val r2cardinality = r2tup._3
+//              println(s"getting selectivity ${sm.ns(r1.rId)} * ${sm.ns(r2.rId)}:")
+              val rFac = idxs // for each connection to that atom
+                .map((r1Pos: Int, r2Pos: Int) =>
+                  val maxUnique = getUniqueKeys(r1.rId, r1Pos, r1IsDelta).max(getUniqueKeys(r2.rId, r2Pos, r2tup._2 == deltaIdx))
+//                  if maxUnique == 0 then println(s"\tpositions ${sm.ns(r1.rId)}[$r1Pos] * ${sm.ns(r2.rId)}[$r2Pos]: maxU=$maxUnique, isDelta=${r2tup._2 == deltaIdx} or $r1IsDelta")
+                  if maxUnique != 0 then 1 / maxUnique else 0
+//                  println(s"\tres=$res")
                 ).product
-              )
-            )
-            .sortBy(_._2)
-            .map(_._1)
-//          println(s"\t\tcxns, in order: ${reductionFactors.map((r2, factor) => s"${r2}: #$factor").mkString("(", ", ", ")")}")
+//              println(s"final factor #=$rFac")
+              val estimatedOut = rFac*r2cardinality // *r1cardinality, not needed bc constant
+//              println(s"\tfactor $rFac * card $r2cardinality = $estimatedOut")
+              (r2tup, estimatedOut, r2cardinality)
+            }
+            .sortBy(r => (r._2, r._3))
+//          val res = reductionFactors
+            .map((r2, _, _) => (r2._1.hash, r2))
+//          println(s"\t\tcxns, in order: ${reductionFactors.map((r2, factor, c) => s"${r2}: #$factor for card $c").mkString("(", ", ", ")")}")
           nextOpt = reductionFactors.headOption
         else
           nextOpt = None
-//        println(s"\t\t\t==>next cxn to add: ${nextOpt.map(next => sm.ns.hashToAtom(next._1.hash)).getOrElse("None")}")
+//        println(s"\t\t\t==>next cxn to add: ${nextOpt.map(next => sm.ns.hashToAtom(next._1)).getOrElse("None")}")
 //
-    val newAtoms = originalK.atoms.head +: newBody.map(_._1)
+    val newAtoms = originalK.atoms.head +: newBody.map(_._1).toSeq
     val newHash = JoinIndexes.getRuleHash(newAtoms)
 
     //    if (originalK.atoms.length > 3)
@@ -239,7 +248,7 @@ object JoinIndexes {
     //    if (originalK.atoms.length > 2)
     //      print(s"Rule: ${sm.printer.ruleToString(originalK.atoms)} => ")
     //      println(s"${sm.printer.ruleToString(originalK.atoms.head +: newBody.map(_._1))}")
-    (newBody, newHash)
+    (newBody.toSeq, newHash)
   }
 
   def presortSelect(sortBy: (Atom, Boolean) => (Boolean, Int), originalK: JoinIndexes, sm: StorageManager, deltaIdx: Int): (Seq[(Atom, Int)], String) = {

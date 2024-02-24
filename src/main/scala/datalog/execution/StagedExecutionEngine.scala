@@ -292,7 +292,10 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
 
       case op: UnionSPJOp if jitOptions.granularity.flag == op.code && op.children.length > 2=>
         if (jitOptions.sortOrder != SortOrder.Unordered && jitOptions.sortOrder != SortOrder.Badluck && jitOptions.fuzzy != 0) // sort child relations and see if change is above threshold
-          val (nb, _) = JoinIndexes.presortSelect(jitOptions.getSortFn(storageManager), op.k, storageManager, -1)
+          val (nb, _) = if (jitOptions.sortOrder == SortOrder.Sel)
+            JoinIndexes.presortSelect(jitOptions.getSortFn(storageManager), op.k, storageManager, -1)
+          else
+            JoinIndexes.presortSelectReduction(jitOptions.getSortFn(storageManager), jitOptions.getUniqueKeysFn(storageManager), op.k, storageManager, -1)
           val oldBody = op.k.atoms.drop(1).map(_.hash)
           val newBodyIdx = nb.map(h => oldBody.indexOf(h._1.hash))
 

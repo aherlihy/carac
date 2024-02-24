@@ -63,9 +63,9 @@ case class JITOptions(
       case SortOrder.VariableR =>
         (rId: RelationId, pos: Int, isDelta: Boolean) =>
           if (isDelta)
-            storageManager.getKnownDeltaDB(rId).getIndex(pos).size()
+            storageManager.getKnownDeltaDB(rId).getIndexSize(pos)
           else
-            storageManager.getKnownDerivedDB(rId).getIndex(pos).size()
+            storageManager.getKnownDerivedDB(rId).getIndexSize(pos)
       case _ => (rId, pos, isDelta) => 10
 
   def getSortFn(storageManager: StorageManager): (Atom, Boolean) => (Boolean, Int) =

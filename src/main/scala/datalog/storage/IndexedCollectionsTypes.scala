@@ -61,6 +61,11 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
     if (skipIndexes.contains(idx)) throw new Exception(s"Error: trying to access data in $name with skipped index $idx")
     indexes(idx)
 
+  inline def getIndexSize(idx: Int): Int =
+    val index = getIndex(idx)
+    if index == null then throw new Exception(s"Getting index on $name at position $idx, uninitialized. IndexKeys=$indexKeys")
+    index.size()
+
   private def createIndexMap(): IndexMap =
     // Customizing the initialCapacity and loadFactor parameters of the
     // constructor do not seem to improve performance at least on
