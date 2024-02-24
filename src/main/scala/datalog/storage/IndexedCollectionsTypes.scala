@@ -153,19 +153,12 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
   private def containsRow(container: mutable.ArrayBuffer[IndexedCollectionsRow], row: IndexedCollectionsRow): Boolean =
     var i = 0
     val rowLength = row.length
-    row.unsafeArray match
-      case rowArray: Array[Int] =>
-        while i < container.length do
-          if Arrays.equals(container(i).unsafeArray.asInstanceOf[Array[Int]], rowArray) then
-            return true
-          i += 1
-        end while
-      case rowArray: Array[AnyRef] =>
-        while i < container.length do
-          if Arrays.equals(container(i).unsafeArray.asInstanceOf[Array[AnyRef]], rowArray) then
-            return true
-          i += 1
-        end while
+    val rowArray = row.unsafeArray
+    while i < container.length do
+      if Arrays.equals(container(i).unsafeArray, rowArray) then
+        return true
+      i += 1
+    end while
     false
 
   def diff(that: IndexedCollectionsEDB): IndexedCollectionsEDB = ???
@@ -319,7 +312,7 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
 
 //    println(s"\tintermediateR=${result.map(_.mkString("(", ", ", ")")).mkString("[", ", ", "]")}")
     val combinedIndexes = outer.indexKeys ++ inner.indexKeys.map(_ + arity)
-    IndexedCollectionsEDB(result, combinedIndexes, s"${outer.name}x${inner.name}", arity + toJoin.arity, combinedIndexes)
+    IndexedCollectionsEDB(result.asInstanceOf, combinedIndexes, s"${outer.name}x${inner.name}", arity + toJoin.arity, combinedIndexes)
 
 
   def factToString: String =
@@ -436,25 +429,21 @@ object IndexedCollectionsEDB {
   }
 }
 
-inline def IndexedCollectionsRow(s: ArraySeq[StorageTerm]) = s
-type IndexedCollectionsRow = ArraySeq[StorageTerm]
-extension (seq: ArraySeq[StorageTerm])
+inline def IndexedCollectionsRow(s: ArraySeq.ofInt) = s
+type IndexedCollectionsRow = ArraySeq.ofInt
+extension (seq: ArraySeq.ofInt)
   def project(projIndexes: Seq[(String, Constant)]): IndexedCollectionsRow = // make a copy
-    if seq.isInstanceOf[ArraySeq.ofInt] then
-      projectInto(new Array[Int](projIndexes.length), projIndexes)
-    else
-      projectInto(new Array[StorageTerm](projIndexes.length), projIndexes)
-  inline def projectInto[T <: StorageTerm](arr: Array[T], projIndexes: Seq[(String, Constant)]): IndexedCollectionsRow =
+    val arr = new Array[Int](projIndexes.length)
     var i = 0
     while i < arr.length do
       val elem = projIndexes(i)
       elem._1 match
-        case "v" => arr(i) = seq(elem._2.asInstanceOf[Int]).asInstanceOf[T]
-        case "c" => arr(i) = elem._2.asInstanceOf[T]
+        case "v" => arr(i) = seq(elem._2.asInstanceOf[Int])
+        case "c" => arr(i) = elem._2
         case _ => throw new Exception("Internal error: projecting something that is not a constant nor a variable")
       i += 1
     end while
-    ArraySeq.unsafeWrapArray(arr)
+    ArraySeq.ofInt(arr)
 
   /* Equality constraint $1 == $2 */
   inline def filterConstraint(keys: Seq[Int]): Boolean =

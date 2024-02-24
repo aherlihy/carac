@@ -33,7 +33,7 @@ class Atom(val rId: Int, val terms: ArraySeq[Term], val negated: Boolean) {
   def :- (body: Unit): Unit = ???
   val hash: String = s"${if (negated) "!" else ""}$rId.${terms.mkString("", "", "")}"
 }
-type StorageAtom = Atom { val terms: ArraySeq[StorageTerm] }
+type StorageAtom = Atom { val terms: ArraySeq.ofInt }
 
 case class Relation[T <: Constant](id: Int, name: String)(using ee: ExecutionEngine) {
   type RelTerm = T | Variable

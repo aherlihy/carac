@@ -135,7 +135,7 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
     // short but inefficient
     val res = List.fill(arity)(edbDomain).flatten.combinations(arity).flatMap(_.permutations).toSeq
     IndexedCollectionsEDB(
-      mutable.ArrayBuffer.from(res.map(r => IndexedCollectionsRow(ArraySeq.from(r)))), indexCandidates(rId), ns(rId), arity, mutable.BitSet()
+      mutable.ArrayBuffer.from(res.map(r => IndexedCollectionsRow(ArraySeq.ofInt(r.toArray)))), indexCandidates(rId), ns(rId), arity, mutable.BitSet()
     )
   }
 
