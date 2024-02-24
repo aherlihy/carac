@@ -111,6 +111,7 @@ class BytecodeCompiler(val storageManager: StorageManager)(using JITOptions) ext
               JoinIndexes.getOnlineSort(
                 children,
                 jitOptions.getSortFn(storageManager),
+                jitOptions.getUniqueKeysFn(storageManager),
                 rId,
                 k,
                 storageManager
@@ -132,6 +133,7 @@ class BytecodeCompiler(val storageManager: StorageManager)(using JITOptions) ext
               JoinIndexes.getPresort(
                 children,
                 jitOptions.getSortFn(storageManager),
+                jitOptions.getUniqueKeysFn(storageManager),
                 rId,
                 k,
                 storageManager

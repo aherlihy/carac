@@ -3,7 +3,7 @@ package datalog.execution.ir
 import datalog.dsl.{Atom, Constant}
 import datalog.execution.{JITOptions, JoinIndexes, PrecedenceGraph, SortOrder, StagedCompiler, ir}
 import datalog.execution.ast.*
-import datalog.storage.{DB, EDB, KNOWLEDGE, RelationId, StorageManager}
+import datalog.storage.{DB, EDB, IndexedStorageManager, KNOWLEDGE, RelationId, StorageManager}
 import datalog.tools.Debug
 import datalog.tools.Debug.debug
 
@@ -117,8 +117,12 @@ case class ProgramOp(override val children:IROp[Any]*)(using JITOptions) extends
 case class DoWhileOp(toCmp: DB, override val children:IROp[Any]*)(using JITOptions) extends IROp[Any](children:_*) {
   val code: OpCode = OpCode.DOWHILE
   override def run_continuation(storageManager: StorageManager, opFns: Seq[CompiledFn[Any]]): Any =
+    var i = 0
     while ( {
       opFns.head(storageManager)
+//      println(s"DBs start of semi-naive iteration $i: ${storageManager.toString}")
+//      opFns(1)(storageManager)
+      i += 1
 //      ctx.count += 1 // TODO: do we need this outside debugging?
       toCmp match {
         case DB.Derived =>
@@ -323,6 +327,7 @@ case class UnionSPJOp(rId: RelationId, var k: JoinIndexes, override val children
       val (sortedChildren, newK) = JoinIndexes.getPresort(
         children,
         jitOptions.getSortFn(storageManager),
+        jitOptions.getUniqueKeysFn(storageManager.asInstanceOf[IndexedStorageManager]),
         rId,
         k,
         storageManager
