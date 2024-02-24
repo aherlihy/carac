@@ -1,4 +1,4 @@
-package test.examples.csda
+package test.examples.csda_full
 
 import buildinfo.BuildInfo
 import datalog.dsl.{Constant, Program}
@@ -11,7 +11,7 @@ class csda_test extends ExampleTestGenerator(
 ) with csda
 
 trait csda {
-  val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/csda/facts"
+  val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/csda_full/facts"
   val toSolve = ""
 
   // Adapted from https://drive.google.com/drive/mobile/folders/1M4WxwykUd-jX8jBA50pSNf2R-1IJ49PJ/1DRj-cfISV9v34vU7DH1PKEu13PaMIf71/1V1JWRdDzjjGxBPSKLg6diEAjJ-eRbQvj?usp=drive_link&pli=1&sort=13&direction=a
