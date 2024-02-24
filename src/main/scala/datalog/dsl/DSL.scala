@@ -58,8 +58,11 @@ case class Relation[T <: Constant](id: Int, name: String)(using ee: ExecutionEng
   }
 
   // Create a tuple in this relation
-  def apply(ts: RelTerm*): RelAtom = RelAtom(ArraySeq.from(ts)(using classTag[AnyRef].asInstanceOf[ClassTag[RelTerm]])) // box everything for now
-  //def apply(ts: RelTerm*): RelAtom = RelAtom(ts.toIndexedSeq)
+  def apply(ts: RelTerm*): RelAtom =
+    // Always boxed for now, use the overload that takes an ArraySeq to avoid boxing Ints.
+    RelAtom(ArraySeq.from(ts)(using classTag[AnyRef].asInstanceOf[ClassTag[RelTerm]]))
+  def apply(ts: ArraySeq[RelTerm]): RelAtom =
+    RelAtom(ts)
 
   def solve(): Set[Seq[StorageTerm]] = ee.solve(id).map(s => s.toSeq).toSet
   def get(): Set[Seq[StorageTerm]] = ee.get(id)
