@@ -157,12 +157,18 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
 
   def contains(edb: IndexedCollectionsRow): Boolean =
     var i = 0
-    while i < indexes.length && indexes(i) == null do
-      i += 1 // for now take first index and use it to filter, TODO: use smallest
-    if i == indexes.length then
-      containsRow(wrapped, edb)
+    var smallestIdx = (-1, Int.MaxValue)
+    while i < indexes.length do
+      if (indexes(i) != null)
+        val idxTerms = indexes(i).get(edb(i))
+        val size = if idxTerms == null then 0 else idxTerms.size
+        if (size < smallestIdx._2)
+          smallestIdx = (i, size)
+      i += 1
+    if smallestIdx._1 == indexes.length || smallestIdx._1 == -1 then
+      throw new Exception(s"Missing index on $name, no indexes found of $indexKeys")
     else
-      val values = indexes(i).get(edb(i))
+      val values = indexes(smallestIdx._1).get(edb(smallestIdx._1))
       values != null && containsRow(values, edb)
 
   private def containsRow(container: mutable.ArrayBuffer[IndexedCollectionsRow], row: IndexedCollectionsRow): Boolean =
