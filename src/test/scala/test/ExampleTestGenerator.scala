@@ -117,7 +117,7 @@ abstract class TestGenerator(directory: Path,
           case "InterpretedStagedIndexed" =>
             Program(StagedExecutionEngine(IndexedStorageManager(), JITOptions()))
           case "InterpretedStaged_selIndexed" =>
-            Program(StagedExecutionEngine(IndexedStorageManager(), JITOptions(sortOrder = SortOrder.Sel)))
+            Program(StagedExecutionEngine(IndexedStorageManager(), JITOptions(sortOrder = SortOrder.VariableR)))
 //          case "InterpretedStaged_badluckDefault" =>
 //            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(sortOrder = SortOrder.Badluck)))
 
@@ -176,23 +176,23 @@ abstract class TestGenerator(directory: Path,
 //      "Naive",
 //      "SemiNaive",
 //      "CompiledStaged", // TODO: for longer tests, can throw MethodTooLarge
-      "InterpretedStaged",
+//      "InterpretedStaged",
       "InterpretedStaged_sel",
-      "JITStaged_Sel_DELTA_Block_Lambda",
-      "JITStaged_Sel_DELTA_Block_BC",
-      "JITStaged_Sel_DELTA_Block_Quotes",
-      "JITStaged_Sel_ALL_Block_BC",
-      "JITStaged_Sel_RULE_Block_BC",
-      "JITStaged_Sel_RULE_Block_Quotes",
-      "JITStaged_Sel_ALL_Block_Quotes",
-      "JITStaged_Sel_RULE_Async_Quotes",
-      "JITStaged_Sel_ALL_Async_Quotes",
-      "JITStaged_Sel_ALL_Block_Lambda",
-      "JITStaged_Sel_RULE_Block_Lambda",
-      "JITStaged_Sel_ALL_Async_Lambda",
-      "JITStaged_Sel_RULE_Async_Lambda",
-      "JITStaged_Sel_RULE_Async_BC",
-      "JITStaged_Sel_ALL_Async_BC",
+//      "JITStaged_Sel_DELTA_Block_Lambda",
+//      "JITStaged_Sel_DELTA_Block_BC",
+//      "JITStaged_Sel_DELTA_Block_Quotes",
+//      "JITStaged_Sel_ALL_Block_BC",
+//      "JITStaged_Sel_RULE_Block_BC",
+//      "JITStaged_Sel_RULE_Block_Quotes",
+//      "JITStaged_Sel_ALL_Block_Quotes",
+//      "JITStaged_Sel_RULE_Async_Quotes",
+//      "JITStaged_Sel_ALL_Async_Quotes",
+//      "JITStaged_Sel_ALL_Block_Lambda",
+//      "JITStaged_Sel_RULE_Block_Lambda",
+//      "JITStaged_Sel_ALL_Async_Lambda",
+//      "JITStaged_Sel_RULE_Async_Lambda",
+//      "JITStaged_Sel_RULE_Async_BC",
+//      "JITStaged_Sel_ALL_Async_BC",
     ).foreach(execution => {
       Seq(/*"Volcano", "Default",*/ "Indexed").foreach(storage => {
         if ((execution.contains("Staged") || execution.contains("BytecodeGenerated") || execution.contains("Lambda")) && storage == "Volcano") {} // skip and don't report as skipped

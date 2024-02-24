@@ -145,6 +145,7 @@ class LambdaCompiler(val storageManager: StorageManager)(using JITOptions) exten
           JoinIndexes.getOnlineSort(
             children,
             jitOptions.getSortFn(storageManager),
+            jitOptions.getUniqueKeysFn(storageManager),
             rId,
             k,
             storageManager
@@ -165,6 +166,7 @@ class LambdaCompiler(val storageManager: StorageManager)(using JITOptions) exten
           JoinIndexes.getPresort(
             children,
             jitOptions.getSortFn(storageManager),
+            jitOptions.getUniqueKeysFn(storageManager),
             rId,
             k,
             storageManager

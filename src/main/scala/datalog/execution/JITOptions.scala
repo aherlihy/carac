@@ -2,14 +2,14 @@ package datalog.execution
 
 import datalog.dsl.Atom
 import datalog.execution.ir.OpCode
-import datalog.storage.StorageManager
+import datalog.storage.{IndexedStorageManager, StorageManager, RelationId}
 
 import scala.quoted.staging
 
 enum CompileSync:
   case Async, Blocking
 enum SortOrder:
-  case Sel, IntMax, Mixed, Badluck, Unordered, Worst
+  case Sel, IntMax, Mixed, Badluck, Unordered, Worst, VariableR
 enum Backend:
   case Quotes, Bytecode, Lambda
 enum Granularity(val flag: OpCode):
@@ -57,6 +57,17 @@ case class JITOptions(
     val backendStr = if (mode == Mode.Interpreted) "" else backend.toString.toLowerCase()
     s"${programStr}_${granStr}_$backendStr"
 
+  def getUniqueKeysFn(sm: StorageManager): (RelationId, Int, Boolean) => Double =
+    val storageManager = sm.asInstanceOf[IndexedStorageManager]
+    sortOrder match
+      case SortOrder.VariableR =>
+        (rId: RelationId, pos: Int, isDelta: Boolean) =>
+          if (isDelta)
+            storageManager.getKnownDeltaDB(rId).getIndex(pos).size()
+          else
+            storageManager.getKnownDerivedDB(rId).getIndex(pos).size()
+      case _ => (rId, pos, isDelta) => 10
+
   def getSortFn(storageManager: StorageManager): (Atom, Boolean) => (Boolean, Int) =
       sortOrder match
         case SortOrder.IntMax =>
@@ -64,7 +75,7 @@ case class JITOptions(
             (true, storageManager.getEDBResult(a.rId).size)
           else
             (true, Int.MaxValue)
-        case SortOrder.Sel =>
+        case SortOrder.Sel | SortOrder.VariableR =>
           (a: Atom, isDelta: Boolean) =>
             if (isDelta)
               (true, storageManager.getKnownDeltaDB(a.rId).length)

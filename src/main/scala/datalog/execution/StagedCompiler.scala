@@ -24,6 +24,7 @@ abstract class StagedCompiler(storageManager: StorageManager)(using val jitOptio
             JoinIndexes.getPresort(
               children,
               jitOptions.getSortFn(storageManager),
+              jitOptions.getUniqueKeysFn(storageManager),
               rId,
               k,
               storageManager
