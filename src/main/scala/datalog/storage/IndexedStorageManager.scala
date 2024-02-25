@@ -170,7 +170,7 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
   def insertDeltaIntoDerived(): Unit =
     deltaDB(newDbId).foreach((rId, edb) =>
       if (derivedDB.contains(rId))
-        derivedDB(rId).mergeEDBs(edb.indexes, false)
+        derivedDB(rId).addAll(edb.wrapped)
       else if (edb.wrapped.nonEmpty)
         derivedDB.addNewEDBCopy(rId, edb)
     )
@@ -233,7 +233,7 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
   }
 
   def union(edbs: Seq[EDB]): EDB =
-    import IndexedCollectionsEDB.{unionEDB, unionInPlace}
+    import IndexedCollectionsEDB.unionEDB
     edbs.unionEDB // unionInPlace is slower!
 
   def diff(lhsEDB: EDB, rhsEDB: EDB): EDB = ???
