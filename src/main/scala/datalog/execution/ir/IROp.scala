@@ -61,7 +61,7 @@ object IROp {
   def runFns[T: ClassTag](storageManager: StorageManager, seq: Seq[StorageManager => T], inParallel: Boolean = false): Seq[T] =
     if seq.length == 1 then
       return immutable.ArraySeq.unsafeWrapArray(Array(seq.head(storageManager)))
-    if inParallel == false then
+    if !inParallel then
       return seq.map(_(storageManager))
     val futures = immutable.ArraySeq.newBuilder[Future[T]]
     futures.sizeHint(seq.length)
@@ -135,7 +135,7 @@ case class DoWhileOp(toCmp: DB, override val children:IROp[Any]*)(using JITOptio
       children.head.children(1).run(storageManager)
 //      children.head.run(storageManager)
       i += 1
-//      if i > 3 then System.exit(0)
+//      if i > 1 then System.exit(0)
       children.head.run(storageManager)
       toCmp match {
         case DB.Derived =>

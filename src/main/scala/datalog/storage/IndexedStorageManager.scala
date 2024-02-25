@@ -1,6 +1,6 @@
 package datalog.storage
 
-import datalog.dsl.{StorageAtom, Constant, Term, Variable}
+import datalog.dsl.{Constant, StorageAtom, Term, Variable}
 import datalog.execution.{AllIndexes, JoinIndexes}
 import datalog.storage.IndexedCollectionsCasts.*
 import datalog.storage.StorageTerm
@@ -146,15 +146,15 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
   // Read intermediate results
   def getKnownDerivedDB(rId: RelationId): IndexedCollectionsEDB =
     if !relationArity.contains(rId) then throw new Exception(s"Internal error: relation $rId (${ns(rId)}) has no arity")
-    derivedDB.getOrElseEmpty(rId, relationArity(rId), indexCandidates.getOrElse(rId, mutable.BitSet()), ns(rId), mutable.BitSet())
+    derivedDB.getOrElseEmpty(rId, relationArity(rId), indexCandidates.getOrElseUpdate(rId, mutable.BitSet(0)), ns(rId), mutable.BitSet())
   def getNewDerivedDB(rId: RelationId): IndexedCollectionsEDB = ??? // TODO: remove
 
   def getKnownDeltaDB(rId: RelationId): IndexedCollectionsEDB =
     if !relationArity.contains(rId) then throw new Exception(s"Internal error: relation $rId (${ns(rId)}) has no arity")
-    deltaDB(knownDbId).getOrElseEmpty(rId, relationArity(rId), indexCandidates.getOrElse(rId, mutable.BitSet()), ns(rId), mutable.BitSet())
+    deltaDB(knownDbId).getOrElseEmpty(rId, relationArity(rId), indexCandidates.getOrElseUpdate(rId, mutable.BitSet(0)), ns(rId), mutable.BitSet())
   def getNewDeltaDB(rId: RelationId): IndexedCollectionsEDB =
     if !relationArity.contains(rId) then throw new Exception(s"Internal error: relation $rId (${ns(rId)}) has no arity")
-    deltaDB(newDbId).getOrElseEmpty(rId, relationArity(rId), indexCandidates.getOrElse(rId, mutable.BitSet()), ns(rId), mutable.BitSet())
+    deltaDB(newDbId).getOrElseEmpty(rId, relationArity(rId), indexCandidates.getOrElseUpdate(rId, mutable.BitSet(0)), ns(rId), mutable.BitSet())
 
   // Read final results
   def getKnownIDBResult(rId: RelationId): Set[Seq[StorageTerm]] =
@@ -245,14 +245,23 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
 //     println(s"input rels: ${inputs.map(e => e.factToString).mkString("[", "*", "]")}")
 
     // var intermediateCardinalities = Seq[Int]()
-    val fResult = if (inputs.length == 1) { // just filter + project
-      inputs.head.projectFilterWithIndex(
-        originalK.constIndexes,
-        originalK.projIndexes,
-        ns(rId),
-        indexCandidates.getOrElse(rId, mutable.BitSet())
-      )
-    } else {
+    val fResult = if (inputs.length == 1) { // need to make a copy
+      if (originalK.constIndexes.isEmpty && originalK.projIndexes.isEmpty && !derivedDB.contains(rId)) // nothing to do but copy, save rebuilding index time. TODO: never happens bc project always defined?
+        val edbToCopy = inputs.head
+//        val newEDB = IndexedCollectionsEDB.empty(edbToCopy.arity, edbToCopy.indexKeys, edbToCopy.name, mutable.BitSet())
+//        newEDB.mergeEDBs(edbToCopy.indexes)
+//        newEDB
+        edbToCopy
+      else
+        inputs.head.projectAndDiff(
+          originalK.constIndexes,
+          originalK.projIndexes,
+          ns(rId),
+          indexCandidates.getOrElseUpdate(rId, mutable.BitSet(0)),
+          derivedDB: IndexedCollectionsDatabase,
+          rId
+        )
+    } else { // no copy needed
       val result = inputs
         .foldLeft(
           (IndexedCollectionsEDB.empty(0, skipIndexes = mutable.BitSet()), 0, originalK) // initialize intermediate indexed-collection
@@ -275,22 +284,17 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
             //            intermediateCardinalities = intermediateCardinalities :+ edbResult.length
             (edbResult, atomI + 1, k)
         )
-      val indexesToIgnore = indexCandidates.getOrElse(rId, mutable.BitSet())
-      IndexedCollectionsEDB(
-        result._1.wrapped.mapInPlace(_.project(result._3.projIndexes)),
-        indexesToIgnore,
+      val outputIndex = indexCandidates.getOrElseUpdate(rId, mutable.BitSet(0))
+
+      result._1.projectAndDiff(
+        mutable.Map[Int, Constant](), // already did constant check
+        result._3.projIndexes,
         ns(rId),
-        result._3.projIndexes.length,
-        indexesToIgnore // remove all indices after proj/ going into union
+        outputIndex,
+        derivedDB,
+        rId
       )
     }
-    fResult.wrapped.filterInPlace(row =>
-      val res =
-//        (!discoveredFacts.contains(rId) || !discoveredFacts(rId).contains(row)) &&
-          (!derivedDB.contains(rId) || !derivedDB(rId).contains(row))
-//      println(s"checking ${row.toString} is not in ${getKnownDerivedDB(rId).factToString}, res=$res")
-      res
-    ) // TODO: push further down to avoid extra it
     fResult
   }
 
