@@ -172,7 +172,7 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
       values != null && containsRow(values, edb)
 
   // merge and deduplicate the passed indexes into the current EDB
-  def mergeEDBs(indexesToMerge: Array[IndexMap]): Unit =
+  def mergeEDBs(indexesToMerge: Array[IndexMap], deduplicate: Boolean): Unit =
     var i = 0
     var update = true
     while i < indexesToMerge.length do
@@ -181,7 +181,7 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
           indexes(i) = createIndexMap()
 
         indexesToMerge(i).forEach((term, rowsToAdd) =>
-          indexes(i).insertInto(term, rowsToAdd, wrapped, update) // only write to wrapped once
+          indexes(i).insertInto(term, rowsToAdd, wrapped, update, deduplicate) // only write to wrapped once
         )
         update = false
       i += 1
@@ -197,17 +197,6 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
     false
 
   def diff(that: IndexedCollectionsEDB): IndexedCollectionsEDB = ???
-
-  /**
-   * Combine EDBs, maintaining the indexes of each.
-   * @param suffix
-   * @return
-   */
-  // TODO: maybe use insert not copy, except problem is that rules is delta.new, and prev is derived.known. Delta cannot mutate because needed for the end-of-iteration check, and derived cannot mutate (?) because needed to be read by other rules potentially
-  def copyAndAdd(suffix: IndexedCollectionsEDB): IndexedCollectionsEDB =
-    val copy = IndexedCollectionsEDB.copyWithIndexes(this, suffix.indexKeys)
-    copy.addAll(suffix.wrapped)
-    copy
 
   /**
    * Used only for getting a final result when we want to make sure to deduplicate results + get a set type
@@ -330,12 +319,11 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
       val outerPosToUse = keyToJoin.get._1
       val innerPosToUse = keyToJoin.get._2
       if (relativeJoinKeys.isEmpty) { // no shared join keys, so just filter by internal constraint
-        // TODO: if no shared keys don't bother building indexes on intermediate result
         filteredOuter.wrapped.flatMap(outerTuple => filteredInner.wrapped.map( innerTuple => outerTuple.concat(innerTuple)))
       } else {
         // TODO: picking first constraint, should pick best constraint
         // remove keys that do not have at least one condition in each tuple, and keep only the first condition (since self-constraints already filtered out)
-        val secondaryKeys = relativeJoinKeys.drop(1) // TODO: remove indexToUse if not first
+        val secondaryKeys = relativeJoinKeys.drop(1)
 //        println(s"\t\tprimary join outer[$outerPosToUse], inner[$innerPosToUse], secondary join positions: $secondaryKeys")
 
         filteredOuter.wrapped.flatMap(outerTuple =>
@@ -353,7 +341,13 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
 
 //    println(s"\tintermediateR=${result.map(_.mkString("(", ", ", ")")).mkString("[", ", ", "]")}")
     val combinedIndexes = outer.indexKeys ++ inner.indexKeys.map(_ + arity)
-    IndexedCollectionsEDB(result, combinedIndexes, s"${outer.name}x${inner.name}", arity + toJoin.arity, combinedIndexes)
+    IndexedCollectionsEDB(
+      result,//.distinct, // TODO: benchmark if better to do this on intermediate results or at union level
+      combinedIndexes,
+      s"${outer.name}x${inner.name}",
+      arity + toJoin.arity,
+      combinedIndexes // do not build indexes on intermediate results because will always be outer, and other than the first join all constant filters will be on the inner. Indexes will be rebuild on final project
+    )
 
 
   def factToString: String =
@@ -396,14 +390,13 @@ object IndexedCollectionsEDB {
     def insertInto(key: StorageTerm,
                    toAdd: ArrayBuffer[IndexedCollectionsRow],
                    wrappedToModify: ArrayBuffer[IndexedCollectionsRow],
-                   update: Boolean) =
+                   update: Boolean,
+                   deduplicate: Boolean) =
       val valueOrNull = index.get(key)
       if valueOrNull != null then // index is defined, so need to ensure no duplicates
-        toAdd.foreach(row =>
-          if (!valueOrNull.contains(row))
-            valueOrNull.addOne(row)
-            if update then wrappedToModify.addOne(row)
-        )
+        val dedup = if deduplicate then toAdd.filter(row => !valueOrNull.contains(row)) else toAdd
+        valueOrNull.addAll(dedup)
+        if update then wrappedToModify.addAll(dedup)
       else
         index.put(key, ArrayBuffer.from(toAdd))
         if update then wrappedToModify.addAll(toAdd) // TODO: need to deduplicate here as well?
@@ -426,7 +419,7 @@ object IndexedCollectionsEDB {
           head.indexKeys,
           head.name,
           head.arity,
-          head.indexKeys // don't skip any of used by diff?
+          mutable.BitSet()//.indexKeys // don't skip any of used by diff?
         )
 
     // TODO: merge individual indexes instead of rebuilding?
@@ -449,16 +442,6 @@ object IndexedCollectionsEDB {
    */
   def empty(arity: Int, preIndexes: mutable.BitSet = mutable.BitSet(), rName: String = "ANON", skipIndexes: mutable.BitSet): IndexedCollectionsEDB =
     IndexedCollectionsEDB(mutable.ArrayBuffer[IndexedCollectionsRow](), preIndexes, rName, arity, skipIndexes)
-
-  /**
-   * Copy the EDB, including the indexes, and any additional indexes to be maintained in `extras`
-   * @param toCopy
-   * @param extras
-   * @return
-   */
-  def copyWithIndexes(toCopy: IndexedCollectionsEDB, extras: Iterable[Int] = Seq.empty): IndexedCollectionsEDB =
-    val copy = IndexedCollectionsEDB(toCopy.wrapped.clone(), toCopy.indexKeys ++ extras, toCopy.name, toCopy.arity, toCopy.skipIndexes)
-    copy
 
   // Print methods
   def indexSizeToString(name: String, indexedCollectionsEDB: IndexedCollectionsEDB): String =
@@ -533,10 +516,11 @@ case class IndexedCollectionsDatabase(wrapped: mutable.Map[RelationId, IndexedCo
 
   def contains(c: RelationId): Boolean = definedRelations.contains(c)
 
-  def assignEDBToCopy(rId: RelationId, edbToCopy: IndexedCollectionsEDB): Unit =
+  // Take edbToCopy and manually copy the indexes to a new EDB to avoid rebuilding indexes, then add it to the DB
+  def addNewEDBCopy(rId: RelationId, edbToCopy: IndexedCollectionsEDB): Unit =
     definedRelations.addOne(rId)
     val newEDB = getOrElseEmpty(rId, edbToCopy.arity, edbToCopy.indexKeys, edbToCopy.name, mutable.BitSet()) // when copying, don't skip any indexes
-    newEDB.addAll(edbToCopy.wrapped) // TODO: copy index structure instead of rebuilding
+    newEDB.mergeEDBs(edbToCopy.indexes, false)
     wrapped(rId) = newEDB
 
   def assignEDBDirect(rId: RelationId, edb: IndexedCollectionsEDB): Unit =
