@@ -7,7 +7,6 @@ import datalog.storage.{DefaultStorageManager, VolcanoStorageManager, StorageMan
 
 import java.nio.file.{Files, Path, Paths}
 import scala.collection.{immutable, mutable}
-import immutable.ArraySeq
 import scala.io.Source
 import scala.jdk.StreamConverters.*
 import scala.util.Properties
@@ -43,30 +42,23 @@ abstract class BenchmarkGenerator(val directory: Path,
           val edbName = f.getFileName.toString.replaceFirst("[.][^.]+$", "")
           val reader = Files.newBufferedReader(f)
           val headers = reader.readLine().split("\t")
-          val allInts = headers.forall(_ == "Int")
-          val edbsBuilder = Seq.newBuilder[Seq[StorageTerm]]
-          reader.lines()
-            .forEach(l =>
-              val splittedInput = l.split("\t")
-              val factInput = {
-                if (allInts) {
-                  ArraySeq.ofInt(splittedInput.map(_.toInt))
-                } else {
-                  splittedInput.zipWithIndex.map((s, i) =>
-                    (headers(i) match {
-                      case "Int" => s.toInt
-                      case "String" => s
-                      case _ => throw new Exception(s"Unknown type ${headers(i)}")
-                    }).asInstanceOf[StorageTerm]
-                  ).toSeq
-                }
-              }
+          val edbs = reader.lines()
+            .map(l => {
+              val factInput = l
+                .split("\t")
+                .zipWithIndex.map((s, i) =>
+                (headers(i) match {
+                  case "Int" => s.toInt
+                  case "String" => s
+                  case _ => throw new Exception(s"Unknown type ${headers(i)}")
+                }).asInstanceOf[StorageTerm]
+              ).toSeq
               if (factInput.size != headers.size)
                 throw new Exception(s"Input data for fact of length ${factInput.size} but should be ${headers.mkString("[", ", ", "]")}. Line='$l'")
-              edbsBuilder += factInput
-            )
+              factInput
+            }).toScala(Seq)
           reader.close()
-          inputFacts(edbName) = edbsBuilder.result()
+          inputFacts(edbName) = edbs
         })
     // Generate expected
     val expDir = Paths.get(directory.toString, "expected")
@@ -77,26 +69,16 @@ abstract class BenchmarkGenerator(val directory: Path,
         val rule = f.getFileName.toString.replaceFirst("[.][^.]+$", "")
         val reader = Files.newBufferedReader(f)
         val headers = reader.readLine().split("\t")
-        val allInts = headers.forall(_ == "Int")
-        val expectedBuilder = Set.newBuilder[Seq[StorageTerm]]
-        reader.lines()
-          .forEach(l =>
-            val splittedInput = l.split("\t")
-            expectedBuilder += {
-              if (allInts) {
-                ArraySeq.ofInt(splittedInput.map(_.toInt))
-              } else {
-                splittedInput.zipWithIndex.map((s, i) =>
-                  (headers(i) match {
-                    case "Int" => s.toInt
-                    case "String" => s
-                    case _ => throw new Exception(s"Unknown type ${headers(i)}")
-                  }).asInstanceOf[StorageTerm]
-                ).toSeq
-              }
-            }
-          )
-        expectedFacts(rule) = expectedBuilder.result()
+        val expected = reader.lines()
+          .map(l => l.split("\t").zipWithIndex.map((s, i) =>
+            (headers(i) match {
+              case "Int" => s.toInt
+              case "String" => s
+              case _ => throw new Exception(s"Unknown type ${headers(i)}")
+            }).asInstanceOf[StorageTerm]
+          ).toSeq)
+          .toScala(Set)
+        expectedFacts(rule) = expected
         reader.close()
       })
   }

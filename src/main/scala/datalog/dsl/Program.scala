@@ -4,7 +4,6 @@ import datalog.execution.{ExecutionEngine, NaiveExecutionEngine}
 
 import java.nio.file.{Files, Path}
 import scala.collection.mutable
-import scala.collection.immutable.ArraySeq
 
 // TODO: better to have program as given instance?
 class Program(engine: ExecutionEngine) extends AbstractProgram {
@@ -46,26 +45,21 @@ class Program(engine: ExecutionEngine) extends AbstractProgram {
           val firstLine = reader.readLine()
           if (firstLine != null) { // empty file, empty EDB
             val headers = firstLine.split("\t")
-            val allInts = headers.forall(_ == "Int")
             val fact = relation[Constant](edbName)
             reader.lines()
               .forEach(l => {
-                val splittedInput = l.split('\t')
-                if (allInts) {
-                  val factInputInts = ArraySeq.ofInt(splittedInput.map(_.toInt))
-                  fact(factInputInts) :- ()
-                } else {
-                  val factInput = splittedInput.zipWithIndex.map((s, i) =>
-                    (headers(i) match {
-                      case "Int" => s.toInt
-                      case "String" => s
-                      case _ => s // TODO: for now files without headers are assumed to be all strings. throw new Exception(s"Unknown type ${headers(i)}")
-                    }).asInstanceOf[Term]
-                  ).toSeq
-                  if (factInput.length != headers.size)
-                    throw new Exception(s"Input data for fact of length ${factInput.size} but should be ${headers.mkString("[", ", ", "]")}. Line='$l'")
-                  fact(factInput*) :- ()
-                }
+                val factInput = l
+                  .split("\t")
+                  .zipWithIndex.map((s, i) =>
+                  (headers(i) match {
+                    case "Int" => s.toInt
+                    case "String" => s
+                    case _ => s // TODO: for now files without headers are assumed to be all strings. throw new Exception(s"Unknown type ${headers(i)}")
+                  }).asInstanceOf[Term]
+                ).toSeq
+                if (factInput.length != headers.size)
+                  throw new Exception(s"Input data for fact of length ${factInput.size} but should be ${headers.mkString("[", ", ", "]")}. Line='$l'")
+                fact(factInput: _*) :- ()
               })
           }
           reader.close()

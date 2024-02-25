@@ -12,12 +12,12 @@ trait cspa_tiny {
 
   // Adapted from https://github.com/Hacker0912/RecStep/blob/e4107c814c7b24ae787dddb4af7e3238303f13ab/benchmark_datalog_programs/cspa.datalog
   def pretest(program: Program): Unit = {
-    val Assign = program.namedRelation[Int]("Assign")
-    val Dereference = program.namedRelation[Int]("Dereference")
+    val Assign = program.namedRelation[String]("Assign")
+    val Dereference = program.namedRelation[String]("Dereference")
 
-    val ValueFlow = program.relation[Int]("ValueFlow")
-    val ValueAlias = program.relation[Int]("ValueAlias")
-    val MemoryAlias = program.relation[Int]("MemoryAlias")
+    val ValueFlow = program.relation[String]("ValueFlow")
+    val ValueAlias = program.relation[String]("ValueAlias")
+    val MemoryAlias = program.relation[String]("MemoryAlias")
 
     val w, x, y, z = program.variable()
 

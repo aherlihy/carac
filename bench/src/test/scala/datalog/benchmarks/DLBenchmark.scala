@@ -7,7 +7,6 @@ import datalog.storage.*
 import datalog.tools.Debug.debug
 
 import scala.collection.{immutable, mutable}
-import immutable.ArraySeq
 import scala.quoted.staging
 
 /**
@@ -123,13 +122,8 @@ abstract class DLBenchmark {
    */
   def loadData(program: Program): Program = {
     inputFacts.foreach((edbName, factInput) =>
-      factInput match
-        case Seq(_: ArraySeq.ofInt, _*) =>
-          val fact = program.relation[Int](edbName)
-          factInput.foreach(f => fact(f.asInstanceOf[ArraySeq.ofInt]) :- ())
-        case _ =>
-          val fact = program.relation[Constant](edbName)
-          factInput.foreach(f => fact(f: _*) :- ())
+      val fact = program.relation[Constant](edbName)
+        factInput.foreach(f => fact(f: _*) :- ())
       if (factInput.isEmpty) {
         val edbs = program.ee.storageManager.getAllEDBS()
       }
