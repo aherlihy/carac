@@ -49,12 +49,12 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
                                  arity: Int,
                                  var skipIndexes: mutable.BitSet // don't build indexes for these keys
                                 ) extends EDB with IterableOnce[IndexedCollectionsRow] {
-  import IndexedCollectionsEDB.{lookupOrCreate,lookupOrEmpty,IndexMap}
+  import IndexedCollectionsEDB.{lookupOrCreate,lookupOrEmpty,IndexMap, insertInto}
 
   if indexKeys.exists(_ >= arity) then throw new Exception(s"Error: creating edb $name with indexes ${indexKeys.mkString("[", ", ", "]")} but arity $arity")
   if skipIndexes.exists(_ >= arity) then throw new Exception(s"Error: creating edb $name but skiping indexes ${skipIndexes.mkString("[", ", ", "]")} but arity $arity")
   // TODO: distinguish between primary (one sortedMap of tuples), and secondary (one map of indexes)
-  private val indexes: Array[IndexMap] = new Array[IndexMap](arity)
+  val indexes: Array[IndexMap] = new Array[IndexMap](arity)
   bulkRegisterIndex(indexKeys)
 
   inline def getIndex(idx: Int): IndexMap =
@@ -171,6 +171,21 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
       val values = indexes(smallestIdx._1).get(edb(smallestIdx._1))
       values != null && containsRow(values, edb)
 
+  // merge and deduplicate the passed indexes into the current EDB
+  def mergeEDBs(indexesToMerge: Array[IndexMap]): Unit =
+    var i = 0
+    var update = true
+    while i < indexesToMerge.length do
+      if (indexesToMerge(i) != null) // for each defined index
+        if (indexes(i) == null)
+          indexes(i) = createIndexMap()
+
+        indexesToMerge(i).forEach((term, rowsToAdd) =>
+          indexes(i).insertInto(term, rowsToAdd, wrapped, update) // only write to wrapped once
+        )
+        update = false
+      i += 1
+
   private def containsRow(container: mutable.ArrayBuffer[IndexedCollectionsRow], row: IndexedCollectionsRow): Boolean =
     var i = 0
     val rowLength = row.length
@@ -201,35 +216,41 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
   def getSetOfSeq: Set[Seq[StorageTerm]] =
     wrapped.map(s => s.toSeq).toSet
 
-
-  /**
-   * Called when no join is needed, single-relation body rule, so justs filters and projects
-   * Right now only single-key indexes, so could pick the most selective index to use as primary.
-   * @param constIndexes
-   * @param projIndexes
-   * @return
-   */
-  def projectFilterWithIndex(constIndexes: mutable.Map[Int, Constant],
-                             projIndexes: Seq[(String, Constant)],
-                             newName: String,
-                             newIndexes: mutable.BitSet): IndexedCollectionsEDB =
+  def projectAndDiff(constIndexes: mutable.Map[Int, Constant],
+                     projIndexes: Seq[(String, Constant)],
+                     newName: String,
+                     newIndexes: mutable.BitSet,
+                     derivedDB: IndexedCollectionsDatabase,
+                     rId: RelationId
+                    ): IndexedCollectionsEDB =
     val constFilter = constIndexes.filter((ind, _) => ind < arity)
-    if (constFilter.isEmpty)
-      if (projIndexes.isEmpty)
-        this
-      else
-        IndexedCollectionsEDB(wrapped.map(_.project(projIndexes)), newIndexes, newName, projIndexes.length, newIndexes) // should build no indexes bc result of project
+    val newWrapped = ArrayBuffer[IndexedCollectionsRow]()
+    var rest: mutable.Map[Int, Constant] = null
+    val toCopy = if (constFilter.isEmpty)
+      wrapped
     else
-      // TODO: is it better to use index on each condition and get intersection?
-      // TODO: If multiple pick the most selective (smallest), but for now just pick first until i can verify not too expensive to check
-      val (position, constant) = constFilter.head // constFilter.map((idx, const) => (idx, indexes(idx)(const).size)).minBy(_._2)._1
-      val rest = constFilter.drop(1)
+      val (position, constant) = constFilter.head // TODO: pick best index, constFilter.map((idx, const) => (idx, indexes(idx)(const).size)).minBy(_._2)._1
+      rest = constFilter.drop(1)
+      indexes(position).lookupOrEmpty(constant)
 
-      val result = indexes(position).lookupOrEmpty(constant).collect{// copy matching EBDs
-        case edb if edb.filterConstant(rest) => edb.project(projIndexes)
-      }
-      val newArity = if projIndexes.isEmpty then arity else projIndexes.length
-      IndexedCollectionsEDB(result, newIndexes, newName, newArity, newIndexes) // do not rebuild indexes after project
+    var i = 0
+    while i < toCopy.length do
+      val projected = toCopy(i).project(projIndexes)
+//      println(s"projected=$projected checking derived(${newName})=${if derivedDB.contains(rId) then derivedDB(rId) else "X"}, constantTest=${rest != null && projected.filterConstant(rest)}")
+      if
+        (rest == null || toCopy(i).filterConstant(rest)) &&                   // filter constants
+          (!derivedDB.contains(rId) || !derivedDB(rId).contains(projected))   // diff with derived
+      then // TODO: also add distinct?
+        newWrapped.addOne(projected)
+      i += 1
+
+    IndexedCollectionsEDB(
+      newWrapped.distinct,
+      newIndexes,
+      newName,
+      projIndexes.length,
+      mutable.BitSet()
+    )
 
   /**
    * Assume this is the outer relation, toJoin is inner relation.
@@ -371,6 +392,22 @@ object IndexedCollectionsEDB {
       else
         // TODO: tune initialSize?
         new mutable.ArrayBuffer(initialSize = 16)
+
+    def insertInto(key: StorageTerm,
+                   toAdd: ArrayBuffer[IndexedCollectionsRow],
+                   wrappedToModify: ArrayBuffer[IndexedCollectionsRow],
+                   update: Boolean) =
+      val valueOrNull = index.get(key)
+      if valueOrNull != null then // index is defined, so need to ensure no duplicates
+        toAdd.foreach(row =>
+          if (!valueOrNull.contains(row))
+            valueOrNull.addOne(row)
+            if update then wrappedToModify.addOne(row)
+        )
+      else
+        index.put(key, ArrayBuffer.from(toAdd))
+        if update then wrappedToModify.addAll(toAdd) // TODO: need to deduplicate here as well?
+
     inline def contains(key: StorageTerm): Boolean =
       index.containsKey(key)
     inline def foreach(f: java.util.function.BiConsumer[StorageTerm, ArrayBuffer[IndexedCollectionsRow]]): Unit =

@@ -5,7 +5,7 @@ import datalog.dsl.{Constant, Program}
 import test.{ExampleTestGenerator, Tags}
 
 class csda_test extends ExampleTestGenerator(
-  "csda",
+  "csda_full",
   Set(Tags.Naive, Tags.Volcano),
   Set(Tags.Slow, Tags.CI)
 ) with csda
