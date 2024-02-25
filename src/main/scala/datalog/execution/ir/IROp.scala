@@ -59,19 +59,19 @@ abstract class IROp[T](val children: IROp[T]*)(using val jitOptions: JITOptions,
 object IROp {
   given ExecutionContext = ExecutionContext.global
   def runFns[T: ClassTag](storageManager: StorageManager, seq: Seq[StorageManager => T], inParallel: Boolean = false): Seq[T] =
-    if seq.length == 1 then
-      return immutable.ArraySeq.unsafeWrapArray(Array(seq.head(storageManager)))
-    if !inParallel then
+//    if seq.length == 1 then
+//      return immutable.ArraySeq.unsafeWrapArray(Array(seq.head(storageManager)))
+//    if !inParallel then
       return seq.map(_(storageManager))
-    val futures = immutable.ArraySeq.newBuilder[Future[T]]
-    futures.sizeHint(seq.length)
-    // Spawn threads for the N - 1 first children
-    seq.view.init.foreach: op =>
-      futures += Future(op(storageManager))
-    // Run the last child on the current thread.
-    val last = seq.last(storageManager)
-    futures += Future(last)
-    Await.result(Future.sequence(futures.result()), Duration.Inf)
+//    val futures = immutable.ArraySeq.newBuilder[Future[T]]
+//    futures.sizeHint(seq.length)
+//     Spawn threads for the N - 1 first children
+//    seq.view.init.foreach: op =>
+//      futures += Future(op(storageManager))
+//     Run the last child on the current thread.
+//    val last = seq.last(storageManager)
+//    futures += Future(last)
+//    Await.result(Future.sequence(futures.result()), Duration.Inf)
 }
 import IROp.*
 
