@@ -237,12 +237,12 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
       if
         (rest == null || toCopy(i).filterConstant(rest)) &&                   // filter constants
           (!derivedDB.contains(rId) || !derivedDB(rId).contains(projected))   // diff with derived
-      then // TODO: also add distinct?
+      then
         newWrapped.addOne(projected)
       i += 1
 
     IndexedCollectionsEDB(
-      newWrapped.distinct,
+      newWrapped.distinct, // no duplicates within single query result, so just need to dep in union
       newIndexes,
       newName,
       projIndexes.length,
@@ -420,6 +420,8 @@ object IndexedCollectionsEDB {
     def unionEDB: EDB =
       if (edbs.isEmpty)
         throw new Exception("Internal error, union on zero relations")
+      else if (edbs.size == 1)
+        edbs.head
       else
         val head = asIndexedCollectionsEDB(edbs.head)
         IndexedCollectionsEDB(
@@ -429,6 +431,8 @@ object IndexedCollectionsEDB {
           head.arity,
           mutable.BitSet()//.indexKeys // don't skip any of used by diff?
         )
+//        edbs.drop(1).foreach(e => head.mergeEDBs(asIndexedCollectionsEDB(e).indexes, true))
+//        head
 
     // TODO: merge individual indexes instead of rebuilding?
   extension (edbs: Seq[EDB])
