@@ -81,10 +81,12 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
       if indexCandidates(rId).isEmpty && relation.arity > 0 then
         relation.registerIndex(0)
         indexCandidates(rId) = mutable.BitSet(0)
+
       deltaDB(knownDbId).addEmpty(rId, relation.arity, indexCandidates(rId), ns(rId), mutable.BitSet())
       deltaDB(newDbId).addEmpty(rId, relation.arity, indexCandidates(rId), ns(rId), mutable.BitSet()) // TODO: no indexes on delta.new, bc write into?
-      derivedDB.assignEDBToCopy(rId, relation)
-    }) // Delta-EDB is just empty sets
+
+      derivedDB.addNewEDBCopy(rId, relation)
+    })
     dbId += 1
   }
 
@@ -168,13 +170,13 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
   def insertDeltaIntoDerived(): Unit =
     deltaDB(newDbId).foreach((rId, edb) =>
       if (derivedDB.contains(rId))
-        derivedDB(rId).addAll(edb.wrapped)
+        derivedDB(rId).mergeEDBs(edb.indexes, false)
       else if (edb.wrapped.nonEmpty)
-        derivedDB.assignEDBToCopy(rId, edb)
+        derivedDB.addNewEDBCopy(rId, edb)
     )
 
   def setNewDelta(rId: RelationId, rules: EDB): Unit =
-    deltaDB(newDbId).assignEDBToCopy(rId, asIndexedCollectionsEDB(rules))
+    deltaDB(newDbId).addNewEDBCopy(rId, asIndexedCollectionsEDB(rules))
 
   def clearNewDeltas(): Unit =
     deltaDB(newDbId).clear()
