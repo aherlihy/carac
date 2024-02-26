@@ -5,7 +5,7 @@ import datalog.dsl.{Constant, Program}
 import test.{ExampleTestGenerator, Tags}
 
 class cspa10k_worst_test extends ExampleTestGenerator(
-  "cspa10k",
+  "cspa10k_worst",
   Set(Tags.Naive, Tags.Volcano),
   Set(Tags.Slow, Tags.CI)
 ) with cspa10k_worst
