@@ -170,7 +170,7 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
   def insertDeltaIntoDerived(): Unit =
     deltaDB(newDbId).foreach((rId, edb) =>
       if (derivedDB.contains(rId))
-        derivedDB(rId).mergeEDBs(edb.indexes, false)
+        derivedDB(rId).mergeEDBs(edb, false)
       else if (edb.wrapped.nonEmpty)
         derivedDB.addNewEDBCopy(rId, edb)
     )
@@ -243,8 +243,9 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
 
     val originalK = allRulesAllIndexes(rId)(hash)
     val inputs = asIndexedCollectionsSeqEDB(inputsEDB)
-//     println(s"Rule: ${printer.ruleToString(originalK.atoms)}")
-//     println(s"input rels: ${inputs.map(e => e.factToString).mkString("[", "*", "]")}")
+//    println(s"Rule: ${printer.ruleToString(originalK.atoms)}")
+//    println(s"input rels: ${inputs.map(e => e.factToString).mkString("[", "*", "]")}")
+//    println(s"storage manager=${toString()}")
 
     // var intermediateCardinalities = Seq[Int]()
     val fResult = if (inputs.length == 1) { // need to make a copy

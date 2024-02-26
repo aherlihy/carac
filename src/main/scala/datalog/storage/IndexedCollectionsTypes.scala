@@ -172,7 +172,8 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
       values != null && containsRow(values, edb)
 
   // merge and deduplicate the passed indexes into the current EDB
-  def mergeEDBs(indexesToMerge: Array[IndexMap], deduplicate: Boolean): Unit =
+  def mergeEDBs(edbToMerge: IndexedCollectionsEDB, deduplicate: Boolean): Unit =
+    val indexesToMerge = edbToMerge.indexes
     var i = 0
     var update = true
     while i < indexesToMerge.length do
@@ -536,7 +537,7 @@ case class IndexedCollectionsDatabase(wrapped: mutable.Map[RelationId, IndexedCo
   def addNewEDBCopy(rId: RelationId, edbToCopy: IndexedCollectionsEDB): Unit =
     definedRelations.addOne(rId)
     val newEDB = getOrElseEmpty(rId, edbToCopy.arity, edbToCopy.indexKeys, edbToCopy.name, mutable.BitSet()) // when copying, don't skip any indexes
-    newEDB.mergeEDBs(edbToCopy.indexes, false)
+    newEDB.mergeEDBs(edbToCopy, false)
     wrapped(rId) = newEDB
 
   def assignEDBDirect(rId: RelationId, edb: IndexedCollectionsEDB): Unit =
