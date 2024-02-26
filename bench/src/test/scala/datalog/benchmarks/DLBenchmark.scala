@@ -29,8 +29,8 @@ abstract class DLBenchmark {
   def initAllEngines(): Unit = {
     // Non-Staged combinations
     val storageEngines = immutable.Map[String, () => StorageManager](
-      "volcano" -> (() => new VolcanoStorageManager()),
-      "default" -> (() => new DefaultStorageManager()),
+//      "volcano" -> (() => new VolcanoStorageManager()),
+      "default" -> (() => new CollectionsStorageManager()),
       "indexed" -> (() => new IndexedStorageManager())
     )
     val shallowAlgo = immutable.Map[String, StorageManager => ExecutionEngine](
@@ -51,7 +51,7 @@ abstract class DLBenchmark {
         backend = bc,
         dotty = dotty
       )
-      programs(jo.toBenchmark) = Program(StagedExecutionEngine(DefaultStorageManager(), jo))
+      programs(jo.toBenchmark) = Program(StagedExecutionEngine(CollectionsStorageManager(), jo))
     )
 
     val jitSortOpts = Seq(SortOrder.Unordered, SortOrder.Sel)
