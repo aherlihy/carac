@@ -284,10 +284,10 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
             //                (innerT, outerT)
             val edbResult = outerT.joinFilterWithIndex(k, atomI, innerT)
 
-            intermediateCardinalities = intermediateCardinalities :+ s"${outerT.name}*${innerT.name}: ${edbResult.length}"
+            intermediateCardinalities = intermediateCardinalities :+ s"\t${outerT.name}(${outerT.wrapped.size})*${innerT.name}(${innerT.wrapped.size})= ${edbResult.length}"
             (edbResult, atomI + 1, k)
         )
-      println(s"Join result, intermediate cardinalities: $intermediateCardinalities")
+      println(s"Join result, intermediate cardinalities: ${intermediateCardinalities.mkString("[\n", ",\n", "\n]")}")
       val outputIndex = indexCandidates.getOrElseUpdate(rId, mutable.BitSet(0))
 
       result._1.projectAndDiff(
