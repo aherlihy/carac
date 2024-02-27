@@ -2,20 +2,20 @@ package datalog.benchmarks.examples
 
 import datalog.benchmarks.ExampleBenchmarkGenerator
 import datalog.dsl.{Constant, Program}
-
-import java.util.concurrent.TimeUnit
 import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.Blackhole
-import test.examples.tastyslistlibnegated.{tastyslistlibnegated => tastyslistlibnegated_test}
+import test.examples.cspa10k.cspa10k_worst as cspa10k_worst_test
+
+import java.util.concurrent.TimeUnit
 
 @Fork(examples_fork, jvmArgsAppend = Array(examples_gc)) // # of jvms that it will use
-@Warmup(iterations = examples_warmup_iterations, time = examples_warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = examples_xl_batchsize)
-@Measurement(iterations = examples_iterations, time = examples_xl_time, timeUnit = TimeUnit.SECONDS, batchSize = examples_xl_batchsize)
+@Warmup(iterations = 1, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
+@Measurement(iterations = 1, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
-class tastyslistlibnegated() extends ExampleBenchmarkGenerator(
-  "tastyslistlibnegated"
-) with tastyslistlibnegated_test {
+class cspa10k_worst() extends ExampleBenchmarkGenerator(
+  "cspa10k"
+) with cspa10k_worst_test {
 
   @Setup
   def s(): Unit = setup() // can't add annotations to super, so just call
@@ -375,6 +375,273 @@ class tastyslistlibnegated() extends ExampleBenchmarkGenerator(
 
   // ---------> unsorted
   @Benchmark def jit_default_unordered__0_blocking_DELTA_lambda_EOL(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  // -> INDEXED
+
+  // ---> blocking
+  // ------> quotes & splices
+  // ---------> sorted
+  @Benchmark def jit_indexed_sel__0_blocking_ALL_quotes_EOL_ci(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  // ---------> unsorted
+  @Benchmark def jit_indexed_unordered__0_blocking_ALL_quotes_EOL(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  // ------> bytecode gen
+  // ---------> sorted
+  @Benchmark def jit_indexed_sel__0_blocking_ALL_bytecode_EOL(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  // ---------> unsorted
+  @Benchmark def jit_indexed_unordered__0_blocking_ALL_bytecode_EOL(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  // ------> lambda
+  // ---------> sorted
+  @Benchmark def jit_indexed_sel__0_blocking_ALL_lambda_EOL(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  // ---------> unsorted
+  @Benchmark def jit_indexed_unordered__0_blocking_ALL_lambda_EOL(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  // ---> async
+  // ------> quotes & splices
+  // ---------> sorted
+  @Benchmark def jit_indexed_sel__0_async_ALL_quotes_EOL_ci(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  // For now skip most async
+  // ---------> unsorted
+  @Benchmark def jit_indexed_unordered__0_async_ALL_quotes_EOL(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  // ------> bytecode gen
+  // ---------> sorted
+  @Benchmark def jit_indexed_sel__0_async_ALL_bytecode_EOL(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  // ---------> unsorted
+  @Benchmark def jit_indexed_unordered__0_async_ALL_bytecode_EOL(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  // ------> lambda
+  // ---------> sorted
+  @Benchmark def jit_indexed_sel__0_async_ALL_lambda_EOL(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  // ---------> unsorted
+  @Benchmark def jit_indexed_unordered__0_async_ALL_lambda_EOL(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  // -> RULE
+
+  // ---> blocking
+  // ------> quotes & splices
+  // ---------> sorted
+  @Benchmark def jit_indexed_sel__0_blocking_RULE_quotes_EOL_ci(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  // ---------> unsorted
+  @Benchmark def jit_indexed_unordered__0_blocking_RULE_quotes_EOL(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  // ------> bytecode gen
+  // ---------> sorted
+  @Benchmark def jit_indexed_sel__0_blocking_RULE_bytecode_EOL(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  // ---------> unsorted
+  @Benchmark def jit_indexed_unordered__0_blocking_RULE_bytecode_EOL(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  // ------> lambda
+  // ---------> sorted
+  @Benchmark def jit_indexed_sel__0_blocking_RULE_lambda_EOL(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  // ---------> unsorted
+  @Benchmark def jit_indexed_unordered__0_blocking_RULE_lambda_EOL(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  // ---> async
+  // ------> quotes & splices
+  // ---------> sorted
+  @Benchmark def jit_indexed_sel__0_async_RULE_quotes_EOL_ci(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  // ---------> unsorted
+  @Benchmark def jit_indexed_unordered__0_async_RULE_quotes_EOL(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  // ------> bytecode gen
+  // ---------> sorted
+  @Benchmark def jit_indexed_sel__0_async_RULE_bytecode_EOL(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  // ---------> unsorted
+  @Benchmark def jit_indexed_unordered__0_async_RULE_bytecode_EOL(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  // ------> lambda
+  // ---------> sorted
+  @Benchmark def jit_indexed_sel__0_async_RULE_lambda_EOL(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  // ---------> unsorted
+  @Benchmark def jit_indexed_unordered__0_async_RULE_lambda_EOL(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  // -> DELTA
+
+  // ---> blocking
+  // ------> quotes & splices
+  // ---------> sorted
+  @Benchmark def jit_indexed_sel__0_blocking_DELTA_quotes_EOL_ci(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  // ---------> unsorted
+  @Benchmark def jit_indexed_unordered__0_blocking_DELTA_quotes_EOL(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  // ------> bytecode gen
+  // ---------> sorted
+  @Benchmark def jit_indexed_sel__0_blocking_DELTA_bytecode_EOL(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  // ---------> unsorted
+  @Benchmark def jit_indexed_unordered__0_blocking_DELTA_bytecode_EOL(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  // ------> lambda
+  // ---------> sorted
+  @Benchmark def jit_indexed_sel__0_blocking_DELTA_lambda_EOL(blackhole: Blackhole): Unit = {
+    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+    if (!programs.contains(p))
+      throw new Exception(f"Error: program for '$p' not found")
+    blackhole.consume(run(programs(p), result))
+  }
+
+  // ---------> unsorted
+  @Benchmark def jit_indexed_unordered__0_blocking_DELTA_lambda_EOL(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
