@@ -1,0 +1,1 @@
+sbt "clean;compile;bench/Jmh/clean;bench/Jmh/compile"; sbt "bench/Jmh/run cspa10k_worst.*jit.*sel.*DELTA.*lambda.* -wi 0 -i 1 -bs 1 -wbs 1 -r 1 -w 1 -e async -e default" > output1-cspa.txt; sbt "bench/Jmh/run cspa10k_worst.*interp.* -wi 0 -i 1 -bs 1 -wbs 1 -r 1 -w 1 -e sel -e badluck -e default" > output2-cspa.txt
