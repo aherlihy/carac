@@ -250,6 +250,7 @@ case class ProjectJoinFilterOp(rId: RelationId, var k: JoinIndexes, override val
   var childrenSO: Array[IROp[EDB]] = children.toArray
 
   override def run_continuation(storageManager: StorageManager, opFns: Seq[CompiledFn[EDB]]): EDB =
+    println(s"doing SPJU for rule ${storageManager.printer.ruleToString(k.atoms)}: ${children.map(c => c.asInstanceOf[ScanOp]).map(c => s"${storageManager.ns(c.rId)}.${c.db}.${c.knowledge}").mkString("", " * ", "")}")
     val inputs = opFns.map(s => s(storageManager))
     storageManager.joinProjectHelper_withHash(
       inputs,
