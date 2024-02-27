@@ -161,6 +161,7 @@ class LambdaCompiler(val storageManager: StorageManager)(using JITOptions) exten
         else
           (children, k)
       val compiledOps = seqToLambda(sortedChildren.map(compile))
+      println(s"doing SPJU on rule: ${storageManager.printer.ruleToString(k.atoms)}:\n${children.map(c => c.asInstanceOf[ScanOp]).map(c => s"${storageManager.ns(c.rId)}.${c.db}.${c.knowledge}").mkString("", " * ", "")}")
       sm => sm.joinProjectHelper_withHash(
         compiledOps(sm),
         rId,
