@@ -110,19 +110,16 @@ class LambdaCompiler(val storageManager: StorageManager)(using JITOptions) exten
       val res = compile(children.head.asInstanceOf[IROp[EDB]])
       db match {
         case DB.Derived =>
+          val res2: CompiledFn[EDB] =
+            if (children.length > 1)
+              compile(children(1).asInstanceOf[IROp[EDB]])
+            else
+              _.getEmptyEDB(rId)
           knowledge match {
             case KNOWLEDGE.New =>
-              if (children.length == 1)
-                sm => sm.setNewDerived(rId, res(sm))
-              else
-                val res2 = compile(children(1).asInstanceOf[IROp[EDB]])
-                sm => sm.resetNewDerived(rId, res(sm), res2(sm))
+              sm => sm.resetNewDerived(rId, res(sm), res2(sm))
             case KNOWLEDGE.Known =>
-              if (children.length == 1)
-                sm => sm.setKnownDerived(rId, res(sm))
-              else
-                val res2 = compile(children(1).asInstanceOf[IROp[EDB]])
-                sm => sm.resetKnownDerived(rId, res(sm), res2(sm))
+              sm => sm.resetKnownDerived(rId, res(sm), res2(sm))
           }
         case DB.Delta =>
           knowledge match {
