@@ -255,7 +255,7 @@ case class ProjectJoinFilterOp(rId: RelationId, var k: JoinIndexes, override val
       inputs,
       rId,
       k.hash,
-      jitOptions.onlineSort
+      jitOptions.sortOrder != SortOrder.Unordered
     )
   override def run(storageManager: StorageManager): EDB =
 //    println(s"doing SPJU on: ${children.map(c => c.asInstanceOf[ScanOp]).map(c => s"${storageManager.ns(c.rId)}.${c.db}.${c.knowledge}").mkString("", " * ", "")}")
@@ -275,7 +275,7 @@ case class ProjectJoinFilterOp(rId: RelationId, var k: JoinIndexes, override val
         inputs,
         rId,
         newK.hash,
-        jitOptions.onlineSort
+        jitOptions.sortOrder != SortOrder.Unordered
       )
 //    println(s"=> result of SPJU on ${storageManager.printer.ruleToString(k.atoms)}: ${storageManager.ns(rId)}=${res.factToString}")
     res

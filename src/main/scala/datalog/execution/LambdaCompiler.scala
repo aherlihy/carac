@@ -165,7 +165,7 @@ class LambdaCompiler(val storageManager: StorageManager)(using JITOptions) exten
         compiledOps(sm),
         rId,
         newK.hash,
-        jitOptions.onlineSort
+        jitOptions.sortOrder != SortOrder.Unordered
       )
 
     case UnionSPJOp(rId, k, children: _*) =>

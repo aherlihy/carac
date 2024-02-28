@@ -129,7 +129,7 @@ class QuoteCompiler(val storageManager: StorageManager)(using JITOptions) extend
             $compiledOps,
             ${ Expr(rId) },
             ${ Expr(newK.hash) },
-            ${ Expr(jitOptions.onlineSort) }
+            ${ Expr(jitOptions.sortOrder != SortOrder.Unordered) }
           )
         }
 

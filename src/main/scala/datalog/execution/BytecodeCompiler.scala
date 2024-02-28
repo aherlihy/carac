@@ -122,7 +122,7 @@ class BytecodeCompiler(val storageManager: StorageManager)(using JITOptions) ext
           emitSeq(xb, sortedChildren.map(c => xxb => traverse(xxb, c)))
           xb.constantInstruction(rId)
           emitString(xb, newK.hash)
-          emitBool(xb, jitOptions.onlineSort)
+          emitBool(xb, jitOptions.sortOrder != SortOrder.Unordered)
           emitSMCall(xb, "joinProjectHelper_withHash",
             classOf[Seq[?]], classOf[Int], classOf[String], classOf[Boolean])
 

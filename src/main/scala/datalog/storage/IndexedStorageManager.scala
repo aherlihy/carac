@@ -239,8 +239,6 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
   def diff(lhsEDB: EDB, rhsEDB: EDB): EDB = ???
 
   override def joinProjectHelper_withHash(inputsEDB: Seq[EDB], rId: Int, hash: String, onlineSort: Boolean): IndexedCollectionsEDB = {
-    if onlineSort then throw new Exception("Unimplemented: online sort with indexes")
-
     val originalK = allRulesAllIndexes(rId)(hash)
     val inputs = asIndexedCollectionsSeqEDB(inputsEDB)
 //     println(s"Rule: ${printer.ruleToString(originalK.atoms)}")
@@ -275,7 +273,7 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
             (innerT, atomI + 1, k)
           else
             val (inner, outer) = // on the fly swapping of join order
-              if (outerT.length > innerT.length)
+              if (outerT.length > innerT.length && onlineSort)
                 val body = k.atoms.drop(1)
                 val newerHash = JoinIndexes.getRuleHash(Seq(k.atoms.head, body(atomI)) ++ body.dropRight(body.length - atomI) ++ body.drop(atomI + 1))
                 k = allRulesAllIndexes(rId).getOrElseUpdate(newerHash, JoinIndexes(originalK.atoms.head +: body, Some(originalK.cxns)))
