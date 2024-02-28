@@ -1,4 +1,0 @@
-String	String	String
-scala.Predef.augmentString	instr#2	slistlib.Main.int_from_string
-slistlib.Main.string_from_int	instr#4	slistlib.Main.main
-slistlib.Main.int_from_string	instr#5	slistlib.Main.main
