@@ -278,12 +278,23 @@ case class ProjectJoinFilterOp(rId: RelationId, var k: JoinIndexes, override val
       jitOptions.onlineSort
     )
   override def run(storageManager: StorageManager): EDB =
-//    println(s"doing SPJU on children: ${children.map(c => c.asInstanceOf[ScanOp]).map(c => s"${storageManager.ns(c.rId)}.${c.db}.${c.knowledge}")}")
-    val inputs = children.map(s => s.run(storageManager))
+//    println(s"doing SPJU on: ${children.map(c => c.asInstanceOf[ScanOp]).map(c => s"${storageManager.ns(c.rId)}.${c.db}.${c.knowledge}").mkString("", " * ", "")}")
+    val (sortedChildren, newK) =
+      if (jitOptions.sortOrder != SortOrder.Unordered && jitOptions.sortOrder != SortOrder.Badluck && jitOptions.granularity.flag == OpCode.OTHER)
+        JoinIndexes.getOnlineSort(
+          children,
+          jitOptions.getSortFn(storageManager),
+          rId,
+          k,
+          storageManager
+        )
+      else
+        (children, k)
+    val inputs = sortedChildren.map(s => s.run(storageManager))
     val res = storageManager.joinProjectHelper_withHash(
         inputs,
         rId,
-        k.hash,
+        newK.hash,
         jitOptions.onlineSort
       )
 //    println(s"=> result of SPJU on ${storageManager.printer.ruleToString(k.atoms)}: ${storageManager.ns(rId)}=${res.factToString}")
@@ -331,18 +342,17 @@ case class UnionSPJOp(rId: RelationId, var k: JoinIndexes, override val children
 //      k,
 //      storageManager
 //    )
-    // TODO: change children.length from 3
-    if (jitOptions.sortOrder == SortOrder.Unordered || jitOptions.sortOrder == SortOrder.Badluck || children.length < 3 || jitOptions.granularity.flag != OpCode.OTHER) // If not only interpreting, then don't optimize since we are waiting for the optimized version to compile
+//    if (jitOptions.sortOrder == SortOrder.Unordered || jitOptions.sortOrder == SortOrder.Badluck || children.length < 3 || jitOptions.granularity.flag != OpCode.OTHER) // If not only interpreting, then don't optimize since we are waiting for the optimized version to compile
       storageManager.union(children.map((s: ProjectJoinFilterOp) => s.run(storageManager)))
-    else
-      val (sortedChildren, newK) = JoinIndexes.getPresort(
-        children,
-        jitOptions.getSortFn(storageManager),
-        rId,
-        k,
-        storageManager
-      )
-      storageManager.union(sortedChildren.map((s: ProjectJoinFilterOp) => s.run(storageManager)))
+//    else
+//      val (sortedChildren, newK) = JoinIndexes.getPresort(
+//        children,
+//        jitOptions.getSortFn(storageManager),
+//        rId,
+//        k,
+//        storageManager
+//      )
+//      storageManager.union(sortedChildren.map((s: ProjectJoinFilterOp) => s.run(storageManager)))
 }
 /**
  * @param children: [Union|Scan, Scan]
