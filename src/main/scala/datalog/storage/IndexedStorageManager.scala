@@ -275,15 +275,15 @@ class IndexedStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
           if (atomI == 0) // not a monad :(
             (innerT, atomI + 1, k)
           else
-            //            val (inner, outer) = // on the fly swapping of join order
-            //              if (atomI > 1 && onlineSort && outerT.length > innerT.length)
-            //                val body = k.atoms.drop(1)
-            //                val newerHash = JoinIndexes.getRuleHash(Seq(k.atoms.head, body(atomI)) ++ body.dropRight(body.length - atomI) ++ body.drop(atomI + 1))
-            //                k = allRulesAllIndexes(rId).getOrElseUpdate(newerHash, JoinIndexes(originalK.atoms.head +: body, Some(originalK.cxns)))
-            //                (outerT, innerT)
-            //              else
-            //                (innerT, outerT)
-            val edbResult = outerT.joinFilterWithIndex(k, atomI, innerT)
+            val (inner, outer) = // on the fly swapping of join order
+//              if (outerT.length > innerT.length)
+//                val body = k.atoms.drop(1)
+//                val newerHash = JoinIndexes.getRuleHash(Seq(k.atoms.head, body(atomI)) ++ body.dropRight(body.length - atomI) ++ body.drop(atomI + 1))
+//                k = allRulesAllIndexes(rId).getOrElseUpdate(newerHash, JoinIndexes(originalK.atoms.head +: body, Some(originalK.cxns)))
+//                (outerT, innerT)
+//              else
+                (innerT, outerT)
+            val edbResult = outer.joinFilterWithIndex(k, atomI, inner)
             //            intermediateCardinalities = intermediateCardinalities :+ edbResult.length
             (edbResult, atomI + 1, k)
         )
