@@ -1,6 +1,0 @@
-String	String	String
-slistlib.Main	slistlib.Main.int_from_string	slistlib.Main.int_from_string
-slistlib.Main	slistlib.Main.string_from_int	slistlib.Main.string_from_int
-slistlib.Main	slistlib.Main.main	slistlib.Main.main
-slistlib.Main	slistlib.Main.writeReplace	slistlib.Main.writeReplace
-slistlib.Main	slistlib.Main.<init>	slistlib.Main.<init>

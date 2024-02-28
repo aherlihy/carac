@@ -49,7 +49,7 @@ class XXtastyslistlibinverse_worst() extends ExampleBenchmarkGenerator(
     blackhole.consume(run(programs(p), result))
   }
 
-  @Benchmark def shallow_default_seminaive______EOL_ci(blackhole: Blackhole): Unit = {
+  @Benchmark def shallow_default_seminaive______EOL(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
@@ -108,7 +108,7 @@ class XXtastyslistlibinverse_worst() extends ExampleBenchmarkGenerator(
   // ---> blocking
   // ------> quotes & splices
   // ---------> sorted
-  @Benchmark def jit_default_sel__0_blocking_ALL_quotes_EOL_ci(blackhole: Blackhole): Unit = {
+  @Benchmark def jit_default_sel__0_blocking_ALL_quotes_EOL(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
@@ -159,7 +159,7 @@ class XXtastyslistlibinverse_worst() extends ExampleBenchmarkGenerator(
   // ---> async
   // ------> quotes & splices
   // ---------> sorted
-  @Benchmark def jit_default_sel__0_async_ALL_quotes_EOL_ci(blackhole: Blackhole): Unit = {
+  @Benchmark def jit_default_sel__0_async_ALL_quotes_EOL(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
@@ -213,7 +213,7 @@ class XXtastyslistlibinverse_worst() extends ExampleBenchmarkGenerator(
   // ---> blocking
   // ------> quotes & splices
   // ---------> sorted
-  @Benchmark def jit_default_sel__0_blocking_RULE_quotes_EOL_ci(blackhole: Blackhole): Unit = {
+  @Benchmark def jit_default_sel__0_blocking_RULE_quotes_EOL(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
@@ -265,7 +265,7 @@ class XXtastyslistlibinverse_worst() extends ExampleBenchmarkGenerator(
   // ---> async
   // ------> quotes & splices
   // ---------> sorted
-  @Benchmark def jit_default_sel__0_async_RULE_quotes_EOL_ci(blackhole: Blackhole): Unit = {
+  @Benchmark def jit_default_sel__0_async_RULE_quotes_EOL(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
@@ -318,7 +318,7 @@ class XXtastyslistlibinverse_worst() extends ExampleBenchmarkGenerator(
   // ---> blocking
   // ------> quotes & splices
   // ---------> sorted
-  @Benchmark def jit_default_sel__0_blocking_DELTA_quotes_EOL_ci(blackhole: Blackhole): Unit = {
+  @Benchmark def jit_default_sel__0_blocking_DELTA_quotes_EOL(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
