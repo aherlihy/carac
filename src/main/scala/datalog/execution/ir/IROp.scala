@@ -259,7 +259,13 @@ case class ProjectJoinFilterOp(rId: RelationId, var k: JoinIndexes, override val
       jitOptions.onlineSort
     )
   override def run(storageManager: StorageManager): EDB =
-    println(s"doing SPJU for rule ${storageManager.printer.ruleToString(k.atoms)}: ${children.map(c => c.asInstanceOf[ScanOp]).map(c => s"${storageManager.ns(c.rId)}.${c.db}.${c.knowledge}").mkString("", " * ", "")}")
+    println(s"doing SPJU for rule ${storageManager.printer.ruleToString(k.atoms)}")
+    println(s"\t${children.map(c => c.asInstanceOf[ScanOp]).map(c =>
+      if (c.db == DB.Derived)
+        s"${storageManager.ns(c.rId)}.derived(${storageManager.getKnownDerivedDB(c.rId).length})"
+      else
+        s"${storageManager.ns(c.rId)}.delta(${storageManager.getKnownDeltaDB(c.rId).length})"
+    ).mkString("", " * ", "")}")
     val inputs = children.map(s => s.run(storageManager))
     val res = storageManager.joinProjectHelper_withHash(
         inputs,

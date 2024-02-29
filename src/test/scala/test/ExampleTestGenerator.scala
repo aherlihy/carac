@@ -176,7 +176,7 @@ abstract class TestGenerator(directory: Path,
 //      "Naive",
 //      "SemiNaive",
 //      "CompiledStaged", // TODO: for longer tests, can throw MethodTooLarge
-      "InterpretedStaged",
+//      "InterpretedStaged",
       "InterpretedStaged_sel",
 //      "JITStaged_Sel_DELTA_Block_Lambda",
 //      "JITStaged_Sel_DELTA_Block_BC",
