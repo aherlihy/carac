@@ -250,7 +250,7 @@ case class ProjectJoinFilterOp(rId: RelationId, var k: JoinIndexes, override val
   var childrenSO: Array[IROp[EDB]] = children.toArray
 
   override def run_continuation(storageManager: StorageManager, opFns: Seq[CompiledFn[EDB]]): EDB =
-    println(s"doing SPJU for rule ${storageManager.printer.ruleToString(k.atoms)}: ${children.map(c => c.asInstanceOf[ScanOp]).map(c => s"${storageManager.ns(c.rId)}.${c.db}.${c.knowledge}").mkString("", " * ", "")}")
+    println(s"doing SPJU for rule (rId)=$rId ${storageManager.printer.ruleToString(k.atoms)}: ${children.map(c => c.asInstanceOf[ScanOp]).map(c => s"${storageManager.ns(c.rId)}.${c.db}.${c.knowledge}").mkString("", " * ", "")}")
     val inputs = opFns.map(s => s(storageManager))
     storageManager.joinProjectHelper_withHash(
       inputs,
@@ -259,13 +259,14 @@ case class ProjectJoinFilterOp(rId: RelationId, var k: JoinIndexes, override val
       jitOptions.onlineSort
     )
   override def run(storageManager: StorageManager): EDB =
-    println(s"doing SPJU for rule ${storageManager.printer.ruleToString(k.atoms)}")
-    println(s"\t${children.map(c => c.asInstanceOf[ScanOp]).map(c =>
-      if (c.db == DB.Derived)
-        s"${storageManager.ns(c.rId)}.derived(${storageManager.getKnownDerivedDB(c.rId).length})"
-      else
-        s"${storageManager.ns(c.rId)}.delta(${storageManager.getKnownDeltaDB(c.rId).length})"
-    ).mkString("", " * ", "")}")
+    if (rId == 3 && children.size == 3)
+      println(s"doing SPJU for rule (rId=$rId) ${storageManager.printer.ruleToString(k.atoms)}")
+      println(s"\t${children.map(c => c.asInstanceOf[ScanOp]).map(c =>
+        if (c.db == DB.Derived)
+          s"${storageManager.ns(c.rId)}.derived(${storageManager.getKnownDerivedDB(c.rId).length})"
+        else
+          s"${storageManager.ns(c.rId)}.delta(${storageManager.getKnownDeltaDB(c.rId).length})"
+      ).mkString("", " * ", "")}")
     val inputs = children.map(s => s.run(storageManager))
     val res = storageManager.joinProjectHelper_withHash(
         inputs,
