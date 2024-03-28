@@ -33,6 +33,19 @@ class Program(engine: ExecutionEngine) extends AbstractProgram {
   // TODO: also provide solve for multiple/all predicates, or return table so users can query over the derived DB
   def solve(rId: Int): Set[Seq[Term]] = ee.solve(rId).map(s => s.toSeq).toSet
 
+  def initializeEmptyFactsFromDir(directory: String): Unit = {
+    val factdir = Path.of(directory)
+    if (Files.exists(factdir)) {
+      Files.walk(factdir, 1)
+        .filter(p => Files.isRegularFile(p))
+        .forEach(f => {
+          val edbName = f.getFileName.toString.replaceFirst("[.][^.]+$", "")
+          val fact = relation[Constant](edbName)
+          // println(fact)
+        })
+    } else throw new Exception(s"Directory $factdir does not contain any facts")
+  }
+
   def loadFromFactDir(directory: String): Unit = {
     val factdir = Path.of(directory)
     if (Files.exists(factdir)) {
@@ -45,7 +58,9 @@ class Program(engine: ExecutionEngine) extends AbstractProgram {
           val firstLine = reader.readLine()
           if (firstLine != null) { // empty file, empty EDB
             val headers = firstLine.split("\t")
-            val fact = relation[Constant](edbName)
+            val fact =
+              if (ee.storageManager.ns.contains(edbName)) namedRelation[Constant](edbName)
+              else relation[Constant](edbName)
             reader.lines()
               .forEach(l => {
                 val factInput = l
