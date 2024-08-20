@@ -77,6 +77,7 @@ class NaiveExecutionEngine(val storageManager: StorageManager, stratified: Boole
       debug(s"initial state @ $count", storageManager.toString)
       count += 1
       evalNaive(relations)
+      if (count == 3) then System.exit(0)
 
       setDiff = !storageManager.compareDerivedDBs()
     }

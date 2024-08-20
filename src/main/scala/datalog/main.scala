@@ -29,7 +29,7 @@ def ackermann(program: Program): String = {
   )
   ack.name
 }
-def cba(program: Program): String = {
+/*def cba(program: Program): String = {
   val kind = program.relation[Constant]("kind")
   val term = program.relation[Constant]("term")
   val app = program.relation[Constant]("app")
@@ -649,40 +649,40 @@ def tastyslistlibinverse(program: Program): String = {
   EquivToOutput(v0) :- Equiv("slistlib.Main.main.OUTPUT_VAR", v0)
   EquivToOutput.name
 }
-
+*/
 @main def main(benchmark: String, back: String) = {
-  val b = back match
-    case "quotes" => Backend.Quotes
-    case "bytecode" => Backend.Bytecode
-    case "lambda" => Backend.Lambda
-    case _ => throw new Exception(s"Unknown backend $back")
-  val dotty = staging.Compiler.make(getClass.getClassLoader)
-  val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = b)
-  val engine = new StagedExecutionEngine(new DefaultStorageManager(), jo)
+//  val b = back match
+//    case "quotes" => Backend.Quotes
+//    case "bytecode" => Backend.Bytecode
+//    case "lambda" => Backend.Lambda
+//    case _ => throw new Exception(s"Unknown backend $back")
+//  val dotty = staging.Compiler.make(getClass.getClassLoader)
+//  val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = b)
+//  val engine = new StagedExecutionEngine(new DefaultStorageManager(), jo)
+
+  // constructs the engine + program
+  val engine = new NaiveExecutionEngine(new DefaultStorageManager()) // SemiNaiveExecutionEngine is alternative
   val program = Program(engine)
 
-  val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/$benchmark/facts"
+  // define the name of your benchmark to load the facts
+  val benchmarkName = "ackermann"
+  val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/$benchmarkName/facts"
   program.loadFromFactDir(factDirectory)
 
-  val toSolve = benchmark match
-    case "ackermann" => ackermann(program)
-    case "cbaexprvalue" => cba(program)
-    case "equal" => equal(program)
-    case "fib" => fib(program)
-    case "prime" => prime(program)
-    case "tastyslistlib" => tastyslistlib(program)
-    case "tastyslistlibinverse" => tastyslistlibinverse(program)
-    case _ => throw new Exception(s"Unknown benchmark $benchmark")
+  // builds the program and returns a relation to solve for
+  val toSolve = ackermann(program)
 
+  // solves for the result
   val result = program.namedRelation(toSolve).solve()
 //  Using(Files.newBufferedWriter(Paths.get("carac-out", benchmark, engine.storageManager.ns(toSolve) + ".csv"))) { writer =>
 //    result.foreach(f => writer.write(f.mkString("", "\t", "\n")))
 //  }
+  // TO turn debug mode to true, need env var: CARAC_DEBUG=true
+  println(result)
 
-
-  engine.precedenceGraph.idbs.foreach(i =>
-    val idb = engine.storageManager.ns(i)
-    Using(Files.newBufferedWriter(Paths.get("carac-out", benchmark, idb + ".csv"))) { writer =>
-      engine.get(idb).foreach(f => writer.write(f.mkString("", "\t", "\n")))
-    })
+//  engine.precedenceGraph.idbs.foreach(i =>
+//    val idb = engine.storageManager.ns(i)
+//    Using(Files.newBufferedWriter(Paths.get("carac-out", benchmark, idb + ".csv"))) { writer =>
+//      engine.get(idb).foreach(f => writer.write(f.mkString("", "\t", "\n")))
+//    })
 }
