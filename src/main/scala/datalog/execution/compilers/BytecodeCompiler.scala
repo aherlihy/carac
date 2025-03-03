@@ -32,22 +32,14 @@ class BytecodeCompiler(val storageManager: StorageManager)(using JITOptions) ext
           traverse(xb, c)
 
         case DoWhileOp(toCmp, children:_*) =>
-          val compMeth = toCmp match
-            case DB.Derived => "compareDerivedDBs"
-            case DB.Delta => "compareNewDeltaDBs"
+          val compMeth = "compareNewDeltaDBs"
           xb.block: xxb =>
             // do
             discardResult(xxb, traverse(xxb, children.head)) // why is this a list if we only ever use the head?
             // while
             xb.aload(0)
             emitCall(xxb, classOf[StorageManager], compMeth)
-            toCmp match
-              case DB.Derived => xxb.ifeq(xxb.startLabel)
-              case DB.Delta   => xxb.ifne(xxb.startLabel)
-
-        case UpdateDiscoveredOp() =>
-          xb.aload(0)
-          emitSMCall(xb, "updateDiscovered")
+            xxb.ifne(xxb.startLabel)
 
         case SwapAndClearOp() =>
           xb.aload(0)
@@ -73,12 +65,7 @@ class BytecodeCompiler(val storageManager: StorageManager)(using JITOptions) ext
         case ScanOp(rId, db, knowledge) =>
           val meth = db match {
             case DB.Derived =>
-              knowledge match {
-                case KNOWLEDGE.New =>
-                  "getNewDerivedDB"
-                case KNOWLEDGE.Known =>
-                  "getKnownDerivedDB"
-              }
+              "getKnownDerivedDB"
             case DB.Delta =>
               knowledge match {
                 case KNOWLEDGE.New =>
@@ -91,11 +78,11 @@ class BytecodeCompiler(val storageManager: StorageManager)(using JITOptions) ext
             .constantInstruction(rId)
           emitSMCall(xb, meth, classOf[Int])
 
-        case ComplementOp(rId, arity) =>
-          xb.aload(0)
-            .constantInstruction(rId)
-            .constantInstruction(arity)
-          emitSMCall(xb, "getComplement", classOf[Int], classOf[Int])
+//        case ComplementOp(rId, arity) =>
+//          xb.aload(0)
+//            .constantInstruction(rId)
+//            .constantInstruction(arity)
+//          emitSMCall(xb, "getComplement", classOf[Int], classOf[Int])
 
         case ScanEDBOp(rId) =>
           xb.aload(0)
@@ -123,7 +110,7 @@ class BytecodeCompiler(val storageManager: StorageManager)(using JITOptions) ext
           xb.constantInstruction(rId)
           emitString(xb, newK.hash)
           emitBool(xb, jitOptions.onlineSort)
-          emitSMCall(xb, "joinProjectHelper_withHash",
+          emitSMCall(xb, "selectProjectJoinHelper",
             classOf[Seq[?]], classOf[Int], classOf[String], classOf[Boolean])
 
         case UnionSPJOp(rId, k, children: _*) =>

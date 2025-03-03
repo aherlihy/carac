@@ -2,11 +2,11 @@ package datalog
 
 import buildinfo.BuildInfo
 import datalog.dsl.*
-import datalog.execution.{Backend, CompileSync, ExecutionEngine, Granularity, JITOptions, NaiveExecutionEngine, SemiNaiveExecutionEngine, SortOrder, StagedExecutionEngine, ir, Mode as CaracMode}
-import datalog.storage.DefaultStorageManager
+import datalog.execution.{Backend, CompileSync, ExecutionEngine, Granularity, JITOptions, SortOrder, StagedExecutionEngine, ir, Mode as CaracMode}
+import datalog.storage.{CollectionsStorageManager, IndexedStorageManager}
+
 import scala.util.Using
 import java.nio.file.{FileSystems, Files, Path, Paths}
-
 import scala.quoted.staging
 
 def ackermann(program: Program): String = {
@@ -650,15 +650,47 @@ def tastyslistlibinverse(program: Program): String = {
   EquivToOutput.name
 }
 
+def tc(program: Program): String = {
+  val base = program.namedRelation[Constant]("base")
+  val tc = program.relation[Constant]("tc")
+  val tcl = program.relation[Constant]("tcl")
+  val tcr = program.relation[Constant]("tcr")
+
+
+  val X, Y, Z, W = program.variable()
+
+  tcl(X, Y) :- (base(X, Y))
+  tcl(X, Y) :- (tcl(X, Z), base(Z, Y))
+
+  tcr(X, Y) :- (base(X, Y))
+  tcr(X, Y) :- (base(X, Z), tcr(Z, Y))
+
+  tc(X, Y) :- (base(X, Y))
+  tc(X, Y) :- (tc(X, Z), tc(Z, Y))
+
+  base("a", "b") :- ()
+  base("b", "c") :- ()
+  base("c", "d") :- ()
+  base("z", "z") :- ()
+  tc.name
+}
+
 @main def main(benchmark: String, back: String) = {
-  val b = back match
-    case "quotes" => Backend.Quotes
-    case "bytecode" => Backend.Bytecode
-    case "lambda" => Backend.Lambda
-    case _ => throw new Exception(s"Unknown backend $back")
-  val dotty = staging.Compiler.make(getClass.getClassLoader)
-  val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = b)
-  val engine = new StagedExecutionEngine(new DefaultStorageManager(), jo)
+  val engine = if back.contains("Interpreted") then
+    println("Collections")
+    new StagedExecutionEngine(new CollectionsStorageManager(), JITOptions(mode = CaracMode.Interpreted))
+//    println(s"Indexes")
+//    new StagedExecutionEngine(new IndexedStorageManager(), JITOptions(mode = CaracMode.Interpreted))
+  else
+    val b = back match
+      case "quotes" => Backend.Quotes
+      case "bytecode" => Backend.Bytecode
+      case "lambda" => Backend.Lambda
+      case _ => throw new Exception(s"Unknown backend $back")
+    val dotty = staging.Compiler.make(getClass.getClassLoader)
+    val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = b)
+    new StagedExecutionEngine(new CollectionsStorageManager(), jo)
+
   val program = Program(engine)
 
   val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/$benchmark/facts"
@@ -672,12 +704,14 @@ def tastyslistlibinverse(program: Program): String = {
     case "prime" => prime(program)
     case "tastyslistlib" => tastyslistlib(program)
     case "tastyslistlibinverse" => tastyslistlibinverse(program)
+    case "tc" => tc(program)
     case _ => throw new Exception(s"Unknown benchmark $benchmark")
 
   val result = program.namedRelation(toSolve).solve()
 //  Using(Files.newBufferedWriter(Paths.get("carac-out", benchmark, engine.storageManager.ns(toSolve) + ".csv"))) { writer =>
 //    result.foreach(f => writer.write(f.mkString("", "\t", "\n")))
 //  }
+  println(s"Result = $result")
 
 
   engine.precedenceGraph.idbs.foreach(i =>

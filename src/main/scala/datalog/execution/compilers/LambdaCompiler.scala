@@ -72,21 +72,13 @@ class LambdaCompiler(val storageManager: StorageManager)(using JITOptions) exten
       compile(children.head)
 
     case DoWhileOp(toCmp, children:_*) =>
-      val cond: CompiledFn[Boolean] = toCmp match {
-        case DB.Derived =>
-          !_.compareDerivedDBs()
-        case DB.Delta =>
-          _.compareNewDeltaDBs()
-      }
+      val cond: CompiledFn[Boolean] = _.compareNewDeltaDBs()
       val body = compile(children.head)
       sm =>
         while {
           body(sm)
           cond(sm)
         } do ()
-
-    case UpdateDiscoveredOp() =>
-      _.updateDiscovered()
 
     case SwapAndClearOp() =>
       sm =>
@@ -124,12 +116,7 @@ class LambdaCompiler(val storageManager: StorageManager)(using JITOptions) exten
     case ScanOp(rId, db, knowledge) =>
       db match {
         case DB.Derived =>
-          knowledge match {
-            case KNOWLEDGE.New =>
-              _.getNewDerivedDB(rId)
-            case KNOWLEDGE.Known =>
-              _.getKnownDerivedDB(rId)
-          }
+          _.getKnownDerivedDB(rId)
         case DB.Delta =>
           knowledge match {
             case KNOWLEDGE.New =>
@@ -139,8 +126,8 @@ class LambdaCompiler(val storageManager: StorageManager)(using JITOptions) exten
           }
       }
 
-    case ComplementOp(r, arity) =>
-      _.getComplement(r, arity)
+//    case ComplementOp(r, arity) =>
+//      _.getComplement(r, arity)
 
     case ScanEDBOp(rId) =>
       if (storageManager.edbContains(rId))
@@ -161,8 +148,7 @@ class LambdaCompiler(val storageManager: StorageManager)(using JITOptions) exten
         else
           (children, k)
       val compiledOps = seqToLambda(sortedChildren.map(compile))
-      println(s"doing SPJU on rule: ${storageManager.printer.ruleToString(k.atoms)}:\n${children.map(c => c.asInstanceOf[ScanOp]).map(c => s"${storageManager.ns(c.rId)}.${c.db}.${c.knowledge}").mkString("", " * ", "")}")
-      sm => sm.joinProjectHelper_withHash(
+      sm => sm.selectProjectJoinHelper(
         compiledOps(sm),
         rId,
         newK.hash,

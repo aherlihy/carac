@@ -4,7 +4,7 @@ import java.util.concurrent.TimeUnit
 import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.Blackhole
 import datalog.dsl.*
-import datalog.execution.{Backend, CompileSync, ExecutionEngine, Granularity, JITOptions, NaiveExecutionEngine, SemiNaiveExecutionEngine, SortOrder, StagedExecutionEngine, ir, Mode as CaracMode}
+import datalog.execution.{Backend, CompileSync, ExecutionEngine, Granularity, JITOptions, NaiveShallowExecutionEngine, ShallowExecutionEngine, SortOrder, StagedExecutionEngine, ir, Mode as CaracMode}
 import datalog.storage.DefaultStorageManager
 import test.examples.tastyslistlibinverse.tastyslistlibinverse_worst
 import test.examples.tastyslistlib.tastyslistlib_worst

@@ -11,7 +11,6 @@ case class SingleCycle(program: Program) extends TestGraph {
   private val e = program.relation[Constant]("e")
   private val p = program.relation[Constant]("p")
   private val path2a = program.relation[Constant]("path2a")
-  private val path2a1 = program.relation[Constant]("path2a1")
   private val edge2a = program.relation[Constant]("edge2a")
 
   private val x, y, z = program.variable()

@@ -34,8 +34,8 @@ abstract class DLBenchmark {
       "indexed" -> (() => new IndexedStorageManager())
     )
     val shallowAlgo = immutable.Map[String, StorageManager => ExecutionEngine](
-      "seminaive" -> (sm => new SemiNaiveExecutionEngine(sm)),
-      "naive" -> (sm => new NaiveExecutionEngine(sm))
+      "seminaive" -> (sm => new ShallowExecutionEngine(sm, new PullBasedSPJU(sm))),
+      "naive" -> (sm => new NaiveShallowExecutionEngine(sm))
     )
     // ---> uncomment to bench shallow embedding
     shallowAlgo.keys.foreach(ee =>
