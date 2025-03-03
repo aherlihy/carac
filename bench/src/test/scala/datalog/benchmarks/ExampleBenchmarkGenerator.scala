@@ -2,7 +2,7 @@ package datalog.benchmarks
 
 import datalog.benchmarks.DLBenchmark
 import datalog.dsl.{Constant, Program, Relation, Term}
-import datalog.execution.{NaiveExecutionEngine, NaiveStagedExecutionEngine, SemiNaiveExecutionEngine, StagedExecutionEngine, ExecutionEngine, ir}
+import datalog.execution.{NaiveShallowExecutionEngine, NaiveStagedExecutionEngine, ShallowExecutionEngine, StagedExecutionEngine, ExecutionEngine, ir}
 import datalog.storage.{DefaultStorageManager, VolcanoStorageManager, StorageManager, StorageTerm}
 
 import java.nio.file.{Files, Path, Paths}

@@ -1,8 +1,8 @@
 package test
 
 import datalog.dsl.{Constant, Program, Relation, Term}
-import datalog.execution.{Backend, CompileSync, Granularity, JITOptions, Mode, NaiveExecutionEngine, NaiveStagedExecutionEngine, SemiNaiveExecutionEngine, SortOrder, StagedExecutionEngine, ir}
-import datalog.storage.{DefaultStorageManager, IndexedStorageManager, StorageTerm, VolcanoStorageManager}
+import datalog.execution.{Backend, CompileSync, Granularity, JITOptions, Mode, NaiveShallowExecutionEngine, NaiveStagedExecutionEngine, ShallowExecutionEngine, SortOrder, StagedExecutionEngine, ir}
+import datalog.storage.{CollectionsStorageManager, IndexedStorageManager, StorageTerm}
 
 import java.nio.file.{Files, Path, Paths}
 import scala.collection.mutable
@@ -101,64 +101,57 @@ abstract class TestGenerator(directory: Path,
       def apply(): Program = program
 
       override def beforeEach(context: BeforeEach): Unit = {
-        program = context.test.name match {
-          case "SemiNaiveVolcano" => Program(SemiNaiveExecutionEngine(VolcanoStorageManager()))
-          case "NaiveVolcano" => Program(NaiveExecutionEngine(VolcanoStorageManager()))
-          case "SemiNaiveDefault" => Program(SemiNaiveExecutionEngine(DefaultStorageManager()))
-          case "NaiveDefault" => Program(NaiveExecutionEngine(DefaultStorageManager()))
-          case "NaiveCompiledStagedDefault" =>
-            Program(NaiveStagedExecutionEngine(DefaultStorageManager(), JITOptions(mode = Mode.Compiled)))
-//          case "CompiledStagedDefault" =>
-//            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(mode = Mode.Compiled)))
-          case "InterpretedStagedDefault" =>
-            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions()))
-          case "InterpretedStaged_selDefault" =>
-            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(sortOrder = SortOrder.Sel)))
-          case "InterpretedStagedIndexed" =>
-            Program(StagedExecutionEngine(IndexedStorageManager(), JITOptions()))
-          case "InterpretedStaged_selIndexed" =>
-            Program(StagedExecutionEngine(IndexedStorageManager(), JITOptions(sortOrder = SortOrder.Sel)))
-//          case "InterpretedStaged_badluckDefault" =>
-//            Program(StagedExecutionEngine(DefaultStorageManager(), JITOptions(sortOrder = SortOrder.Badluck)))
+        val storageManager = if context.test.name.contains("Indexed") then
+          IndexedStorageManager()
+        else if context.test.name.contains("Collections") then
+          CollectionsStorageManager()
+        else throw new Exception(s"Unknown storage manager for ${context.test.name}")
 
-//           blocking
-          case "JITStaged_Sel_RULE_Block_QuotesIndexed" =>
-            Program(StagedExecutionEngine(IndexedStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.RULE, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Quotes)))
-          case "JITStaged_Sel_ALL_Block_QuotesIndexed" =>
-            Program(StagedExecutionEngine(IndexedStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.ALL, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Quotes)))
-          case "JITStaged_Sel_DELTA_Block_QuotesIndexed" =>
-            Program(StagedExecutionEngine(IndexedStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.DELTA, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Quotes)))
-          case "JITStaged_Sel_RULE_Block_BCIndexed" =>
-            Program(StagedExecutionEngine(IndexedStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.RULE, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Bytecode)))
-          case "JITStaged_Sel_ALL_Block_BCIndexed" =>
-            Program(StagedExecutionEngine(IndexedStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.ALL, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Bytecode)))
-          case "JITStaged_Sel_DELTA_Block_BCIndexed" =>
-            Program(StagedExecutionEngine(IndexedStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.DELTA, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Bytecode)))
-          case "JITStaged_Sel_RULE_Block_LambdaIndexed" =>
-            Program(StagedExecutionEngine(IndexedStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.RULE, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)))
-          case "JITStaged_Sel_ALL_Block_LambdaIndexed" =>
-            Program(StagedExecutionEngine(IndexedStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.ALL, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)))
-          case "JITStaged_Sel_DELTA_Block_LambdaIndexed" =>
-            Program(StagedExecutionEngine(IndexedStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.DELTA, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)))
+        val executionEngine = if context.test.name.contains("Shallow") then
+          if context.test.name.contains("Naive") then
+            NaiveShallowExecutionEngine(storageManager)
+          else
+            ShallowExecutionEngine(storageManager)
+        else if context.test.name.contains("Staged") then
+          val mode = if context.test.name.contains("Compiled") then
+            Mode.Compiled
+          else if context.test.name.contains("Interpreted") then
+            Mode.Interpreted
+          else if context.test.name.contains("JIT") then
+            Mode.JIT
+          else throw new Exception(s"Unknown mode for ${context.test.name}")
 
+          val sortOrder = if context.test.name.contains("sel") then SortOrder.Sel else SortOrder.Unordered
+          val compileSync = if context.test.name.contains("Async") then CompileSync.Async else CompileSync.Blocking
+          val backend = if context.test.name.contains("Quotes") || context.test.name.contains("Interpreted") then
+            Backend.Quotes
+          else if context.test.name.contains("Lambda") then
+            Backend.Lambda
+          else if context.test.name.contains("BC") then
+            Backend.Bytecode
+          else
+            throw new Exception(s"Unknown backend for ${context.test.name}")
 
-          // async
-          case "JITStaged_Sel_RULE_Async_QuotesIndexed" =>
-            Program(StagedExecutionEngine(IndexedStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.RULE, dotty = dotty, compileSync = CompileSync.Async, sortOrder = SortOrder.Sel, backend = Backend.Quotes)))
-          case "JITStaged_Sel_ALL_Async_QuotesIndexed" =>
-            Program(StagedExecutionEngine(IndexedStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.ALL, dotty = dotty, compileSync = CompileSync.Async, sortOrder = SortOrder.Sel, backend = Backend.Quotes)))
-          case "JITStaged_Sel_RULE_Async_BCIndexed" =>
-            Program(StagedExecutionEngine(IndexedStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.RULE, dotty = dotty, compileSync = CompileSync.Async, sortOrder = SortOrder.Sel, backend = Backend.Bytecode)))
-          case "JITStaged_Sel_ALL_Async_BCIndexed" =>
-            Program(StagedExecutionEngine(IndexedStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.ALL, dotty = dotty, compileSync = CompileSync.Async, sortOrder = SortOrder.Sel, backend = Backend.Bytecode)))
-          case "JITStaged_Sel_RULE_Async_LambdaIndexed" =>
-            Program(StagedExecutionEngine(IndexedStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.RULE, dotty = dotty, compileSync = CompileSync.Async, sortOrder = SortOrder.Sel, backend = Backend.Lambda)))
-          case "JITStaged_Sel_ALL_Async_LambdaIndexed" =>
-            Program(StagedExecutionEngine(IndexedStorageManager(), JITOptions(mode = Mode.JIT, granularity = Granularity.ALL, dotty = dotty, compileSync = CompileSync.Async, sortOrder = SortOrder.Sel, backend = Backend.Lambda)))
+          val granularity = if context.test.name.contains("RULE") then
+            Granularity.RULE
+          else if context.test.name.contains("ALL") then
+            Granularity.ALL
+          else if context.test.name.contains("DELTA") then
+            Granularity.DELTA
+          else if context.test.name.contains("Interpreted") then
+            Granularity.NEVER
+          else throw new Exception(s"Unknown granularity for ${context.test.name}")
 
-          case _ => // WARNING: MUnit just returns null pointers everywhere if an error or assert is triggered in beforeEach
-            throw new Exception(s"Unknown engine construction ${context.test.name}") // TODO: this is reported as passing
-        }
+          val jitOptions = JITOptions(mode = mode, granularity = granularity, dotty = dotty, compileSync = compileSync, sortOrder = sortOrder, backend = backend)
+
+          if context.test.name.contains("Naive") then
+            NaiveStagedExecutionEngine(storageManager, jitOptions)
+          else
+            StagedExecutionEngine(storageManager, jitOptions)
+        else throw new Exception(s"Unknown execution engine for ${context.test.name}")
+
+        program = Program(executionEngine)
+
         inputFacts.foreach((edbName, factInput) =>
           val fact = program.relation[Constant](edbName)
           factInput.foreach(f => fact(f: _*) :- ())
@@ -173,30 +166,29 @@ abstract class TestGenerator(directory: Path,
     override def munitFixtures = List(program)
 
     Seq(
-//      "Naive",
-//      "SemiNaive",
+      "NaiveShallow",
+      "SemiNaiveShallow",
 //      "CompiledStaged", // TODO: for longer tests, can throw MethodTooLarge
-//      "InterpretedStaged",
+      "InterpretedStaged",
       "InterpretedStaged_sel",
-//      "JITStaged_Sel_DELTA_Block_Lambda",
-//      "JITStaged_Sel_DELTA_Block_BC",
-//      "JITStaged_Sel_DELTA_Block_Quotes",
-//      "JITStaged_Sel_ALL_Block_BC",
-//      "JITStaged_Sel_RULE_Block_BC",
-//      "JITStaged_Sel_RULE_Block_Quotes",
-//      "JITStaged_Sel_ALL_Block_Quotes",
-//      "JITStaged_Sel_RULE_Async_Quotes",
-//      "JITStaged_Sel_ALL_Async_Quotes",
-//      "JITStaged_Sel_ALL_Block_Lambda",
-//      "JITStaged_Sel_RULE_Block_Lambda",
-//      "JITStaged_Sel_ALL_Async_Lambda",
-//      "JITStaged_Sel_RULE_Async_Lambda",
-//      "JITStaged_Sel_RULE_Async_BC",
-//      "JITStaged_Sel_ALL_Async_BC",
+      "JITStaged_Sel_DELTA_Block_Lambda",
+      "JITStaged_Sel_DELTA_Block_BC",
+      "JITStaged_Sel_DELTA_Block_Quotes",
+      "JITStaged_Sel_ALL_Block_BC",
+      "JITStaged_Sel_RULE_Block_BC",
+      "JITStaged_Sel_RULE_Block_Quotes",
+      "JITStaged_Sel_ALL_Block_Quotes",
+      "JITStaged_Sel_RULE_Async_Quotes",
+      "JITStaged_Sel_ALL_Async_Quotes",
+      "JITStaged_Sel_ALL_Block_Lambda",
+      "JITStaged_Sel_RULE_Block_Lambda",
+      "JITStaged_Sel_ALL_Async_Lambda",
+      "JITStaged_Sel_RULE_Async_Lambda",
+      "JITStaged_Sel_RULE_Async_BC",
+      "JITStaged_Sel_ALL_Async_BC",
     ).foreach(execution => {
-      Seq(/*"Volcano", "Default",*/ "Indexed").foreach(storage => {
-        if ((execution.contains("Staged") || execution.contains("BytecodeGenerated") || execution.contains("Lambda")) && storage == "Volcano") {} // skip and don't report as skipped
-        else if (
+      Seq("Collections", "Indexed").foreach(storage => {
+        if (
             skip.contains(execution) || skip.contains(storage) ||
               (tags ++ Set(execution, storage)).flatMap(t => Properties.envOrNone(t.toUpperCase())).nonEmpty// manually implement --exclude for intellij
         ) {

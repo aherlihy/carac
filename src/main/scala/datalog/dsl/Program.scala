@@ -1,6 +1,6 @@
 package datalog.dsl
 
-import datalog.execution.{ExecutionEngine, NaiveExecutionEngine}
+import datalog.execution.ExecutionEngine
 
 import java.nio.file.{Files, Path}
 import scala.collection.mutable

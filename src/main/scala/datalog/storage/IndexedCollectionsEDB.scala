@@ -13,43 +13,29 @@ import java.util.{Arrays, HashMap, TreeMap}
 
 
 /**
- * This file defines the datatypes that the IndexedCollectionsStorageManager operatoes over. These are the simplest example and just wrap Scala IndexedCollections.
+ * EDB for indexed collections-based storage.
  */
 
 /* Necessary evil to avoid path dependent types. All casts go first-thing in the IndexedCollectionsStorageManager (or child)'s public methods that take an EDB as argument */
 object IndexedCollectionsCasts {
   def asIndexedCollectionsEDB(to: Relation[StorageTerm]): IndexedCollectionsEDB = to.asInstanceOf[IndexedCollectionsEDB]
   def asIndexedCollectionsSeqEDB(to: Seq[Relation[StorageTerm]]): Seq[IndexedCollectionsEDB] = to.asInstanceOf[Seq[IndexedCollectionsEDB]]
-  def asIndexedCollectionsRow(to: Row[StorageTerm]): IndexedCollectionsRow = to.asInstanceOf[IndexedCollectionsRow]
+  def asCollectionsRow(to: Row[StorageTerm]): CollectionsRow = to.asInstanceOf[CollectionsRow]
 }
-
-given Ordering[StorageTerm] with
-  def compare(x: StorageTerm, y: StorageTerm): Int = x match
-    case x: Int =>
-      y match
-        case y: Int =>
-          Ordering[Int].compare(x, y)
-        case y: String =>
-          -1
-    case x: String =>
-      y match
-        case y: String =>
-          Ordering[String].compare(x, y)
-        case y: Int =>
-          1
 
 /**
  * Precise type for the EDB type in IndexedCollectionsStorageManager.
  * Represents one EDB relation, i.e. the set of rows of tuples in a particular EDB relation.
  * AKA mutable.SortedMap[Term, ArrayBuffer[Seq[StorageTerm]]] for each index key, for now ignore multi-key indexes
  */
-case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollectionsRow],
+case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[CollectionsRow],
                                  indexKeys: mutable.BitSet,
                                  name: String,
                                  arity: Int,
                                  var skipIndexes: mutable.BitSet // don't build indexes for these keys
-                                ) extends EDB with IterableOnce[IndexedCollectionsRow] {
+                                ) extends GeneralCollectionsEDB {
   import IndexedCollectionsEDB.{lookupOrCreate,lookupOrEmpty,IndexMap, insertInto}
+  def emptyCopy: IndexedCollectionsEDB = IndexedCollectionsEDB.empty(arity, name, indexKeys, skipIndexes)
 
   if indexKeys.exists(_ >= arity) then throw new Exception(s"Error: creating edb $name with indexes ${indexKeys.mkString("[", ", ", "]")} but arity $arity")
   if skipIndexes.exists(_ >= arity) then throw new Exception(s"Error: creating edb $name but skiping indexes ${skipIndexes.mkString("[", ", ", "]")} but arity $arity")
@@ -110,7 +96,7 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
    * @param edbs
    * @return
    */
-  def addAll(edbs: mutable.ArrayBuffer[IndexedCollectionsRow]): this.type = {
+  def addAll(edbs: mutable.ArrayBuffer[CollectionsRow]): this.type = {
     // TODO: potentially build indexes async
     wrapped.addAll(edbs)
     val keysToRebuild = indexKeys.diff(skipIndexes)
@@ -128,7 +114,7 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
    * @param edbs
    * @return
    */
-  def addAndDeduplicate(edbs: mutable.ArrayBuffer[IndexedCollectionsRow]): this.type = {
+  def addAndDeduplicate(edbs: mutable.ArrayBuffer[CollectionsRow]): this.type = {
     val keysToRebuild = indexKeys.diff(skipIndexes)
     edbs.foreach(edb =>
       if (!contains(edb)) {
@@ -146,7 +132,7 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
    * @param edb
    * @return
    */
-  def addOne(edb: IndexedCollectionsRow): this.type =
+  def addOne(edb: CollectionsRow): this.type =
     if (edb.size != arity) throw new Exception(s"Adding row with length ${edb.size} to EDB $name with arity $arity")
     wrapped.addOne(edb)
     val keysToRebuild = indexKeys.diff(skipIndexes)
@@ -155,7 +141,7 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
     )
     this
 
-  def contains(edb: IndexedCollectionsRow): Boolean =
+  def contains(edb: CollectionsRow): Boolean =
     var i = 0
     var smallestIdx = (-1, Int.MaxValue)
     while i < indexes.length do
@@ -172,7 +158,9 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
       values != null && containsRow(values, edb)
 
   // merge and deduplicate the passed indexes into the current EDB
-  def mergeEDBs(indexesToMerge: Array[IndexMap], deduplicate: Boolean): Unit =
+  def mergeEDBs(toCopy: GeneralCollectionsEDB): Unit =
+    val edbToCopy = asIndexedCollectionsEDB(toCopy)
+    val indexesToMerge = edbToCopy.indexes
     var i = 0
     var update = true
     while i < indexesToMerge.length do
@@ -181,12 +169,12 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
           indexes(i) = createIndexMap()
 
         indexesToMerge(i).forEach((term, rowsToAdd) =>
-          indexes(i).insertInto(term, rowsToAdd, wrapped, update, deduplicate) // only write to wrapped once
+          indexes(i).insertInto(term, rowsToAdd, wrapped, update, false) // only write to wrapped once
         )
         update = false
       i += 1
 
-  private def containsRow(container: mutable.ArrayBuffer[IndexedCollectionsRow], row: IndexedCollectionsRow): Boolean =
+  private def containsRow(container: mutable.ArrayBuffer[CollectionsRow], row: CollectionsRow): Boolean =
     var i = 0
     val rowLength = row.length
     row.unsafeArray match
@@ -204,8 +192,6 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
         end while
     false
 
-  def diff(that: IndexedCollectionsEDB): IndexedCollectionsEDB = ???
-
   /**
    * Used only for getting a final result when we want to make sure to deduplicate results + get a set type
    * @return
@@ -217,11 +203,12 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
                      projIndexes: Seq[(String, Constant)],
                      newName: String,
                      newIndexes: mutable.BitSet,
-                     derivedDB: IndexedCollectionsDatabase,
+                     derivedDB: CollectionsDatabase,
                      rId: RelationId
                     ): IndexedCollectionsEDB =
     val constFilter = constIndexes.filter((ind, _) => ind < arity)
-    val newWrapped = ArrayBuffer[IndexedCollectionsRow]()
+//    println(s"constIdx=${constIndexes}, constFilter=$constFilter, arity=$arity, wrapped=$wrapped")
+    val newWrapped = ArrayBuffer[CollectionsRow]()
     var rest: mutable.Map[Int, Constant] = null
     val toCopy = if (constFilter.isEmpty)
       wrapped
@@ -233,7 +220,8 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
     var i = 0
     while i < toCopy.length do
       val projected = toCopy(i).project(projIndexes)
-//      println(s"projected=$projected checking derived(${newName})=${if derivedDB.contains(rId) then derivedDB(rId) else "X"}, constantTest=${rest != null && projected.filterConstant(rest)}")
+//      println(s"projected=$projected checking derived(${newName})=${if derivedDB.contains(rId) then derivedDB(rId) else "X"}, constantTest=${rest == null || toCopy(i).filterConstant(rest)}")
+//      println(s"projected=$projected, derivedDB.contains($rId)=${derivedDB.contains(rId)}, derivedDB($rId).contains=${derivedDB.contains(rId) && derivedDB(rId).contains(projected)}")
       if
         (rest == null || toCopy(i).filterConstant(rest)) &&                   // filter constants
           (!derivedDB.contains(rId) || !derivedDB(rId).contains(projected))   // diff with derived
@@ -258,9 +246,8 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
    * @param toJoin
    * @return
    */
-  def joinFilterWithIndex(joinIndexes: JoinIndexes,
-                          skip: Int,
-                          toJoin: IndexedCollectionsEDB): IndexedCollectionsEDB =
+  def joinFilter(joinIndexes: JoinIndexes, skip: Int, toJoinG: GeneralCollectionsEDB): GeneralCollectionsEDB =
+    val toJoin = asIndexedCollectionsEDB(toJoinG)
     var outer = this
     var inner = toJoin
     // TODO: check and potentially swap inner + outer, if onlineSort
@@ -320,6 +307,7 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
           )
         val withInnerKey = if keyToJoin.isEmpty then mutable.BitSet() else inner.indexKeys.filter(_ != keyToJoin.get._2)
         IndexedCollectionsEDB(filtered, inner.indexKeys, inner.name, inner.arity, withInnerKey)
+//    println(s"filteredInner=${filteredInner.wrapped.mkString("[", ", ", "]")}")
 
     val result = if (keyToJoin.isEmpty) // join without keys, so just loop over everything without index
       filteredOuter.wrapped.flatMap(outerTuple => filteredInner.wrapped.map( innerTuple => outerTuple.concat(innerTuple)))
@@ -334,7 +322,7 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
         val secondaryKeys = relativeJoinKeys.drop(1)
 //        println(s"\t\tprimary join outer[$outerPosToUse], inner[$innerPosToUse], secondary join positions: $secondaryKeys")
 
-        filteredOuter.wrapped.flatMap(outerTuple =>
+        val res = filteredOuter.wrapped.flatMap(outerTuple =>
           val indexVal = outerTuple(outerPosToUse)
           if !filteredInner.indexKeys.contains(innerPosToUse) then throw new Exception(s"Missing index on inner ${filteredInner.name} at position $innerPosToUse, expected initial indexes=${filteredInner.indexKeys.mkString("[", ", ", "]")}, skippedIndexes=${filteredInner.skipIndexes.mkString("[", ", ", "]")}")
           val matchingInners = filteredInner.getIndex(keyToJoin.get._2).lookupOrEmpty(indexVal)
@@ -345,6 +333,8 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
             }
           }
         )
+//        println(s"res=${res}")
+        res
       }
 
 //    println(s"\tintermediateR=${result.map(_.mkString("(", ", ", ")")).mkString("[", ", ", "]")}")
@@ -359,11 +349,11 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
 
 
   def factToString: String =
-    val inner = wrapped.map(s => s.mkString("(", ", ", ")")).mkString("[", ", ", "]")
+    val inner = wrapped.sorted.map(s => s.mkString("(", ", ", ")")).mkString("[", ", ", "]")
     val indexStr = ""//indexes.map((pos, tMap) => s"i$pos|${tMap.keys.size}|").mkString("{", ", ", "}") + ":"
     s"$indexStr$inner"
 
-  def nonEmpty(): Boolean = wrapped.nonEmpty
+  def nonEmpty: Boolean = wrapped.nonEmpty
   def length = wrapped.size
 
   def clear(): Unit =
@@ -372,9 +362,9 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
     skipIndexes.clear()
 
   // TODO: potentially remove IterableOnce, or restructure to use indexes with iterable ops "automatically"
-  def map(f: IndexedCollectionsRow => IndexedCollectionsRow): IndexedCollectionsEDB = ???
-  def filter(f: IndexedCollectionsRow => Boolean): IndexedCollectionsEDB = ???
-  def flatMap(f: IndexedCollectionsRow => IterableOnce[IndexedCollectionsRow]): IndexedCollectionsEDB = ???
+  def map(f: CollectionsRow => CollectionsRow): IndexedCollectionsEDB = ???
+  def filter(f: CollectionsRow => Boolean): IndexedCollectionsEDB = ???
+  def flatMap(f: CollectionsRow => IterableOnce[CollectionsRow]): IndexedCollectionsEDB = ???
   def toSet = ???
   def apply = ???
   def mkString = ???
@@ -382,12 +372,12 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[IndexedCollect
 }
 
 object IndexedCollectionsEDB {
-  type IndexMap = HashMap[StorageTerm, ArrayBuffer[IndexedCollectionsRow]]
+  type IndexMap = HashMap[StorageTerm, ArrayBuffer[CollectionsRow]]
   extension (index: IndexMap)
-    def lookupOrCreate(key: StorageTerm): ArrayBuffer[IndexedCollectionsRow] =
+    def lookupOrCreate(key: StorageTerm): ArrayBuffer[CollectionsRow] =
       // TODO: tune initialSize?
       index.computeIfAbsent(key, _ => new mutable.ArrayBuffer(initialSize = 16))
-    def lookupOrEmpty(key: StorageTerm): ArrayBuffer[IndexedCollectionsRow] =
+    def lookupOrEmpty(key: StorageTerm): ArrayBuffer[CollectionsRow] =
       val valueOrNull = index.get(key)
       if valueOrNull != null then
         valueOrNull
@@ -396,8 +386,8 @@ object IndexedCollectionsEDB {
         new mutable.ArrayBuffer(initialSize = 16)
 
     def insertInto(key: StorageTerm,
-                   toAdd: ArrayBuffer[IndexedCollectionsRow],
-                   wrappedToModify: ArrayBuffer[IndexedCollectionsRow],
+                   toAdd: ArrayBuffer[CollectionsRow],
+                   wrappedToModify: ArrayBuffer[CollectionsRow],
                    update: Boolean,
                    deduplicate: Boolean) =
       val valueOrNull = index.get(key)
@@ -411,7 +401,7 @@ object IndexedCollectionsEDB {
 
     inline def contains(key: StorageTerm): Boolean =
       index.containsKey(key)
-    inline def foreach(f: java.util.function.BiConsumer[StorageTerm, ArrayBuffer[IndexedCollectionsRow]]): Unit =
+    inline def foreach(f: java.util.function.BiConsumer[StorageTerm, ArrayBuffer[CollectionsRow]]): Unit =
       index.forEach(f)
     inline def clear(): Unit =
       index.clear()
@@ -431,29 +421,14 @@ object IndexedCollectionsEDB {
           head.arity,
           mutable.BitSet()//.indexKeys // don't skip any of used by diff?
         )
-//        edbs.drop(1).foreach(e => head.mergeEDBs(asIndexedCollectionsEDB(e).indexes, true))
-//        head
-
-    // TODO: merge individual indexes instead of rebuilding?
-  extension (edbs: Seq[EDB])
-    def unionInPlace: EDB =
-      if (edbs.isEmpty)
-        throw new Exception("Internal error, union on zero relations")
-      else
-        val head = asIndexedCollectionsEDB(edbs.head)
-        edbs.foreach(e =>
-          head.addAndDeduplicate(asIndexedCollectionsEDB(e).wrapped)
-        )
-        head
-
 
   /**
    * Create empty EDB, optionally preregister index keys if known ahead of time
    * @param preIndexes
    * @return
    */
-  def empty(arity: Int, preIndexes: mutable.BitSet = mutable.BitSet(), rName: String = "ANON", skipIndexes: mutable.BitSet): IndexedCollectionsEDB =
-    IndexedCollectionsEDB(mutable.ArrayBuffer[IndexedCollectionsRow](), preIndexes, rName, arity, skipIndexes)
+  def empty(arity: Int, rName: String = "ANON", preIndexes: mutable.BitSet = mutable.BitSet(), skipIndexes: mutable.BitSet = mutable.BitSet()): IndexedCollectionsEDB =
+    IndexedCollectionsEDB(mutable.ArrayBuffer[CollectionsRow](), preIndexes, rName, arity, skipIndexes)
 
   // Print methods
   def indexSizeToString(name: String, indexedCollectionsEDB: IndexedCollectionsEDB): String =
@@ -467,7 +442,8 @@ object IndexedCollectionsEDB {
       s"$term => ${matchingRows.map(r => r.mkString("[", ", ", "]")).mkString("[", ", ", "]")}"
     ).mkString("{", ", ", "}")
 
-  def allIndexesToString(edb: IndexedCollectionsEDB): String = {
+  def allIndexesToString(e: GeneralCollectionsEDB): String = {
+    val edb = asIndexedCollectionsEDB(e)
     s"  ${edb.name}:\n\t${
       edb.indexes.zipWithIndex.filter(_._1 != null).map((index, pos) =>
         s"@$pos: ${
@@ -479,93 +455,6 @@ object IndexedCollectionsEDB {
       ).mkString("", "\n\t", "")
     }"
   }
-}
-
-inline def IndexedCollectionsRow(s: ArraySeq[StorageTerm]) = s
-type IndexedCollectionsRow = ArraySeq[StorageTerm]
-extension (seq: ArraySeq[StorageTerm])
-  def project(projIndexes: Seq[(String, Constant)]): IndexedCollectionsRow = // make a copy
-    if seq.isInstanceOf[ArraySeq.ofInt] then
-      projectInto(new Array[Int](projIndexes.length), projIndexes)
-    else
-      projectInto(new Array[StorageTerm](projIndexes.length), projIndexes)
-  inline def projectInto[T <: StorageTerm](arr: Array[T], projIndexes: Seq[(String, Constant)]): IndexedCollectionsRow =
-    var i = 0
-    while i < arr.length do
-      val elem = projIndexes(i)
-      elem._1 match
-        case "v" => arr(i) = seq(elem._2.asInstanceOf[Int]).asInstanceOf[T]
-        case "c" => arr(i) = elem._2.asInstanceOf[T]
-        case _ => throw new Exception("Internal error: projecting something that is not a constant nor a variable")
-      i += 1
-    end while
-    ArraySeq.unsafeWrapArray(arr)
-
-  /* Equality constraint $1 == $2 */
-  inline def filterConstraint(keys: Seq[Int]): Boolean =
-    keys.size <= 1 ||                    // there is no self-constraint, OR
-      keys.drop(1).forall(idxToMatch =>  // all the self constraints hold
-        seq(keys.head) == seq(idxToMatch)
-      )
-
-  /* Constant filter $1 = c */
-  inline def filterConstant(consts: mutable.Map[Int, Constant]): Boolean =
-    consts.isEmpty || consts.forall((idx, const) => // for each filter
-      seq(idx) == const
-    )
-end extension
-
-/**
- * Precise type for the Database type in IndexedCollectionsStorageManager.
- * Represents a DB containing a set of rows, i.e. tuples of terms.
- * AKA a mutable.Map[RelationId, ArrayBuffer[Seq[Term]]].
- */
-case class IndexedCollectionsDatabase(wrapped: mutable.Map[RelationId, IndexedCollectionsEDB]) extends Database[IndexedCollectionsEDB] {
-  val definedRelations: mutable.BitSet = mutable.BitSet() ++ wrapped.keys
-
-  def clear(): Unit = {
-    wrapped.foreach((rId, edb) =>
-      edb.clear()
-    )
-    definedRelations.clear()
-  }
-
-  def contains(c: RelationId): Boolean = definedRelations.contains(c)
-
-  // Take edbToCopy and manually copy the indexes to a new EDB to avoid rebuilding indexes, then add it to the DB
-  def addNewEDBCopy(rId: RelationId, edbToCopy: IndexedCollectionsEDB): Unit =
-    definedRelations.addOne(rId)
-    val newEDB = getOrElseEmpty(rId, edbToCopy.arity, edbToCopy.indexKeys, edbToCopy.name, mutable.BitSet()) // when copying, don't skip any indexes
-    newEDB.mergeEDBs(edbToCopy.indexes, false)
-    wrapped(rId) = newEDB
-
-  def assignEDBDirect(rId: RelationId, edb: IndexedCollectionsEDB): Unit =
-    definedRelations.addOne(rId)
-    wrapped(rId) = edb
-
-  def foreach[U](f: ((RelationId, IndexedCollectionsEDB)) => U): Unit = wrapped.filter((k, v) => definedRelations.contains(k)).foreach(f)
-
-  def exists(p: ((RelationId, IndexedCollectionsEDB)) => Boolean): Boolean = wrapped.filter((k, v) => definedRelations.contains(k)).exists(p)
-
-  def forall(p: ((RelationId, IndexedCollectionsEDB)) => Boolean): Boolean = wrapped.filter((k, v) => definedRelations.contains(k)).forall(p)
-
-  def toSeq: Seq[(RelationId, IndexedCollectionsEDB)] = wrapped.filter((k, v) => definedRelations.contains(k)).toSeq
-
-  def getOrElseEmpty(rId: RelationId, arity: Int, indexCandidates: mutable.BitSet, name: String, indexToSkip: mutable.BitSet): IndexedCollectionsEDB =
-    wrapped.getOrElseUpdate(rId,
-      IndexedCollectionsEDB.empty(arity, indexCandidates, name, indexToSkip)
-    )
-  def addEmpty(rId: RelationId, arity: Int, indexCandidates: mutable.BitSet, name: String, indexToSkip: mutable.BitSet): IndexedCollectionsEDB =
-    definedRelations.addOne(rId)
-    wrapped.getOrElseUpdate(rId,
-      IndexedCollectionsEDB.empty(arity, indexCandidates, name, indexToSkip)
-    )
-
-  export wrapped.apply
-}
-
-object IndexedCollectionsDatabase {
-  def apply(elems: (RelationId, IndexedCollectionsEDB)*): IndexedCollectionsDatabase = new IndexedCollectionsDatabase(mutable.Map[RelationId, IndexedCollectionsEDB](elems *))
 }
 
 

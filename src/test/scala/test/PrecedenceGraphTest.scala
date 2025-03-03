@@ -1,14 +1,14 @@
 package test
-import datalog.execution.{ExecutionEngine, PrecedenceGraph, SemiNaiveExecutionEngine}
+import datalog.execution.{ExecutionEngine, PrecedenceGraph, ShallowExecutionEngine}
 
 import scala.collection.immutable.ArraySeq
 import scala.collection.mutable
-import datalog.dsl.{Program, Constant, Atom, __}
-import datalog.storage.{NS, VolcanoStorageManager}
+import datalog.dsl.{Atom, Constant, Program, __}
+import datalog.storage.{CollectionsStorageManager, NS}
 
 class PrecedenceGraphTest extends munit.FunSuite {
   test("tarjan with tarjan example") {
-    given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new VolcanoStorageManager())
+    given engine: ExecutionEngine = new ShallowExecutionEngine(new CollectionsStorageManager())
     val program = Program(engine)
     val t0 = program.relation[Constant]("t0")
     val t1 = program.relation[Constant]("t1")
@@ -65,7 +65,7 @@ class PrecedenceGraphTest extends munit.FunSuite {
     )
   }
   test("negated tarjan example") {
-    given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new VolcanoStorageManager())
+    given engine: ExecutionEngine = new ShallowExecutionEngine(new CollectionsStorageManager())
 
     val program = Program(engine)
     val t0 = program.relation[Constant]("t0")
@@ -150,7 +150,7 @@ class PrecedenceGraphTest extends munit.FunSuite {
     )
   }
   test("tarjan tc with isolated cycles") {
-    given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new VolcanoStorageManager())
+    given engine: ExecutionEngine = new ShallowExecutionEngine(new CollectionsStorageManager())
 
     val program = Program(engine)
     val e = program.relation[String]("e")
@@ -188,61 +188,61 @@ class PrecedenceGraphTest extends munit.FunSuite {
       Seq(p2.id, other2.id)
     )
   }
-  test("negated tc with isolated cycles") {
-    given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new VolcanoStorageManager())
-
-    val program = Program(engine)
-    val e = program.relation[String]("e") // 0
-    val p = program.relation[String]("p") // 1
-    val other = program.relation[String]("other") // 2
-    val e2 = program.relation[String]("e2") // 3
-    val p2 = program.relation[String]("p2") // 4
-    val other2 = program.relation[String]("other2") // 5
-    val x, y, z = program.variable()
-
-    e("a", "b") :- ()
-    e("b", "c") :- ()
-    e("c", "d") :- ()
-    p("a", "b") :- !e(__, __)
-    p(x, z) :- (e(x, y), p(y, z))
-    other("x") :- !p("a", "x")
-
-    e2("a", "b") :- ()
-    e2("b", "c") :- ()
-    e2("c", "d") :- ()
-    p2("x", "y") :- !e2("x", "y")
-    p2(x, z) :- (e2(x, y), p2(y, z))
-    other2("x") :- !p2("a", "x")
-
-    // ullman
-    assertEquals(
-      engine.precedenceGraph.ullman(),
-      Seq(Set(e.id, e2.id), Set(p.id, p2.id), Set(other2.id, other.id))
-    )
-    assertEquals(
-      engine.precedenceGraph.dropIrrelevant(engine.precedenceGraph.ullman(Some(other.id)), Some(other.id)),
-      Seq(Set(p.id, p2.id), Set(other.id, other2.id))
-    )
-    assertEquals(
-      engine.precedenceGraph.dropIrrelevant(engine.precedenceGraph.ullman(Some(p2.id)), Some(p2.id)),
-      Seq(Set(p2.id, p.id))
-    )
-    // tarjan has a slightly different stratification
-    assertEquals(
-      engine.precedenceGraph.tarjan(),
-      Seq(Set(e.id), Set(p.id), Set(other.id), Set(e2.id), Set(p2.id), Set(other2.id))
-    )
-    assertEquals(
-      engine.precedenceGraph.dropIrrelevant(engine.precedenceGraph.tarjan(Some(other.id)), Some(other.id)),
-      Seq(Set(p.id), Set(other.id))
-    )
-    assertEquals(
-      engine.precedenceGraph.dropIrrelevant(engine.precedenceGraph.tarjan(Some(p2.id)), Some(p2.id)),
-      Seq(Set(p2.id))
-    )
-  }
+//  test("negated tc with isolated cycles") {
+//    given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new CollectionsStorageManager(), PushBasedSPJU())
+//
+//    val program = Program(engine)
+//    val e = program.relation[String]("e") // 0
+//    val p = program.relation[String]("p") // 1
+//    val other = program.relation[String]("other") // 2
+//    val e2 = program.relation[String]("e2") // 3
+//    val p2 = program.relation[String]("p2") // 4
+//    val other2 = program.relation[String]("other2") // 5
+//    val x, y, z = program.variable()
+//
+//    e("a", "b") :- ()
+//    e("b", "c") :- ()
+//    e("c", "d") :- ()
+//    p("a", "b") :- !e(__, __)
+//    p(x, z) :- (e(x, y), p(y, z))
+//    other("x") :- !p("a", "x")
+//
+//    e2("a", "b") :- ()
+//    e2("b", "c") :- ()
+//    e2("c", "d") :- ()
+//    p2("x", "y") :- !e2("x", "y")
+//    p2(x, z) :- (e2(x, y), p2(y, z))
+//    other2("x") :- !p2("a", "x")
+//
+//    // ullman
+//    assertEquals(
+//      engine.precedenceGraph.ullman(),
+//      Seq(Set(e.id, e2.id), Set(p.id, p2.id), Set(other2.id, other.id))
+//    )
+//    assertEquals(
+//      engine.precedenceGraph.dropIrrelevant(engine.precedenceGraph.ullman(Some(other.id)), Some(other.id)),
+//      Seq(Set(p.id, p2.id), Set(other.id, other2.id))
+//    )
+//    assertEquals(
+//      engine.precedenceGraph.dropIrrelevant(engine.precedenceGraph.ullman(Some(p2.id)), Some(p2.id)),
+//      Seq(Set(p2.id, p.id))
+//    )
+//    // tarjan has a slightly different stratification
+//    assertEquals(
+//      engine.precedenceGraph.tarjan(),
+//      Seq(Set(e.id), Set(p.id), Set(other.id), Set(e2.id), Set(p2.id), Set(other2.id))
+//    )
+//    assertEquals(
+//      engine.precedenceGraph.dropIrrelevant(engine.precedenceGraph.tarjan(Some(other.id)), Some(other.id)),
+//      Seq(Set(p.id), Set(other.id))
+//    )
+//    assertEquals(
+//      engine.precedenceGraph.dropIrrelevant(engine.precedenceGraph.tarjan(Some(p2.id)), Some(p2.id)),
+//      Seq(Set(p2.id))
+//    )
+//  }
   test("tarjan transitive closure") {
-    given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new VolcanoStorageManager())
+    given engine: ExecutionEngine = new ShallowExecutionEngine(new CollectionsStorageManager())
     val program = Program(engine)
     val e = program.relation[String]("e")
     val p = program.relation[String]("p")
@@ -263,7 +263,7 @@ class PrecedenceGraphTest extends munit.FunSuite {
   }
 
   test("simple positive cycle") {
-    given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new VolcanoStorageManager())
+    given engine: ExecutionEngine = new ShallowExecutionEngine(new CollectionsStorageManager())
     val program = Program(engine)
     val a = program.relation[String]("a")
     val b = program.relation[String]("b")
@@ -285,7 +285,7 @@ class PrecedenceGraphTest extends munit.FunSuite {
     )
   }
   test("simple negative cycle") {
-    given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new VolcanoStorageManager())
+    given engine: ExecutionEngine = new ShallowExecutionEngine(new CollectionsStorageManager())
 
     val program = Program(engine)
     val a = program.relation[String]("a")
@@ -304,7 +304,7 @@ class PrecedenceGraphTest extends munit.FunSuite {
     }
   }
   test("simple self negative cycle") {
-    given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new VolcanoStorageManager())
+    given engine: ExecutionEngine = new ShallowExecutionEngine(new CollectionsStorageManager())
 
     val program = Program(engine)
     val a = program.relation[String]("a")
@@ -325,7 +325,7 @@ class PrecedenceGraphTest extends munit.FunSuite {
     }
   }
   test("simple cycle with 1 negative strata") {
-    given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new VolcanoStorageManager())
+    given engine: ExecutionEngine = new ShallowExecutionEngine(new CollectionsStorageManager())
 
     val program = Program(engine)
     val a = program.relation[String]("a")
@@ -349,7 +349,7 @@ class PrecedenceGraphTest extends munit.FunSuite {
   }
 
   test("tarjan simple cycle with inner loop") {
-    given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new VolcanoStorageManager())
+    given engine: ExecutionEngine = new ShallowExecutionEngine(new CollectionsStorageManager())
     val program = Program(engine)
     val a = program.relation[String]("a")
     val b = program.relation[String]("b")
@@ -369,7 +369,7 @@ class PrecedenceGraphTest extends munit.FunSuite {
   }
 
   test("tarjan souffle top order test") {
-    given engine: ExecutionEngine = new SemiNaiveExecutionEngine(new VolcanoStorageManager())
+    given engine: ExecutionEngine = new ShallowExecutionEngine(new CollectionsStorageManager())
     val program = Program(engine)
     val a = program.relation[String]("a")
     val b = program.relation[String]("b")

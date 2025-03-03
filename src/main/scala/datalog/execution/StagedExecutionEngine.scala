@@ -18,7 +18,6 @@ import scala.quoted.*
 
 class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOptions: JITOptions = JITOptions(mode = Mode.Interpreted)) extends ExecutionEngine {
   val precedenceGraph = new PrecedenceGraph(using storageManager.ns)
-  val prebuiltOpKeys: mutable.Map[Int, mutable.ArrayBuffer[JoinIndexes]] = mutable.Map[Int, mutable.ArrayBuffer[JoinIndexes]]() // TODO: currently unused, mb remove from EE
   val ast: ProgramNode = ProgramNode()
   private val tCtx = ASTTransformerContext(using precedenceGraph)(using storageManager)
   given JITOptions = defaultJITOptions
@@ -275,9 +274,6 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
       case op: SequenceOp =>
         op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o)))
 
-      case op: UpdateDiscoveredOp =>
-        op.run(storageManager)
-
       case op: SwapAndClearOp =>
         op.run(storageManager)
 
@@ -346,8 +342,8 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
       case op: ScanEDBOp =>
         op.run(storageManager)
 
-      case op: ComplementOp =>
-        op.run(storageManager)
+//      case op: ComplementOp =>
+//        op.run(storageManager)
 
       case op: ProjectJoinFilterOp =>
         op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o)))

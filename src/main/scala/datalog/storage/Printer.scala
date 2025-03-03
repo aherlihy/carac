@@ -128,7 +128,6 @@ class Printer[S <: StorageManager](val sm: S) {
       case SwapAndClearOp() => "SWAP & CLEAR"
       case DoWhileOp(toCmp, children:_*) => s"DO {\n${printIR(children.head, ident+1)}}\n${i}WHILE {$toCmp}\n"
       case SequenceOp(fnCode, children:_*) => s"SEQ{${seq+1}${if (fnCode != OpCode.SEQ) "::" + fnCode else "_"}:${children.zipWithIndex.map((o, idx) => s"${seq+1}.$idx" + printIR(o, ident+1, seq+1)).mkString("[\n", ",\n", "]")}"
-      case UpdateDiscoveredOp() => "UPDATE_DISCOVERED()"
       case ScanEDBOp(srcRel) => s"SCANEDB(edbs[${ctx.storageManager.ns(srcRel)}])"
       case ScanOp(srcRel, db, knowledge) =>
         s"SCAN[$db.$knowledge](${ctx.storageManager.ns(srcRel)})"
@@ -144,7 +143,7 @@ class Printer[S <: StorageManager](val sm: S) {
           k.toStringWithNS(sm.ns)}::${
           children.map(o => printIR(o, ident+1)).mkString("(\n", ",\n", ")")}"
       case DiffOp(children:_*) => s"DIFF\n${printIR(children.head, ident+1)}\n-${printIR(children(1), ident+1)}"
-      case ComplementOp(rId, arity) => s"${ctx.storageManager.ns(rId)}:COMPL|$arity|"
+//      case ComplementOp(rId, arity) => s"${ctx.storageManager.ns(rId)}:COMPL|$arity|"
       case DebugNode(prefix, dbg) => s"DEBUG: $prefix"
       case DebugPeek(prefix, dbg, children:_*) => s"DEBUG PEEK: $prefix into: ${printIR(children.head)}"
     })

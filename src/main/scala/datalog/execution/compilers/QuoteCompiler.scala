@@ -86,12 +86,7 @@ class QuoteCompiler(val storageManager: StorageManager)(using JITOptions) extend
       case ScanOp(rId, db, knowledge) =>
         db match {
           case DB.Derived =>
-            knowledge match {
-              case KNOWLEDGE.New =>
-                '{ $stagedSM.getNewDerivedDB(${ Expr(rId) }) }
-              case KNOWLEDGE.Known =>
-                '{ $stagedSM.getKnownDerivedDB(${ Expr(rId) }) }
-            }
+            '{ $stagedSM.getKnownDerivedDB(${ Expr(rId) }) }
           case DB.Delta =>
             knowledge match {
               case KNOWLEDGE.New =>
@@ -101,8 +96,8 @@ class QuoteCompiler(val storageManager: StorageManager)(using JITOptions) extend
             }
         }
 
-      case ComplementOp(rId, arity) =>
-        '{ $stagedSM.getComplement(${ Expr(rId) }, ${ Expr(arity) }) }
+//      case ComplementOp(rId, arity) =>
+//        '{ $stagedSM.getComplement(${ Expr(rId) }, ${ Expr(arity) }) }
 
       case ScanEDBOp(rId) =>
         if (storageManager.edbContains(rId))
@@ -125,7 +120,7 @@ class QuoteCompiler(val storageManager: StorageManager)(using JITOptions) extend
 
         val compiledOps = Expr.ofSeq(sortedChildren.map(compileIRRelOp))
         '{
-          $stagedSM.joinProjectHelper_withHash(
+          $stagedSM.selectProjectJoinHelper(
             $compiledOps,
             ${ Expr(rId) },
             ${ Expr(newK.hash) },
@@ -185,12 +180,8 @@ class QuoteCompiler(val storageManager: StorageManager)(using JITOptions) extend
         compileIR(children.head)
 
       case DoWhileOp(toCmp, children:_*) =>
-        val cond = toCmp match {
-          case DB.Derived =>
-            '{ !$stagedSM.compareDerivedDBs() }
-          case DB.Delta =>
+        val cond =
             '{ $stagedSM.compareNewDeltaDBs() }
-        }
         '{
           while ( {
             ${ compileIR(children.head) };
@@ -198,11 +189,8 @@ class QuoteCompiler(val storageManager: StorageManager)(using JITOptions) extend
           }) ()
         }
 
-      case UpdateDiscoveredOp() =>
-        '{ $stagedSM.updateDiscovered() }
-
       case SwapAndClearOp() =>
-        '{ $stagedSM.swapKnowledge() ; $stagedSM.clearNewDerived() }
+        '{ $stagedSM.swapKnowledge() }
 
       case SequenceOp(label, children:_*) =>
         val cOps = children.map(compileIR)
