@@ -37,18 +37,18 @@ class ShallowExecutionEngine(override val storageManager: StorageManager,
               val q = if (r == d && !found && i > idx)
                 found = true
                 idx = i
-//                if (typ != PredicateType.NEGATED) // if negated then we want the complement of all facts not just the delta
-                storageManager.getKnownDeltaDB(r)
-//                else
-//                  ??? //storageManager.getKnownDerivedDB(r)
+                if (typ != PredicateType.NEGATED) // if negated then we want the complement of all facts not just the delta
+                  storageManager.getKnownDeltaDB(r)
+                else
+                  storageManager.getKnownDerivedDB(r)
               else
                 storageManager.getKnownDerivedDB(r)
               typ match
-                case PredicateType.NEGATED => ???
-                //                      val arity = k.atoms(i + 1).terms.length
-                //                      val res = DiffOp(ComplementOp(k.atoms(i+1).rId, arity), q)
-                //                      debug(s"found negated relation, rule=", () => s"${ctx.storageManager.printer.ruleToString(k.atoms)}\n\tarity=$arity")
-                //                      res
+                case PredicateType.NEGATED =>
+                  val arity = k.atoms(i + 1).terms.length
+                  val res = storageManager.diff(storageManager.getComplement(k.atoms(i+1).rId, arity), q)
+                  debug(s"found negated relation, rule=", () => s"${storageManager.printer.ruleToString(k.atoms)}\n\tarity=$arity")
+                  res
                 case _ => q
             }), rId, kHash, false)
         })
@@ -94,38 +94,6 @@ class ShallowExecutionEngine(override val storageManager: StorageManager,
       setDiff = storageManager.compareNewDeltaDBs()
     }
     debug(s"final state @$count", storageManager.toString)
-  }
-
-  override def solve(toSolve: RelationId): Set[Seq[StorageTerm]] = {
-    storageManager.verifyEDBs(idbs.keys.to(mutable.Set))
-    if (storageManager.edbContains(toSolve) && !idbs.contains(toSolve)) { // if just an edb predicate then return
-      return storageManager.getEDBResult(toSolve)
-    }
-    if (!idbs.contains(toSolve)) {
-      throw new Exception("Solving for rule without body")
-    }
-    val strata = precedenceGraph.scc(toSolve)
-
-//    strata.flatten.foreach(r =>
-//      println(s"Relation ${storageManager.ns(r)}")
-//      val keys = getOperatorKeys(r)
-//      println(s"\t" + keys.map(k =>
-//        s"${storageManager.printer.ruleToString(k.atoms)}: ${k.cxnsToString(storageManager.ns)}").mkString("", "\n\t", "")
-//      )
-//    )
-    storageManager.initEvaluation() // facts previously derived
-
-    debug(s"solving relation: ${storageManager.ns(toSolve)} sCount=${strata.length} order of strata=", () => strata.map(r => r.map(storageManager.ns.apply).mkString("(", ", ", ")")).mkString("{", ", ", "}"))
-
-    if(strata.length <= 1 || !stratified)
-      innerSolve(toSolve, strata.flatten)
-    else
-      // for each stratum
-      strata.zipWithIndex.foreach((relations, idx) =>
-        debug(s"**STRATA@$idx, rels=", () => relations.map(storageManager.ns.apply).mkString("(", ", ", ")"))
-        innerSolve(toSolve, relations.toSeq)
-      )
-    storageManager.getNewIDBResult(toSolve)
   }
 }
 
@@ -182,7 +150,7 @@ class NaiveShallowExecutionEngine(val storageManager: StorageManager, stratified
 //      storageManager.allRulesAllIndexes(rId) ++= allK
 
     idbs.getOrElseUpdate(rId, mutable.ArrayBuffer[IndexedSeq[Atom]]()).addOne(rule.toIndexedSeq)
-    //    storageManager.addConstantsToDomain(jIdx.constIndexes.values.toSeq)
+    storageManager.addConstantsToDomain(k.constIndexes.values.toSeq)
   }
 
   def insertEDB(rule: StorageAtom): Unit = {
@@ -200,21 +168,17 @@ class NaiveShallowExecutionEngine(val storageManager: StorageManager, stratified
         else
           storageManager.getEmptyEDB(rId)
       else
-        //          val withNeg = (md, i) =>
-        //            val (typ, r) = md
-        //            //              val q = ScanOp(r, DB.Derived, KNOWLEDGE.Known).run(storageManager)
-        //            val q = storageManager.getKnownDerivedDB(r)
-        //            typ match
-        //              case PredicateType.NEGATED => ???
-        //              //                  val arity = k.atoms(i + 1).terms.length
-        //              //                  val res = DiffOp(ComplementOp(k.atoms(i+1).rId, arity), q)
-        //              //                  debug(s"found negated relation, rule=", () => s"${ctx.storageManager.printer.ruleToString(k.atoms)}\n\tarity=$arity")
-        //              //                  res
-        //              case _ => q
         storageManager.selectProjectJoinHelper(
           k.deps.zipWithIndex.map((md, i) =>
             val (typ, r) = md
-            storageManager.getKnownDerivedDB(r)
+            val q = storageManager.getKnownDerivedDB(r)
+            typ match
+              case PredicateType.NEGATED =>
+                val arity = k.atoms(i + 1).terms.length
+                val res = storageManager.diff(storageManager.getComplement(k.atoms(i+1).rId, arity), q)
+                debug(s"found negated relation, rule=", () => s"${storageManager.printer.ruleToString(k.atoms)}\n\tarity=$arity")
+                res
+              case _ => q
           ),
           rId,
           kHash,

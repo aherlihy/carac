@@ -96,8 +96,8 @@ class QuoteCompiler(val storageManager: StorageManager)(using JITOptions) extend
             }
         }
 
-//      case ComplementOp(rId, arity) =>
-//        '{ $stagedSM.getComplement(${ Expr(rId) }, ${ Expr(arity) }) }
+      case ComplementOp(rId, arity) =>
+        '{ $stagedSM.getComplement(${ Expr(rId) }, ${ Expr(arity) }) }
 
       case ScanEDBOp(rId) =>
         if (storageManager.edbContains(rId))

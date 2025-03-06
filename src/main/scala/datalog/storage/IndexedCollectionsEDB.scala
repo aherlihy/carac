@@ -5,7 +5,7 @@ import datalog.dsl.{Constant, Variable}
 import scala.collection.mutable
 import IndexedCollectionsCasts.*
 import datalog.execution.JoinIndexes
-import datalog.storage.IndexedCollectionsEDB.allIndexesToString
+import datalog.storage.IndexedCollectionsEDB.{allIndexesToString, indexToString}
 
 import scala.collection.immutable.ArraySeq
 import scala.collection.mutable.ArrayBuffer
@@ -35,7 +35,7 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[CollectionsRow
                                  var skipIndexes: mutable.BitSet // don't build indexes for these keys
                                 ) extends GeneralCollectionsEDB {
   import IndexedCollectionsEDB.{lookupOrCreate,lookupOrEmpty,IndexMap, insertInto}
-  def emptyCopy: IndexedCollectionsEDB = IndexedCollectionsEDB.empty(arity, name, indexKeys, skipIndexes)
+  def emptyCopy: IndexedCollectionsEDB = IndexedCollectionsEDB.empty(arity, name, indexKeys, mutable.BitSet())
 
   if indexKeys.exists(_ >= arity) then throw new Exception(s"Error: creating edb $name with indexes ${indexKeys.mkString("[", ", ", "]")} but arity $arity")
   if skipIndexes.exists(_ >= arity) then throw new Exception(s"Error: creating edb $name but skiping indexes ${skipIndexes.mkString("[", ", ", "]")} but arity $arity")
@@ -159,8 +159,7 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[CollectionsRow
 
   // merge and deduplicate the passed indexes into the current EDB
   def mergeEDBs(toCopy: GeneralCollectionsEDB): Unit =
-    val edbToCopy = asIndexedCollectionsEDB(toCopy)
-    val indexesToMerge = edbToCopy.indexes
+    val indexesToMerge = asIndexedCollectionsEDB(toCopy).indexes
     var i = 0
     var update = true
     while i < indexesToMerge.length do
@@ -347,10 +346,21 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[CollectionsRow
       combinedIndexes // do not build indexes on intermediate results because will always be outer, and other than the first join all constant filters will be on the inner. Indexes will be rebuild on final project
     )
 
+  def diff(toDiff: EDB): GeneralCollectionsEDB =
+    val edbToDiff = asIndexedCollectionsEDB(toDiff)
+    val newWrapped = wrapped.filter(edb => !edbToDiff.contains(edb))
+    IndexedCollectionsEDB(
+      newWrapped.distinct,
+      indexKeys,
+      name,
+      arity,
+      skipIndexes
+    )
 
   def factToString: String =
     val inner = wrapped.sorted.map(s => s.mkString("(", ", ", ")")).mkString("[", ", ", "]")
-    val indexStr = ""//indexes.map((pos, tMap) => s"i$pos|${tMap.keys.size}|").mkString("{", ", ", "}") + ":"
+    // if you want to print indexes directly, uncomment
+    val indexStr = indexes.map(idx => indexToString(idx)).mkString("{", ", ", "}") + ":"
     s"$indexStr$inner"
 
   def nonEmpty: Boolean = wrapped.nonEmpty
@@ -438,21 +448,22 @@ object IndexedCollectionsEDB {
 
   def indexToString(index: IndexMap): String =
     import scala.jdk.CollectionConverters.*
-    index.asScala.toSeq.sortBy(_._1).map((term, matchingRows) =>
-      s"$term => ${matchingRows.map(r => r.mkString("[", ", ", "]")).mkString("[", ", ", "]")}"
-    ).mkString("{", ", ", "}")
+    if index == null then "null" else
+      index.asScala.toSeq.sortBy(_._1).map((term, matchingRows) =>
+        s"$term => ${matchingRows.map(r => r.mkString("[", ", ", "]")).mkString("[", ", ", "]")}"
+      ).mkString("{", ", ", "}")
 
   def allIndexesToString(e: GeneralCollectionsEDB): String = {
     val edb = asIndexedCollectionsEDB(e)
     s"  ${edb.name}:\n\t${
-      edb.indexes.zipWithIndex.filter(_._1 != null).map((index, pos) =>
+      edb.indexes.zipWithIndex.map((index, pos) =>
         s"@$pos: ${
           if (edb.skipIndexes.contains(pos))
             "[SKIP]"
           else
             indexToString(index)
         }"
-      ).mkString("", "\n\t", "")
+      ).mkString("  ", "\n\t  ", "")
     }"
   }
 }

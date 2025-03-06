@@ -53,6 +53,7 @@ abstract class GeneralCollectionsEDB extends EDB with IterableOnce[CollectionsRo
                      derivedDB: CollectionsDatabase,
                      rId: RelationId): GeneralCollectionsEDB
   def registerIndex(idx: Int): this.type
+  def diff(edb: EDB): GeneralCollectionsEDB
 //  def filter(p: CollectionsRow => Boolean): GeneralCollectionsEDB
 //  def flatMap(f: CollectionsRow => GeneralCollectionsEDB): GeneralCollectionsEDB
 //  def map(f: CollectionsRow => CollectionsRow): GeneralCollectionsEDB
