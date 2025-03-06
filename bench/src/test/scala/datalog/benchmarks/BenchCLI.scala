@@ -5,7 +5,7 @@ import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.Blackhole
 import datalog.dsl.*
 import datalog.execution.{Backend, CompileSync, ExecutionEngine, Granularity, JITOptions, NaiveShallowExecutionEngine, ShallowExecutionEngine, SortOrder, StagedExecutionEngine, ir, Mode as CaracMode}
-import datalog.storage.DefaultStorageManager
+import datalog.storage.CollectionsStorageManager
 import test.examples.tastyslistlibinverse.tastyslistlibinverse_worst
 import test.examples.tastyslistlib.tastyslistlib_worst
 import test.examples.ackermann.ackermann_worst
@@ -64,7 +64,7 @@ class BenchCLI_tastyslistlibinverse extends tastyslistlibinverse_worst {
 
   @Benchmark def carac_warm_quotes(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Quotes)
-    val engine = new StagedExecutionEngine(new DefaultStorageManager(), jo)
+    val engine = new StagedExecutionEngine(new CollectionsStorageManager(), jo)
     val program = Program(engine)
     program.loadFromFactDir(factDirectory)
     pretest(program)
@@ -80,7 +80,7 @@ class BenchCLI_tastyslistlibinverse extends tastyslistlibinverse_worst {
 
   @Benchmark def carac_warm_bytecode(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Bytecode)
-    val engine = new StagedExecutionEngine(new DefaultStorageManager(), jo)
+    val engine = new StagedExecutionEngine(new CollectionsStorageManager(), jo)
     val program = Program(engine)
     program.loadFromFactDir(factDirectory)
     pretest(program)
@@ -96,7 +96,7 @@ class BenchCLI_tastyslistlibinverse extends tastyslistlibinverse_worst {
 
   @Benchmark def carac_warm_lambda(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
-    val engine = new StagedExecutionEngine(new DefaultStorageManager(), jo)
+    val engine = new StagedExecutionEngine(new CollectionsStorageManager(), jo)
     val program = Program(engine)
     program.loadFromFactDir(factDirectory)
     pretest(program)
@@ -211,7 +211,7 @@ class BenchCLI_tastyslistlib extends tastyslistlib_worst {
 
   @Benchmark def carac_warm_quotes(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Quotes)
-    val engine = new StagedExecutionEngine(new DefaultStorageManager(), jo)
+    val engine = new StagedExecutionEngine(new CollectionsStorageManager(), jo)
     val program = Program(engine)
     program.loadFromFactDir(factDirectory)
     pretest(program)
@@ -227,7 +227,7 @@ class BenchCLI_tastyslistlib extends tastyslistlib_worst {
 
   @Benchmark def carac_warm_bytecode(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Bytecode)
-    val engine = new StagedExecutionEngine(new DefaultStorageManager(), jo)
+    val engine = new StagedExecutionEngine(new CollectionsStorageManager(), jo)
     val program = Program(engine)
     program.loadFromFactDir(factDirectory)
     pretest(program)
@@ -243,7 +243,7 @@ class BenchCLI_tastyslistlib extends tastyslistlib_worst {
 
   @Benchmark def carac_warm_lambda(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
-    val engine = new StagedExecutionEngine(new DefaultStorageManager(), jo)
+    val engine = new StagedExecutionEngine(new CollectionsStorageManager(), jo)
     val program = Program(engine)
     program.loadFromFactDir(factDirectory)
     pretest(program)
@@ -358,7 +358,7 @@ class BenchCLI_ackermann extends ackermann_worst {
 
   @Benchmark def carac_warm_quotes(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Quotes)
-    val engine = new StagedExecutionEngine(new DefaultStorageManager(), jo)
+    val engine = new StagedExecutionEngine(new CollectionsStorageManager(), jo)
     val program = Program(engine)
     program.loadFromFactDir(factDirectory)
     pretest(program)
@@ -374,7 +374,7 @@ class BenchCLI_ackermann extends ackermann_worst {
 
   @Benchmark def carac_warm_bytecode(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Bytecode)
-    val engine = new StagedExecutionEngine(new DefaultStorageManager(), jo)
+    val engine = new StagedExecutionEngine(new CollectionsStorageManager(), jo)
     val program = Program(engine)
     program.loadFromFactDir(factDirectory)
     pretest(program)
@@ -390,7 +390,7 @@ class BenchCLI_ackermann extends ackermann_worst {
 
   @Benchmark def carac_warm_lambda(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
-    val engine = new StagedExecutionEngine(new DefaultStorageManager(), jo)
+    val engine = new StagedExecutionEngine(new CollectionsStorageManager(), jo)
     val program = Program(engine)
     program.loadFromFactDir(factDirectory)
     pretest(program)
@@ -505,7 +505,7 @@ class BenchCLI_cbaexprvalue extends cbaexprvalue_worst {
 
   @Benchmark def carac_warm_quotes(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Quotes)
-    val engine = new StagedExecutionEngine(new DefaultStorageManager(), jo)
+    val engine = new StagedExecutionEngine(new CollectionsStorageManager(), jo)
     val program = Program(engine)
     program.loadFromFactDir(factDirectory)
     pretest(program)
@@ -521,7 +521,7 @@ class BenchCLI_cbaexprvalue extends cbaexprvalue_worst {
 
   @Benchmark def carac_warm_bytecode(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Bytecode)
-    val engine = new StagedExecutionEngine(new DefaultStorageManager(), jo)
+    val engine = new StagedExecutionEngine(new CollectionsStorageManager(), jo)
     val program = Program(engine)
     program.loadFromFactDir(factDirectory)
     pretest(program)
@@ -537,7 +537,7 @@ class BenchCLI_cbaexprvalue extends cbaexprvalue_worst {
 
   @Benchmark def carac_warm_lambda(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
-    val engine = new StagedExecutionEngine(new DefaultStorageManager(), jo)
+    val engine = new StagedExecutionEngine(new CollectionsStorageManager(), jo)
     val program = Program(engine)
     program.loadFromFactDir(factDirectory)
     pretest(program)
@@ -652,7 +652,7 @@ class BenchCLI_equal extends equal_worst {
 
   @Benchmark def carac_warm_quotes(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Quotes)
-    val engine = new StagedExecutionEngine(new DefaultStorageManager(), jo)
+    val engine = new StagedExecutionEngine(new CollectionsStorageManager(), jo)
     val program = Program(engine)
     program.loadFromFactDir(factDirectory)
     pretest(program)
@@ -668,7 +668,7 @@ class BenchCLI_equal extends equal_worst {
 
   @Benchmark def carac_warm_bytecode(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Bytecode)
-    val engine = new StagedExecutionEngine(new DefaultStorageManager(), jo)
+    val engine = new StagedExecutionEngine(new CollectionsStorageManager(), jo)
     val program = Program(engine)
     program.loadFromFactDir(factDirectory)
     pretest(program)
@@ -684,7 +684,7 @@ class BenchCLI_equal extends equal_worst {
 
   @Benchmark def carac_warm_lambda(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
-    val engine = new StagedExecutionEngine(new DefaultStorageManager(), jo)
+    val engine = new StagedExecutionEngine(new CollectionsStorageManager(), jo)
     val program = Program(engine)
     program.loadFromFactDir(factDirectory)
     pretest(program)
@@ -799,7 +799,7 @@ class BenchCLI_prime extends prime_worst {
 
   @Benchmark def carac_warm_quotes(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Quotes)
-    val engine = new StagedExecutionEngine(new DefaultStorageManager(), jo)
+    val engine = new StagedExecutionEngine(new CollectionsStorageManager(), jo)
     val program = Program(engine)
     program.loadFromFactDir(factDirectory)
     pretest(program)
@@ -815,7 +815,7 @@ class BenchCLI_prime extends prime_worst {
 
   @Benchmark def carac_warm_bytecode(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Bytecode)
-    val engine = new StagedExecutionEngine(new DefaultStorageManager(), jo)
+    val engine = new StagedExecutionEngine(new CollectionsStorageManager(), jo)
     val program = Program(engine)
     program.loadFromFactDir(factDirectory)
     pretest(program)
@@ -831,7 +831,7 @@ class BenchCLI_prime extends prime_worst {
 
   @Benchmark def carac_warm_lambda(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
-    val engine = new StagedExecutionEngine(new DefaultStorageManager(), jo)
+    val engine = new StagedExecutionEngine(new CollectionsStorageManager(), jo)
     val program = Program(engine)
     program.loadFromFactDir(factDirectory)
     pretest(program)
@@ -946,7 +946,7 @@ class BenchCLI_fib extends fib_worst {
 
   @Benchmark def carac_warm_quotes(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Quotes)
-    val engine = new StagedExecutionEngine(new DefaultStorageManager(), jo)
+    val engine = new StagedExecutionEngine(new CollectionsStorageManager(), jo)
     val program = Program(engine)
     program.loadFromFactDir(factDirectory)
     pretest(program)
@@ -962,7 +962,7 @@ class BenchCLI_fib extends fib_worst {
 
   @Benchmark def carac_warm_bytecode(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Bytecode)
-    val engine = new StagedExecutionEngine(new DefaultStorageManager(), jo)
+    val engine = new StagedExecutionEngine(new CollectionsStorageManager(), jo)
     val program = Program(engine)
     program.loadFromFactDir(factDirectory)
     pretest(program)
@@ -978,7 +978,7 @@ class BenchCLI_fib extends fib_worst {
 
   @Benchmark def carac_warm_lambda(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
-    val engine = new StagedExecutionEngine(new DefaultStorageManager(), jo)
+    val engine = new StagedExecutionEngine(new CollectionsStorageManager(), jo)
     val program = Program(engine)
     program.loadFromFactDir(factDirectory)
     pretest(program)

@@ -138,7 +138,7 @@ abstract class TestGenerator(directory: Path,
             Granularity.ALL
           else if context.test.name.contains("DELTA") then
             Granularity.DELTA
-          else if context.test.name.contains("Interpreted") then
+          else if context.test.name.contains("Interpreted") || context.test.name.contains("Compiled") then
             Granularity.NEVER
           else throw new Exception(s"Unknown granularity for ${context.test.name}")
 
@@ -168,7 +168,9 @@ abstract class TestGenerator(directory: Path,
     Seq(
       "NaiveShallow",
       "SemiNaiveShallow",
-//      "CompiledStaged", // TODO: for longer tests, can throw MethodTooLarge
+      "CompiledStaged_Lambda",
+//      "CompiledStaged_BC",
+//      "CompiledStaged_Quotes",
       "InterpretedStaged",
       "InterpretedStaged_sel",
       "JITStaged_Sel_DELTA_Block_Lambda",
@@ -187,7 +189,7 @@ abstract class TestGenerator(directory: Path,
       "JITStaged_Sel_RULE_Async_BC",
       "JITStaged_Sel_ALL_Async_BC",
     ).foreach(execution => {
-      Seq("Collections", "Indexed").foreach(storage => {
+      Seq("Indexed", "Collections").foreach(storage => {
         if (
             skip.contains(execution) || skip.contains(storage) ||
               (tags ++ Set(execution, storage)).flatMap(t => Properties.envOrNone(t.toUpperCase())).nonEmpty// manually implement --exclude for intellij

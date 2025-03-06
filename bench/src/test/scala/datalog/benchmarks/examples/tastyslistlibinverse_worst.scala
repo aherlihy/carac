@@ -27,27 +27,27 @@ class XXtastyslistlibinverse_worst() extends ExampleBenchmarkGenerator(
   // All benchmark bodies should be identical
 
   // volcano, naive
-  @Benchmark def shallow_volcano_naive______EOL(blackhole: Blackhole): Unit = {
-    // this is rancid but otherwise have to copy the method name twice, which is typo prone. Put extra stuff for runnign with a regex after _EOL
-    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
-    if (!programs.contains(p))
-      throw new Exception(f"Error: program for '$p' not found")
-    blackhole.consume(run(programs(p), result))
-  }
-
-  @Benchmark def shallow_volcano_seminaive______EOL(blackhole: Blackhole): Unit = {
-    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
-    if (!programs.contains(p))
-      throw new Exception(f"Error: program for '$p' not found")
-    blackhole.consume(run(programs(p), result))
-  }
-
-  @Benchmark def shallow_default_naive______EOL(blackhole: Blackhole): Unit = {
-    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
-    if (!programs.contains(p))
-      throw new Exception(f"Error: program for '$p' not found")
-    blackhole.consume(run(programs(p), result))
-  }
+//  @Benchmark def shallow_volcano_naive______EOL(blackhole: Blackhole): Unit = {
+//    // this is rancid but otherwise have to copy the method name twice, which is typo prone. Put extra stuff for runnign with a regex after _EOL
+//    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+//    if (!programs.contains(p))
+//      throw new Exception(f"Error: program for '$p' not found")
+//    blackhole.consume(run(programs(p), result))
+//  }
+//
+//  @Benchmark def shallow_volcano_seminaive______EOL(blackhole: Blackhole): Unit = {
+//    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+//    if (!programs.contains(p))
+//      throw new Exception(f"Error: program for '$p' not found")
+//    blackhole.consume(run(programs(p), result))
+//  }
+//
+//  @Benchmark def shallow_default_naive______EOL(blackhole: Blackhole): Unit = {
+//    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+//    if (!programs.contains(p))
+//      throw new Exception(f"Error: program for '$p' not found")
+//    blackhole.consume(run(programs(p), result))
+//  }
 
   @Benchmark def shallow_default_seminaive______EOL_ci(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"

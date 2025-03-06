@@ -87,7 +87,7 @@ class LambdaCompiler(val storageManager: StorageManager)(using JITOptions) exten
 
     case SequenceOp(label, children:_*) =>
       val cOps: Array[CompiledFn[Any]] = children.map(compile).toArray
-      assert(false, "This is never triggered")
+//      assert(false, "This is never triggered")
       if irTree.runInParallel then
         // TODO: optimize by directly using the underlying Java stuff.
         sm => IROp.runFns(sm, immutable.ArraySeq.unsafeWrapArray(cOps), inParallel = true)

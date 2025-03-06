@@ -29,12 +29,11 @@ abstract class DLBenchmark {
   def initAllEngines(): Unit = {
     // Non-Staged combinations
     val storageEngines = immutable.Map[String, () => StorageManager](
-      "volcano" -> (() => new VolcanoStorageManager()),
-      "default" -> (() => new DefaultStorageManager()),
+      "default" -> (() => new CollectionsStorageManager()),
       "indexed" -> (() => new IndexedStorageManager())
     )
     val shallowAlgo = immutable.Map[String, StorageManager => ExecutionEngine](
-      "seminaive" -> (sm => new ShallowExecutionEngine(sm, new PullBasedSPJU(sm))),
+      "seminaive" -> (sm => new ShallowExecutionEngine(sm)),
       "naive" -> (sm => new NaiveShallowExecutionEngine(sm))
     )
     // ---> uncomment to bench shallow embedding
@@ -51,7 +50,7 @@ abstract class DLBenchmark {
         backend = bc,
         dotty = dotty
       )
-      programs(jo.toBenchmark) = Program(StagedExecutionEngine(DefaultStorageManager(), jo))
+      programs(jo.toBenchmark) = Program(StagedExecutionEngine(CollectionsStorageManager(), jo))
     )
 
     val jitSortOpts = Seq(SortOrder.Unordered, SortOrder.Sel)
@@ -89,7 +88,7 @@ abstract class DLBenchmark {
           fuzzySortOpts.foreach(fuzzy =>
             blocking.foreach(block =>
               backends.foreach(bc =>
-                storageEngines.filter(_._1 != "volcano").foreach(storageEngine =>
+                storageEngines.foreach(storageEngine =>
                   val jo = JITOptions(
                     mode = Mode.JIT,
                     granularity = gran,
