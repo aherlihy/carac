@@ -126,8 +126,8 @@ class LambdaCompiler(val storageManager: StorageManager)(using JITOptions) exten
           }
       }
 
-//    case ComplementOp(r, arity) =>
-//      _.getComplement(r, arity)
+    case ComplementOp(r, arity) =>
+      _.getComplement(r, arity)
 
     case ScanEDBOp(rId) =>
       if (storageManager.edbContains(rId))

@@ -2,7 +2,6 @@ package datalog.storage
 
 import datalog.dsl.{Constant, StorageAtom, Term, Variable}
 import datalog.execution.{AllIndexes, JoinIndexes}
-import datalog.storage.IndexedCollectionsCasts.*
 import datalog.storage.StorageTerm
 import datalog.tools.Debug.debug
 
@@ -20,6 +19,8 @@ class GeneralCollectionsStorageManager(ns: NS = new NS(), indexed: Boolean = fal
   // "database", i.e. relationID => Relation
   val empty = if indexed then IndexedCollectionsEDB.empty else CollectionsEDB.empty
   protected val edbs: CollectionsDatabase = CollectionsDatabase(None, empty) // raw user-supplied EDBs from initialization.
+  val edbDomain: mutable.Set[StorageTerm] = mutable.Set.empty // incrementally grow the total domain of all EDBs, used for calculating complement of negated predicates
+
   var knownDbId: KnowledgeId = -1
   var newDbId: KnowledgeId = -1
 
@@ -38,7 +39,7 @@ class GeneralCollectionsStorageManager(ns: NS = new NS(), indexed: Boolean = fal
         throw new Exception(s"Error: registering relations ${ns(k)} and ${ns(v)} as aliases but have different arity (${relationArity(k)} vs. ${relationArity(v)})")
       relationArity.getOrElseUpdate(k, relationArity.getOrElse(v, throw new Exception(s"No arity available for either ${ns(k)} or ${ns(v)}")))
       indexCandidates(k) = indexCandidates.getOrElseUpdate(k, mutable.BitSet()).addAll(indexCandidates.getOrElse(v, mutable.BitSet()))
-      indexCandidates(v) = indexCandidates(k)
+      indexCandidates(v) = mutable.BitSet().addAll(indexCandidates(k))
     )
   }
 
@@ -83,6 +84,8 @@ class GeneralCollectionsStorageManager(ns: NS = new NS(), indexed: Boolean = fal
       if indexCandidates(rId).isEmpty && relation.arity > 0 then
         relation.registerIndex(0)
         indexCandidates(rId) = mutable.BitSet(0)
+      else
+        relation.bulkRegisterIndex(indexCandidates(rId)) // build indexes on EDBs
 
       deltaDB(knownDbId).addEmpty(rId, relation.arity, indexCandidates(rId), ns(rId), mutable.BitSet())
       deltaDB(newDbId).addEmpty(rId, relation.arity, indexCandidates(rId), ns(rId), mutable.BitSet())
@@ -102,6 +105,7 @@ class GeneralCollectionsStorageManager(ns: NS = new NS(), indexed: Boolean = fal
       indexCandidates.getOrElseUpdate(rule.rId, mutable.BitSet())
       edbs.addEmpty(rule.rId, rule.terms.length, indexCandidates(rule.rId), ns(rule.rId), mutable.BitSet())
       edbs(rule.rId).addOne(CollectionsRow(rule.terms))
+    edbDomain.addAll(rule.terms)
   }
   // Only used when querying for a completely empty EDB that hasn't been declared/added yet.
   def getEmptyEDB(rId: RelationId): GeneralCollectionsEDB =
@@ -249,10 +253,10 @@ class GeneralCollectionsStorageManager(ns: NS = new NS(), indexed: Boolean = fal
   // Printer methods
   override def toString() = {
     def printIndexes(db: CollectionsDatabase): String = {
-      //      if (indexed)
-      //        db.toSeq.map((rId, idxC) => IndexedCollectionsEDB.allIndexesToString(idxC)/* + s"(arity=${idxC.arity})"*/).mkString("$indexes: [\n  ",",\n", "]")
-      //      else
-      ""
+      if (indexed)
+        db.toSeq.map((rId, idxC) => IndexedCollectionsEDB.allIndexesToString(idxC)/* + s"(arity=${idxC.arity})"*/).mkString("{$indexes: [\n  ",",\n  ", "\n  ]}\n")
+      else
+        ""
     }
     def printHelperRelation(db: CollectionsDatabase, i: Int): String = {
       val indexes = printIndexes(db)
@@ -266,4 +270,22 @@ class GeneralCollectionsStorageManager(ns: NS = new NS(), indexed: Boolean = fal
       "\nDELTA:" + deltaDB.zipWithIndex.map(printHelperRelation).mkString("[", ", ", "]") +
       "\n+++++"
   }
+
+  /**
+   * Compute Dom * Dom * ... arity # times
+   */
+  override def getComplement(rId: RelationId, arity: Int): GeneralCollectionsEDB = {
+    // short but inefficient
+    val res = List.fill(arity)(edbDomain).flatten.combinations(arity).flatMap(_.permutations).toSeq
+    empty(arity, ns(rId), indexCandidates(rId), mutable.BitSet()).addAll(
+      mutable.ArrayBuffer.from(res.map(r => CollectionsRow(ArraySeq.from(r))))
+    )
+  }
+  override def addConstantsToDomain(constants: Seq[StorageTerm]): Unit = {
+    edbDomain.addAll(constants)
+  }
+  // Only used with negation, otherwise merged with project.
+  override def diff(lhsEDB: EDB, rhsEDB: EDB): EDB =
+    val lhs = if indexed then IndexedCollectionsCasts.asIndexedCollectionsEDB(lhsEDB) else CollectionsCasts.asCollectionsEDB(lhsEDB)
+    lhs.diff(rhsEDB)
 }

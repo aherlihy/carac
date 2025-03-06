@@ -5,7 +5,7 @@ For example:
 ```scala
 val p = new Program(
   new StagedExecutionEngine(
-    new DefaultStorageManager(...)))
+    new CollectionsStorageManager(...)))
 ```
 
 ## DSL
@@ -25,7 +25,6 @@ All of the engines use `JoinIndexes` to track locations of constants and variabl
 
 ## Storage Manager
 This layer determines how the data is stored and some basic relational operators.
-`DefaultStorageEngine` uses Scala collections, which is a pull-based engine, and `VolcanoStorageManager` which is a push-based engine. The type aliases, which are very likely to change, are stored in `StorageManager` and will likely require wrapping in order to operate over anything other than in-memory collections. `SimpleStorageManager` has shared functionality between the push and pull based engine.
 
 ## Tools
 At the moment this package just contains the `Debug` statement, but is where any other future tooling can go. Debug will print to the console when the env var `CARAC_DEBUG` is defined. The `Printer` is where I put pretty printing statements for the entire architecture, its just located in the `storage` layer for convenience.

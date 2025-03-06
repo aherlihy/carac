@@ -45,6 +45,10 @@ trait StorageManager(val ns: NS) {
 
   // Helper method to merge the select-project-join operations.
   def selectProjectJoinHelper(inputs: Seq[EDB], rId: Int, hash: String, onlineSort: Boolean): EDB
-  def diff(lhs: EDB, rhs: EDB): EDB = ??? // TODO
   def union(edbs: Seq[EDB]): EDB
+
+  // Helpers for negation
+  def addConstantsToDomain(constants: Seq[StorageTerm]): Unit
+  def getComplement(rId: RelationId, arity: Int): EDB
+  def diff(lhs: EDB, rhs: EDB): EDB
 }

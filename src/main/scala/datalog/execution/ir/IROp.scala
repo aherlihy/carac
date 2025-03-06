@@ -177,15 +177,15 @@ case class ResetDeltaOp(rId: RelationId, override val children:IROp[Any]*)(using
     storageManager.setNewDelta(rId, res)
 }
 
-//case class ComplementOp(rId: RelationId, arity: Int)(using JITOptions) extends IROp[EDB] {
-//  val code: OpCode = OpCode.COMPLEMENT
-//
-//  override def run(storageManager: StorageManager): EDB =
-//    storageManager.getComplement(rId, arity)
-//
-//  override def run_continuation(storageManager: StorageManager, opFns: Seq[CompiledFn[EDB]]): EDB =
-//    run(storageManager) // bc leaf node, no difference for continuation or run
-//}
+case class ComplementOp(rId: RelationId, arity: Int)(using JITOptions) extends IROp[EDB] {
+  val code: OpCode = OpCode.COMPLEMENT
+
+  override def run(storageManager: StorageManager): EDB =
+    storageManager.getComplement(rId, arity)
+
+  override def run_continuation(storageManager: StorageManager, opFns: Seq[CompiledFn[EDB]]): EDB =
+    run(storageManager) // bc leaf node, no difference for continuation or run
+}
 
 case class ScanOp(rId: RelationId, db: DB, knowledge: KNOWLEDGE)(using JITOptions) extends IROp[EDB] {
   val code: OpCode = OpCode.SCAN
@@ -243,7 +243,7 @@ case class ProjectJoinFilterOp(rId: RelationId, var k: JoinIndexes, override val
 //          s"${storageManager.ns(c.rId)}.delta(${storageManager.getKnownDeltaDB(c.rId).length})"
 //      ).mkString("", " * ", "")}")
     val inputs = children.map(s => s.run(storageManager))
-//    println(s"inputs in PJFO=${inputs.map(_.factToString)}")
+//    println(s"inputs in SPJU=${inputs.map(_.factToString)}")
     val res = storageManager.selectProjectJoinHelper(
         inputs,
         rId,

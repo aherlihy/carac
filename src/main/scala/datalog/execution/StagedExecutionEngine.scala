@@ -59,6 +59,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
     var rule = ruleSeq
     var k = JoinIndexes(rule, None)
     storageManager.allRulesAllIndexes.getOrElseUpdate(rId, mutable.Map[String, JoinIndexes]()).addOne(k.hash, k)
+    storageManager.addConstantsToDomain(k.constIndexes.values.toSeq)
 
     val allLocs = k.varIndexes.flatten ++ k.constIndexes.keys
     if (allLocs.nonEmpty) {
@@ -342,8 +343,8 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
       case op: ScanEDBOp =>
         op.run(storageManager)
 
-//      case op: ComplementOp =>
-//        op.run(storageManager)
+      case op: ComplementOp =>
+        op.run(storageManager)
 
       case op: ProjectJoinFilterOp =>
         op.run_continuation(storageManager, op.children.map(o => (sm: StorageManager) => jit(o)))

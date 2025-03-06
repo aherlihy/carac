@@ -183,6 +183,14 @@ case class CollectionsEDB(wrapped: mutable.ArrayBuffer[CollectionsRow],
   def getSetOfSeq: Set[Seq[StorageTerm]] =
     wrapped.map(s => s.toSeq).toSet
 
+  def diff(toDiff: EDB): GeneralCollectionsEDB =
+    val toDiffEDB = asCollectionsEDB(toDiff)
+    CollectionsEDB(
+      wrapped.diff(toDiffEDB.wrapped),
+      name,
+      arity
+    )
+
   def factToString: String = wrapped.sorted.map(s => s.mkString("(", ", ", ")")).mkString("[", ", ", "]")
 
   def insertInto(key: StorageTerm, toAdd: ArrayBuffer[CollectionsRow], wrappedToModify: ArrayBuffer[CollectionsRow], update: Boolean, deduplicate: Boolean) =
