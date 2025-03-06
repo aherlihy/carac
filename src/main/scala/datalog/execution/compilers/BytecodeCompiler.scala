@@ -56,7 +56,7 @@ class BytecodeCompiler(val storageManager: StorageManager)(using JITOptions) ext
           xb.aload(0)
           emitSMCall(xb, "insertDeltaIntoDerived")
 
-        case ResetDeltaOp(rId, db, knowledge, children:_*) =>
+        case ResetDeltaOp(rId, children:_*) =>
           xb.aload(0)
             .constantInstruction(rId)
           traverse(xb, children.head)
