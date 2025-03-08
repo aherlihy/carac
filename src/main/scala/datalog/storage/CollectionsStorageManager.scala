@@ -53,7 +53,8 @@ class GeneralCollectionsStorageManager(ns: NS = new NS(), indexed: Boolean = fal
     )
   }
   // Store relation arity. In the future can require it to be declared, but for now derived.
-  def registerRelationArity(rId: RelationId, arity: Int): Unit =
+  def registerRelationSchema(rId: RelationId, terms: Seq[Term]): Unit =
+    val arity = terms.length
     if relationArity.contains(rId) then if arity != relationArity(rId) then throw new Exception(s"Derived relation $rId (${ns(rId)}) declared with arity $arity but previously declared with arity ${relationArity(rId)}")
     relationArity(rId) = arity
 

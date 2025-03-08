@@ -143,7 +143,7 @@ class NaiveShallowExecutionEngine(val storageManager: StorageManager, stratified
       }
       if relationCands.nonEmpty then storageManager.registerIndexCandidates(relationCands) // add at once to deduplicate ahead of time and avoid repeated calls
     }
-    rule.foreach(r => storageManager.registerRelationArity(r.rId, r.terms.length))
+    rule.foreach(r => storageManager.registerRelationSchema(r.rId, r.terms))
 
 //    if (rule.length <= heuristics.max_length_cache)
 //      val allK = JoinIndexes.allOrders(rule)

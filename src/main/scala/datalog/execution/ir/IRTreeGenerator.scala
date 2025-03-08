@@ -19,7 +19,7 @@ class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
     SequenceOp(
       OpCode.EVAL_NAIVE,
       //      DebugNode("in eval:", () => s"rId=${ctx.storageManager.ns(rId)} relations=${ctx.relations.map(r => ctx.storageManager.ns(r)).mkString("[", ", ", "]")}  incr=${ctx.newDbId} src=${ctx.knownDbId}") +:
-      queries:_*
+      queries*
     )
   }
 
@@ -35,7 +35,7 @@ class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
       OpCode.SEQ,
       SequenceOp(
         OpCode.EVAL_SN,
-        queries:_*,
+        queries*,
       ),
       InsertDeltaNewIntoDerived()
     )
@@ -45,7 +45,7 @@ class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
     ast match {
       case AllRulesNode(rules, rId, edb) =>
         val allRes = rules.map(naiveEvalRule).toSeq
-        UnionOp(OpCode.EVAL_RULE_NAIVE, allRes:_*)
+        UnionOp(OpCode.EVAL_RULE_NAIVE, allRes*)
       case RuleNode(head, _, atoms, k) =>
         val r = head.asInstanceOf[LogicAtom].relation
         if (k.edb)
@@ -62,7 +62,7 @@ class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
                   debug(s"found negated relation, rule=", () => s"${ctx.storageManager.printer.ruleToString(k.atoms)}\n\tarity=$arity")
                   res
                 case _ => q
-            ):_*
+            )*
           )
       case _ =>
         debug("AST node passed to naiveEval:", () => ctx.storageManager.printer.printAST(ast))
@@ -77,7 +77,7 @@ class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
 //        if (edb)
 //          allRes = allRes :+ ScanEDBOp(rId)
 //        if(allRes.length == 1) allRes.head else
-        UnionOp(OpCode.EVAL_RULE_SN, allRes:_*) // None bc union of unions so no point in sorting
+        UnionOp(OpCode.EVAL_RULE_SN, allRes*) // None bc union of unions so no point in sorting
       case RuleNode(head, body, atoms, k) =>
         val r = head.asInstanceOf[LogicAtom].relation
         if (k.edb)
@@ -108,9 +108,9 @@ class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
                       debug(s"found negated relation, rule=", () => s"${ctx.storageManager.printer.ruleToString(k.atoms)}\n\tarity=$arity")
                       res
                     case _ => q
-                }): _*
+                })*
               )
-            }):_*
+            })*
           )
       case _ =>
         debug("AST node passed to semiNaiveEval:", () => ctx.storageManager.printer.printAST(ast))
@@ -153,7 +153,7 @@ class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
           )
         else
           innerP
-      ): _*
+      )*
     )
   }
 

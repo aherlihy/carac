@@ -74,7 +74,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
       }
       if relationCands.nonEmpty then storageManager.registerIndexCandidates(relationCands) // add at once to deduplicate ahead of time and avoid repeated calls
     }
-    ruleSeq.foreach(r => storageManager.registerRelationArity(r.rId, r.terms.length))
+    ruleSeq.foreach(r => storageManager.registerRelationSchema(r.rId, r.terms))
 
     if (rule.length <= heuristics.max_length_cache)
       val allK = JoinIndexes.allOrders(rule)
@@ -137,30 +137,6 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
     storageManager.insertEDB(rule)
     val allRules = ast.rules.getOrElseUpdate(rule.rId, AllRulesNode(mutable.ArrayBuffer.empty, rule.rId)).asInstanceOf[AllRulesNode]
     allRules.edb = true
-  }
-
-  // NOTE: this method is just for testing to see how much overhead tree processing has, not used irl.
-  def generateProgramTree(rId: Int): (IROp[Any], InterpreterContext) = {
-    // verify setup
-    storageManager.verifyEDBs(precedenceGraph.idbs)
-    if (storageManager.edbContains(rId) && !precedenceGraph.idbs.contains(rId)) { // if just an edb predicate then return
-      debug("Returning EDB without any IDB rule: ", () => storageManager.ns(rId))
-      throw new Exception("NOTE: using generateProgramTree which is only for benchmarking")
-    }
-    if (!precedenceGraph.idbs.contains(rId)) {
-      throw new Exception("Solving for rule without body")
-    }
-    val transformedAST = transforms.foldLeft(ast: ASTNode)((t, pass) => pass.transform(t)(using storageManager))
-
-    var toSolve = rId
-    if (tCtx.aliases.contains(rId))
-      toSolve = tCtx.aliases.getOrElse(rId, rId)
-      if (storageManager.edbContains(toSolve) && !precedenceGraph.idbs.contains(toSolve)) { // if just an edb predicate then return
-        throw new Exception("NOTE: using generateProgramTree which is only for benchmarking")
-      }
-    given irCtx: InterpreterContext = InterpreterContext(storageManager, precedenceGraph, toSolve)
-    val irTree = createIR(transformedAST)
-    (irTree, irCtx)
   }
 
   // Separate out for easier benchmarking tree stuff vs. compilation

@@ -23,7 +23,7 @@ type StorageConstant = Constant
 type Row[T] = Seq[T] // FIXME: Either make this ArraySeq or make it fully abstract and overridable.
 
 /* Most methods used within storage manager so are defined on the implementation, other than length (execution) and factToString (printer) */
-trait Relation[T] extends IterableOnce[Row[T]] {
+trait Relation[T] {
   def length: Int
   def factToString: String
 }

@@ -78,7 +78,7 @@ import IROp.*
 /**
  * @param children: SequenceOp[SequenceOp.NaiveEval, DoWhileOp]
  */
-case class ProgramOp(override val children:IROp[Any]*)(using JITOptions) extends IROp[Any](children:_*) {
+case class ProgramOp(override val children:IROp[Any]*)(using JITOptions) extends IROp[Any](children*) {
   val code: OpCode = OpCode.PROGRAM
   override def run_continuation(storageManager: StorageManager, opFns: Seq[StorageManager => Any]): Any =
     opFns.head(storageManager)
@@ -114,7 +114,7 @@ case class ProgramOp(override val children:IROp[Any]*)(using JITOptions) extends
  * @param toCmp: DB
  * @param children: [SequenceOp.LoopBody]
  */
-case class DoWhileOp(toCmp: DB, override val children:IROp[Any]*)(using JITOptions) extends IROp[Any](children:_*) {
+case class DoWhileOp(toCmp: DB, override val children:IROp[Any]*)(using JITOptions) extends IROp[Any](children*) {
   val code: OpCode = OpCode.DOWHILE
   override def run_continuation(storageManager: StorageManager, opFns: Seq[CompiledFn[Any]]): Any =
     while ({
@@ -140,7 +140,7 @@ case class DoWhileOp(toCmp: DB, override val children:IROp[Any]*)(using JITOptio
  * @param code
  * @param children: [Any*]
  */
-case class SequenceOp(override val code: OpCode, override val children:IROp[Any]*)(using JITOptions) extends IROp[Any](children:_*) {
+case class SequenceOp(override val code: OpCode, override val children:IROp[Any]*)(using JITOptions) extends IROp[Any](children*) {
   override val runInParallel: Boolean = code == OpCode.EVAL_SN
 
   override def run_continuation(storageManager: StorageManager, opFns: Seq[CompiledFn[Any]]): Any =
@@ -167,7 +167,7 @@ case class InsertDeltaNewIntoDerived()(using JITOptions) extends IROp[Any]() {
   override def run(storageManager: StorageManager): Any =
     storageManager.insertDeltaIntoDerived()
 }
-case class ResetDeltaOp(rId: RelationId, override val children:IROp[Any]*)(using JITOptions) extends IROp[Any](children:_*) {
+case class ResetDeltaOp(rId: RelationId, override val children:IROp[Any]*)(using JITOptions) extends IROp[Any](children*) {
   val code: OpCode = OpCode.RESET_DELTA
   override def run_continuation(storageManager:  StorageManager, opFns: Seq[CompiledFn[Any]]): Any =
     val res = opFns.head.asInstanceOf[CompiledFn[EDB]](storageManager)
@@ -221,7 +221,7 @@ case class ScanEDBOp(rId: RelationId)(using JITOptions) extends IROp[EDB] {
  * @param joinIdx
  * @param children: [Scan*deps]
  */
-case class ProjectJoinFilterOp(rId: RelationId, var k: JoinIndexes, override val children:IROp[EDB]*)(using jitOptions: JITOptions) extends IROp[EDB](children:_*) {
+case class ProjectJoinFilterOp(rId: RelationId, var k: JoinIndexes, override val children:IROp[EDB]*)(using jitOptions: JITOptions) extends IROp[EDB](children*) {
   val code: OpCode = OpCode.SPJ
   var childrenSO: Array[IROp[EDB]] = children.toArray
 
@@ -258,7 +258,7 @@ case class ProjectJoinFilterOp(rId: RelationId, var k: JoinIndexes, override val
  * @param code
  * @param children: [Scan|UnionSPJ*rules]
  */
-case class UnionOp(override val code: OpCode, override val children:IROp[EDB]*)(using JITOptions) extends IROp[EDB](children:_*) {
+case class UnionOp(override val code: OpCode, override val children:IROp[EDB]*)(using JITOptions) extends IROp[EDB](children*) {
 //  var compiledFnIndexed: java.util.concurrent.Future[CompiledFnIndexed[EDB]] = null
   var compiledFnIndexed: Future[CompiledFnIndexed[EDB]] = null
   var blockingCompiledFnIndexed: CompiledFnIndexed[EDB] = null
@@ -276,7 +276,7 @@ case class UnionOp(override val code: OpCode, override val children:IROp[EDB]*)(
  * @param code
  * @param children: [Scan*atoms]
  */
-case class UnionSPJOp(rId: RelationId, var k: JoinIndexes, override val children:ProjectJoinFilterOp*)(using JITOptions) extends IROp[EDB](children:_*) {
+case class UnionSPJOp(rId: RelationId, var k: JoinIndexes, override val children:ProjectJoinFilterOp*)(using JITOptions) extends IROp[EDB](children*) {
   val code: OpCode = OpCode.EVAL_RULE_BODY
   var compiledFnIndexed: Future[CompiledFnIndexed[EDB]] = null
 //  var compiledFnIndexed: java.util.concurrent.Future[CompiledFnIndexed[EDB]] = null
@@ -316,7 +316,7 @@ case class UnionSPJOp(rId: RelationId, var k: JoinIndexes, override val children
 /**
  * @param children: [Union|Scan, Scan]
  */
-case class DiffOp(override val children:IROp[EDB]*)(using JITOptions) extends IROp[EDB](children:_*) {
+case class DiffOp(override val children:IROp[EDB]*)(using JITOptions) extends IROp[EDB](children*) {
   val code: OpCode = OpCode.DIFF
   private val queryResult = children.head
   private val derivedKnownRead = children(1)
@@ -337,7 +337,7 @@ case class DebugNode(prefix: String, dbg: () => String)(using JITOptions) extend
  * @param dbg - more to write, potentially a toString method on children.head
  * @param children - [IROp[EDB]] to return
  */
-case class DebugPeek(prefix: String, dbg: () => String, override val children:IROp[EDB]*)(using JITOptions) extends IROp[EDB](children:_*) {
+case class DebugPeek(prefix: String, dbg: () => String, override val children:IROp[EDB]*)(using JITOptions) extends IROp[EDB](children*) {
   val code: OpCode = OpCode.DEBUGP
   override def run_continuation(storageManager: StorageManager, opFns: Seq[CompiledFn[EDB]]): EDB =
     val res = opFns.head(storageManager)

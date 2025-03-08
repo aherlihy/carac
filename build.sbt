@@ -16,7 +16,7 @@ lazy val root = project.in(file("."))
   .enablePlugins(BuildInfoPlugin)
   .enablePlugins(NativeImagePlugin)
   .settings(
-    name := "datalog",
+    name := "carac",
 
     // By default, the plugin will fetch graalvm from the Internet itself, but
     // it only supports the Community Edition. Here we customize it to look up
@@ -45,6 +45,7 @@ lazy val root = project.in(file("."))
       "org.scala-lang" %% "scala3-staging" % scalaVersion.value,
       "org.glavo" % "classfile" % "0.4.0", // Copy of jdk.internal.classfile, won't be necessary when https://openjdk.org/jeps/8280389 is done.
       "org.scalameta" %% "munit" % "0.7.29" % Test,
+      "org.duckdb" % "duckdb_jdbc" % "1.1.1",
     ),
 
     buildInfoKeys := Seq[BuildInfoKey](baseDirectory),

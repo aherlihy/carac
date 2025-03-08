@@ -68,10 +68,10 @@ class LambdaCompiler(val storageManager: StorageManager)(using JITOptions) exten
 
   /** "Compile" an IRTree into nested lambda calls. */
   def compile[T](irTree: IROp[T]): CompiledFn[T] = irTree match
-    case ProgramOp(children:_*) =>
+    case ProgramOp(children*) =>
       compile(children.head)
 
-    case DoWhileOp(toCmp, children:_*) =>
+    case DoWhileOp(toCmp, children*) =>
       val cond: CompiledFn[Boolean] = _.compareNewDeltaDBs()
       val body = compile(children.head)
       sm =>
@@ -85,7 +85,7 @@ class LambdaCompiler(val storageManager: StorageManager)(using JITOptions) exten
         sm.swapKnowledge()
         sm.clearNewDeltas()
 
-    case SequenceOp(label, children:_*) =>
+    case SequenceOp(label, children*) =>
       val cOps: Array[CompiledFn[Any]] = children.map(compile).toArray
 //      assert(false, "This is never triggered")
       if irTree.runInParallel then
@@ -109,7 +109,7 @@ class LambdaCompiler(val storageManager: StorageManager)(using JITOptions) exten
     case InsertDeltaNewIntoDerived() =>
       sm => sm.insertDeltaIntoDerived()
 
-    case ResetDeltaOp(rId, children:_*) =>
+    case ResetDeltaOp(rId, children*) =>
       val res = compile(children.head.asInstanceOf[IROp[EDB]])
       sm => sm.setNewDelta(rId, res(sm))
 
@@ -135,7 +135,7 @@ class LambdaCompiler(val storageManager: StorageManager)(using JITOptions) exten
       else
         _.getEmptyEDB(rId)
 
-    case ProjectJoinFilterOp(rId, k, children: _*) =>
+    case ProjectJoinFilterOp(rId, k, children*) =>
       val (sortedChildren, newK) =
         if (jitOptions.sortOrder != SortOrder.Unordered && jitOptions.sortOrder != SortOrder.Badluck && jitOptions.granularity.flag == irTree.code)
           JoinIndexes.getOnlineSort(
@@ -155,7 +155,7 @@ class LambdaCompiler(val storageManager: StorageManager)(using JITOptions) exten
         jitOptions.onlineSort
       )
 
-    case UnionSPJOp(rId, k, children: _*) =>
+    case UnionSPJOp(rId, k, children*) =>
       val (sortedChildren, _) =
         if (jitOptions.sortOrder != SortOrder.Unordered && jitOptions.sortOrder != SortOrder.Badluck)
           JoinIndexes.getPresort(
@@ -171,11 +171,11 @@ class LambdaCompiler(val storageManager: StorageManager)(using JITOptions) exten
       val compiledOps = seqToLambda(sortedChildren.map(compile), inParallel = irTree.runInParallel)
       sm => sm.union(compiledOps(sm))
 
-    case UnionOp(label, children: _*) =>
+    case UnionOp(label, children*) =>
       val compiledOps = seqToLambda(children.map(compile), inParallel = irTree.runInParallel)
       sm => sm.union(compiledOps(sm))
 
-    case DiffOp(children: _*) =>
+    case DiffOp(children*) =>
       val clhs = compile(children.head)
       val crhs = compile(children(1))
       sm => sm.diff(clhs(sm), crhs(sm))

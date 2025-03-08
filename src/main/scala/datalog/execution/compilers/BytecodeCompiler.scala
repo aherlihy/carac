@@ -31,7 +31,7 @@ class BytecodeCompiler(val storageManager: StorageManager)(using JITOptions) ext
         case ProgramOp(c) =>
           traverse(xb, c)
 
-        case DoWhileOp(toCmp, children:_*) =>
+        case DoWhileOp(toCmp, children*) =>
           val compMeth = "compareNewDeltaDBs"
           xb.block: xxb =>
             // do
@@ -47,7 +47,7 @@ class BytecodeCompiler(val storageManager: StorageManager)(using JITOptions) ext
           xb.aload(0)
           emitSMCall(xb, "clearNewDeltas")
 
-        case SequenceOp(label, children:_*) =>
+        case SequenceOp(label, children*) =>
           // TODO: take into account heuristics.max_relations? We could create a
           // CodeBuilder for one or more new methods we would immediately call.
           children.foreach(c => discardResult(xb, traverse(xb, c)))
@@ -56,7 +56,7 @@ class BytecodeCompiler(val storageManager: StorageManager)(using JITOptions) ext
           xb.aload(0)
           emitSMCall(xb, "insertDeltaIntoDerived")
 
-        case ResetDeltaOp(rId, children:_*) =>
+        case ResetDeltaOp(rId, children*) =>
           xb.aload(0)
             .constantInstruction(rId)
           traverse(xb, children.head)
@@ -92,7 +92,7 @@ class BytecodeCompiler(val storageManager: StorageManager)(using JITOptions) ext
           else
             emitSMCall(xb, "getEmptyEDB")
 
-        case ProjectJoinFilterOp(rId, k, children: _*) =>
+        case ProjectJoinFilterOp(rId, k, children*) =>
           val (sortedChildren, newK) =
             if (jitOptions.sortOrder != SortOrder.Unordered && jitOptions.sortOrder != SortOrder.Badluck && jitOptions.granularity.flag == irTree.code)
               JoinIndexes.getOnlineSort(
@@ -113,7 +113,7 @@ class BytecodeCompiler(val storageManager: StorageManager)(using JITOptions) ext
           emitSMCall(xb, "selectProjectJoinHelper",
             classOf[Seq[?]], classOf[Int], classOf[String], classOf[Boolean])
 
-        case UnionSPJOp(rId, k, children: _*) =>
+        case UnionSPJOp(rId, k, children*) =>
           val (sortedChildren, _) =
             if (jitOptions.sortOrder != SortOrder.Unordered && jitOptions.sortOrder != SortOrder.Badluck)
               JoinIndexes.getPresort(
@@ -130,18 +130,18 @@ class BytecodeCompiler(val storageManager: StorageManager)(using JITOptions) ext
           emitSeq(xb, sortedChildren.map(c => xxb => traverse(xxb, c)))
           emitSMCall(xb, "union", classOf[Seq[?]])
 
-        case UnionOp(label, children: _*) =>
+        case UnionOp(label, children*) =>
           xb.aload(0)
           emitSeq(xb, children.map(c => xxb => traverse(xxb, c)))
           emitSMCall(xb, "union", classOf[Seq[?]])
 
-        case DiffOp(children:_*) =>
+        case DiffOp(children*) =>
           xb.aload(0)
           traverse(xb, children(0))
           traverse(xb, children(1))
           emitSMCall(xb, "diff", classOf[EDB], classOf[EDB])
 
-        case DebugPeek(prefix, msg, children: _*) =>
+        case DebugPeek(prefix, msg, children*) =>
           assert(false, s"Unimplemented node: $irTree")
 
         case DebugNode(prefix, msg) =>

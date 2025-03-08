@@ -25,7 +25,7 @@ trait StorageManager(val ns: NS) {
   def getEDB(rId: RelationId): EDB
   def getAllEDBS(): mutable.Map[RelationId, Any] // if you ever just want to read the EDBs as a map, used for testing
   def registerIndexCandidates(cands: mutable.Map[RelationId, mutable.BitSet]): Unit
-  def registerRelationArity(rId: RelationId, arity: Int): Unit
+  def registerRelationSchema(rId: RelationId, terms: Seq[Term]): Unit
 
   def getKnownDerivedDB(rId: RelationId): EDB
   def getKnownDeltaDB(rId: RelationId): EDB

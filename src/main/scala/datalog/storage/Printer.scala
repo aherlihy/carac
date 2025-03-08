@@ -34,7 +34,7 @@ class Printer[S <: StorageManager](val sm: S) {
   }
   
   def edbToString(db: Database[?]): String = {
-    immutable.ListMap(db.toSeq.sortBy(_._1):_*)
+    immutable.ListMap(db.toSeq.sortBy(_._1)*)
       .map((k, v) => (sm.ns(k), factToString(v)))
       .mkString("[\n  ", ",\n  ", "]")
   }
@@ -97,7 +97,7 @@ class Printer[S <: StorageManager](val sm: S) {
    * @return
    */
   def printIDB(idbs: mutable.Map[RelationId, mutable.ArrayBuffer[Seq[Atom]]]): String = {
-    immutable.ListMap(idbs.toSeq.sortBy(_._1):_*)
+    immutable.ListMap(idbs.toSeq.sortBy(_._1)*)
       .map((k, v) => (sm.ns(k), rulesToString(v)))
       .mkString("[\n  ", ",\n  ", "]")
   }
@@ -124,28 +124,28 @@ class Printer[S <: StorageManager](val sm: S) {
   def printIR[T](node: IROp[T], ident: Int = 0, seq: Int = 0)(using ctx: InterpreterContext): String = {
     val i = "\t"*ident
     i + (node match {
-      case ProgramOp(children:_*) => s"PROGRAM:\n${printIR(children.head, ident+1)}"
+      case ProgramOp(children*) => s"PROGRAM:\n${printIR(children.head, ident+1)}"
       case SwapAndClearOp() => "SWAP & CLEAR"
-      case DoWhileOp(toCmp, children:_*) => s"DO {\n${printIR(children.head, ident+1)}}\n${i}WHILE {$toCmp}\n"
-      case SequenceOp(fnCode, children:_*) => s"SEQ{${seq+1}${if (fnCode != OpCode.SEQ) "::" + fnCode else "_"}:${children.zipWithIndex.map((o, idx) => s"${seq+1}.$idx" + printIR(o, ident+1, seq+1)).mkString("[\n", ",\n", "]")}"
+      case DoWhileOp(toCmp, children*) => s"DO {\n${printIR(children.head, ident+1)}}\n${i}WHILE {$toCmp}\n"
+      case SequenceOp(fnCode, children*) => s"SEQ{${seq+1}${if (fnCode != OpCode.SEQ) "::" + fnCode else "_"}:${children.zipWithIndex.map((o, idx) => s"${seq+1}.$idx" + printIR(o, ident+1, seq+1)).mkString("[\n", ",\n", "]")}"
       case ScanEDBOp(srcRel) => s"SCANEDB(edbs[${ctx.storageManager.ns(srcRel)}])"
       case ScanOp(srcRel, db, knowledge) =>
         s"SCAN[$db.$knowledge](${ctx.storageManager.ns(srcRel)})"
-      case ProjectJoinFilterOp(rId, keys, children:_*) =>
+      case ProjectJoinFilterOp(rId, keys, children*) =>
         s"JOIN${keys.varToString()}${keys.constToString()}${children.map(s => printIR(s, ident+1)).mkString("(\n", ",\n", ")")}"
-      case ResetDeltaOp(rId, children:_*) =>
+      case ResetDeltaOp(rId, children*) =>
         s"INSERT INTO delta.new.${ctx.storageManager.ns(rId)}\n${children.map(s => printIR(s, ident+1)).mkString("", "\n", "")}\n"
       case InsertDeltaNewIntoDerived() => "COPY DELTA INTO DERIVED"
-      case UnionOp(fnCode, children:_*) => s"UNION${if (fnCode != OpCode.UNION) "::" + fnCode else "_"}${children.map(o => printIR(o, ident+1)).mkString("(\n", ",\n", ")")}"
-      case UnionSPJOp(rId, k, children:_*) =>
+      case UnionOp(fnCode, children*) => s"UNION${if (fnCode != OpCode.UNION) "::" + fnCode else "_"}${children.map(o => printIR(o, ident+1)).mkString("(\n", ",\n", ")")}"
+      case UnionSPJOp(rId, k, children*) =>
         s"UNION_SPJ::${
           ctx.storageManager.ns(rId)}::${
           k.toStringWithNS(sm.ns)}::${
           children.map(o => printIR(o, ident+1)).mkString("(\n", ",\n", ")")}"
-      case DiffOp(children:_*) => s"DIFF\n${printIR(children.head, ident+1)}\n-${printIR(children(1), ident+1)}"
+      case DiffOp(children*) => s"DIFF\n${printIR(children.head, ident+1)}\n-${printIR(children(1), ident+1)}"
       case ComplementOp(rId, arity) => s"${ctx.storageManager.ns(rId)}:COMPL|$arity|"
       case DebugNode(prefix, dbg) => s"DEBUG: $prefix"
-      case DebugPeek(prefix, dbg, children:_*) => s"DEBUG PEEK: $prefix into: ${printIR(children.head)}"
+      case DebugPeek(prefix, dbg, children*) => s"DEBUG PEEK: $prefix into: ${printIR(children.head)}"
     })
   }
 }
