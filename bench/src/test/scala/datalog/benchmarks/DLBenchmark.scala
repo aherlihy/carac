@@ -128,7 +128,7 @@ abstract class DLBenchmark {
           factInput.foreach(f => fact(f.asInstanceOf[ArraySeq.ofInt]) :- ())
         case _ =>
           val fact = program.relation[Constant](edbName)
-          factInput.foreach(f => fact(f: _*) :- ())
+          factInput.foreach(f => fact(f*) :- ())
       if (factInput.isEmpty) {
         val edbs = program.ee.storageManager.getAllEDBS()
       }

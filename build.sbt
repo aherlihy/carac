@@ -4,7 +4,7 @@ import java.nio.file.{Files, Paths}
 
 inThisBuild(Seq(
   organization := "ch.epfl.lamp",
-  scalaVersion := "3.3.1-RC4",
+  scalaVersion := "3.6.3",
 //  scalaVersion := "3.3.1-RC1-bin-SNAPSHOT",
   version := "0.1",
 ))

@@ -8,7 +8,7 @@ import test.examples.cspa1k.cspa1k_worst as cspa1k_worst_test
 
 import java.util.concurrent.TimeUnit
 
-@Fork(examples_fork, jvmArgsAppend = Array(examples_gc)) // # of jvms that it will use
+@Fork(value = examples_fork, jvmArgsAppend = Array(examples_gc)) // # of jvms that it will use
 @Warmup(iterations = 1, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
 @Measurement(iterations = 1, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
 @State(Scope.Thread)

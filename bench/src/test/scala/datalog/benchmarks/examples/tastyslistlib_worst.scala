@@ -8,7 +8,7 @@ import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.Blackhole
 import test.examples.tastyslistlib.{tastyslistlib_worst => tastyslistlib_worst_test}
 
-@Fork(examples_fork, jvmArgsAppend = Array(examples_gc)) // # of jvms that it will use
+@Fork(value = examples_fork, jvmArgsAppend = Array(examples_gc)) // # of jvms that it will use
 @Warmup(iterations = examples_warmup_iterations, time = examples_warmup_time, timeUnit = TimeUnit.SECONDS, batchSize = examples_xl_batchsize)
 @Measurement(iterations = examples_iterations, time = examples_time, timeUnit = TimeUnit.SECONDS, batchSize = examples_xl_batchsize)
 @State(Scope.Thread)

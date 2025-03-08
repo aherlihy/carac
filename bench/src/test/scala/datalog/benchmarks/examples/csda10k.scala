@@ -8,7 +8,7 @@ import test.examples.csda10k.csda10k as csda10k_test
 
 import java.util.concurrent.TimeUnit
 
-@Fork(examples_fork, jvmArgsAppend = Array(examples_gc)) // # of jvms that it will use
+@Fork(value = examples_fork, jvmArgsAppend = Array(examples_gc)) // # of jvms that it will use
 @Warmup(iterations = 3, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
 @Measurement(iterations = 10, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
 @State(Scope.Thread)
