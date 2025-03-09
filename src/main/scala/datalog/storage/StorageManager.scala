@@ -7,8 +7,7 @@ import scala.collection.mutable
 import scala.collection.immutable
 trait StorageManager(val ns: NS) {
   var iteration = 0
-  var knownDbId: KnowledgeId
-  var newDbId: KnowledgeId
+  var initialized: Boolean
 
   val allRulesAllIndexes: mutable.Map[RelationId, AllIndexes]
 
@@ -26,6 +25,8 @@ trait StorageManager(val ns: NS) {
   def getAllEDBS(): mutable.Map[RelationId, Any] // if you ever just want to read the EDBs as a map, used for testing
   def registerIndexCandidates(cands: mutable.Map[RelationId, mutable.BitSet]): Unit
   def registerRelationSchema(rId: RelationId, terms: Seq[Term]): Unit
+  // If you already know the schema and do not need to infer it
+  def declareTable(rId: RelationId, s: Seq[(String, DatabaseType)]): Unit = {}
 
   def getKnownDerivedDB(rId: RelationId): EDB
   def getKnownDeltaDB(rId: RelationId): EDB

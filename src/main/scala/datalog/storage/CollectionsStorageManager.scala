@@ -23,6 +23,7 @@ class GeneralCollectionsStorageManager(ns: NS = new NS(), indexed: Boolean = fal
 
   var knownDbId: KnowledgeId = -1
   var newDbId: KnowledgeId = -1
+  var initialized = false
 
   var dbId = 0
   protected val derivedDB: CollectionsDatabase = CollectionsDatabase(None, empty)
@@ -75,6 +76,7 @@ class GeneralCollectionsStorageManager(ns: NS = new NS(), indexed: Boolean = fal
     knownDbId = dbId
     dbId += 1
     newDbId = dbId
+    initialized = true
 
     derivedDB.clear()
     deltaDB(knownDbId) = CollectionsDatabase(None, empty)

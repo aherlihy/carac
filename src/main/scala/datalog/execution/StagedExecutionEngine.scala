@@ -40,7 +40,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
   }
 
   def get(rId: Int): Set[Seq[StorageTerm]] = {
-    if (storageManager.knownDbId == -1)
+    if (!storageManager.initialized)
       throw new Exception("Solve() has not yet been called")
     if (precedenceGraph.idbs.contains(rId))
       storageManager.getKnownIDBResult(rId)

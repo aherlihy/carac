@@ -111,7 +111,7 @@ class NaiveShallowExecutionEngine(val storageManager: StorageManager, stratified
   }
 
   def get(rId: RelationId): Set[Seq[StorageTerm]] = {
-    if (storageManager.knownDbId == -1)
+    if (!storageManager.initialized)
       throw new Exception("Solve() has not yet been called")
     val edbs = storageManager.getEDBResult(rId)
     if (idbs.contains(rId))
@@ -143,6 +143,7 @@ class NaiveShallowExecutionEngine(val storageManager: StorageManager, stratified
       }
       if relationCands.nonEmpty then storageManager.registerIndexCandidates(relationCands) // add at once to deduplicate ahead of time and avoid repeated calls
     }
+    // TODO: infer types
     rule.foreach(r => storageManager.registerRelationSchema(r.rId, r.terms))
 
 //    if (rule.length <= heuristics.max_length_cache)
@@ -168,7 +169,7 @@ class NaiveShallowExecutionEngine(val storageManager: StorageManager, stratified
         else
           storageManager.getEmptyEDB(rId)
       else
-        storageManager.selectProjectJoinHelper(
+        val res = storageManager.selectProjectJoinHelper(
           k.deps.zipWithIndex.map((md, i) =>
             val (typ, r) = md
             val q = storageManager.getKnownDerivedDB(r)
@@ -184,6 +185,8 @@ class NaiveShallowExecutionEngine(val storageManager: StorageManager, stratified
           kHash,
           false
         )
+        println(s"SPJU result for ${storageManager.ns(rId)}: ${res.factToString}")
+        res
     ).toSeq
     storageManager.union(
       subqueries
@@ -207,11 +210,12 @@ class NaiveShallowExecutionEngine(val storageManager: StorageManager, stratified
     var count = 0
     var setDiff = true
     while (setDiff) {
+      println(s"starting iteration $count")
 //      SwapAndClearOp(storageManager).run()
       storageManager.swapKnowledge()
       storageManager.clearNewDeltas()
 
-      debug(s"initial state @ $count", storageManager.toString)
+      println(s"initial state @ $count: ${storageManager.toString}")
       count += 1
       evalNaive(relations)
 
@@ -228,7 +232,7 @@ class NaiveShallowExecutionEngine(val storageManager: StorageManager, stratified
       throw new Exception("Solving for rule without body")
     }
     val strata = precedenceGraph.scc(toSolve)
-    storageManager.initEvaluation() // facts discovered in the previous iteration
+    storageManager.initEvaluation()
 
     debug(s"solving relation: ${storageManager.ns(toSolve)} order of strata=", () => strata.map(r => r.map(storageManager.ns.apply).mkString("(", ", ", ")")).mkString("{", ", ", "}"))
 

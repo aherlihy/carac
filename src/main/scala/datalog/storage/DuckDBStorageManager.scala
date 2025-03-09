@@ -45,28 +45,140 @@ case class DuckDBEDB(rId: RelationId, name: String, prefix: DatabasePrefix,
 
 case class DuckDBDatabase(prefix: DatabasePrefix, run: String => ResultSet, update: String => Unit) extends Database[DuckDBEDB]: // TODO: handle benchmark-specific prefix to avoid dropping DB between each iteration
   var commandCache: mutable.ArrayBuffer[String] = mutable.ArrayBuffer[String]()
-  val schema: mutable.Map[RelationId, Seq[(String, DatabaseType)]] = mutable.Map[RelationId, Seq[(String, DatabaseType)]]() // relationId => [(column name, type)*]
   val tables: mutable.Map[RelationId, DuckDBEDB] = mutable.Map[RelationId, DuckDBEDB]() // relationId => table name
   val indexCandidates: mutable.Map[RelationId, mutable.BitSet] = mutable.Map[RelationId, mutable.BitSet]() // relative position of atoms with constant or variable locations
 
   def contains: RelationId => Boolean = tables.contains
-  def declared: RelationId => Boolean = schema.contains
 
   def execute_cache(): Unit =
-    commandCache.foreach(update)
-    commandCache.clear()
+    if commandCache.nonEmpty then
+      val cmds = commandCache.mkString("", "; ", ";")
+      update(cmds)
+      commandCache.clear()
 
-  def generateSchema(terms: Seq[Term], throwOnVar: Boolean = false): Seq[(String, DatabaseType)] =
+  def initializeTable(rId: RelationId, name: String, schema: Seq[(String, DatabaseType)]): DuckDBDatabase =
+    if (!contains(rId))
+      val newEdb = DuckDBEDB(rId, name, prefix, run, schema)
+      tables(rId) = newEdb // use name for easier debuggablity
+      indexCandidates.getOrElseUpdate(rId, mutable.BitSet())
+      val types = schema.map((s, t) =>
+        val dbtype = t match
+          case DatabaseType.UNKNOWN => throw new Exception(s"No Schema available for ${newEdb.prefixedName}: $schema") // TODO: potentially derive type from rule
+          case _ => t
+        s"$s $dbtype"
+      ).mkString("(", ", ", ")")
+      val schemaString = s"CREATE TABLE ${newEdb.prefixedName} $types"
+      commandCache.addOne(schemaString)
+    this
+
+  def insertRow(rId: RelationId, terms: Seq[Term]): DuckDBDatabase =
+    val values = terms.map(t => t match {
+      case c: Constant => c match
+        case i: String => s"'$i'"
+        case s: Int => s
+      case v: Variable => throw new Exception("Variable in EDB head")
+    })
+    commandCache.addOne(s"INSERT INTO ${tables(rId).prefixedName} VALUES (${values.mkString(", ")})")
+    this
+
+  def clear(): DuckDBDatabase =
+    commandCache.addAll(tables.values.map(t => s"DELETE FROM ${t.prefixedName}"))
+    this
+
+  def insertAllFrom(other: DuckDBDatabase): DuckDBDatabase =
+    other.tables.values.map(t =>
+      commandCache.addOne(s"INSERT INTO ${prefix}_${t.name} ${t.cmd}")
+    )
+    this
+
+  def resetTableFrom(other: DuckDBEDB): DuckDBDatabase =
+    commandCache.addOne(s"DELETE FROM ${prefix}_${other.name}")
+    commandCache.addOne(s"INSERT INTO ${prefix}_${other.name} ${other.cmd}")
+    this
+
+  def execute_nonEmpty(): Boolean =
+    if commandCache.nonEmpty then throw new Exception(s"Executing query with non-empty cmd cache: ${commandCache.mkString(", ")}")
+    val cmds = tables.values.map(_.cmd)
+    cmds.map(run).exists(rs => rs.next())
+
+  override def toSeq: Seq[(RelationId, DuckDBEDB)] = tables.toSeq
+
+  def get(rId: RelationId, name: String): DuckDBEDB = tables.getOrElse(rId, throw new Exception(s"Table $name ($rId) not found in $prefix"))
+
+/**
+ * Collections-based storage manager, index or no index.
+ */
+class DuckDBStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
+  // "database", i.e. relationID => Relation
+  var connection: Connection = null
+  var initialized: Boolean = false
+  val schema: mutable.Map[RelationId, Seq[(String, DatabaseType)]] = mutable.Map[RelationId, Seq[(String, DatabaseType)]]() // relationId => [(column name, type)*]
+  connect()
+
+  private def connect(): Unit =
+    Class.forName("org.duckdb.DuckDBDriver")
+    connection = DriverManager.getConnection("jdbc:duckdb:")
+
+  private def close() = connection.close()
+
+  val runQuery: String => ResultSet = sqlString =>
+    val lastStmt = connection.createStatement()
+//    println(s"running query: $sqlString")
+//    lastStmt.setQueryTimeout(timeout)
+    lastStmt.executeQuery(sqlString)
+
+  val runUpdate: String => Unit = sqlString =>
+//    println(s"running update: $sqlString")
+    val lastStmt = connection.createStatement()
+//    lastStmt.setQueryTimeout(timeout)
+    lastStmt.executeUpdate(sqlString)
+
+//  val edbDomain: mutable.Set[StorageTerm] = mutable.Set.empty // incrementally grow the total domain of all EDBs, used for calculating complement of negated predicates
+
+  protected val edbs: DuckDBDatabase = DuckDBDatabase(edb, runQuery, runUpdate)
+  protected val tmpDB: DuckDBDatabase = DuckDBDatabase(tmp, runQuery, runUpdate)
+  protected val derivedDB: DuckDBDatabase = DuckDBDatabase(derived, runQuery, runUpdate)
+  protected val deltaDB: DuckDBDatabase = DuckDBDatabase(delta, runQuery, runUpdate)
+
+  val databases: Array[DuckDBDatabase] = Array(derivedDB, deltaDB, tmpDB, edbs)
+
+  var deltaIdx: Int = -1
+  var nextIdx: Int = -1
+  var derivedIdx: Int = -1
+
+  val allRulesAllIndexes: mutable.Map[RelationId, AllIndexes] = mutable.Map.empty // Index => position
+
+  // Update metadata if aliases are discovered
+  def updateAliases(aliases: mutable.Map[RelationId, RelationId]): Unit = {
+//    aliases.foreach((k, v) =>
+//      if (relationSchema.contains(k) && relationSchema.contains(v) && relationSchema(k) != relationSchema(v))
+//        throw new Exception(s"Error: registering relations ${ns(k)} and ${ns(v)} as aliases but have different arity (${relationSchema(k)} vs. ${relationSchema(v)})")
+//      relationSchema.getOrElseUpdate(k, relationSchema.getOrElse(v, throw new Exception(s"No arity available for either ${ns(k)} or ${ns(v)}")))
+//      indexCandidates(k) = indexCandidates.getOrElseUpdate(k, mutable.BitSet()).addAll(indexCandidates.getOrElse(v, mutable.BitSet()))
+//      indexCandidates(v) = mutable.BitSet().addAll(indexCandidates(k))
+//    )
+  }
+
+  // Store relative positions of shared variables as candidates for potential indexes
+  def registerIndexCandidates(cands: mutable.Map[RelationId, mutable.BitSet]): Unit = {
+    cands.foreach((rId, idxs) =>
+      databases.foreach(_.indexCandidates.getOrElseUpdate(rId, mutable.BitSet()).addAll(idxs))
+    )
+  }
+
+  def generateSchema(terms: Seq[Term], throwOnVar: Boolean): Seq[(String, DatabaseType)] =
     terms.zipWithIndex.map((t, i) => (s"c$i", t match {
       case c: Constant => c match
         case _: Int => DatabaseType.INTEGER
         case _: String => DatabaseType.TEXT
-      case _: Variable => if throwOnVar then throw new Exception("Variable declared in EDB head") else DatabaseType.UNKNOWN
+      case _: Variable =>
+        if throwOnVar then
+          throw new Exception("Variable declared in EDB head")
+        else DatabaseType.UNKNOWN
     }))
 
-  def declareTable(rId: RelationId, terms: Seq[Term], throwOnVar: Boolean): Unit =
-    val s = generateSchema(terms, throwOnVar)
-    if declared(rId) then
+  override def declareTable(rId: RelationId, s: Seq[(String, DatabaseType)]): Unit =
+    if schema.contains(rId) then
       val precise = s.zipWithIndex.map((next, i) =>
         val previous = schema(rId)(i)
         val pIdx = previous._1
@@ -87,116 +199,46 @@ case class DuckDBDatabase(prefix: DatabasePrefix, run: String => ResultSet, upda
     else
       schema(rId) = s
 
-  def initializeTable(rId: RelationId, name: String): DuckDBDatabase =
-    if (!contains(rId))
-      val newEdb = DuckDBEDB(rId, name, prefix, run, schema(rId))
-      tables(rId) = newEdb // use name for easier debuggablity
-      indexCandidates.getOrElseUpdate(rId, mutable.BitSet())
-      val types = schema(rId).map((s, t) =>
-        val dbtype = t match
-          case DatabaseType.UNKNOWN => DatabaseType.TEXT // TODO: potentially derive type from rule
-          case _ => t
-        s"$s $dbtype"
-      ).mkString("(", ", ", ")")
-      val schemaString = s"CREATE TABLE ${newEdb.prefixedName} $types;"
-      commandCache.addOne(schemaString)
-    this
-
-  def insertRow(rId: RelationId, terms: Seq[Term]): DuckDBDatabase =
-    val values = terms.map(t => t match {
-      case c: Constant => c match
-        case i: String => s"'$i'"
-        case s: Int => s
-      case v: Variable => throw new Exception("Variable in EDB head")
-    })
-    commandCache.addOne(s"INSERT INTO ${tables(rId).prefixedName} VALUES (${values.mkString(", ")});")
-    this
-
-  def clear(): DuckDBDatabase =
-    commandCache.addAll(tables.values.map(t => s"DELETE FROM ${t.prefixedName};"))
-    this
-
-  def insertAllFrom(other: DuckDBDatabase): DuckDBDatabase =
-    other.tables.values.map(t =>
-      commandCache.addOne(s"INSERT INTO ${prefix}_${t.name} ${t.cmd};")
-    )
-    this
-
-  def resetTableFrom(other: DuckDBEDB): DuckDBDatabase =
-    commandCache.addOne(s"DELETE FROM ${prefix}_${other.name};")
-    commandCache.addOne(s"INSERT INTO ${prefix}_${other.name} ${other.cmd};")
-    this
-
-  def execute_nonEmpty(): Boolean =
-    if commandCache.nonEmpty then throw new Exception(s"Executing query with non-empty cmd cache: ${commandCache.mkString(", ")}")
-    val cmds = tables.values.map(_.cmd)
-    cmds.map(run).exists(rs => rs.next())
-
-  override def toSeq: Seq[(RelationId, DuckDBEDB)] = tables.toSeq
-
-  def get(rId: RelationId, name: String): DuckDBEDB = tables.getOrElse(rId, throw new Exception(s"Table $name ($rId) not found in $prefix"))
-
-/**
- * Collections-based storage manager, index or no index.
- */
-class DuckDBStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
-  // "database", i.e. relationID => Relation
-  var connection: Connection = null
-  connect()
-
-  private def connect(): Unit =
-    Class.forName("org.duckdb.DuckDBDriver")
-    connection = DriverManager.getConnection("jdbc:duckdb:")
-
-  private def close() = connection.close()
-
-  val runQuery: String => ResultSet = sqlString =>
-    val lastStmt = connection.createStatement()
-    println(s"running query: $sqlString")
-//    lastStmt.setQueryTimeout(timeout)
-    lastStmt.executeQuery(sqlString)
-
-  val runUpdate: String => Unit = sqlString =>
-    println(s"running update: $sqlString")
-    val lastStmt = connection.createStatement()
-//    lastStmt.setQueryTimeout(timeout)
-    lastStmt.executeUpdate(sqlString)
-
-//  val edbDomain: mutable.Set[StorageTerm] = mutable.Set.empty // incrementally grow the total domain of all EDBs, used for calculating complement of negated predicates
-
-  protected val edbs: DuckDBDatabase = DuckDBDatabase(edb, runQuery, runUpdate)
-  protected val tmpDB: DuckDBDatabase = DuckDBDatabase(tmp, runQuery, runUpdate)
-  protected val derivedDB: DuckDBDatabase = DuckDBDatabase(derived, runQuery, runUpdate)
-  protected val deltaDB: DuckDBDatabase = DuckDBDatabase(delta, runQuery, runUpdate)
-
-  val databases: Array[DuckDBDatabase] = Array(derivedDB, deltaDB, tmpDB, edbs)
-
-  var knownDbId: KnowledgeId = -1
-  var newDbId: KnowledgeId = -1
-
-  val allRulesAllIndexes: mutable.Map[RelationId, AllIndexes] = mutable.Map.empty // Index => position
-
-  // Update metadata if aliases are discovered
-  def updateAliases(aliases: mutable.Map[RelationId, RelationId]): Unit = {
-//    aliases.foreach((k, v) =>
-//      if (relationSchema.contains(k) && relationSchema.contains(v) && relationSchema(k) != relationSchema(v))
-//        throw new Exception(s"Error: registering relations ${ns(k)} and ${ns(v)} as aliases but have different arity (${relationSchema(k)} vs. ${relationSchema(v)})")
-//      relationSchema.getOrElseUpdate(k, relationSchema.getOrElse(v, throw new Exception(s"No arity available for either ${ns(k)} or ${ns(v)}")))
-//      indexCandidates(k) = indexCandidates.getOrElseUpdate(k, mutable.BitSet()).addAll(indexCandidates.getOrElse(v, mutable.BitSet()))
-//      indexCandidates(v) = mutable.BitSet().addAll(indexCandidates(k))
-//    )
-  }
-
-  // Store relative positions of shared variables as candidates for potential indexes
-  def registerIndexCandidates(cands: mutable.Map[RelationId, mutable.BitSet]): Unit = {
-    cands.foreach((rId, idxs) =>
-      if edbs.declared(rId) then databases.foreach(_.indexCandidates.getOrElseUpdate(rId, mutable.BitSet()).addAll(idxs))
-    )
-  }
-
   // Store relation arity. In the future can require it to be declared, but for now derived.
   def registerRelationSchema(rId: RelationId, terms: Seq[Term]): Unit =
-    databases.foreach(_.declareTable(rId, terms, throwOnVar = false))
+    val s = generateSchema(terms, throwOnVar = false)
+    declareTable(rId, s)
+    try {
+      inferSchema(rId)
+    } catch {
+      case e: Exception => {} // will try again after all IDBs and EDBs are declared
+    }
+
+  def inferSchema(rId: RelationId): Unit =
+    if (schema(rId).map(_._2).contains(DatabaseType.UNKNOWN))
+      val k = allRulesAllIndexes(rId).values.headOption
+        .getOrElse(throw new Exception(s"Internal error: no JoinIndexes for ${ns(rId)}"))
+
+      val depTypes: Seq[DatabaseType] = k.deps.flatMap { case (_, depRId) =>
+        schema(depRId).map(_._2)
+      }
+
+      def getTypeFromIdx(varIdx: Int, matches: Seq[Int]): DatabaseType =
+        depTypes.lift(varIdx) match {
+          case None => throw new Exception(s"Invalid variable index $varIdx in $k")
+          case types if types.exists(_ != DatabaseType.UNKNOWN) =>
+            types.find(_ != DatabaseType.UNKNOWN).get
+          case _ =>
+            matches.flatMap(idx => Some(getTypeFromIdx(idx, matches.filter(_ != idx))))
+              .find(_ != DatabaseType.UNKNOWN)
+              .getOrElse(DatabaseType.UNKNOWN)
+        }
+
+      val inferredTypes = k.projIndexes.map {
+        case ("v", varIdx: Int) =>
+          val matchingIdx = k.varIndexes.find(_.contains(varIdx)).getOrElse(Seq()).filter(_ != varIdx)
+          getTypeFromIdx(varIdx, matchingIdx)
+        case ("c", constValue) =>
+          constValue match
+            case _: Int => DatabaseType.INTEGER
+            case _: String => DatabaseType.TEXT
+      }
+      declareTable(rId, inferredTypes.zipWithIndex.map((t, i) => (s"c$i", t)))
 
   val printer: Printer[this.type] = Printer[this.type](this)
 
@@ -212,16 +254,23 @@ class DuckDBStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
     databases.foreach(_.execute_cache())
 
     iteration = 0
-    knownDbId = 0
-    newDbId = 1
 
-    tmpDB.clear().execute_cache()
-    derivedDB.clear().execute_cache()
-    deltaDB.clear().execute_cache()
+    nextIdx = 1     // relation to write
+    deltaIdx = 2    // delta relations (e.g. bases)
+    derivedIdx = 0  // derived relations
+    initialized = true
 
-    databases(knownDbId).insertAllFrom(edbs).execute_cache()
+    databases(derivedIdx).clear().execute_cache()
+    databases(deltaIdx).clear().execute_cache()
+    databases(nextIdx).clear().execute_cache()
 
-    println(s"DuckDB init: ${toString()}")
+    databases(derivedIdx).insertAllFrom(edbs).execute_cache()
+
+//    println(s"${
+//      databases.map(db => db.prefix.toString + ": " +
+//        db.tables.values.map(edb => s"${edb.name}: ${edb.columnTypes.mkString("=")}").mkString("[", ", ", "]")
+//      ).mkString("", ",\n", "")
+//    }")
   }
 
   /**
@@ -231,23 +280,39 @@ class DuckDBStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
   def verifyEDBs(idbList: mutable.Set[RelationId]): Unit = {
     ns.rIds().foreach(rId =>
       if (!edbs.contains(rId) && !idbList.contains(rId))
-        if (!edbs.declared(rId))
-          throw new Exception(s"Error: using EDB $rId (${ns(rId)}) but no known arity")
-        edbs.initializeTable(rId, ns(rId)) // initialize empty table
+        if (!schema.contains(rId))
+          throw new Exception(s"Error: using EDB $rId (${ns(rId)}) but no known schema")
+        edbs.initializeTable(rId, ns(rId), schema(rId)) // initialize empty table
     )
-    idbList.foreach(rId =>
-      val allButEDBs = databases.dropRight(1)
-      databases.foreach(db =>
-        if !db.declared(rId) then throw new Exception(s"Error: using IDB $rId (${ns(rId)}) but no known table")
-        db.initializeTable(rId, ns(rId))
+
+    // Quick and dirty type inference
+    var fixPoint = true
+    var it = 0
+    while (fixPoint)
+      it += 1
+
+      val typesBefore = schema.values.flatMap(_.map(_._2))
+      idbList.foreach(rId =>
+        inferSchema(rId)
+      )
+      val typesAfter = schema.values.flatMap(_.map(_._2))
+      fixPoint = typesBefore != typesAfter
+
+    ns.rIds().foreach(rId =>
+      if schema(rId).map(_._2).contains(DatabaseType.UNKNOWN) then throw new Exception(s"Error: could not infer schema of IDB $rId (${ns(rId)}): ${schema(rId)}")
+      val allButEDBs = databases.dropRight(1) // all but EDB
+      allButEDBs.foreach(db =>
+        if !db.contains(rId) then db.initializeTable(rId, ns(rId), schema(rId))
       )
     )
   }
 
   // Read & Write EDBs
   override def insertEDB(rule: StorageAtom): Unit = {
-    databases.foreach(_.declareTable(rule.rId, rule.terms, throwOnVar = true))
-    databases.foreach(_.initializeTable(rule.rId, ns(rule.rId)))
+    val edbSchema = generateSchema(rule.terms, throwOnVar = true)
+    declareTable(rule.rId, edbSchema)
+    if (!edbs.contains(rule.rId))
+      databases.foreach(_.initializeTable(rule.rId, ns(rule.rId), schema(rule.rId)))
     edbs.insertRow(rule.rId, rule.terms)
 //    edbDomain.addAll(rule.terms)
   }
@@ -262,12 +327,12 @@ class DuckDBStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
 
   // Read intermediate results
   def getKnownDerivedDB(rId: RelationId): DuckDBEDB =
-    if !edbs.declared(rId) then throw new Exception(s"Internal error: relation $rId (${ns(rId)}) has no schema")
-    databases(knownDbId).tables.getOrElse(rId, throw new Exception(s"Table ${ns(rId)} not found in ${databases(knownDbId).prefix}"))
+    if !schema.contains(rId) then throw new Exception(s"Internal error: relation $rId (${ns(rId)}) has no schema")
+    databases(derivedIdx).get(rId, ns(rId))
 
   def getKnownDeltaDB(rId: RelationId): DuckDBEDB =
-    if !edbs.declared(rId) then throw new Exception(s"Internal error: relation $rId (${ns(rId)}) has no schema")
-    databases(newDbId).get(rId, ns(rId))
+    if !schema.contains(rId) then throw new Exception(s"Internal error: relation $rId (${ns(rId)}) has no schema")
+    databases(deltaIdx).get(rId, ns(rId))
 
   def getNewDeltaDB(rId: RelationId): DuckDBEDB = ???
 //    if !edbs.contains(rId) then throw new Exception(s"Internal error: relation $rId (${ns(rId)}) has no schema")
@@ -275,31 +340,33 @@ class DuckDBStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
 
   // Read final results
   def getKnownIDBResult(rId: RelationId): Set[Seq[StorageTerm]] =
-    debug("Final IDB Result[known]: ", () => s"at iteration $iteration: @$knownDbId, count=${getKnownDerivedDB(rId).length}")
-    databases(knownDbId).get(rId, ns(rId)).execute_toSetOfSeq()
+    databases(derivedIdx).get(rId, ns(rId)).execute_toSetOfSeq()
   def getNewIDBResult(rId: RelationId): Set[Seq[StorageTerm]] =
-    databases(newDbId).get(rId, ns(rId)).execute_toSetOfSeq()
+    databases(nextIdx).get(rId, ns(rId)).execute_toSetOfSeq()
   def getEDBResult(rId: RelationId): Set[Seq[StorageTerm]] =
-    edbs.get(rId, ns(rId)).execute_toSetOfSeq()
+    if (edbs.contains(rId))
+      edbs.get(rId, ns(rId)).execute_toSetOfSeq()
+    else
+      Set()
 
   def insertDeltaIntoDerived(): Unit =
-    databases(knownDbId).insertAllFrom(databases(knownDbId)).execute_cache()
+    databases(derivedIdx).insertAllFrom(databases(nextIdx)).execute_cache()
 
   def setNewDelta(rId: RelationId, rules: EDB): Unit =
-    databases(newDbId).resetTableFrom(rules.asInstanceOf[DuckDBEDB]).execute_cache()
+    databases(nextIdx).resetTableFrom(rules.asInstanceOf[DuckDBEDB]).execute_cache()
 
   def clearNewDeltas(): Unit =
-    databases(newDbId).clear().execute_cache()
+    databases(nextIdx).clear().execute_cache()
 
   // Compare & Swap
   def swapKnowledge(): Unit = {
     iteration += 1
-    val t = knownDbId
-    knownDbId = newDbId
-    newDbId = t
+    val t = deltaIdx
+    deltaIdx = nextIdx
+    nextIdx = t
   }
   def compareNewDeltaDBs(): Boolean =
-    databases(newDbId).execute_nonEmpty()
+    databases(nextIdx).execute_nonEmpty()
 
   def union(edbs: Seq[EDB]): EDB =
     val ddbedbs = edbs.map(e => e.asInstanceOf[DuckDBEDB])
@@ -315,29 +382,61 @@ class DuckDBStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
 
     val k = originalK
 
-    val project = k.projIndexes.map((typ, v) => typ match
-      case "c" => v
-      case "v" => s"c$v"
-    ).mkString(", ")
+    // (EDB index, EDB instance, relative column name, relative position, type)
+    val edbColumnMapping: Seq[(Int, DuckDBEDB, String, Int, DatabaseType)] = inputs.zipWithIndex.flatMap { case (edb, edbIdx) =>
+      edb.columnTypes.zipWithIndex.map { case ((colName, colType), colIdx) =>
+        (edbIdx, edb, colName, colIdx, colType)
+      }
+    }
 
-    val where = if k.varIndexes.nonEmpty then " WHERE " + k.varIndexes.map(v => v.mkString("c", "=$c", "")).mkString(" AND ") else ""
+    val projectAliasesTypes = k.projIndexes.map {
+      case ("v", varIdx: Int) =>
+        edbColumnMapping.lift(varIdx)
+          .map { case (edbIdx, edb, colName, colPos, colType) =>
+            if colType == DatabaseType.UNKNOWN then throw new Exception(s"Cannot derive type for var pos $varIdx ${edb.name}$edbIdx.$colName")
+            (s"${edb.name}$edbIdx.$colName", colType)
+          }
+          .getOrElse(throw new Exception(s"Invalid variable index $varIdx in $k"))
 
-    val plan = s"SELECT $project FROM ${inputs.map(i =>
-      if i.cmdOpt.isDefined then s"(${i.cmd})" else i.prefixedName
-    ).mkString(", ")}$where"
+      case ("c", constValue) =>
+        constValue match
+          case _: Int => (constValue.toString, DatabaseType.INTEGER)
+          case _: String => (s"'$constValue'", DatabaseType.TEXT)
+    }
+    val projectClause = projectAliasesTypes.map(_._1).mkString(", ")
 
-    val newSchema = k.projIndexes.map((typ, v) => typ match
-      case "c" =>
-        v match
-          case _: Int => DatabaseType.INTEGER
-          case _: String => DatabaseType.TEXT
-      case "v" =>
-        val allSchema = inputs.flatMap(_.columnTypes.map(_._2))
-        val idx = v.toString.toIntOption.getOrElse(throw new Exception(s"Invalid variable index $v in $k"))
-        allSchema(idx)
-    ).zipWithIndex.map((s, i) => (s"c$i", s))
+    val fromClause = inputs.zipWithIndex.map { case (edb, i) =>
+      edb.cmdOpt.getOrElse(edb.prefixedName) + s" AS ${edb.name}$i"
+    }.mkString(", ")
 
-    // TODO: start here, fix up query aliases
+    val joinClause = if k.varIndexes.nonEmpty then
+      k.varIndexes.flatMap { indexes =>
+        indexes.sliding(2).map { case Seq(a, b) =>
+          (edbColumnMapping.lift(a), edbColumnMapping.lift(b)) match
+            case (Some((edbIdxA, edbA, colA, _, _)), Some((edbIdxB, edbB, colB, _, _))) =>
+              s"${edbA.name}$edbIdxA.$colA = ${edbB.name}$edbIdxB.$colB"
+            case _ => throw new Exception(s"Invalid variable indexes $indexes in $k")
+        }
+      } else Seq()
+    val constClause = if k.constIndexes.nonEmpty then
+      k.constIndexes.map { case (pos, constValue) =>
+        edbColumnMapping.lift(pos) match
+          case Some((edbIdx, edb, colName, _, _)) =>
+            val constStr = constValue match
+              case _: Int => constValue.toString
+              case _: String => s"'$constValue'"
+              case _ => throw new Exception(s"Unsupported constant type: $constValue")
+            s"${edb.name}$edbIdx.$colName = $constStr"
+          case None => throw new Exception(s"Invalid constant index $pos in $k")
+      } else Seq()
+
+    val whereClause = if k.constIndexes.isEmpty && k.varIndexes.isEmpty then "" else s" WHERE ${(constClause ++ joinClause).mkString(" AND ")}"
+
+    val plan = s"(SELECT $projectClause FROM $fromClause$whereClause EXCEPT (SELECT * FROM ${databases(derivedIdx).get(rId, ns(rId)).prefixedName}))"
+
+    println(s"=>running query ${ns(rId)}=$plan")
+
+    val newSchema = projectAliasesTypes.map(_._2).zipWithIndex.map((s, i) => (s"c$i", s))
 
     DuckDBEDB(rId, ns(rId), tmp, runQuery, newSchema, Some(plan))
 
@@ -364,8 +463,9 @@ class DuckDBStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
 
     "+++++\n" +
       "EDB:\n  " +  printer.edbToString(edbs) +
-      "\nDERIVED:" + printer.edbToString(databases(knownDbId)) +
-      "\nDELTA:" + printer.edbToString(databases(newDbId)) +
+      "\nDERIVED:" + printer.edbToString(databases(derivedIdx)) +
+      "\nDELTA:" + printer.edbToString(databases(deltaIdx)) +
+      "\nNEXT:" + printer.edbToString(databases(nextIdx)) +
       "\n+++++"
   }
 

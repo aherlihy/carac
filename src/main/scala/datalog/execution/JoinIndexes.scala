@@ -40,7 +40,7 @@ case class JoinIndexes(varIndexes: Seq[Seq[Int]],
       ", project:" + projToString() +
       ", deps:" + depsToString(ns) +
       ", edb:" + edb +
-      ", cxn: " + cxnsToString(ns) +
+//      ", cxn: " + cxnsToString(ns) +
       " }"
 
   def varToString(): String = varIndexes.map(v => v.mkString("$", "==$", "")).mkString("[", ",", "]")

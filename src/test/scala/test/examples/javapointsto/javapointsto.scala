@@ -2,6 +2,7 @@ package test.examples.javapointsto
 
 import buildinfo.BuildInfo
 import datalog.dsl.{Constant, Program}
+import datalog.storage.DatabaseType
 import test.{ExampleTestGenerator, Tags}
 
 import java.nio.file.Paths
@@ -13,12 +14,14 @@ trait javapointsto {
     val ActualParam = program.namedRelation[Constant]("ActualParam")
 
     val AssignCast = program.namedRelation[Constant]("AssignCast")
+    program.ee.storageManager.declareTable(AssignCast.id, Seq(("c0", DatabaseType.TEXT), ("c1", DatabaseType.TEXT), ("c2", DatabaseType.TEXT), ("c3", DatabaseType.TEXT)))
 
     val AssignHeapAllocation = program.namedRelation[Constant]("AssignHeapAllocation")
 
     val AssignLocal = program.namedRelation[Constant]("AssignLocal")
 
     val AssignReturnValue = program.namedRelation[Constant]("AssignReturnValue")
+    program.ee.storageManager.declareTable(AssignReturnValue.id, Seq(("c0", DatabaseType.TEXT), ("c1", DatabaseType.TEXT)))
 
     val DirectFieldIndexSignature = program.namedRelation[Constant]("DirectFieldIndexSignature")
 
@@ -39,6 +42,7 @@ trait javapointsto {
     val SpecialMethodInvocationSignature = program.namedRelation[Constant]("SpecialMethodInvocationSignature")
 
     val StaticMethodInvocationSignature = program.namedRelation[Constant]("StaticMethodInvocationSignature")
+    program.ee.storageManager.declareTable(StaticMethodInvocationSignature.id, Seq(("c0", DatabaseType.TEXT), ("c1", DatabaseType.TEXT), ("c2", DatabaseType.TEXT), ("c3", DatabaseType.TEXT)))
 
     val StoreInstanceFieldIndex = program.namedRelation[Constant]("StoreInstanceFieldIndex")
 
