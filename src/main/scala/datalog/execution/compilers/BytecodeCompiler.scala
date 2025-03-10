@@ -1,15 +1,11 @@
 package datalog.execution
 
-import datalog.dsl.{Atom, Constant, Term, Variable}
 import datalog.execution.ir.*
 import datalog.storage.*
-import datalog.tools.Debug.debug
 import org.glavo.classfile.CodeBuilder
 
-import java.lang.constant.MethodTypeDesc
 import java.lang.invoke.MethodType
-import java.util.concurrent.atomic.AtomicInteger
-import scala.collection.{immutable, mutable}
+import scala.collection.immutable
 import scala.quoted.*
 
 /**
@@ -32,7 +28,7 @@ class BytecodeCompiler(val storageManager: StorageManager)(using JITOptions) ext
           traverse(xb, c)
 
         case DoWhileOp(toCmp, children*) =>
-          val compMeth = "compareNewDeltaDBs"
+          val compMeth = "deltasEmpty"
           xb.block: xxb =>
             // do
             discardResult(xxb, traverse(xxb, children.head)) // why is this a list if we only ever use the head?
@@ -43,7 +39,7 @@ class BytecodeCompiler(val storageManager: StorageManager)(using JITOptions) ext
 
         case SwapAndClearOp() =>
           xb.aload(0)
-          emitSMCall(xb, "swapKnowledge")
+          emitSMCall(xb, "swapReadWriteDeltas")
           xb.aload(0)
           emitSMCall(xb, "clearNewDeltas")
 
@@ -60,19 +56,14 @@ class BytecodeCompiler(val storageManager: StorageManager)(using JITOptions) ext
           xb.aload(0)
             .constantInstruction(rId)
           traverse(xb, children.head)
-          emitSMCall(xb, "setNewDelta", classOf[Int], classOf[EDB])
+          emitSMCall(xb, "writeNewDelta", classOf[Int], classOf[EDB])
 
-        case ScanOp(rId, db, knowledge) =>
+        case ScanOp(rId, db) =>
           val meth = db match {
             case DB.Derived =>
-              "getKnownDerivedDB"
+              "getDerivedDB"
             case DB.Delta =>
-              knowledge match {
-                case KNOWLEDGE.New =>
-                  "getNewDeltaDB"
-                case KNOWLEDGE.Known =>
-                  "getKnownDeltaDB"
-              }
+              "getDeltaDB"
           }
           xb.aload(0)
             .constantInstruction(rId)
@@ -86,11 +77,8 @@ class BytecodeCompiler(val storageManager: StorageManager)(using JITOptions) ext
 
         case ScanEDBOp(rId) =>
           xb.aload(0)
-          if (storageManager.edbContains(rId))
-            xb.constantInstruction(rId)
-            emitSMCall(xb, "getEDB", classOf[Int])
-          else
-            emitSMCall(xb, "getEmptyEDB")
+          xb.constantInstruction(rId)
+          emitSMCall(xb, "getEDB", classOf[Int])
 
         case ProjectJoinFilterOp(rId, k, children*) =>
           val (sortedChildren, newK) =

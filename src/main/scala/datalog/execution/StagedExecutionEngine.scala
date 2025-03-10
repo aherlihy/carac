@@ -5,7 +5,7 @@ import datalog.execution
 import datalog.execution.ast.*
 import datalog.execution.ast.transform.{ASTTransformerContext, CopyEliminationPass, Transformer}
 import datalog.execution.ir.*
-import datalog.storage.{DB, EDB, KNOWLEDGE, StorageManager, StorageTerm, RelationId}
+import datalog.storage.{EDB, StorageManager, StorageTerm, RelationId}
 import datalog.tools.Debug.debug
 
 import java.util.concurrent.{Executors, ForkJoinPool}
@@ -18,6 +18,7 @@ import scala.quoted.*
 
 class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOptions: JITOptions = JITOptions(mode = Mode.Interpreted)) extends ExecutionEngine {
   val precedenceGraph = new PrecedenceGraph(using storageManager.ns)
+  val keyHashs: mutable.Map[RelationId, mutable.ArrayBuffer[String]] = mutable.Map() // for each idb rule, store the hash of the key. Used for type inference.
   val ast: ProgramNode = ProgramNode()
   private val tCtx = ASTTransformerContext(using precedenceGraph)(using storageManager)
   given JITOptions = defaultJITOptions
@@ -43,7 +44,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
     if (!storageManager.initialized)
       throw new Exception("Solve() has not yet been called")
     if (precedenceGraph.idbs.contains(rId))
-      storageManager.getKnownIDBResult(rId)
+      storageManager.getIDBResult(rId)
     else
       storageManager.getEDBResult(rId)
   }
@@ -74,7 +75,6 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
       }
       if relationCands.nonEmpty then storageManager.registerIndexCandidates(relationCands) // add at once to deduplicate ahead of time and avoid repeated calls
     }
-    ruleSeq.foreach(r => storageManager.registerRelationSchema(r.rId, r.terms))
 
     if (rule.length <= heuristics.max_length_cache)
       val allK = JoinIndexes.allOrders(rule)
@@ -111,6 +111,9 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
 
     //    println(s"${storageManager.printer.ruleToString(rule)}")
 
+    keyHashs.getOrElseUpdate(rId, mutable.ArrayBuffer[String]()).append(k.hash)
+    ruleSeq.foreach(r => storageManager.registerRelationSchema(r.rId, r.terms, keyHashs.get(r.rId).flatMap(_.lastOption)))
+
     val allRules = ast.rules.getOrElseUpdate(rId, AllRulesNode(mutable.ArrayBuffer.empty, rId)).asInstanceOf[AllRulesNode]
     allRules.rules.append(
       RuleNode(
@@ -143,13 +146,13 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
   def solveCompiled(irTree: IROp[Any], ctx: InterpreterContext): Set[Seq[StorageTerm]] = {
     val compiled = compiler.compile(irTree)
     compiled(storageManager)
-    storageManager.getNewIDBResult(ctx.toSolve)
+    storageManager.getIDBResult(ctx.toSolve)
   }
 
   def solveInterpreted[T](irTree: IROp[Any], ctx: InterpreterContext):  Set[Seq[StorageTerm]] = {
     debug("", () => "interpret-only mode")
     irTree.run(storageManager)
-    storageManager.getNewIDBResult(ctx.toSolve)
+    storageManager.getIDBResult(ctx.toSolve)
   }
 
   def solveJIT(irTree: IROp[Any], ctx: InterpreterContext)(using jitOptions: JITOptions): Set[Seq[StorageTerm]] = {
@@ -164,7 +167,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
     given ExecutionContext = executionContext
 
     jit(irTree)
-    storageManager.getNewIDBResult(ctx.toSolve)
+    storageManager.getIDBResult(ctx.toSolve)
   }
 
   inline def checkResult[T](value: Future[StorageManager => T], op: IROp[T], default: () => T)(using jitOptions: JITOptions): T = {
@@ -358,7 +361,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
 //    println(s"jit opts==${defaultJITOptions.toBenchmark}")
     debug("", () => s"solve $rId with options $defaultJITOptions")
     // verify setup
-    storageManager.verifyEDBs(precedenceGraph.idbs)
+    storageManager.verifyEDBs(keyHashs)
     if (storageManager.edbContains(rId) && !precedenceGraph.idbs.contains(rId)) { // if just an edb predicate then return
       debug("Returning EDB without any IDB rule: ", () => storageManager.ns(rId))
       return storageManager.getEDBResult(rId)

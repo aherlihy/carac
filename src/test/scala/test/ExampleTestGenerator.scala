@@ -1,17 +1,14 @@
 package test
 
-import datalog.dsl.{Constant, Program, Relation, Term}
+import datalog.dsl.{Constant, Program}
 import datalog.execution.{Backend, CompileSync, Granularity, JITOptions, Mode, NaiveShallowExecutionEngine, NaiveStagedExecutionEngine, ShallowExecutionEngine, SortOrder, StagedExecutionEngine, ir}
 import datalog.storage.{CollectionsStorageManager, IndexedStorageManager, StorageTerm, DuckDBStorageManager}
 
 import java.nio.file.{Files, Path, Paths}
 import scala.collection.mutable
-import scala.io.Source
 import scala.jdk.StreamConverters.*
 import scala.quoted.staging
 import scala.util.{Properties, Using}
-//import scala.quoted.*
-//import scala.quoted.staging.*
 
 abstract class ExampleTestGenerator(testname: String,
                                     skip: Set[String] = Set(),
@@ -169,27 +166,28 @@ abstract class TestGenerator(directory: Path,
 
     Seq(
       "NaiveShallow",
-//      "SemiNaiveShallow",
-//      "CompiledStaged_Lambda",
-//      "CompiledStaged_BC",
-//      "CompiledStaged_Quotes",
-//      "InterpretedStaged",
-//      "InterpretedStaged_sel",
-//      "JITStaged_Sel_DELTA_Block_Lambda",
-//      "JITStaged_Sel_DELTA_Block_BC",
-//      "JITStaged_Sel_DELTA_Block_Quotes",
-//      "JITStaged_Sel_ALL_Block_BC",
-//      "JITStaged_Sel_RULE_Block_BC",
-//      "JITStaged_Sel_RULE_Block_Quotes",
-//      "JITStaged_Sel_ALL_Block_Quotes",
-//      "JITStaged_Sel_RULE_Async_Quotes",
-//      "JITStaged_Sel_ALL_Async_Quotes",
-//      "JITStaged_Sel_ALL_Block_Lambda",
-//      "JITStaged_Sel_RULE_Block_Lambda",
-//      "JITStaged_Sel_ALL_Async_Lambda",
-//      "JITStaged_Sel_RULE_Async_Lambda",
-//      "JITStaged_Sel_RULE_Async_BC",
-//      "JITStaged_Sel_ALL_Async_BC",
+      "SemiNaiveShallow",
+      "CompiledStaged_Lambda",
+      "CompiledStaged_BC",
+      "CompiledStaged_Quotes",
+      "InterpretedStaged",
+      "NaiveInterpretedStaged",
+      "InterpretedStaged_sel",
+      "JITStaged_Sel_DELTA_Block_Lambda",
+      "JITStaged_Sel_DELTA_Block_BC",
+      "JITStaged_Sel_DELTA_Block_Quotes",
+      "JITStaged_Sel_ALL_Block_BC",
+      "JITStaged_Sel_RULE_Block_BC",
+      "JITStaged_Sel_RULE_Block_Quotes",
+      "JITStaged_Sel_ALL_Block_Quotes",
+      "JITStaged_Sel_RULE_Async_Quotes",
+      "JITStaged_Sel_ALL_Async_Quotes",
+      "JITStaged_Sel_ALL_Block_Lambda",
+      "JITStaged_Sel_RULE_Block_Lambda",
+      "JITStaged_Sel_ALL_Async_Lambda",
+      "JITStaged_Sel_RULE_Async_Lambda",
+      "JITStaged_Sel_RULE_Async_BC",
+      "JITStaged_Sel_ALL_Async_BC",
     ).foreach(execution => {
       Seq("Indexed", /*"Collections",*/ "DuckDB").foreach(storage => {
         if (

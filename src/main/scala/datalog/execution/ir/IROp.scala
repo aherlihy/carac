@@ -1,19 +1,13 @@
 package datalog.execution.ir
 
-import datalog.dsl.{Atom, Constant}
-import datalog.execution.{JITOptions, JoinIndexes, PrecedenceGraph, SortOrder, StagedCompiler, ir}
-import datalog.execution.ast.*
-import datalog.storage.{DB, EDB, KNOWLEDGE, RelationId, StorageManager}
+import datalog.execution.{JITOptions, JoinIndexes, SortOrder, ir}
+import datalog.storage.{DB, EDB, RelationId, StorageManager}
 import datalog.tools.Debug
 import datalog.tools.Debug.debug
 
-import java.util.concurrent.atomic.AtomicReference
-import scala.collection.{immutable, mutable}
-import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.collection.immutable
+import scala.concurrent.{ExecutionContext, Future}
 import scala.reflect.ClassTag
-import scala.quoted.*
-import scala.util.{Failure, Success}
 
 enum OpCode:
   case PROGRAM, SWAP_CLEAR, SEQ,
@@ -120,7 +114,7 @@ case class DoWhileOp(toCmp: DB, override val children:IROp[Any]*)(using JITOptio
     while ({
       opFns.head(storageManager)
 //      ctx.count += 1 // TODO: do we need this outside debugging?
-      storageManager.compareNewDeltaDBs()
+      storageManager.deltasEmpty()
     }) ()
   override def run(storageManager: StorageManager): Any =
     var i = 0
@@ -132,7 +126,7 @@ case class DoWhileOp(toCmp: DB, override val children:IROp[Any]*)(using JITOptio
       i += 1
 //      if i > 1 then System.exit(0)
       children.head.run(storageManager)
-      storageManager.compareNewDeltaDBs()
+      storageManager.deltasEmpty()
     }) ()
 }
 
@@ -152,8 +146,8 @@ case class SequenceOp(override val code: OpCode, override val children:IROp[Any]
 case class SwapAndClearOp()(using JITOptions) extends IROp[Any] {
   val code: OpCode = OpCode.SWAP_CLEAR
   override def run(storageManager: StorageManager): Any =
-    storageManager.swapKnowledge()
-    storageManager.clearNewDeltas()
+    storageManager.swapReadWriteDeltas()
+    storageManager.clearPreviousDeltas()
 
   override def run_continuation(storageManager: StorageManager, opFns: Seq[CompiledFn[Any]]): Any =
     run(storageManager)
@@ -171,10 +165,10 @@ case class ResetDeltaOp(rId: RelationId, override val children:IROp[Any]*)(using
   val code: OpCode = OpCode.RESET_DELTA
   override def run_continuation(storageManager:  StorageManager, opFns: Seq[CompiledFn[Any]]): Any =
     val res = opFns.head.asInstanceOf[CompiledFn[EDB]](storageManager)
-    storageManager.setNewDelta(rId, res)
+    storageManager.writeNewDelta(rId, res)
   override def run(storageManager: StorageManager): Any =
     val res = children.head.run(storageManager).asInstanceOf[EDB]
-    storageManager.setNewDelta(rId, res)
+    storageManager.writeNewDelta(rId, res)
 }
 
 case class ComplementOp(rId: RelationId, arity: Int)(using JITOptions) extends IROp[EDB] {
@@ -187,20 +181,15 @@ case class ComplementOp(rId: RelationId, arity: Int)(using JITOptions) extends I
     run(storageManager) // bc leaf node, no difference for continuation or run
 }
 
-case class ScanOp(rId: RelationId, db: DB, knowledge: KNOWLEDGE)(using JITOptions) extends IROp[EDB] {
+case class ScanOp(rId: RelationId, db: DB)(using JITOptions) extends IROp[EDB] {
   val code: OpCode = OpCode.SCAN
 
   override def run(storageManager: StorageManager): EDB =
     db match {
       case DB.Derived =>
-        storageManager.getKnownDerivedDB(rId)
+        storageManager.getDerivedDB(rId)
       case DB.Delta =>
-        knowledge match {
-          case KNOWLEDGE.Known =>
-            storageManager.getKnownDeltaDB(rId)
-          case KNOWLEDGE.New =>
-            storageManager.getNewDeltaDB(rId)
-        }
+        storageManager.getDeltaDB(rId)
     }
   override def run_continuation(storageManager: StorageManager, opFns: Seq[CompiledFn[EDB]]): EDB =
     run(storageManager) // bc leaf node, no difference for continuation or run
@@ -209,10 +198,7 @@ case class ScanOp(rId: RelationId, db: DB, knowledge: KNOWLEDGE)(using JITOption
 case class ScanEDBOp(rId: RelationId)(using JITOptions) extends IROp[EDB] {
   val code: OpCode = OpCode.SCANEDB
   override def run(storageManager: StorageManager): EDB =
-    if (storageManager.edbContains(rId))
-      storageManager.getEDB(rId)
-    else
-      storageManager.getEmptyEDB(rId)
+    storageManager.getEDB(rId)
 
   override def run_continuation(storageManager: StorageManager, opFns: Seq[CompiledFn[EDB]]): EDB =
     run(storageManager)
@@ -234,14 +220,6 @@ case class ProjectJoinFilterOp(rId: RelationId, var k: JoinIndexes, override val
       jitOptions.onlineSort
     )
   override def run(storageManager: StorageManager): EDB =
-//    if (rId == 3 && children.size == 3)
-//      println(s"doing SPJU for rule (rId=$rId) ${storageManager.printer.ruleToString(k.atoms)}")
-//      println(s"\t${children.map(c => c.asInstanceOf[ScanOp]).map(c =>
-//        if (c.db == DB.Derived)
-//          s"${storageManager.ns(c.rId)}.derived(${storageManager.getKnownDerivedDB(c.rId).length})"
-//        else
-//          s"${storageManager.ns(c.rId)}.delta(${storageManager.getKnownDeltaDB(c.rId).length})"
-//      ).mkString("", " * ", "")}")
     val inputs = children.map(s => s.run(storageManager))
 //    println(s"inputs in SPJU=${inputs.map(_.factToString)}")
     val res = storageManager.selectProjectJoinHelper(
@@ -288,19 +266,6 @@ case class UnionSPJOp(rId: RelationId, var k: JoinIndexes, override val children
     storageManager.union(runFns(storageManager, opFns, inParallel = runInParallel))
 
   override def run(storageManager: StorageManager): EDB =
-
-    // uncomment to print out "worst" order
-//    JoinIndexes.presortSelectWorst(
-//      a => (true, storageManager.getKnownDerivedDB(a.rId).length),
-//      k,
-//      storageManager
-//    )
-//    JoinIndexes.presortSelect(
-//      a => (true, storageManager.getKnownDerivedDB(a.rId).length),
-//      k,
-//      storageManager
-//    )
-    // TODO: change children.length from 3
     if (jitOptions.sortOrder == SortOrder.Unordered || jitOptions.sortOrder == SortOrder.Badluck || children.length < 3 || jitOptions.granularity.flag != OpCode.OTHER) // If not only interpreting, then don't optimize since we are waiting for the optimized version to compile
       storageManager.union(runFns(storageManager, children.map(_.run), inParallel = runInParallel))
     else

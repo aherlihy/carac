@@ -2,7 +2,7 @@ package datalog.execution.ir
 
 import datalog.execution.{JITOptions, PredicateType, StagedCompiler, ir}
 import datalog.execution.ast.{ASTNode, AllRulesNode, LogicAtom, ProgramNode, RuleNode}
-import datalog.storage.{DB, EDB, KNOWLEDGE, RelationId, StorageManager}
+import datalog.storage.{DB, EDB, RelationId, StorageManager}
 import datalog.tools.Debug.debug
 
 import java.util.function.Predicate
@@ -54,7 +54,7 @@ class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
           ProjectJoinFilterOp(atoms.head.rId, k,
             k.deps.zipWithIndex.map((md, i) =>
               val (typ, r) = md
-              val q = ScanOp(r, DB.Derived, KNOWLEDGE.Known)
+              val q = ScanOp(r, DB.Derived)
               typ match
                 case PredicateType.NEGATED =>
                   val arity = k.atoms(i + 1).terms.length
@@ -96,11 +96,11 @@ class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
                     found = true
                     idx = i
                     if (typ != PredicateType.NEGATED) // if negated then we want the complement of all facts not just the delta
-                      ScanOp(r, DB.Delta, KNOWLEDGE.Known)
+                      ScanOp(r, DB.Delta)
                     else
-                      ScanOp(r, DB.Derived, KNOWLEDGE.Known)
+                      ScanOp(r, DB.Derived)
                   else
-                    ScanOp(r, DB.Derived, KNOWLEDGE.Known)
+                    ScanOp(r, DB.Derived)
                   typ match
                     case PredicateType.NEGATED =>
                       val arity = k.atoms(i + 1).terms.length

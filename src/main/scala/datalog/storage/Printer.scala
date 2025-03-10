@@ -1,6 +1,6 @@
 package datalog.storage
 
-import datalog.dsl.{Atom, Term}
+import datalog.dsl.Atom
 import datalog.execution.ast.*
 import datalog.execution.JoinIndexes
 import datalog.execution.ir.*
@@ -129,8 +129,8 @@ class Printer[S <: StorageManager](val sm: S) {
       case DoWhileOp(toCmp, children*) => s"DO {\n${printIR(children.head, ident+1)}}\n${i}WHILE {$toCmp}\n"
       case SequenceOp(fnCode, children*) => s"SEQ{${seq+1}${if (fnCode != OpCode.SEQ) "::" + fnCode else "_"}:${children.zipWithIndex.map((o, idx) => s"${seq+1}.$idx" + printIR(o, ident+1, seq+1)).mkString("[\n", ",\n", "]")}"
       case ScanEDBOp(srcRel) => s"SCANEDB(edbs[${ctx.storageManager.ns(srcRel)}])"
-      case ScanOp(srcRel, db, knowledge) =>
-        s"SCAN[$db.$knowledge](${ctx.storageManager.ns(srcRel)})"
+      case ScanOp(srcRel, db) =>
+        s"SCAN[$db](${ctx.storageManager.ns(srcRel)})"
       case ProjectJoinFilterOp(rId, keys, children*) =>
         s"JOIN${keys.varToString()}${keys.constToString()}${children.map(s => printIR(s, ident+1)).mkString("(\n", ",\n", ")")}"
       case ResetDeltaOp(rId, children*) =>

@@ -3,10 +3,8 @@ package datalog.execution
 import datalog.dsl.{Atom, Constant, Variable}
 import datalog.execution.ir.{IROp, ProjectJoinFilterOp, ScanOp}
 import datalog.storage.{DB, EDB, NS, RelationId, StorageManager}
-import datalog.tools.Debug.debug
 
 import scala.collection.mutable
-import scala.quoted.*
 import scala.reflect.ClassTag
 
 type AllIndexes = mutable.Map[String, JoinIndexes]

@@ -1,16 +1,9 @@
 package datalog.execution
 
-import datalog.dsl.{Atom, Constant, Term, Variable}
 import datalog.execution.ir.*
 import datalog.storage.*
-import datalog.tools.Debug.debug
-import org.glavo.classfile.CodeBuilder
 
-import java.lang.invoke.MethodType
-import java.util.concurrent.atomic.AtomicInteger
-import scala.collection.{immutable, mutable}
-import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.collection.{immutable}
 import scala.quoted.*
 import scala.reflect.{classTag, ClassTag}
 
@@ -72,7 +65,7 @@ class LambdaCompiler(val storageManager: StorageManager)(using JITOptions) exten
       compile(children.head)
 
     case DoWhileOp(toCmp, children*) =>
-      val cond: CompiledFn[Boolean] = _.compareNewDeltaDBs()
+      val cond: CompiledFn[Boolean] = _.deltasEmpty()
       val body = compile(children.head)
       sm =>
         while {
@@ -82,8 +75,8 @@ class LambdaCompiler(val storageManager: StorageManager)(using JITOptions) exten
 
     case SwapAndClearOp() =>
       sm =>
-        sm.swapKnowledge()
-        sm.clearNewDeltas()
+        sm.swapReadWriteDeltas()
+        sm.clearPreviousDeltas()
 
     case SequenceOp(label, children*) =>
       val cOps: Array[CompiledFn[Any]] = children.map(compile).toArray
@@ -111,29 +104,21 @@ class LambdaCompiler(val storageManager: StorageManager)(using JITOptions) exten
 
     case ResetDeltaOp(rId, children*) =>
       val res = compile(children.head.asInstanceOf[IROp[EDB]])
-      sm => sm.setNewDelta(rId, res(sm))
+      sm => sm.writeNewDelta(rId, res(sm))
 
-    case ScanOp(rId, db, knowledge) =>
+    case ScanOp(rId, db) =>
       db match {
         case DB.Derived =>
-          _.getKnownDerivedDB(rId)
+          _.getDerivedDB(rId)
         case DB.Delta =>
-          knowledge match {
-            case KNOWLEDGE.New =>
-              _.getNewDeltaDB(rId)
-            case KNOWLEDGE.Known =>
-              _.getKnownDeltaDB(rId)
-          }
+          _.getDeltaDB(rId)
       }
 
     case ComplementOp(r, arity) =>
       _.getComplement(r, arity)
 
     case ScanEDBOp(rId) =>
-      if (storageManager.edbContains(rId))
-        _.getEDB(rId)
-      else
-        _.getEmptyEDB(rId)
+      _.getEDB(rId)
 
     case ProjectJoinFilterOp(rId, k, children*) =>
       val (sortedChildren, newK) =

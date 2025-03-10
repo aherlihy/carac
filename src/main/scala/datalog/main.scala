@@ -687,7 +687,7 @@ def tc(program: Program): String = {
       case "bytecode" => Backend.Bytecode
       case "lambda" => Backend.Lambda
       case _ => throw new Exception(s"Unknown backend $back")
-    val dotty = staging.Compiler.make(getClass.getClassLoader)
+    val dotty = staging.Compiler.make(Predef.getClass.getClassLoader)
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = b)
     new StagedExecutionEngine(new CollectionsStorageManager(), jo)
 

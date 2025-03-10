@@ -83,27 +83,19 @@ class QuoteCompiler(val storageManager: StorageManager)(using JITOptions) extend
    */
   def compileIRRelOp(irTree: IROp[EDB])(using stagedSM: Expr[StorageManager])(using Quotes): Expr[EDB] = {
     irTree match {
-      case ScanOp(rId, db, knowledge) =>
+      case ScanOp(rId, db) =>
         db match {
           case DB.Derived =>
-            '{ $stagedSM.getKnownDerivedDB(${ Expr(rId) }) }
+            '{ $stagedSM.getDerivedDB(${ Expr(rId) }) }
           case DB.Delta =>
-            knowledge match {
-              case KNOWLEDGE.New =>
-                '{ $stagedSM.getNewDeltaDB(${ Expr(rId) }) }
-              case KNOWLEDGE.Known =>
-                '{ $stagedSM.getKnownDeltaDB(${ Expr(rId) }) }
-            }
+            '{ $stagedSM.getDeltaDB(${ Expr(rId) }) }
         }
 
       case ComplementOp(rId, arity) =>
         '{ $stagedSM.getComplement(${ Expr(rId) }, ${ Expr(arity) }) }
 
       case ScanEDBOp(rId) =>
-        if (storageManager.edbContains(rId))
-          '{ $stagedSM.getEDB(${ Expr(rId) }) }
-        else
-          '{ $stagedSM.getEmptyEDB(${ Expr(rId) }) }
+        '{ $stagedSM.getEDB(${ Expr(rId) }) }
 
       case ProjectJoinFilterOp(rId, k, children*) =>
         val (sortedChildren, newK) =
@@ -181,7 +173,7 @@ class QuoteCompiler(val storageManager: StorageManager)(using JITOptions) extend
 
       case DoWhileOp(toCmp, children*) =>
         val cond =
-            '{ $stagedSM.compareNewDeltaDBs() }
+            '{ $stagedSM.deltasEmpty() }
         '{
           while ( {
             ${ compileIR(children.head) };
@@ -190,7 +182,7 @@ class QuoteCompiler(val storageManager: StorageManager)(using JITOptions) extend
         }
 
       case SwapAndClearOp() =>
-        '{ $stagedSM.swapKnowledge() }
+        '{ $stagedSM.swapReadWriteDeltas() }
 
       case SequenceOp(label, children*) =>
         val cOps = children.map(compileIR)
@@ -209,7 +201,7 @@ class QuoteCompiler(val storageManager: StorageManager)(using JITOptions) extend
             )
       case ResetDeltaOp(rId, children*) =>
         val res = compileIRRelOp(children.head.asInstanceOf[IROp[EDB]])
-        '{ $stagedSM.setNewDelta(${ Expr(rId) }, $res) }
+        '{ $stagedSM.writeNewDelta(${ Expr(rId) }, $res) }
 
       case InsertDeltaNewIntoDerived() =>
         '{ $stagedSM.insertDeltaIntoDerived() }

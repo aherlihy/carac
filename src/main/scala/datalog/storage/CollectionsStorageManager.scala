@@ -6,8 +6,7 @@ import datalog.storage.StorageTerm
 import datalog.tools.Debug.debug
 
 import scala.collection.immutable.ArraySeq
-import scala.collection.mutable.ArrayBuffer
-import scala.collection.{Iterator, immutable, mutable}
+import scala.collection.{immutable, mutable}
 
 class IndexedStorageManager(ns: NS = new NS()) extends GeneralCollectionsStorageManager(ns, true)
 class CollectionsStorageManager(ns: NS = new NS()) extends GeneralCollectionsStorageManager(ns, false)
@@ -21,8 +20,8 @@ class GeneralCollectionsStorageManager(ns: NS = new NS(), indexed: Boolean = fal
   protected val edbs: CollectionsDatabase = CollectionsDatabase(None, empty) // raw user-supplied EDBs from initialization.
   val edbDomain: mutable.Set[StorageTerm] = mutable.Set.empty // incrementally grow the total domain of all EDBs, used for calculating complement of negated predicates
 
-  var knownDbId: KnowledgeId = -1
-  var newDbId: KnowledgeId = -1
+  var readDeltaDbId: Int = -1
+  var writeDeltaDbId: Int = -1
   var initialized = false
 
   var dbId = 0
@@ -54,7 +53,7 @@ class GeneralCollectionsStorageManager(ns: NS = new NS(), indexed: Boolean = fal
     )
   }
   // Store relation arity. In the future can require it to be declared, but for now derived.
-  def registerRelationSchema(rId: RelationId, terms: Seq[Term]): Unit =
+  def registerRelationSchema(rId: RelationId, terms: Seq[Term], hashOpt: Option[String]): Unit =
     val arity = terms.length
     if relationArity.contains(rId) then if arity != relationArity(rId) then throw new Exception(s"Derived relation $rId (${ns(rId)}) declared with arity $arity but previously declared with arity ${relationArity(rId)}")
     relationArity(rId) = arity
@@ -73,14 +72,14 @@ class GeneralCollectionsStorageManager(ns: NS = new NS(), indexed: Boolean = fal
     // TODO: for now reinit with each solve(), don't keep around previous discovered facts. Future work -> incremental
     iteration = 0
     dbId = 0
-    knownDbId = dbId
+    readDeltaDbId = dbId
     dbId += 1
-    newDbId = dbId
+    writeDeltaDbId = dbId
     initialized = true
 
     derivedDB.clear()
-    deltaDB(knownDbId) = CollectionsDatabase(None, empty)
-    deltaDB(newDbId) = CollectionsDatabase(None, empty)
+    deltaDB(readDeltaDbId) = CollectionsDatabase(None, empty)
+    deltaDB(writeDeltaDbId) = CollectionsDatabase(None, empty)
 
     edbs.foreach((rId, relation) => {
       // All relations get at least 1 index
@@ -90,8 +89,8 @@ class GeneralCollectionsStorageManager(ns: NS = new NS(), indexed: Boolean = fal
       else
         relation.bulkRegisterIndex(indexCandidates(rId)) // build indexes on EDBs
 
-      deltaDB(knownDbId).addEmpty(rId, relation.arity, indexCandidates(rId), ns(rId), mutable.BitSet())
-      deltaDB(newDbId).addEmpty(rId, relation.arity, indexCandidates(rId), ns(rId), mutable.BitSet())
+      deltaDB(readDeltaDbId).addEmpty(rId, relation.arity, indexCandidates(rId), ns(rId), mutable.BitSet())
+      deltaDB(writeDeltaDbId).addEmpty(rId, relation.arity, indexCandidates(rId), ns(rId), mutable.BitSet())
 
       derivedDB.addNewEDBCopy(rId, relation)
     })
@@ -110,66 +109,57 @@ class GeneralCollectionsStorageManager(ns: NS = new NS(), indexed: Boolean = fal
       edbs(rule.rId).addOne(CollectionsRow(rule.terms))
     edbDomain.addAll(rule.terms)
   }
-  // Only used when querying for a completely empty EDB that hasn't been declared/added yet.
-  def getEmptyEDB(rId: RelationId): GeneralCollectionsEDB =
-    if (!relationArity.contains(rId))
-      throw new Exception(s"Getting empty relation $rId (${ns(rId)}) but undefined")
-    empty(relationArity(rId), ns(rId), indexCandidates.getOrElse(rId, mutable.BitSet()), mutable.BitSet())
   def getEDB(rId: RelationId): GeneralCollectionsEDB = edbs(rId)
   def edbContains(rId: RelationId): Boolean = edbs.contains(rId)
   def getAllEDBS(): mutable.Map[RelationId, Any] = edbs.wrapped.asInstanceOf[mutable.Map[RelationId, Any]]
 
   // Read intermediate results
-  def getKnownDerivedDB(rId: RelationId): GeneralCollectionsEDB =
+  def getDerivedDB(rId: RelationId): GeneralCollectionsEDB =
     if !relationArity.contains(rId) then throw new Exception(s"Internal error: relation $rId (${ns(rId)}) has no arity")
     derivedDB.getOrElseEmpty(rId, relationArity(rId), indexCandidates.getOrElseUpdate(rId, mutable.BitSet(0)), ns(rId), mutable.BitSet())
 
-  def getKnownDeltaDB(rId: RelationId): GeneralCollectionsEDB =
+  def getDeltaDB(rId: RelationId): GeneralCollectionsEDB =
     if !relationArity.contains(rId) then throw new Exception(s"Internal error: relation $rId (${ns(rId)}) has no arity")
-    deltaDB(knownDbId).getOrElseEmpty(rId, relationArity(rId), indexCandidates.getOrElseUpdate(rId, mutable.BitSet(0)), ns(rId), mutable.BitSet())
-  def getNewDeltaDB(rId: RelationId): GeneralCollectionsEDB =
-    if !relationArity.contains(rId) then throw new Exception(s"Internal error: relation $rId (${ns(rId)}) has no arity")
-    deltaDB(newDbId).getOrElseEmpty(rId, relationArity(rId), indexCandidates.getOrElseUpdate(rId, mutable.BitSet(0)), ns(rId), mutable.BitSet())
+    deltaDB(readDeltaDbId).getOrElseEmpty(rId, relationArity(rId), indexCandidates.getOrElseUpdate(rId, mutable.BitSet(0)), ns(rId), mutable.BitSet())
 
   // Read final results
-  def getKnownIDBResult(rId: RelationId): Set[Seq[StorageTerm]] =
-    debug("Final IDB Result[known]: ", () => s"at iteration $iteration: @$knownDbId, count=${getKnownDerivedDB(rId).length}")
-    getKnownDerivedDB(rId).getSetOfSeq
-  def getNewIDBResult(rId: RelationId): Set[Seq[StorageTerm]] =
-    derivedDB.getOrElseEmpty(rId, relationArity.getOrElse(rId, 0), mutable.BitSet(), ns(rId), mutable.BitSet()).getSetOfSeq
+  def getIDBResult(rId: RelationId): Set[Seq[StorageTerm]] =
+    debug("Final IDB Result[known]: ", () => s"at iteration $iteration: @$readDeltaDbId, count=${getDerivedDB(rId).length}")
+    getDerivedDB(rId).getSetOfSeq
   def getEDBResult(rId: RelationId): Set[Seq[StorageTerm]] =
     edbs.getOrElseEmpty(rId, relationArity.getOrElse(rId, 0), mutable.BitSet(), ns(rId), mutable.BitSet()).getSetOfSeq
 
   def insertDeltaIntoDerived(): Unit =
-    deltaDB(newDbId).foreach((rId, edb) =>
+    deltaDB(writeDeltaDbId).foreach((rId, edb) =>
       if (derivedDB.contains(rId))
         derivedDB(rId).mergeEDBs(edb)
       else if (edb.nonEmpty)
         derivedDB.addNewEDBCopy(rId, edb)
     )
 
-  def setNewDelta(rId: RelationId, rules: EDB): Unit =
+  def writeNewDelta(rId: RelationId, rules: EDB): Unit =
     val toAdd = if indexed then IndexedCollectionsCasts.asIndexedCollectionsEDB(rules) else CollectionsCasts.asCollectionsEDB(rules)
-    deltaDB(newDbId).addNewEDBCopy(rId, toAdd)
+    deltaDB(writeDeltaDbId).addNewEDBCopy(rId, toAdd)
 
-  def clearNewDeltas(): Unit =
-    deltaDB(newDbId).clear()
+  def clearPreviousDeltas(): Unit =
+    deltaDB(writeDeltaDbId).clear()
 
   // Compare & Swap
-  def swapKnowledge(): Unit = {
+  def swapReadWriteDeltas(): Unit = {
     iteration += 1
-    val t = knownDbId
-    knownDbId = newDbId
-    newDbId = t
+    val t = readDeltaDbId
+    readDeltaDbId = writeDeltaDbId
+    writeDeltaDbId = t
     //    deltaDB(knownDbId).foreach((rId, edb) =>
     //      edb.bulkRebuildIndex()
     //    )
   }
-  def compareNewDeltaDBs(): Boolean =
-    deltaDB(newDbId).exists((k, v) => v.nonEmpty)
+  def deltasEmpty(): Boolean =
+    deltaDB(writeDeltaDbId).exists((k, v) => v.nonEmpty)
 
-  def verifyEDBs(idbList: mutable.Set[RelationId]): Unit = {
-    ns.rIds().foreach(rId =>
+  def verifyEDBs(ruleHashes: mutable.Map[RelationId, mutable.ArrayBuffer[String]]): Unit = {
+    val idbList = ruleHashes.keys.to(mutable.Set)
+      ns.rIds().foreach(rId =>
       if (!edbs.contains(rId) && !idbList.contains(rId))
         // NOTE: no longer treat undefined relations as empty edbs, instead error
         if (!relationArity.contains(rId))
@@ -263,7 +253,7 @@ class GeneralCollectionsStorageManager(ns: NS = new NS(), indexed: Boolean = fal
     }
     def printHelperRelation(db: CollectionsDatabase, i: Int): String = {
       val indexes = printIndexes(db)
-      val name = if (i == knownDbId) "known" else if (i == newDbId) "new" else s"!!!OTHER($i)"
+      val name = if (i == readDeltaDbId) "READ" else if (i == writeDeltaDbId) "WRITE" else s"!!!OTHER($i)"
       s"\n $name : \n  $indexes ${printer.edbToString(db)}"
     }
 

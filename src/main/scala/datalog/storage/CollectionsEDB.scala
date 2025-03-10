@@ -1,6 +1,7 @@
 package datalog.storage
 
 import datalog.dsl.{Constant, Variable}
+
 import scala.collection.mutable
 import CollectionsCasts.*
 import datalog.execution.JoinIndexes
@@ -8,6 +9,8 @@ import datalog.execution.JoinIndexes
 import scala.collection.immutable.Seq
 import scala.collection.immutable.ArraySeq
 import scala.collection.mutable.ArrayBuffer
+import scala.math
+import scala.math.Ordering.Double
 
 /**
  * EDB for non-indexed collections-based storage.
@@ -191,7 +194,8 @@ case class CollectionsEDB(wrapped: mutable.ArrayBuffer[CollectionsRow],
       arity
     )
 
-  def factToString: String = wrapped.sorted.map(s => s.mkString("(", ", ", ")")).mkString("[", ", ", "]")
+  def factToString: String =
+    wrapped.map(s => s.mkString("(", ", ", ")")).sorted.mkString("[", ", ", "]")
 
   def insertInto(key: StorageTerm, toAdd: ArrayBuffer[CollectionsRow], wrappedToModify: ArrayBuffer[CollectionsRow], update: Boolean, deduplicate: Boolean) =
     ???

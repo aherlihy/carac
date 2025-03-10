@@ -358,7 +358,7 @@ case class IndexedCollectionsEDB(var wrapped: mutable.ArrayBuffer[CollectionsRow
     )
 
   def factToString: String =
-    val inner = wrapped.sorted.map(s => s.mkString("(", ", ", ")")).mkString("[", ", ", "]")
+    val inner = wrapped.map(s => s.mkString("(", ", ", ")")).sorted.mkString("[", ", ", "]")
     // if you want to print indexes directly, uncomment
     val indexStr = indexes.map(idx => indexToString(idx)).mkString("{", ", ", "}") + ":"
     s"$indexStr$inner"
