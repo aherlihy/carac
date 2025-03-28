@@ -182,7 +182,7 @@ class QuoteCompiler(val storageManager: StorageManager)(using JITOptions) extend
         }
 
       case SwapAndClearOp() =>
-        '{ $stagedSM.swapReadWriteDeltas() }
+        '{ $stagedSM.swapReadWriteDeltas(); $stagedSM.clearPreviousDeltas() }
 
       case SequenceOp(label, children*) =>
         val cOps = children.map(compileIR)

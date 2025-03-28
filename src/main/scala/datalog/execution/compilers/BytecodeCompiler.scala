@@ -41,7 +41,7 @@ class BytecodeCompiler(val storageManager: StorageManager)(using JITOptions) ext
           xb.aload(0)
           emitSMCall(xb, "swapReadWriteDeltas")
           xb.aload(0)
-          emitSMCall(xb, "clearNewDeltas")
+          emitSMCall(xb, "clearPreviousDeltas")
 
         case SequenceOp(label, children*) =>
           // TODO: take into account heuristics.max_relations? We could create a
