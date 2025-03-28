@@ -1,17 +1,14 @@
 package test
 
-import datalog.dsl.{Constant, Program, Relation, Term}
+import datalog.dsl.{Constant, Program}
 import datalog.execution.{Backend, CompileSync, Granularity, JITOptions, Mode, NaiveShallowExecutionEngine, NaiveStagedExecutionEngine, ShallowExecutionEngine, SortOrder, StagedExecutionEngine, ir}
-import datalog.storage.{CollectionsStorageManager, IndexedStorageManager, StorageTerm}
+import datalog.storage.{CollectionsStorageManager, IndexedStorageManager, StorageTerm, DuckDBStorageManager}
 
 import java.nio.file.{Files, Path, Paths}
 import scala.collection.mutable
-import scala.io.Source
 import scala.jdk.StreamConverters.*
 import scala.quoted.staging
 import scala.util.{Properties, Using}
-//import scala.quoted.*
-//import scala.quoted.staging.*
 
 abstract class ExampleTestGenerator(testname: String,
                                     skip: Set[String] = Set(),
@@ -105,6 +102,8 @@ abstract class TestGenerator(directory: Path,
           IndexedStorageManager()
         else if context.test.name.contains("Collections") then
           CollectionsStorageManager()
+        else if context.test.name.contains("DuckDB") then
+          DuckDBStorageManager()
         else throw new Exception(s"Unknown storage manager for ${context.test.name}")
 
         val executionEngine = if context.test.name.contains("Shallow") then
@@ -154,7 +153,7 @@ abstract class TestGenerator(directory: Path,
 
         inputFacts.foreach((edbName, factInput) =>
           val fact = program.relation[Constant](edbName)
-          factInput.foreach(f => fact(f: _*) :- ())
+          factInput.foreach(f => fact(f*) :- ())
           if (factInput.isEmpty) {
             val edbs = program.ee.storageManager.getAllEDBS()
           }
@@ -169,27 +168,28 @@ abstract class TestGenerator(directory: Path,
       "NaiveShallow",
       "SemiNaiveShallow",
       "CompiledStaged_Lambda",
-//      "CompiledStaged_BC",
-//      "CompiledStaged_Quotes",
-//      "InterpretedStaged",
+      "CompiledStaged_BC",
+      "CompiledStaged_Quotes",
+      "InterpretedStaged",
+      "NaiveInterpretedStaged",
       "InterpretedStaged_sel",
-//      "JITStaged_Sel_DELTA_Block_Lambda",
-//      "JITStaged_Sel_DELTA_Block_BC",
-//      "JITStaged_Sel_DELTA_Block_Quotes",
+      "JITStaged_Sel_DELTA_Block_Lambda",
+      "JITStaged_Sel_DELTA_Block_BC",
+      "JITStaged_Sel_DELTA_Block_Quotes",
       "JITStaged_Sel_ALL_Block_BC",
-//      "JITStaged_Sel_RULE_Block_BC",
-//      "JITStaged_Sel_RULE_Block_Quotes",
+      "JITStaged_Sel_RULE_Block_BC",
+      "JITStaged_Sel_RULE_Block_Quotes",
       "JITStaged_Sel_ALL_Block_Quotes",
-//      "JITStaged_Sel_RULE_Async_Quotes",
+      "JITStaged_Sel_RULE_Async_Quotes",
       "JITStaged_Sel_ALL_Async_Quotes",
       "JITStaged_Sel_ALL_Block_Lambda",
-//      "JITStaged_Sel_RULE_Block_Lambda",
-//      "JITStaged_Sel_ALL_Async_Lambda",
-//      "JITStaged_Sel_RULE_Async_Lambda",
-//      "JITStaged_Sel_RULE_Async_BC",
-//      "JITStaged_Sel_ALL_Async_BC",
+      "JITStaged_Sel_RULE_Block_Lambda",
+      "JITStaged_Sel_ALL_Async_Lambda",
+      "JITStaged_Sel_RULE_Async_Lambda",
+      "JITStaged_Sel_RULE_Async_BC",
+      "JITStaged_Sel_ALL_Async_BC",
     ).foreach(execution => {
-      Seq("Indexed", "Collections").foreach(storage => {
+      Seq("Indexed", /*"Collections",*/ "DuckDB").foreach(storage => {
         if (
             skip.contains(execution) || skip.contains(storage) ||
               (tags ++ Set(execution, storage)).flatMap(t => Properties.envOrNone(t.toUpperCase())).nonEmpty// manually implement --exclude for intellij

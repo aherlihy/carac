@@ -1,7 +1,6 @@
 package datalog.execution
 
 import datalog.dsl.Atom
-import datalog.tools.Debug.debug
 import datalog.storage.{NS, RelationId}
 
 import scala.collection.mutable

@@ -18,7 +18,7 @@ abstract class StagedCompiler(storageManager: StorageManager)(using val jitOptio
 
   def compileIndexed[T](irTree: IROp[T]): CompiledFnIndexed[T] = {
     irTree match {
-      case UnionSPJOp(rId, k, children: _*) =>
+      case UnionSPJOp(rId, k, children*) =>
         val (sortedChildren, _) =
           if (jitOptions.sortOrder != SortOrder.Unordered)
             JoinIndexes.getPresort(
@@ -32,7 +32,7 @@ abstract class StagedCompiler(storageManager: StorageManager)(using val jitOptio
             (children, k)
         (sm, i) => sortedChildren.map(compile)(i)(sm)
 
-      case UnionOp(label, children: _*) =>
+      case UnionOp(label, children*) =>
         (sm, i) => children.map(compile)(i)(sm)
     }
   }

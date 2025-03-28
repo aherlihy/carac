@@ -1,21 +1,19 @@
 package datalog.storage
 
-import datalog.dsl.{Constant, Term, Variable}
+import datalog.dsl.Constant
 import datalog.dsl.Variable
 import datalog.execution.PredicateType
 
 import scala.collection.mutable
 
 type RelationId = Int
-type KnowledgeId = Int
 enum DB:
   case Derived, Delta
-enum KNOWLEDGE:
-  case New, Known
 
 /* TODO: expand to other types, right now we just support Variables + Constants that are either Int or String.
  * When expended, may want the DSL types and the storage types to diverge, so use type aliases (for now) instead of DSL types. */
 type StorageTerm = Constant
+
 type StorageVariable = Variable
 type StorageConstant = Constant
 
@@ -23,7 +21,7 @@ type StorageConstant = Constant
 type Row[T] = Seq[T] // FIXME: Either make this ArraySeq or make it fully abstract and overridable.
 
 /* Most methods used within storage manager so are defined on the implementation, other than length (execution) and factToString (printer) */
-trait Relation[T] extends IterableOnce[Row[T]] {
+trait Relation[T] {
   def length: Int
   def factToString: String
 }

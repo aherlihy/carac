@@ -1,13 +1,12 @@
 package datalog.storage
 
-import datalog.dsl.{Constant, Variable}
+import datalog.dsl.Constant
 
 import scala.collection.mutable
 import IndexedCollectionsCasts.*
 import datalog.execution.JoinIndexes
 
 import scala.collection.immutable.ArraySeq
-import scala.collection.mutable.ArrayBuffer
 
 /**
  * General database types for indexed and unindexed collections-based storage.
@@ -105,11 +104,12 @@ case class CollectionsDatabase(wrappedOpt: Option[mutable.Map[RelationId, Genera
     definedRelations.addOne(rId)
     getOrElseEmpty(rId, arity, indexCandidates, name, indexToSkip)
 
-  export wrapped.apply
+  def apply(key: RelationId): GeneralCollectionsEDB = wrapped.getOrElse(key, throw new Exception(s"Relation $key not found in EDB database"))
 }
 
 inline def CollectionsRow(s: ArraySeq[StorageTerm]) = s
 type CollectionsRow = ArraySeq[StorageTerm]
+//implicit val collectionsRowOrdering: Ordering[CollectionsRow] = Ordering.by(_.toList)
 extension (seq: ArraySeq[StorageTerm])
   def project(projIndexes: Seq[(String, Constant)]): CollectionsRow = // make a copy
     if seq.isInstanceOf[ArraySeq.ofInt] then
@@ -141,6 +141,5 @@ extension (seq: ArraySeq[StorageTerm])
       seq(idx) == const
     )
 
-  inline def contains(StorageTerm: StorageTerm): Boolean = seq.contains(StorageTerm)
 end extension
 

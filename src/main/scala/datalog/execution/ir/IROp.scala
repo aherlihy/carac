@@ -1,19 +1,13 @@
 package datalog.execution.ir
 
-import datalog.dsl.{Atom, Constant}
-import datalog.execution.{JITOptions, JoinIndexes, PrecedenceGraph, SortOrder, StagedCompiler, ir}
-import datalog.execution.ast.*
-import datalog.storage.{DB, EDB, KNOWLEDGE, RelationId, StorageManager}
+import datalog.execution.{JITOptions, JoinIndexes, SortOrder, ir}
+import datalog.storage.{DB, EDB, RelationId, StorageManager}
 import datalog.tools.Debug
 import datalog.tools.Debug.debug
 
-import java.util.concurrent.atomic.AtomicReference
-import scala.collection.{immutable, mutable}
-import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.collection.immutable
+import scala.concurrent.{ExecutionContext, Future}
 import scala.reflect.ClassTag
-import scala.quoted.*
-import scala.util.{Failure, Success}
 
 enum OpCode:
   case PROGRAM, SWAP_CLEAR, SEQ,
@@ -78,7 +72,7 @@ import IROp.*
 /**
  * @param children: SequenceOp[SequenceOp.NaiveEval, DoWhileOp]
  */
-case class ProgramOp(override val children:IROp[Any]*)(using JITOptions) extends IROp[Any](children:_*) {
+case class ProgramOp(override val children:IROp[Any]*)(using JITOptions) extends IROp[Any](children*) {
   val code: OpCode = OpCode.PROGRAM
   override def run_continuation(storageManager: StorageManager, opFns: Seq[StorageManager => Any]): Any =
     opFns.head(storageManager)
@@ -114,13 +108,13 @@ case class ProgramOp(override val children:IROp[Any]*)(using JITOptions) extends
  * @param toCmp: DB
  * @param children: [SequenceOp.LoopBody]
  */
-case class DoWhileOp(toCmp: DB, override val children:IROp[Any]*)(using JITOptions) extends IROp[Any](children:_*) {
+case class DoWhileOp(toCmp: DB, override val children:IROp[Any]*)(using JITOptions) extends IROp[Any](children*) {
   val code: OpCode = OpCode.DOWHILE
   override def run_continuation(storageManager: StorageManager, opFns: Seq[CompiledFn[Any]]): Any =
     while ({
       opFns.head(storageManager)
 //      ctx.count += 1 // TODO: do we need this outside debugging?
-      storageManager.compareNewDeltaDBs()
+      storageManager.deltasEmpty()
     }) ()
   override def run(storageManager: StorageManager): Any =
     var i = 0
@@ -132,7 +126,7 @@ case class DoWhileOp(toCmp: DB, override val children:IROp[Any]*)(using JITOptio
       i += 1
 //      if i > 1 then System.exit(0)
       children.head.run(storageManager)
-      storageManager.compareNewDeltaDBs()
+      storageManager.deltasEmpty()
     }) ()
 }
 
@@ -140,7 +134,7 @@ case class DoWhileOp(toCmp: DB, override val children:IROp[Any]*)(using JITOptio
  * @param code
  * @param children: [Any*]
  */
-case class SequenceOp(override val code: OpCode, override val children:IROp[Any]*)(using JITOptions) extends IROp[Any](children:_*) {
+case class SequenceOp(override val code: OpCode, override val children:IROp[Any]*)(using JITOptions) extends IROp[Any](children*) {
   override val runInParallel: Boolean = code == OpCode.EVAL_SN
 
   override def run_continuation(storageManager: StorageManager, opFns: Seq[CompiledFn[Any]]): Any =
@@ -152,8 +146,8 @@ case class SequenceOp(override val code: OpCode, override val children:IROp[Any]
 case class SwapAndClearOp()(using JITOptions) extends IROp[Any] {
   val code: OpCode = OpCode.SWAP_CLEAR
   override def run(storageManager: StorageManager): Any =
-    storageManager.swapKnowledge()
-    storageManager.clearNewDeltas()
+    storageManager.swapReadWriteDeltas()
+    storageManager.clearPreviousDeltas()
 
   override def run_continuation(storageManager: StorageManager, opFns: Seq[CompiledFn[Any]]): Any =
     run(storageManager)
@@ -167,14 +161,14 @@ case class InsertDeltaNewIntoDerived()(using JITOptions) extends IROp[Any]() {
   override def run(storageManager: StorageManager): Any =
     storageManager.insertDeltaIntoDerived()
 }
-case class ResetDeltaOp(rId: RelationId, override val children:IROp[Any]*)(using JITOptions) extends IROp[Any](children:_*) {
+case class ResetDeltaOp(rId: RelationId, override val children:IROp[Any]*)(using JITOptions) extends IROp[Any](children*) {
   val code: OpCode = OpCode.RESET_DELTA
   override def run_continuation(storageManager:  StorageManager, opFns: Seq[CompiledFn[Any]]): Any =
     val res = opFns.head.asInstanceOf[CompiledFn[EDB]](storageManager)
-    storageManager.setNewDelta(rId, res)
+    storageManager.writeNewDelta(rId, res)
   override def run(storageManager: StorageManager): Any =
     val res = children.head.run(storageManager).asInstanceOf[EDB]
-    storageManager.setNewDelta(rId, res)
+    storageManager.writeNewDelta(rId, res)
 }
 
 case class ComplementOp(rId: RelationId, arity: Int)(using JITOptions) extends IROp[EDB] {
@@ -187,20 +181,15 @@ case class ComplementOp(rId: RelationId, arity: Int)(using JITOptions) extends I
     run(storageManager) // bc leaf node, no difference for continuation or run
 }
 
-case class ScanOp(rId: RelationId, db: DB, knowledge: KNOWLEDGE)(using JITOptions) extends IROp[EDB] {
+case class ScanOp(rId: RelationId, db: DB)(using JITOptions) extends IROp[EDB] {
   val code: OpCode = OpCode.SCAN
 
   override def run(storageManager: StorageManager): EDB =
     db match {
       case DB.Derived =>
-        storageManager.getKnownDerivedDB(rId)
+        storageManager.getDerivedDB(rId)
       case DB.Delta =>
-        knowledge match {
-          case KNOWLEDGE.Known =>
-            storageManager.getKnownDeltaDB(rId)
-          case KNOWLEDGE.New =>
-            storageManager.getNewDeltaDB(rId)
-        }
+        storageManager.getDeltaDB(rId)
     }
   override def run_continuation(storageManager: StorageManager, opFns: Seq[CompiledFn[EDB]]): EDB =
     run(storageManager) // bc leaf node, no difference for continuation or run
@@ -209,10 +198,7 @@ case class ScanOp(rId: RelationId, db: DB, knowledge: KNOWLEDGE)(using JITOption
 case class ScanEDBOp(rId: RelationId)(using JITOptions) extends IROp[EDB] {
   val code: OpCode = OpCode.SCANEDB
   override def run(storageManager: StorageManager): EDB =
-    if (storageManager.edbContains(rId))
-      storageManager.getEDB(rId)
-    else
-      storageManager.getEmptyEDB(rId)
+    storageManager.getEDB(rId)
 
   override def run_continuation(storageManager: StorageManager, opFns: Seq[CompiledFn[EDB]]): EDB =
     run(storageManager)
@@ -221,7 +207,7 @@ case class ScanEDBOp(rId: RelationId)(using JITOptions) extends IROp[EDB] {
  * @param joinIdx
  * @param children: [Scan*deps]
  */
-case class ProjectJoinFilterOp(rId: RelationId, var k: JoinIndexes, override val children:IROp[EDB]*)(using jitOptions: JITOptions) extends IROp[EDB](children:_*) {
+case class ProjectJoinFilterOp(rId: RelationId, var k: JoinIndexes, override val children:IROp[EDB]*)(using jitOptions: JITOptions) extends IROp[EDB](children*) {
   val code: OpCode = OpCode.SPJ
   var childrenSO: Array[IROp[EDB]] = children.toArray
 
@@ -234,14 +220,6 @@ case class ProjectJoinFilterOp(rId: RelationId, var k: JoinIndexes, override val
       jitOptions.onlineSort
     )
   override def run(storageManager: StorageManager): EDB =
-//    if (rId == 3 && children.size == 3)
-//      println(s"doing SPJU for rule (rId=$rId) ${storageManager.printer.ruleToString(k.atoms)}")
-//      println(s"\t${children.map(c => c.asInstanceOf[ScanOp]).map(c =>
-//        if (c.db == DB.Derived)
-//          s"${storageManager.ns(c.rId)}.derived(${storageManager.getKnownDerivedDB(c.rId).length})"
-//        else
-//          s"${storageManager.ns(c.rId)}.delta(${storageManager.getKnownDeltaDB(c.rId).length})"
-//      ).mkString("", " * ", "")}")
     val inputs = children.map(s => s.run(storageManager))
 //    println(s"inputs in SPJU=${inputs.map(_.factToString)}")
     val res = storageManager.selectProjectJoinHelper(
@@ -258,7 +236,7 @@ case class ProjectJoinFilterOp(rId: RelationId, var k: JoinIndexes, override val
  * @param code
  * @param children: [Scan|UnionSPJ*rules]
  */
-case class UnionOp(override val code: OpCode, override val children:IROp[EDB]*)(using JITOptions) extends IROp[EDB](children:_*) {
+case class UnionOp(override val code: OpCode, override val children:IROp[EDB]*)(using JITOptions) extends IROp[EDB](children*) {
 //  var compiledFnIndexed: java.util.concurrent.Future[CompiledFnIndexed[EDB]] = null
   var compiledFnIndexed: Future[CompiledFnIndexed[EDB]] = null
   var blockingCompiledFnIndexed: CompiledFnIndexed[EDB] = null
@@ -276,7 +254,7 @@ case class UnionOp(override val code: OpCode, override val children:IROp[EDB]*)(
  * @param code
  * @param children: [Scan*atoms]
  */
-case class UnionSPJOp(rId: RelationId, var k: JoinIndexes, override val children:ProjectJoinFilterOp*)(using JITOptions) extends IROp[EDB](children:_*) {
+case class UnionSPJOp(rId: RelationId, var k: JoinIndexes, override val children:ProjectJoinFilterOp*)(using JITOptions) extends IROp[EDB](children*) {
   val code: OpCode = OpCode.EVAL_RULE_BODY
   var compiledFnIndexed: Future[CompiledFnIndexed[EDB]] = null
 //  var compiledFnIndexed: java.util.concurrent.Future[CompiledFnIndexed[EDB]] = null
@@ -288,19 +266,6 @@ case class UnionSPJOp(rId: RelationId, var k: JoinIndexes, override val children
     storageManager.union(runFns(storageManager, opFns, inParallel = runInParallel))
 
   override def run(storageManager: StorageManager): EDB =
-
-    // uncomment to print out "worst" order
-//    JoinIndexes.presortSelectWorst(
-//      a => (true, storageManager.getKnownDerivedDB(a.rId).length),
-//      k,
-//      storageManager
-//    )
-//    JoinIndexes.presortSelect(
-//      a => (true, storageManager.getKnownDerivedDB(a.rId).length),
-//      k,
-//      storageManager
-//    )
-    // TODO: change children.length from 3
     if (jitOptions.sortOrder == SortOrder.Unordered || jitOptions.sortOrder == SortOrder.Badluck || children.length < 3 || jitOptions.granularity.flag != OpCode.OTHER) // If not only interpreting, then don't optimize since we are waiting for the optimized version to compile
       storageManager.union(runFns(storageManager, children.map(_.run), inParallel = runInParallel))
     else
@@ -316,7 +281,7 @@ case class UnionSPJOp(rId: RelationId, var k: JoinIndexes, override val children
 /**
  * @param children: [Union|Scan, Scan]
  */
-case class DiffOp(override val children:IROp[EDB]*)(using JITOptions) extends IROp[EDB](children:_*) {
+case class DiffOp(override val children:IROp[EDB]*)(using JITOptions) extends IROp[EDB](children*) {
   val code: OpCode = OpCode.DIFF
   private val queryResult = children.head
   private val derivedKnownRead = children(1)
@@ -337,7 +302,7 @@ case class DebugNode(prefix: String, dbg: () => String)(using JITOptions) extend
  * @param dbg - more to write, potentially a toString method on children.head
  * @param children - [IROp[EDB]] to return
  */
-case class DebugPeek(prefix: String, dbg: () => String, override val children:IROp[EDB]*)(using JITOptions) extends IROp[EDB](children:_*) {
+case class DebugPeek(prefix: String, dbg: () => String, override val children:IROp[EDB]*)(using JITOptions) extends IROp[EDB](children*) {
   val code: OpCode = OpCode.DEBUGP
   override def run_continuation(storageManager: StorageManager, opFns: Seq[CompiledFn[EDB]]): EDB =
     val res = opFns.head(storageManager)

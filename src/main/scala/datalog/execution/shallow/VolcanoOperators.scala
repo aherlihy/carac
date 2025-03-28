@@ -209,7 +209,7 @@
 //    private var index = 0
 //    def open(): Unit = {
 //      val opResults = ops.map(o => o.toList())
-//      outputRelation = storageManager.union(opResults: _*)
+//      outputRelation = storageManager.union(opResults*)
 //    }
 //    def next(): Option[CollectionsRow] = {
 //      if (index >= outputRelation.length)

@@ -2,6 +2,7 @@ package test.examples.tastyslistlib
 
 import buildinfo.BuildInfo
 import datalog.dsl.{Constant, Program}
+import datalog.storage.DatabaseType
 import test.{ExampleTestGenerator, Tags}
 
 class tastyslistlib_optimized_test extends ExampleTestGenerator(
@@ -29,6 +30,7 @@ trait tastyslistlib_optimized {
     val LookUp = program.relation[String]("LookUp")
     val Move = program.namedRelation[String]("Move")
     val Store = program.relation[String]("Store")
+    program.ee.storageManager.declareTable(Store.id, Seq(("c0", DatabaseType.TEXT), ("c1", DatabaseType.TEXT), ("c2", DatabaseType.TEXT)))
     val Load = program.namedRelation[String]("Load")
 
     val StaticCall = program.namedRelation[String]("StaticCall")
@@ -41,6 +43,7 @@ trait tastyslistlib_optimized {
 
 //    val Delegate = program.relation[String]("Delegate")
     val SuperCall = program.relation[String]("SuperCall")
+    program.ee.storageManager.declareTable(SuperCall.id, Seq(("c0", DatabaseType.TEXT), ("c1", DatabaseType.TEXT), ("c2", DatabaseType.TEXT)))
     val FieldValDef = program.namedRelation[String]("FieldValDef")
 
 //    val Refers = program.relation[String]("Refers")

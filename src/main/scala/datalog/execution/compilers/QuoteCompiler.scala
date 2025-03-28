@@ -21,7 +21,7 @@ class QuoteCompiler(val storageManager: StorageManager)(using JITOptions) extend
 
   given MutableMapToExpr[T: Type : ToExpr, U: Type : ToExpr]: ToExpr[mutable.Map[T, U]] with {
     def apply(map: mutable.Map[T, U])(using Quotes): Expr[mutable.Map[T, U]] =
-      '{ mutable.Map(${ Expr(map.toSeq) }: _*) }
+      '{ mutable.Map(${ Expr(map.toSeq) }*) }
   }
 
   given ToExpr[Constant] with {
@@ -83,29 +83,21 @@ class QuoteCompiler(val storageManager: StorageManager)(using JITOptions) extend
    */
   def compileIRRelOp(irTree: IROp[EDB])(using stagedSM: Expr[StorageManager])(using Quotes): Expr[EDB] = {
     irTree match {
-      case ScanOp(rId, db, knowledge) =>
+      case ScanOp(rId, db) =>
         db match {
           case DB.Derived =>
-            '{ $stagedSM.getKnownDerivedDB(${ Expr(rId) }) }
+            '{ $stagedSM.getDerivedDB(${ Expr(rId) }) }
           case DB.Delta =>
-            knowledge match {
-              case KNOWLEDGE.New =>
-                '{ $stagedSM.getNewDeltaDB(${ Expr(rId) }) }
-              case KNOWLEDGE.Known =>
-                '{ $stagedSM.getKnownDeltaDB(${ Expr(rId) }) }
-            }
+            '{ $stagedSM.getDeltaDB(${ Expr(rId) }) }
         }
 
       case ComplementOp(rId, arity) =>
         '{ $stagedSM.getComplement(${ Expr(rId) }, ${ Expr(arity) }) }
 
       case ScanEDBOp(rId) =>
-        if (storageManager.edbContains(rId))
-          '{ $stagedSM.getEDB(${ Expr(rId) }) }
-        else
-          '{ $stagedSM.getEmptyEDB(${ Expr(rId) }) }
+        '{ $stagedSM.getEDB(${ Expr(rId) }) }
 
-      case ProjectJoinFilterOp(rId, k, children: _*) =>
+      case ProjectJoinFilterOp(rId, k, children*) =>
         val (sortedChildren, newK) =
           if (jitOptions.sortOrder != SortOrder.Unordered && jitOptions.sortOrder != SortOrder.Badluck && jitOptions.granularity.flag == irTree.code)
             JoinIndexes.getOnlineSort(
@@ -128,7 +120,7 @@ class QuoteCompiler(val storageManager: StorageManager)(using JITOptions) extend
           )
         }
 
-      case UnionSPJOp(rId, k, children: _*) =>
+      case UnionSPJOp(rId, k, children*) =>
         val (sortedChildren, _) =
           if (jitOptions.sortOrder != SortOrder.Unordered && jitOptions.sortOrder != SortOrder.Badluck)
             JoinIndexes.getPresort(
@@ -144,7 +136,7 @@ class QuoteCompiler(val storageManager: StorageManager)(using JITOptions) extend
         val compiledOps = sortedChildren.map(compileIRRelOp)
         '{ $stagedSM.union(${ Expr.ofSeq(compiledOps) }) }
 
-      case UnionOp(label, children: _*) =>
+      case UnionOp(label, children*) =>
         val compiledOps = children.map(compileIRRelOp)
         label match
           case OpCode.EVAL_RULE_NAIVE if children.length > heuristics.max_deps =>
@@ -156,12 +148,12 @@ class QuoteCompiler(val storageManager: StorageManager)(using JITOptions) extend
           case _ =>
             '{ $stagedSM.union(${ Expr.ofSeq(compiledOps) }) }
 
-      case DiffOp(children: _*) =>
+      case DiffOp(children*) =>
         val clhs = compileIRRelOp(children.head)
         val crhs = compileIRRelOp(children(1))
         '{ $stagedSM.diff($clhs, $crhs) }
 
-      case DebugPeek(prefix, msg, children: _*) =>
+      case DebugPeek(prefix, msg, children*) =>
         val res = compileIRRelOp(children.head)
         '{ debug(${ Expr(prefix) }, () => s"${${ Expr(msg()) }}") ; $res }
 
@@ -176,12 +168,12 @@ class QuoteCompiler(val storageManager: StorageManager)(using JITOptions) extend
    */
   def compileIR(irTree: IROp[Any])(using stagedSM: Expr[StorageManager])(using Quotes): Expr[Any] = {
     irTree match {
-      case ProgramOp(children:_*) =>
+      case ProgramOp(children*) =>
         compileIR(children.head)
 
-      case DoWhileOp(toCmp, children:_*) =>
+      case DoWhileOp(toCmp, children*) =>
         val cond =
-            '{ $stagedSM.compareNewDeltaDBs() }
+            '{ $stagedSM.deltasEmpty() }
         '{
           while ( {
             ${ compileIR(children.head) };
@@ -190,9 +182,9 @@ class QuoteCompiler(val storageManager: StorageManager)(using JITOptions) extend
         }
 
       case SwapAndClearOp() =>
-        '{ $stagedSM.swapKnowledge() }
+        '{ $stagedSM.swapReadWriteDeltas(); $stagedSM.clearPreviousDeltas() }
 
-      case SequenceOp(label, children:_*) =>
+      case SequenceOp(label, children*) =>
         val cOps = children.map(compileIR)
         label match
           case OpCode.EVAL_NAIVE if children.length / 2 > heuristics.max_relations =>
@@ -207,9 +199,9 @@ class QuoteCompiler(val storageManager: StorageManager)(using JITOptions) extend
             cOps.reduceLeft((acc, next) =>
               '{ $acc ; $next }
             )
-      case ResetDeltaOp(rId, children: _*) =>
+      case ResetDeltaOp(rId, children*) =>
         val res = compileIRRelOp(children.head.asInstanceOf[IROp[EDB]])
-        '{ $stagedSM.setNewDelta(${ Expr(rId) }, $res) }
+        '{ $stagedSM.writeNewDelta(${ Expr(rId) }, $res) }
 
       case InsertDeltaNewIntoDerived() =>
         '{ $stagedSM.insertDeltaIntoDerived() }

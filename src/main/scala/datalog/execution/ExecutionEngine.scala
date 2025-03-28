@@ -1,10 +1,8 @@
 package datalog.execution
 
-import datalog.dsl.{Atom, Constant, Term, Variable, StorageAtom}
+import datalog.dsl.{Atom, StorageAtom}
 import datalog.storage.{RelationId, StorageManager, StorageTerm}
 
-import scala.collection.mutable
-import scala.collection.mutable.ArrayBuffer
 
 trait ExecutionEngine {
   val precedenceGraph: PrecedenceGraph

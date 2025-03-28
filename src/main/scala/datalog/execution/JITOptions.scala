@@ -67,14 +67,14 @@ case class JITOptions(
         case SortOrder.Sel =>
           (a: Atom, isDelta: Boolean) =>
             if (isDelta)
-              (true, storageManager.getKnownDeltaDB(a.rId).length)
+              (true, storageManager.getDeltaDB(a.rId).length)
             else
-              (true, storageManager.getKnownDerivedDB(a.rId).length)
+              (true, storageManager.getDerivedDB(a.rId).length)
         case SortOrder.Mixed =>
           (a: Atom, isDelta: Boolean) =>
             if (isDelta)
-              (storageManager.allRulesAllIndexes.contains(a.rId), storageManager.getKnownDeltaDB(a.rId).length)
+              (storageManager.allRulesAllIndexes.contains(a.rId), storageManager.getDeltaDB(a.rId).length)
             else
-              (storageManager.allRulesAllIndexes.contains(a.rId), storageManager.getKnownDerivedDB(a.rId).length)
+              (storageManager.allRulesAllIndexes.contains(a.rId), storageManager.getDerivedDB(a.rId).length)
         case _ => throw new Exception(s"Unknown sort order ${sortOrder}")
 }

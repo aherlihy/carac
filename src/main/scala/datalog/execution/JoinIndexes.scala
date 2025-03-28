@@ -3,10 +3,8 @@ package datalog.execution
 import datalog.dsl.{Atom, Constant, Variable}
 import datalog.execution.ir.{IROp, ProjectJoinFilterOp, ScanOp}
 import datalog.storage.{DB, EDB, NS, RelationId, StorageManager}
-import datalog.tools.Debug.debug
 
 import scala.collection.mutable
-import scala.quoted.*
 import scala.reflect.ClassTag
 
 type AllIndexes = mutable.Map[String, JoinIndexes]
@@ -40,7 +38,7 @@ case class JoinIndexes(varIndexes: Seq[Seq[Int]],
       ", project:" + projToString() +
       ", deps:" + depsToString(ns) +
       ", edb:" + edb +
-      ", cxn: " + cxnsToString(ns) +
+//      ", cxn: " + cxnsToString(ns) +
       " }"
 
   def varToString(): String = varIndexes.map(v => v.mkString("$", "==$", "")).mkString("[", ",", "]")
@@ -227,7 +225,7 @@ object JoinIndexes {
           newHash,
           JoinIndexes(originalK.atoms.head +: newBody.map(_._1), Some(originalK.cxns))
         )
-        (input.map(c => ProjectJoinFilterOp(rId, newK, newBody.map((_, oldP) => c.childrenSO(oldP)): _*)), newK)
+        (input.map(c => ProjectJoinFilterOp(rId, newK, newBody.map((_, oldP) => c.childrenSO(oldP))*)), newK)
   }
 
   def getOnlineSort(input: Seq[IROp[EDB]], sortBy: (Atom, Boolean) => (Boolean, Int), rId: Int, originalK: JoinIndexes, sm: StorageManager)(using jitOptions: JITOptions): (Seq[IROp[EDB]], JoinIndexes) = {
@@ -256,7 +254,7 @@ object JoinIndexes {
     mutable.Map[String, JoinIndexes](rule.drop(1).permutations.map(r =>
       val toRet = JoinIndexes(rule.head +: r, Some(idx.cxns))
       toRet.hash -> toRet
-    ).toSeq:_*)
+    ).toSeq*)
   }
 
   def getRuleHash(rule: Seq[Atom]): String = rule.map(r => r.hash).mkString("", "", "")

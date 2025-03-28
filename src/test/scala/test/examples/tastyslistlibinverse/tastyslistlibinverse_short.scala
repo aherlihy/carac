@@ -2,6 +2,7 @@ package test.examples.tastyslistlibinverse
 
 import buildinfo.BuildInfo
 import datalog.dsl.{Constant, Program}
+import datalog.storage.DatabaseType
 import test.{ExampleTestGenerator, Tags}
 
 class tastyslistlibinverse_short_test extends ExampleTestGenerator(
@@ -48,6 +49,9 @@ trait tastyslistlibinverse_short {
     val Refers = program.relation[String]("Refers")
     val Overrides = program.relation[String]("Overrides")
     val TopLevel = program.relation[String]("TopLevel")
+
+    program.ee.storageManager.declareTable(SuperCall.id, Seq(("c0", DatabaseType.TEXT), ("c1", DatabaseType.TEXT), ("c2", DatabaseType.TEXT)))
+    program.ee.storageManager.declareTable(Store.id, Seq(("c0", DatabaseType.TEXT), ("c1", DatabaseType.TEXT), ("c2", DatabaseType.TEXT)))
 
     val varr, heap, meth, to, from, base, baseH, fld, ref = program.variable()
     val toMeth, thiss, thisFrom, invo, sig, inMeth, heapT, m, n, actualFld = program.variable()
