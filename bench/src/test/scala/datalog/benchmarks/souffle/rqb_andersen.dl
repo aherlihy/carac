@@ -1,0 +1,24 @@
+// Input relations
+.decl addressOf(y: symbol, x: symbol)
+.decl assign(y: symbol, z: symbol)
+.decl load(y: symbol, x: symbol)
+.decl store(y: symbol, x: symbol)
+
+// Output relation
+.decl pointsTo(y: symbol, x: symbol)
+.output pointsTo
+
+// Rules
+pointsTo(y, x) :- addressOf(y, x).
+
+pointsTo(y, x) :- assign(y, z), pointsTo(z, x).
+
+pointsTo(y, w) :-
+    load(y, x),
+    pointsTo(x, z),
+    pointsTo(z, w).
+
+pointsTo(z, w) :-
+    store(y, x),
+    pointsTo(y, z),
+    pointsTo(x, w).

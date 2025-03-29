@@ -3,7 +3,7 @@ package datalog
 import buildinfo.BuildInfo
 import datalog.dsl.*
 import datalog.execution.{Backend, CompileSync, ExecutionEngine, Granularity, JITOptions, SortOrder, StagedExecutionEngine, ir, Mode as CaracMode}
-import datalog.storage.{CollectionsStorageManager, IndexedStorageManager}
+import datalog.storage.{CollectionsStorageManager, DuckDBStorageManager, IndexedStorageManager}
 
 import scala.util.Using
 import java.nio.file.{FileSystems, Files, Path, Paths}
@@ -675,12 +675,36 @@ def tc(program: Program): String = {
   tc.name
 }
 
+def rqb_andersen(program: Program): String = {
+  val addressOf = program.namedRelation("addressOf")
+  val assign = program.namedRelation("assign")
+  val load = program.namedRelation("load")
+  val store = program.namedRelation("store")
+  val pointsTo = program.relation[Constant]("pointsTo")
+
+  val x, y, z, w = program.variable()
+
+  pointsTo(y, x) :- addressOf(y, x)
+
+  pointsTo(y, x) :- (assign(y, z), pointsTo(z, x))
+
+  pointsTo(y, w) :- (
+    load(y, x),
+    pointsTo(x, z),
+    pointsTo(z, w)
+  )
+
+  pointsTo(z, w) :- (
+    store(y, x),
+    pointsTo(y, z),
+    pointsTo(x, w)
+  )
+  pointsTo.name
+}
+
 @main def main(benchmark: String, back: String) = {
   val engine = if back.contains("Interpreted") then
-    println("Collections")
-    new StagedExecutionEngine(new CollectionsStorageManager(), JITOptions(mode = CaracMode.Interpreted))
-//    println(s"Indexes")
-//    new StagedExecutionEngine(new IndexedStorageManager(), JITOptions(mode = CaracMode.Interpreted))
+    new StagedExecutionEngine(new DuckDBStorageManager(), JITOptions(mode = CaracMode.Interpreted))
   else
     val b = back match
       case "quotes" => Backend.Quotes
@@ -689,7 +713,7 @@ def tc(program: Program): String = {
       case _ => throw new Exception(s"Unknown backend $back")
     val dotty = staging.Compiler.make(Predef.getClass.getClassLoader)
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, dotty = dotty, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = b)
-    new StagedExecutionEngine(new CollectionsStorageManager(), jo)
+    new StagedExecutionEngine(new DuckDBStorageManager(), jo)
 
   val program = Program(engine)
 
@@ -705,6 +729,7 @@ def tc(program: Program): String = {
     case "tastyslistlib" => tastyslistlib(program)
     case "tastyslistlibinverse" => tastyslistlibinverse(program)
     case "tc" => tc(program)
+    case "rqb_andersen" => rqb_andersen(program)
     case _ => throw new Exception(s"Unknown benchmark $benchmark")
 
   val result = program.namedRelation(toSolve).solve()
