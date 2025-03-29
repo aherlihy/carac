@@ -11,8 +11,10 @@
 // Output relation
 .decl pointsTo(y: symbol, x: symbol)
 .output pointsTo
-
+.output assign
 .output addressOf
+.output load
+.output store
 
 // Rules
 pointsTo(y, x) :- addressOf(y, x).
