@@ -1,7 +1,7 @@
 package test.examples.tastypointstofun
 
 import buildinfo.BuildInfo
-import datalog.dsl.{Constant, Program}
+import carac.dsl.{Constant, Program}
 import test.{ExampleTestGenerator, Tags}
 
 class tastypointstofun_test extends ExampleTestGenerator("tastypointstofun", tags = Set(Tags.Negated)) with tastypointstofun

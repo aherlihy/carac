@@ -1,7 +1,7 @@
 package test.examples.game2
 
 import buildinfo.BuildInfo
-import datalog.dsl.{Constant, Program, __}
+import carac.dsl.{Constant, Program, __}
 import test.{ExampleTestGenerator, Tags}
 class game2_test extends ExampleTestGenerator("game2", tags = Set(Tags.Negated)) with game2
 trait game2 {

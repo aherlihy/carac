@@ -1,8 +1,8 @@
 //package test
 //
-//import datalog.dsl.{Constant, Program, __, not}
-//import datalog.execution.*
-//import datalog.storage.DefaultStorageManager
+//import carac.dsl.{Constant, Program, __, not}
+//import carac.execution.*
+//import carac.storage.DefaultStorageManager
 //
 //class StratifiedNegationTests extends munit.FunSuite {
 //

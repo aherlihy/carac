@@ -1,7 +1,7 @@
 package test.examples.cspa1k
 
 import buildinfo.BuildInfo
-import datalog.dsl.{Constant, Program}
+import carac.dsl.{Constant, Program}
 import test.{ExampleTestGenerator, Tags}
 
 class cspa1k_test extends ExampleTestGenerator(
@@ -14,7 +14,7 @@ trait cspa1k {
   val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/cspa1k/facts"
   val toSolve = "ValueFlow"
 
-  // Adapted from https://github.com/Hacker0912/RecStep/blob/e4107c814c7b24ae787dddb4af7e3238303f13ab/benchmark_datalog_programs/cspa.datalog
+  // Adapted from https://github.com/Hacker0912/RecStep/blob/e4107c814c7b24ae787dddb4af7e3238303f13ab/benchmark_carac_programs/cspa.carac
   def pretest(program: Program): Unit = {
     val Assign = program.namedRelation[Int]("Assign")
     val Dereference = program.namedRelation[Int]("Dereference")

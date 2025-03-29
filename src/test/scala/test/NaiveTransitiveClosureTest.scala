@@ -1,8 +1,8 @@
 package test
 
-import datalog.dsl.{Program, Relation}
-import datalog.execution.{ExecutionEngine, NaiveShallowExecutionEngine, ShallowExecutionEngine}
-import datalog.storage.CollectionsStorageManager
+import carac.dsl.{Program, Relation}
+import carac.execution.{ExecutionEngine, NaiveShallowExecutionEngine, ShallowExecutionEngine}
+import carac.storage.CollectionsStorageManager
 import test.graphs.{Acyclic, MultiIsolatedCycle, MultiJoin, RecursivePath, SingleCycle, TopSort}
 
 //class NaiveVolcanoTransitiveClosure extends munit.FunSuite {

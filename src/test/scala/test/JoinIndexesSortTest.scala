@@ -1,8 +1,8 @@
 package test
 
-import datalog.dsl.{Atom, Constant, Program, __}
-import datalog.execution.{ExecutionEngine, JoinIndexes, ShallowExecutionEngine}
-import datalog.storage.{CollectionsStorageManager, NS}
+import carac.dsl.{Atom, Constant, Program, __}
+import carac.execution.{ExecutionEngine, JoinIndexes, ShallowExecutionEngine}
+import carac.storage.{CollectionsStorageManager, NS}
 
 import scala.collection.mutable
 

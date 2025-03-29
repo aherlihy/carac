@@ -1,8 +1,8 @@
 package test.examples.javapointsto
 
 import buildinfo.BuildInfo
-import datalog.dsl.{Constant, Program}
-import datalog.storage.DatabaseType
+import carac.dsl.{Constant, Program}
+import carac.storage.DatabaseType
 import test.{ExampleTestGenerator, Tags}
 
 class javapointsto_test extends ExampleTestGenerator("javapointsto") with javapointsto

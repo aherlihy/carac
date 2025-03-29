@@ -1,7 +1,7 @@
 package test.examples.neg
 
 import buildinfo.BuildInfo
-import datalog.dsl.{Constant, Program, not}
+import carac.dsl.{Constant, Program, not}
 import test.{ExampleTestGenerator, Tags}
 
 class neg_test extends ExampleTestGenerator("neg", tags = Set(Tags.Negated)) with neg

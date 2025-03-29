@@ -1,7 +1,7 @@
 package test.examples.fib
 
 import buildinfo.BuildInfo
-import datalog.dsl.{Constant, Program}
+import carac.dsl.{Constant, Program}
 import test.{ExampleTestGenerator, Tags}
 
 import java.nio.file.Paths

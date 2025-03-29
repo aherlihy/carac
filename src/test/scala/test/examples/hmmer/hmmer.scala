@@ -1,5 +1,5 @@
 //package test.examples.hmmer
-//import datalog.dsl.{Constant, Program, __}
+//import carac.dsl.{Constant, Program, __}
 //import test.ExampleTestGenerator
 //class hmmer_test extends ExampleTestGenerator("hmmer") with hmmer
 //trait hmmer {

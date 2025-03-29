@@ -1,10 +1,10 @@
 package test
-import datalog.execution.{ExecutionEngine, PrecedenceGraph, ShallowExecutionEngine}
+import carac.execution.{ExecutionEngine, PrecedenceGraph, ShallowExecutionEngine}
 
 import scala.collection.immutable.ArraySeq
 import scala.collection.mutable
-import datalog.dsl.{Atom, Constant, Program, __}
-import datalog.storage.{CollectionsStorageManager, NS}
+import carac.dsl.{Atom, Constant, Program, __}
+import carac.storage.{CollectionsStorageManager, NS}
 
 class PrecedenceGraphTest extends munit.FunSuite {
   test("tarjan with tarjan example") {

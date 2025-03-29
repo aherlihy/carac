@@ -1,8 +1,8 @@
 package test.examples.tastyslistlib
 
 import buildinfo.BuildInfo
-import datalog.dsl.{Constant, Program}
-import datalog.storage.DatabaseType
+import carac.dsl.{Constant, Program}
+import carac.storage.DatabaseType
 import test.{ExampleTestGenerator, Tags}
 
 class tastyslistlib_worst_test extends ExampleTestGenerator(

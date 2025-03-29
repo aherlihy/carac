@@ -1,9 +1,9 @@
 package test
 
-import datalog.dsl.{Program, Relation}
-import datalog.execution.ir.OpCode
-import datalog.execution.{Backend, CompileSync, ExecutionEngine, Granularity, JITOptions, Mode, NaiveStagedExecutionEngine, SortOrder, StagedExecutionEngine, ir}
-import datalog.storage.CollectionsStorageManager
+import carac.dsl.{Program, Relation}
+import carac.execution.ir.OpCode
+import carac.execution.{Backend, CompileSync, ExecutionEngine, Granularity, JITOptions, Mode, NaiveStagedExecutionEngine, SortOrder, StagedExecutionEngine, ir}
+import carac.storage.CollectionsStorageManager
 import test.graphs.*
 
 @munit.IgnoreSuite

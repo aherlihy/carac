@@ -1,7 +1,7 @@
 package test.examples.tastyslistlibmini
 
 import buildinfo.BuildInfo
-import datalog.dsl.{Constant, Program}
+import carac.dsl.{Constant, Program}
 import test.{ExampleTestGenerator, Tags}
 
 class tastyslistlibmini_test extends ExampleTestGenerator(

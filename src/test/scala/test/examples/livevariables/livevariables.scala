@@ -1,7 +1,7 @@
 package test.examples.livevariables
 
 import buildinfo.BuildInfo
-import datalog.dsl.{Constant, Program, not}
+import carac.dsl.{Constant, Program, not}
 import test.{ExampleTestGenerator, Tags}
 
 class livevariables_test extends ExampleTestGenerator("livevariables", tags = Set(Tags.Negated)) with livevariables

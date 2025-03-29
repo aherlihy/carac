@@ -1,7 +1,7 @@
 package test.graphs
 
-import datalog.dsl.{Constant, Program, Relation, Term}
-import datalog.storage.StorageTerm
+import carac.dsl.{Constant, Program, Relation, Term}
+import carac.storage.StorageTerm
 
 import scala.collection.mutable
 

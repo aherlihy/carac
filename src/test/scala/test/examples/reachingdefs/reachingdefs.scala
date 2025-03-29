@@ -1,7 +1,7 @@
 package test.examples.reachingdefs
 
 import buildinfo.BuildInfo
-import datalog.dsl.{Constant, Program, not}
+import carac.dsl.{Constant, Program, not}
 import test.{ExampleTestGenerator, Tags}
 
 class reachingdefs_test extends ExampleTestGenerator("reachingdefs", tags = Set(Tags.Negated)) with reachingdefs

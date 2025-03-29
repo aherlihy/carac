@@ -1,5 +1,5 @@
 package test.examples.disconnected
-import datalog.dsl.{Constant, Program, __}
+import carac.dsl.{Constant, Program, __}
 
 import buildinfo.BuildInfo
 import test.{ExampleTestGenerator, Tags}

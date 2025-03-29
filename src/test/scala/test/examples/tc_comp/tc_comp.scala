@@ -1,7 +1,7 @@
 package test.examples.tc_comp
 
 import buildinfo.BuildInfo
-import datalog.dsl.{Constant, Program, __, not}
+import carac.dsl.{Constant, Program, __, not}
 import test.{ExampleTestGenerator, Tags}
 
 class tc_comp_test extends ExampleTestGenerator("tc_comp", tags = Set(Tags.Negated)) with tc_comp

@@ -1,8 +1,8 @@
 package test
 
-import datalog.dsl.{Constant, Program}
-import datalog.execution.{Backend, CompileSync, Granularity, JITOptions, Mode, NaiveShallowExecutionEngine, NaiveStagedExecutionEngine, ShallowExecutionEngine, SortOrder, StagedExecutionEngine, ir}
-import datalog.storage.{CollectionsStorageManager, IndexedStorageManager, StorageTerm, DuckDBStorageManager}
+import carac.dsl.{Constant, Program}
+import carac.execution.{Backend, CompileSync, Granularity, JITOptions, Mode, NaiveShallowExecutionEngine, NaiveStagedExecutionEngine, ShallowExecutionEngine, SortOrder, StagedExecutionEngine, ir}
+import carac.storage.{CollectionsStorageManager, IndexedStorageManager, StorageTerm, DuckDBStorageManager}
 
 import java.nio.file.{Files, Path, Paths}
 import scala.collection.mutable

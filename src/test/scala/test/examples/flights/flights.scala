@@ -1,7 +1,7 @@
 package test.examples.flights
 
 import buildinfo.BuildInfo
-import datalog.dsl.{Constant, Program}
+import carac.dsl.{Constant, Program}
 import test.{ExampleTestGenerator, Tags}
 class flights_test extends ExampleTestGenerator("flights", tags = Set(Tags.Negated)) with flights
 trait flights {

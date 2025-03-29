@@ -1,7 +1,7 @@
 package test.examples.csda100k
 
 import buildinfo.BuildInfo
-import datalog.dsl.{Constant, Program}
+import carac.dsl.{Constant, Program}
 import test.{ExampleTestGenerator, Tags}
 
 class csda100k_test extends ExampleTestGenerator(

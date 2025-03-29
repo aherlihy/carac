@@ -1,8 +1,8 @@
 package test.examples.tastyslistlibinverse
 
 import buildinfo.BuildInfo
-import datalog.dsl.{Constant, Program}
-import datalog.storage.DatabaseType
+import carac.dsl.{Constant, Program}
+import carac.storage.DatabaseType
 import test.ExampleTestGenerator
 
 class tastyslistlibinverse_optimized_test extends ExampleTestGenerator("tastyslistlibinverse") with tastyslistlibinverse_optimized

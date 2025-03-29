@@ -1,7 +1,7 @@
 package test.examples.strata
 
 import buildinfo.BuildInfo
-import datalog.dsl.{Constant, Program}
+import carac.dsl.{Constant, Program}
 import test.ExampleTestGenerator
 
 class strata_test extends ExampleTestGenerator("strata") with strata

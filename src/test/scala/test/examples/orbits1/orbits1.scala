@@ -1,7 +1,7 @@
 package test.examples.orbits1
 
 import buildinfo.BuildInfo
-import datalog.dsl.{Constant, Program, __}
+import carac.dsl.{Constant, Program, __}
 import test.{ExampleTestGenerator, Tags}
 class orbits1_test extends ExampleTestGenerator("orbits1", tags = Set(Tags.Negated)) with orbits1
 trait orbits1 {

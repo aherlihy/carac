@@ -1,7 +1,7 @@
 package test.examples.tastyslistlibnegated
 
 import buildinfo.BuildInfo
-import datalog.dsl.{Constant, Program}
+import carac.dsl.{Constant, Program}
 import test.{ExampleTestGenerator, Tags}
 
 class tastyslistlibnegated_test extends ExampleTestGenerator(

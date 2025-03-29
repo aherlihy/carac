@@ -1,7 +1,7 @@
 package test.examples.tree
 
 import buildinfo.BuildInfo
-import datalog.dsl.{Constant, Program, __}
+import carac.dsl.{Constant, Program, __}
 import test.ExampleTestGenerator
 
 import java.nio.file.Paths

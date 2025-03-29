@@ -1,7 +1,7 @@
 package test.examples.andersen
 
 import buildinfo.BuildInfo
-import datalog.dsl.{Constant, Program}
+import carac.dsl.{Constant, Program}
 import test.ExampleTestGenerator
 
 import java.nio.file.Paths

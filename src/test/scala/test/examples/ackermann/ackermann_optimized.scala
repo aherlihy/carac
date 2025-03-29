@@ -1,7 +1,7 @@
 package test.examples.ackermann
 
 import buildinfo.BuildInfo
-import datalog.dsl.{Constant, Program}
+import carac.dsl.{Constant, Program}
 import test.{ExampleTestGenerator, Tags}
 
 trait ackermann_optimized {
