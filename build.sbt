@@ -1,6 +1,7 @@
 import java.util.regex.Pattern
 import java.io.File.pathSeparator
 import java.nio.file.{Files, Paths}
+import scala.sys.process.Process
 
 inThisBuild(Seq(
   organization := "ch.epfl.lamp",

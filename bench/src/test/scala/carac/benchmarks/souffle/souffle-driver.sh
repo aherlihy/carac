@@ -10,7 +10,7 @@ BENCHMARK="$2"
 MODE="$3"
 
 FACTDIR="../src/test/scala/test/examples/$BENCHMARK/facts"
-PROGRAM="src/test/scala/datalog/benchmarks/souffle/$BENCHMARK.dl"
+PROGRAM="src/test/scala/carac/benchmarks/souffle/$BENCHMARK.dl"
 
 case "$MODE" in
   compile)

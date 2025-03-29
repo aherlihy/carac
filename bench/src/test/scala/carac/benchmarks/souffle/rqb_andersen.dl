@@ -1,12 +1,18 @@
 // Input relations
 .decl addressOf(y: symbol, x: symbol)
+.input addressOf(IO=file, header=true)
 .decl assign(y: symbol, z: symbol)
+.input assign(IO=file, header=true)
 .decl load(y: symbol, x: symbol)
+.input load(IO=file, header=true)
 .decl store(y: symbol, x: symbol)
+.input store(IO=file, header=true)
 
 // Output relation
 .decl pointsTo(y: symbol, x: symbol)
 .output pointsTo
+
+.output addressOf
 
 // Rules
 pointsTo(y, x) :- addressOf(y, x).
