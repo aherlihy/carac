@@ -2,7 +2,7 @@ package carac.benchmarks
 
 import carac.dsl.*
 import carac.execution.{Backend, CompileSync, ExecutionEngine, Granularity, JITOptions, NaiveShallowExecutionEngine, ShallowExecutionEngine, SortOrder, StagedExecutionEngine, ir, Mode as CaracMode}
-import carac.storage.{CollectionsStorageManager, DuckDBStorageManager}
+import carac.storage.{CollectionsStorageManager, DuckDBStorageManager, IndexedStorageManager}
 import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.Blackhole
 import test.examples.rqb_andersen.rqb_andersen
@@ -89,6 +89,22 @@ class BenchRQB_andersen extends rqb_andersen {
   @Benchmark def carac_warm_interp(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
     val engine = new StagedExecutionEngine(new DuckDBStorageManager(), jo)
+    val program = Program(engine)
+    program.loadFromFactDir(factDirectory)
+    pretest(program)
+    blackhole.consume(
+      program.namedRelation(toSolve).solve()
+    )
+    engine.precedenceGraph.idbs.foreach(i =>
+      val idb = engine.storageManager.ns(i)
+      Using(Files.newBufferedWriter(Paths.get("carac-scala-out", benchmark, idb + ".csv"))) { writer =>
+        engine.get(idb).foreach(f => writer.write(f.mkString("", "\t", "\n")))
+      })
+  }
+
+  @Benchmark def carac_warm_interp_indexed(blackhole: Blackhole): Unit = {
+    val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
+    val engine = new StagedExecutionEngine(new IndexedStorageManager(), jo)
     val program = Program(engine)
     program.loadFromFactDir(factDirectory)
     pretest(program)
