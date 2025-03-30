@@ -208,7 +208,7 @@ class BenchRQB_andersen_embedded() extends ExampleBenchmarkGenerator(
     blackhole.consume(run(programs(p), result))
   }
 
-  @Benchmark def interpreted_ddbnix_sel__0____EOL(blackhole: Blackhole): Unit = {
+  @Benchmark def interpreted_ddbnidx_sel__0____EOL(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
@@ -380,7 +380,7 @@ class BenchRQB_cba_embedded() extends ExampleBenchmarkGenerator(
     blackhole.consume(run(programs(p), result))
   }
 
-  @Benchmark def interpreted_ddbnix_sel__0____EOL(blackhole: Blackhole): Unit = {
+  @Benchmark def interpreted_ddbnidx_sel__0____EOL(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
@@ -552,7 +552,7 @@ class BenchRQB_cspa_embedded() extends ExampleBenchmarkGenerator(
     blackhole.consume(run(programs(p), result))
   }
 
-  @Benchmark def interpreted_ddbnix_sel__0____EOL(blackhole: Blackhole): Unit = {
+  @Benchmark def interpreted_ddbnidx_sel__0____EOL(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
     if (!programs.contains(p))
       throw new Exception(f"Error: program for '$p' not found")
