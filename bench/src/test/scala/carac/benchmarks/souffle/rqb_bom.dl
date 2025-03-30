@@ -1,0 +1,26 @@
+// Input: base production times for individual parts
+.decl basic(part: symbol, days: number)
+.input basic(IO="file", header="false")
+
+// Input: assembly relation - which part includes which sub-part
+.decl assbl(part: symbol, spart: symbol)
+.input assbl(IO="file", header="false")
+
+// Recursive relation to track wait time for part availability
+.decl waitFor(part: symbol, days: number)
+
+waitFor(part, days) :-
+    basic(part, days).
+
+waitFor(part, days) :-
+    assbl(part, spart),
+    waitFor(spart, days).
+
+.output waitFor
+
+// Compute the maximum wait time per part
+.decl max_wait(part: symbol, days: number)
+.output max_wait
+
+max_wait(p, d) :-
+    d = max days : { waitFor(p, days) }.

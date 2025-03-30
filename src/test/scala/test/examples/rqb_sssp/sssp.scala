@@ -4,7 +4,6 @@ import buildinfo.BuildInfo
 import carac.dsl.{Constant, Program}
 import test.{ExampleTestGenerator, Tags}
 
-class rqb_sssp_test extends ExampleTestGenerator("rqb_sssp") with rqb_sssp
 trait rqb_sssp {
   val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/rqb_sssp/facts"
   val toSolve = "cost"
