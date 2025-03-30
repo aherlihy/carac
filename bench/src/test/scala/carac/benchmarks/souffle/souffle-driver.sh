@@ -9,7 +9,7 @@ SOUFFLE_BIN="$1"
 BENCHMARK="$2"
 MODE="$3"
 
-FACTDIR="../src/test/scala/test/examples/$BENCHMARK/facts"
+FACTDIR="../src/test/scala/test/examples/$BENCHMARK/souffle-facts"
 PROGRAM="src/test/scala/carac/benchmarks/souffle/$BENCHMARK.dl"
 
 case "$MODE" in
