@@ -1,0 +1,22 @@
+// Define the input relation
+.decl parents(c0: symbol, c1: symbol)
+.input parents(IO=file, header=false)
+
+// Recursive relation: (name, generation)
+.decl generation(name: symbol, gen: number)
+//.output generation
+
+// Base case: children of '1' are in generation 1
+generation(name, 1) :-
+    parents("1", name).
+
+// Recursive step: find children of previously found names
+generation(name, gen + 1) :-
+    parents(parent, name),
+    generation(parent, gen).
+
+.decl result(name: symbol)
+
+result(name) :-
+    generation(name, 2).
+.output result
