@@ -52,27 +52,33 @@ class BenchRQB_andersen extends rqb_andersen {
     Process(s"mkdir -p carac-out/$benchmark").!
     Process(s"rm -rf carac-scala-out/$benchmark").!
     Process(s"mkdir -p  carac-scala-out/$benchmark").!
+    Process(s"mkdir -p  carac-scala-out/lambda_ddbidx/$benchmark").!
+    Process(s"mkdir -p  carac-scala-out/lambda_collidx/$benchmark").!
+    Process(s"mkdir -p  carac-scala-out/lambda_ddbn/$benchmark").!
+    Process(s"mkdir -p  carac-scala-out/interp_ddbidx/$benchmark").!
+    Process(s"mkdir -p  carac-scala-out/interp_collidx/$benchmark").!
+    Process(s"mkdir -p  carac-scala-out/interp_ddbn/$benchmark").!
   }
 
-  @Benchmark def carac_warm_bytecode(blackhole: Blackhole): Unit = {
-    val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Bytecode)
-    val engine = new StagedExecutionEngine(new DuckDBStorageManager(), jo)
-    val program = Program(engine)
-    program.loadFromFactDir(factDirectory)
-    pretest(program)
-    blackhole.consume(
-      program.namedRelation(toSolve).solve()
-    )
-    engine.precedenceGraph.idbs.foreach(i =>
-      val idb = engine.storageManager.ns(i)
-      Using(Files.newBufferedWriter(Paths.get("carac-scala-out", benchmark, idb + ".csv"))) { writer =>
-        engine.get(idb).foreach(f => writer.write(f.mkString("", "\t", "\n")))
-      })
-  }
+//  @Benchmark def carac_warm_bytecode(blackhole: Blackhole): Unit = {
+//    val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Bytecode)
+//    val engine = new StagedExecutionEngine(new DuckDBStorageManager(), jo)
+//    val program = Program(engine)
+//    program.loadFromFactDir(factDirectory)
+//    pretest(program)
+//    blackhole.consume(
+//      program.namedRelation(toSolve).solve()
+//    )
+//    engine.precedenceGraph.idbs.foreach(i =>
+//      val idb = engine.storageManager.ns(i)
+//      Using(Files.newBufferedWriter(Paths.get("carac-scala-out", benchmark, idb + ".csv"))) { writer =>
+//        engine.get(idb).foreach(f => writer.write(f.mkString("", "\t", "\n")))
+//      })
+//  }
 
-  @Benchmark def carac_warm_lambda(blackhole: Blackhole): Unit = {
+  @Benchmark def carac_warm_lambda_ddbidx(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
-    val engine = new StagedExecutionEngine(new DuckDBStorageManager(), jo)
+    val engine = new StagedExecutionEngine(new DuckDBStorageManager(indexed = true), jo)
     val program = Program(engine)
     program.loadFromFactDir(factDirectory)
     pretest(program)
@@ -81,14 +87,30 @@ class BenchRQB_andersen extends rqb_andersen {
     )
     engine.precedenceGraph.idbs.foreach(i =>
       val idb = engine.storageManager.ns(i)
-      Using(Files.newBufferedWriter(Paths.get("carac-scala-out", benchmark, idb + ".csv"))) { writer =>
+      Using(Files.newBufferedWriter(Paths.get("carac-scala-out", "lambda_ddbidx", benchmark, idb + ".csv"))) { writer =>
         engine.get(idb).foreach(f => writer.write(f.mkString("", "\t", "\n")))
       })
   }
 
-  @Benchmark def carac_warm_interp(blackhole: Blackhole): Unit = {
+  @Benchmark def carac_warm_lambda_ddbn(blackhole: Blackhole): Unit = {
+    val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
+    val engine = new StagedExecutionEngine(new DuckDBStorageManager(indexed = false), jo)
+    val program = Program(engine)
+    program.loadFromFactDir(factDirectory)
+    pretest(program)
+    blackhole.consume(
+      program.namedRelation(toSolve).solve()
+    )
+    engine.precedenceGraph.idbs.foreach(i =>
+      val idb = engine.storageManager.ns(i)
+      Using(Files.newBufferedWriter(Paths.get("carac-scala-out", "lambda_ddbn", benchmark, idb + ".csv"))) { writer =>
+        engine.get(idb).foreach(f => writer.write(f.mkString("", "\t", "\n")))
+      })
+  }
+
+  @Benchmark def carac_warm_interp_ddbn(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
-    val engine = new StagedExecutionEngine(new DuckDBStorageManager(), jo)
+    val engine = new StagedExecutionEngine(new DuckDBStorageManager(indexed = false), jo)
     val program = Program(engine)
     program.loadFromFactDir(factDirectory)
     pretest(program)
@@ -97,12 +119,28 @@ class BenchRQB_andersen extends rqb_andersen {
     )
     engine.precedenceGraph.idbs.foreach(i =>
       val idb = engine.storageManager.ns(i)
-      Using(Files.newBufferedWriter(Paths.get("carac-scala-out", benchmark, idb + ".csv"))) { writer =>
+      Using(Files.newBufferedWriter(Paths.get("carac-scala-out", "interp_ddbn", benchmark, idb + ".csv"))) { writer =>
         engine.get(idb).foreach(f => writer.write(f.mkString("", "\t", "\n")))
       })
   }
 
-  @Benchmark def carac_warm_interp_indexed(blackhole: Blackhole): Unit = {
+  @Benchmark def carac_warm_interp_ddbidx(blackhole: Blackhole): Unit = {
+    val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
+    val engine = new StagedExecutionEngine(new DuckDBStorageManager(indexed = true), jo)
+    val program = Program(engine)
+    program.loadFromFactDir(factDirectory)
+    pretest(program)
+    blackhole.consume(
+      program.namedRelation(toSolve).solve()
+    )
+    engine.precedenceGraph.idbs.foreach(i =>
+      val idb = engine.storageManager.ns(i)
+      Using(Files.newBufferedWriter(Paths.get("carac-scala-out", "interp_ddbidx", benchmark, idb + ".csv"))) { writer =>
+        engine.get(idb).foreach(f => writer.write(f.mkString("", "\t", "\n")))
+      })
+  }
+
+  @Benchmark def carac_warm_lambda_collidx(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
     val engine = new StagedExecutionEngine(new IndexedStorageManager(), jo)
     val program = Program(engine)
@@ -113,7 +151,23 @@ class BenchRQB_andersen extends rqb_andersen {
     )
     engine.precedenceGraph.idbs.foreach(i =>
       val idb = engine.storageManager.ns(i)
-      Using(Files.newBufferedWriter(Paths.get("carac-scala-out", benchmark, idb + ".csv"))) { writer =>
+      Using(Files.newBufferedWriter(Paths.get("carac-scala-out", "lambda_collidx", benchmark, idb + ".csv"))) { writer =>
+        engine.get(idb).foreach(f => writer.write(f.mkString("", "\t", "\n")))
+      })
+  }
+
+  @Benchmark def carac_warm_interp_collidx(blackhole: Blackhole): Unit = {
+    val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
+    val engine = new StagedExecutionEngine(new IndexedStorageManager(), jo)
+    val program = Program(engine)
+    program.loadFromFactDir(factDirectory)
+    pretest(program)
+    blackhole.consume(
+      program.namedRelation(toSolve).solve()
+    )
+    engine.precedenceGraph.idbs.foreach(i =>
+      val idb = engine.storageManager.ns(i)
+      Using(Files.newBufferedWriter(Paths.get("carac-scala-out", "interp_collidx", benchmark, idb + ".csv"))) { writer =>
         engine.get(idb).foreach(f => writer.write(f.mkString("", "\t", "\n")))
       })
   }
@@ -126,29 +180,29 @@ class BenchRQB_andersen extends rqb_andersen {
 //    blackhole.consume(exitCode) // prob unnecessary
 //  }
 
-  @Benchmark def carac_jar_lambda(blackhole: Blackhole): Unit = {
-    val b = "lambda"
-    val pb = Process(Seq(s"../target/pack/bin/main", benchmark, b))
-    val exitCode = pb.!
-    if (exitCode != 0) throw new Exception(s"Carac $benchmark and $b exited with code $exitCode")
-    blackhole.consume(exitCode) // prob unnecessary
-  }
-
-  @Benchmark def carac_jar_bytecode(blackhole: Blackhole): Unit = {
-    val b = "bytecode"
-    val pb = Process(Seq(s"../target/pack/bin/main", benchmark, b))
-    val exitCode = pb.!
-    if (exitCode != 0) throw new Exception(s"Carac $benchmark and $b exited with code $exitCode")
-    blackhole.consume(exitCode) // prob unnecessary
-  }
-
-  @Benchmark def carac_jar_interp(blackhole: Blackhole): Unit = {
-    val b = "Interpreted"
-    val pb = Process(Seq(s"../target/pack/bin/main", benchmark, b))
-    val exitCode = pb.!
-    if (exitCode != 0) throw new Exception(s"Carac $benchmark and $b exited with code $exitCode")
-    blackhole.consume(exitCode) // prob unnecessary
-  }
+//  @Benchmark def carac_jar_lambda(blackhole: Blackhole): Unit = {
+//    val b = "lambda"
+//    val pb = Process(Seq(s"../target/pack/bin/main", benchmark, b))
+//    val exitCode = pb.!
+//    if (exitCode != 0) throw new Exception(s"Carac $benchmark and $b exited with code $exitCode")
+//    blackhole.consume(exitCode) // prob unnecessary
+//  }
+//
+//  @Benchmark def carac_jar_bytecode(blackhole: Blackhole): Unit = {
+//    val b = "bytecode"
+//    val pb = Process(Seq(s"../target/pack/bin/main", benchmark, b))
+//    val exitCode = pb.!
+//    if (exitCode != 0) throw new Exception(s"Carac $benchmark and $b exited with code $exitCode")
+//    blackhole.consume(exitCode) // prob unnecessary
+//  }
+//
+//  @Benchmark def carac_jar_interp(blackhole: Blackhole): Unit = {
+//    val b = "Interpreted"
+//    val pb = Process(Seq(s"../target/pack/bin/main", benchmark, b))
+//    val exitCode = pb.!
+//    if (exitCode != 0) throw new Exception(s"Carac $benchmark and $b exited with code $exitCode")
+//    blackhole.consume(exitCode) // prob unnecessary
+//  }
 
   private def run_souffle(mode: String, blackhole: Blackhole): Unit = {
     val pb = Process(Seq("src/test/scala/carac/benchmarks/souffle/souffle-driver.sh", SOUFFLE_BIN, benchmark, mode))
