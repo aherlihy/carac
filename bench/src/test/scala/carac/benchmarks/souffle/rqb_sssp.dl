@@ -1,0 +1,34 @@
+// Input base facts: known distances to some nodes
+.decl base(dst: number, cost: number)
+.input base(IO=file, header=false)
+
+// Input edge facts: edges in the graph
+.decl edge(src: number, dst: number, cost: number)
+.input edge(IO=file, header=false)
+
+// Recursive relation: reachable nodes with a cost
+.decl cost(dst: number, cost: number)
+.output cost
+
+// Base case: start from known distances
+cost(dst, cost) :-
+    base(dst, cost).
+
+// Recursive step: extend paths through edges
+cost(dst, cost1 + cost2) :-
+    cost(src, cost1),
+    edge(src, dst, cost2).
+
+// Compute the minimum cost per dst
+.decl min_cost(dst: number, cost: number)
+
+min_cost(d, c) :-
+    c = min cost : { cost(d, cost) }.
+
+// Final result: only those cost facts where cost is minimal
+.decl result(dst: number, cost: number)
+.output result
+
+result(d, c) :-
+    cost(d, c),
+    min_cost(d, c).
