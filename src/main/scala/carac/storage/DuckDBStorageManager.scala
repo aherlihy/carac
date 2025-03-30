@@ -55,6 +55,7 @@ case class DuckDBDatabase(prefix: DatabasePrefix, run: String => ResultSet, upda
   var commandCache: mutable.ArrayBuffer[String] = mutable.ArrayBuffer[String]()
   val tables: mutable.Map[RelationId, DuckDBEDB] = mutable.Map[RelationId, DuckDBEDB]() // relationId => table name
   val indexCandidates: mutable.Map[RelationId, mutable.BitSet] = mutable.Map[RelationId, mutable.BitSet]() // relative position of atoms with constant or variable locations
+  val idxTODO: mutable.Map[RelationId, mutable.BitSet] = mutable.Map[RelationId, mutable.BitSet]()
 
   def contains: RelationId => Boolean = tables.contains
 
@@ -64,11 +65,25 @@ case class DuckDBDatabase(prefix: DatabasePrefix, run: String => ResultSet, upda
       update(cmds)
       commandCache.clear()
 
+  def createIndex(rId: RelationId, positions: mutable.BitSet): Unit =
+    val currentIdx = indexCandidates.getOrElseUpdate(rId, mutable.BitSet())
+    positions.foreach(i =>
+      if !currentIdx.contains(i) then
+        currentIdx.addOne(i)
+        // for now add single-column indexes
+        if tables.contains(rId) then
+          val idx = s"CREATE INDEX ${tables(rId).prefixedName}_c${i}_idx ON ${tables(rId).prefixedName} (c$i)"
+//          println(s"creating index: $idx")
+          commandCache.addOne(idx)
+        else
+          idxTODO.getOrElseUpdate(rId, mutable.BitSet()).addOne(i)
+    )
+    indexCandidates(rId) = currentIdx
+
   def initializeTable(rId: RelationId, name: String, schema: Seq[(String, DatabaseType)]): DuckDBDatabase =
     if (!contains(rId))
       val newEdb = DuckDBEDB(rId, name, prefix, run, schema)
       tables(rId) = newEdb // use name for easier debuggablity
-      indexCandidates.getOrElseUpdate(rId, mutable.BitSet())
       val types = schema.map((s, t) =>
         val dbtype = t match
           case DatabaseType.UNKNOWN => throw new Exception(s"No Schema available for ${newEdb.prefixedName}: $schema") // TODO: potentially derive type from rule
@@ -77,6 +92,14 @@ case class DuckDBDatabase(prefix: DatabasePrefix, run: String => ResultSet, upda
       ).mkString("(", ", ", ")")
       val schemaString = s"CREATE TABLE ${newEdb.prefixedName} $types"
       commandCache.addOne(schemaString)
+      if idxTODO.contains(rId) then
+        val idx = idxTODO(rId)
+        idx.foreach(i =>
+          val idx = s"CREATE INDEX ${newEdb.prefixedName}_c${i}_idx ON ${newEdb.prefixedName} (c$i)"
+//          println(s"creating index: $idx")
+          commandCache.addOne(idx)
+        )
+        idxTODO.remove(rId)
     this
 
   def insertRow(rId: RelationId, terms: Seq[Term]): DuckDBDatabase =
@@ -116,7 +139,7 @@ case class DuckDBDatabase(prefix: DatabasePrefix, run: String => ResultSet, upda
 /**
  * Collections-based storage manager, index or no index.
  */
-class DuckDBStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
+class DuckDBStorageManager(ns: NS = new NS(), indexed: Boolean = true) extends StorageManager(ns) {
   // "database", i.e. relationID => Relation
   var connection: Connection = null
   var initialized: Boolean = false
@@ -176,11 +199,10 @@ class DuckDBStorageManager(ns: NS = new NS()) extends StorageManager(ns) {
   }
 
   // Store relative positions of shared variables as candidates for potential indexes
-  def registerIndexCandidates(cands: mutable.Map[RelationId, mutable.BitSet]): Unit = {
-    cands.foreach((rId, idxs) =>
-      databases.foreach(_.indexCandidates.getOrElseUpdate(rId, mutable.BitSet()).addAll(idxs))
+  def registerIndexCandidates(cands: mutable.Map[RelationId, mutable.BitSet]): Unit =
+    if indexed then cands.foreach((rId, idxs) =>
+      databases.foreach(_.createIndex(rId, idxs))
     )
-  }
 
   def generateSchema(terms: Seq[Term], throwOnVar: Boolean): Seq[(String, DatabaseType)] =
     terms.zipWithIndex.map((t, i) => (s"c$i", t match {
