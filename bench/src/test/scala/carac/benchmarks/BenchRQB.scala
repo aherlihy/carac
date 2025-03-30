@@ -1,22 +1,19 @@
 package carac.benchmarks
 
 import carac.dsl.*
-import carac.execution.{Backend, CompileSync, ExecutionEngine, Granularity, JITOptions, NaiveShallowExecutionEngine, ShallowExecutionEngine, SortOrder, StagedExecutionEngine, ir, Mode as CaracMode}
-import carac.storage.{CollectionsStorageManager, DuckDBStorageManager, IndexedStorageManager}
+import carac.execution.{Backend, CompileSync, ExecutionEngine, Granularity, JITOptions, SortOrder, StagedExecutionEngine, Mode as CaracMode}
+import carac.storage.{DuckDBStorageManager, IndexedStorageManager}
 import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.Blackhole
 import test.examples.rqb_andersen.rqb_andersen
-import test.examples.rqb_cba.rqb_cba_worst
+import test.examples.rqb_cba.rqb_cba
 import test.examples.rqb_cspa.rqb_cspa
 import test.examples.rqb_ancestry.rqb_ancestry
 import test.examples.rqb_sssp.rqb_sssp
 import test.examples.rqb_bom.rqb_bom
 
-import java.nio.file.{FileSystems, Files, Path, Paths}
+import java.nio.file.{Files, Paths}
 import java.util.concurrent.TimeUnit
-import scala.collection.immutable.Map
-import scala.concurrent.duration.Duration
-import scala.quoted.staging
 import scala.sys.process.Process
 import scala.util.Using
 
@@ -48,12 +45,45 @@ object RQB_Bench {
 }
 
 @Fork(1) // # of jvms that it will use
-@Warmup(iterations = 10, time = 10, timeUnit = TimeUnit.SECONDS, batchSize = 1)
-@Measurement(iterations = 10, time = 10, timeUnit = TimeUnit.SECONDS, batchSize= 1)
+@Warmup(iterations = 0, batchSize = 1)
+@Measurement(iterations = 1, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
 @State(Scope.Thread)
 //@TearDown(Level.Invocation)
 @BenchmarkMode(Array(Mode.AverageTime))
-class BenchRQB_andersen extends rqb_andersen {
+class BenchRQB_andersen_souffle extends rqb_andersen {
+  val pattern = """.*examples/(.*?)/facts.*""".r
+  val benchmark = pattern.findFirstMatchIn(factDirectory).get.group(1)
+  var directory = null
+
+  RQB_Bench.cleanup(benchmark)
+
+  private def run_souffle(mode: String, blackhole: Blackhole): Unit = {
+    val pb = Process(Seq("src/test/scala/carac/benchmarks/souffle/souffle-driver.sh", SOUFFLE_BIN, benchmark, mode))
+    val exitCode = pb.!
+    if (exitCode != 0) throw new Exception(s"Souffle $mode failed with code $exitCode")
+    blackhole.consume(exitCode)
+  }
+  @Benchmark def souffle__compile(blackhole: Blackhole): Unit =
+    run_souffle("compile", blackhole)
+
+  @Benchmark def souffle__interp(blackhole: Blackhole): Unit =
+    run_souffle("interp", blackhole)
+
+  @Benchmark def souffle_profile_compile(blackhole: Blackhole): Unit =
+    run_souffle("profile-compile", blackhole)
+
+  @Benchmark def souffle_profile_interp(blackhole: Blackhole): Unit =
+    run_souffle("profile-interp", blackhole)
+}
+
+
+@Fork(1) // # of jvms that it will use
+@Warmup(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
+@Measurement(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS, batchSize= 1)
+@State(Scope.Thread)
+//@TearDown(Level.Invocation)
+@BenchmarkMode(Array(Mode.AverageTime))
+class BenchRQB_andersen_carac extends rqb_andersen {
   val pattern = """.*examples/(.*?)/facts.*""".r
   val benchmark = pattern.findFirstMatchIn(factDirectory).get.group(1)
   var directory = null
@@ -74,66 +104,47 @@ class BenchRQB_andersen extends rqb_andersen {
     }
   }
 
-  private def run_souffle(mode: String, blackhole: Blackhole): Unit = {
-    val pb = Process(Seq("src/test/scala/carac/benchmarks/souffle/souffle-driver.sh", SOUFFLE_BIN, benchmark, mode))
-    val exitCode = pb.!
-    if (exitCode != 0) throw new Exception(s"Souffle $mode failed with code $exitCode")
-    blackhole.consume(exitCode)
-  }
-
-  @Benchmark def carac_warm_lambda_ddbidx(blackhole: Blackhole): Unit = {
+  @Benchmark def warm_lambda_ddbidx(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
     val engine = new StagedExecutionEngine(new DuckDBStorageManager(indexed = true), jo)
     val mode = "lambda_ddbidx"
     run_warm_carac(blackhole, mode, engine)
   }
 
-  @Benchmark def carac_warm_lambda_ddbn(blackhole: Blackhole): Unit = {
+  @Benchmark def warm_lambda_ddbn(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
     val engine = new StagedExecutionEngine(new DuckDBStorageManager(indexed = false), jo)
     val mode = "lambda_ddbn"
     run_warm_carac(blackhole, mode, engine)
   }
 
-  @Benchmark def carac_warm_interp_ddbn(blackhole: Blackhole): Unit = {
+  @Benchmark def warm_interp_ddbn(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
     val engine = new StagedExecutionEngine(new DuckDBStorageManager(indexed = false), jo)
     val mode = "interp_ddbn"
     run_warm_carac(blackhole, mode, engine)
   }
 
-  @Benchmark def carac_warm_interp_ddbidx(blackhole: Blackhole): Unit = {
+  @Benchmark def warm_interp_ddbidx(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
     val engine = new StagedExecutionEngine(new DuckDBStorageManager(indexed = true), jo)
     val mode = "interp_ddbidx"
     run_warm_carac(blackhole, mode, engine)
   }
 
-  @Benchmark def carac_warm_lambda_collidx(blackhole: Blackhole): Unit = {
+  @Benchmark def warm_lambda_collidx(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
     val engine = new StagedExecutionEngine(new IndexedStorageManager(), jo)
     val mode = "lambda_collidx"
     run_warm_carac(blackhole, mode, engine)
   }
 
-  @Benchmark def carac_warm_interp_collidx(blackhole: Blackhole): Unit = {
+  @Benchmark def warm_interp_collidx(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
     val engine = new StagedExecutionEngine(new IndexedStorageManager(), jo)
     val mode = "interp_collidx"
     run_warm_carac(blackhole, mode, engine)
   }
-
-  @Benchmark def souffle__compile(blackhole: Blackhole): Unit =
-    run_souffle("compile", blackhole)
-
-  @Benchmark def souffle__interp(blackhole: Blackhole): Unit =
-    run_souffle("interp", blackhole)
-
-  @Benchmark def souffle_profile_compile(blackhole: Blackhole): Unit =
-    run_souffle("profile-compile", blackhole)
-
-  @Benchmark def souffle_profile_interp(blackhole: Blackhole): Unit =
-    run_souffle("profile-interp", blackhole)
 
   //  @Benchmark def carac_native_lambda(blackhole: Blackhole): Unit = {
   //    val b = "lambda"
@@ -169,11 +180,11 @@ class BenchRQB_andersen extends rqb_andersen {
 }
 
 @Fork(1) // # of jvms that it will use
-@Warmup(iterations = 10, time = 10, timeUnit = TimeUnit.SECONDS, batchSize = 1)
-@Measurement(iterations = 10, time = 10, timeUnit = TimeUnit.SECONDS, batchSize = 1)
+@Warmup(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
+@Measurement(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
-class BenchRQB_andersen_carac_embedded() extends ExampleBenchmarkGenerator(
+class BenchRQB_andersen_embedded() extends ExampleBenchmarkGenerator(
   "rqb_andersen"
 ) with rqb_andersen {
   @Benchmark def jit_indexed_sel__0_blocking_DELTA_lambda_EOL(blackhole: Blackhole): Unit = {
@@ -219,12 +230,46 @@ class BenchRQB_andersen_carac_embedded() extends ExampleBenchmarkGenerator(
 }
 
 @Fork(1) // # of jvms that it will use
-@Warmup(iterations = 10, time = 10, timeUnit = TimeUnit.SECONDS, batchSize = 1)
-@Measurement(iterations = 10, time = 10, timeUnit = TimeUnit.SECONDS, batchSize= 1)
+@Warmup(iterations = 0, batchSize = 1)
+@Measurement(iterations = 1, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
 @State(Scope.Thread)
 //@TearDown(Level.Invocation)
 @BenchmarkMode(Array(Mode.AverageTime))
-class BenchRQB_cba extends rqb_cba_worst {
+class BenchRQB_cba_souffle extends rqb_cba {
+  val pattern = """.*examples/(.*?)/facts.*""".r
+  val benchmark = pattern.findFirstMatchIn(factDirectory).get.group(1)
+  var directory = null
+
+  RQB_Bench.cleanup(benchmark)
+
+  private def run_souffle(mode: String, blackhole: Blackhole): Unit = {
+    val pb = Process(Seq("src/test/scala/carac/benchmarks/souffle/souffle-driver.sh", SOUFFLE_BIN, benchmark, mode))
+    val exitCode = pb.!
+    if (exitCode != 0) throw new Exception(s"Souffle $mode failed with code $exitCode")
+    blackhole.consume(exitCode)
+  }
+
+  @Benchmark def souffle__compile(blackhole: Blackhole): Unit =
+    run_souffle("compile", blackhole)
+
+  @Benchmark def souffle__interp(blackhole: Blackhole): Unit =
+    run_souffle("interp", blackhole)
+
+  @Benchmark def souffle_profile_compile(blackhole: Blackhole): Unit =
+    run_souffle("profile-compile", blackhole)
+
+  @Benchmark def souffle_profile_interp(blackhole: Blackhole): Unit =
+    run_souffle("profile-interp", blackhole)
+}
+
+
+@Fork(1) // # of jvms that it will use
+@Warmup(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
+@Measurement(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
+@State(Scope.Thread)
+//@TearDown(Level.Invocation)
+@BenchmarkMode(Array(Mode.AverageTime))
+class BenchRQB_cba_carac extends rqb_cba {
   val pattern = """.*examples/(.*?)/facts.*""".r
   val benchmark = pattern.findFirstMatchIn(factDirectory).get.group(1)
   var directory = null
@@ -245,66 +290,47 @@ class BenchRQB_cba extends rqb_cba_worst {
     }
   }
 
-  private def run_souffle(mode: String, blackhole: Blackhole): Unit = {
-    val pb = Process(Seq("src/test/scala/carac/benchmarks/souffle/souffle-driver.sh", SOUFFLE_BIN, benchmark, mode))
-    val exitCode = pb.!
-    if (exitCode != 0) throw new Exception(s"Souffle $mode failed with code $exitCode")
-    blackhole.consume(exitCode)
-  }
-
-  @Benchmark def carac_warm_lambda_ddbidx(blackhole: Blackhole): Unit = {
+  @Benchmark def warm_lambda_ddbidx(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
     val engine = new StagedExecutionEngine(new DuckDBStorageManager(indexed = true), jo)
     val mode = "lambda_ddbidx"
     run_warm_carac(blackhole, mode, engine)
   }
 
-  @Benchmark def carac_warm_lambda_ddbn(blackhole: Blackhole): Unit = {
+  @Benchmark def warm_lambda_ddbn(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
     val engine = new StagedExecutionEngine(new DuckDBStorageManager(indexed = false), jo)
     val mode = "lambda_ddbn"
     run_warm_carac(blackhole, mode, engine)
   }
 
-  @Benchmark def carac_warm_interp_ddbn(blackhole: Blackhole): Unit = {
+  @Benchmark def warm_interp_ddbn(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
     val engine = new StagedExecutionEngine(new DuckDBStorageManager(indexed = false), jo)
     val mode = "interp_ddbn"
     run_warm_carac(blackhole, mode, engine)
   }
 
-  @Benchmark def carac_warm_interp_ddbidx(blackhole: Blackhole): Unit = {
+  @Benchmark def warm_interp_ddbidx(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
     val engine = new StagedExecutionEngine(new DuckDBStorageManager(indexed = true), jo)
     val mode = "interp_ddbidx"
     run_warm_carac(blackhole, mode, engine)
   }
 
-  @Benchmark def carac_warm_lambda_collidx(blackhole: Blackhole): Unit = {
+  @Benchmark def warm_lambda_collidx(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
     val engine = new StagedExecutionEngine(new IndexedStorageManager(), jo)
     val mode = "lambda_collidx"
     run_warm_carac(blackhole, mode, engine)
   }
 
-  @Benchmark def carac_warm_interp_collidx(blackhole: Blackhole): Unit = {
+  @Benchmark def warm_interp_collidx(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
     val engine = new StagedExecutionEngine(new IndexedStorageManager(), jo)
     val mode = "interp_collidx"
     run_warm_carac(blackhole, mode, engine)
   }
-
-  @Benchmark def souffle__compile(blackhole: Blackhole): Unit =
-    run_souffle("compile", blackhole)
-
-  @Benchmark def souffle__interp(blackhole: Blackhole): Unit =
-    run_souffle("interp", blackhole)
-
-  @Benchmark def souffle_profile_compile(blackhole: Blackhole): Unit =
-    run_souffle("profile-compile", blackhole)
-
-  @Benchmark def souffle_profile_interp(blackhole: Blackhole): Unit =
-    run_souffle("profile-interp", blackhole)
 
   //  @Benchmark def carac_native_lambda(blackhole: Blackhole): Unit = {
   //    val b = "lambda"
@@ -340,13 +366,13 @@ class BenchRQB_cba extends rqb_cba_worst {
 }
 
 @Fork(1) // # of jvms that it will use
-@Warmup(iterations = 10, time = 10, timeUnit = TimeUnit.SECONDS, batchSize = 1)
-@Measurement(iterations = 10, time = 10, timeUnit = TimeUnit.SECONDS, batchSize = 1)
+@Warmup(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
+@Measurement(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
-class BenchRQB_cba_carac_embedded() extends ExampleBenchmarkGenerator(
+class BenchRQB_cba_embedded() extends ExampleBenchmarkGenerator(
   "rqb_cba"
-) with rqb_cba_worst {
+) with rqb_cba {
   @Benchmark def jit_indexed_sel__0_blocking_DELTA_lambda_EOL(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
     if (!programs.contains(p))
@@ -391,12 +417,46 @@ class BenchRQB_cba_carac_embedded() extends ExampleBenchmarkGenerator(
 }
 
 @Fork(1) // # of jvms that it will use
-@Warmup(iterations = 10, time = 10, timeUnit = TimeUnit.SECONDS, batchSize = 1)
-@Measurement(iterations = 10, time = 10, timeUnit = TimeUnit.SECONDS, batchSize= 1)
+@Warmup(iterations = 0, batchSize = 1)
+@Measurement(iterations = 1, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
 @State(Scope.Thread)
 //@TearDown(Level.Invocation)
 @BenchmarkMode(Array(Mode.AverageTime))
-class BenchRQB_cspa extends rqb_cspa {
+class BenchRQB_cspa_souffle extends rqb_cspa {
+  val pattern = """.*examples/(.*?)/facts.*""".r
+  val benchmark = pattern.findFirstMatchIn(factDirectory).get.group(1)
+  var directory = null
+
+  RQB_Bench.cleanup(benchmark)
+
+  private def run_souffle(mode: String, blackhole: Blackhole): Unit = {
+    val pb = Process(Seq("src/test/scala/carac/benchmarks/souffle/souffle-driver.sh", SOUFFLE_BIN, benchmark, mode))
+    val exitCode = pb.!
+    if (exitCode != 0) throw new Exception(s"Souffle $mode failed with code $exitCode")
+    blackhole.consume(exitCode)
+  }
+
+  @Benchmark def souffle__compile(blackhole: Blackhole): Unit =
+    run_souffle("compile", blackhole)
+
+  @Benchmark def souffle__interp(blackhole: Blackhole): Unit =
+    run_souffle("interp", blackhole)
+
+  @Benchmark def souffle_profile_compile(blackhole: Blackhole): Unit =
+    run_souffle("profile-compile", blackhole)
+
+  @Benchmark def souffle_profile_interp(blackhole: Blackhole): Unit =
+    run_souffle("profile-interp", blackhole)
+}
+
+
+@Fork(1) // # of jvms that it will use
+@Warmup(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
+@Measurement(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
+@State(Scope.Thread)
+//@TearDown(Level.Invocation)
+@BenchmarkMode(Array(Mode.AverageTime))
+class BenchRQB_cspa_carac extends rqb_cspa {
   val pattern = """.*examples/(.*?)/facts.*""".r
   val benchmark = pattern.findFirstMatchIn(factDirectory).get.group(1)
   var directory = null
@@ -417,66 +477,47 @@ class BenchRQB_cspa extends rqb_cspa {
     }
   }
 
-  private def run_souffle(mode: String, blackhole: Blackhole): Unit = {
-    val pb = Process(Seq("src/test/scala/carac/benchmarks/souffle/souffle-driver.sh", SOUFFLE_BIN, benchmark, mode))
-    val exitCode = pb.!
-    if (exitCode != 0) throw new Exception(s"Souffle $mode failed with code $exitCode")
-    blackhole.consume(exitCode)
-  }
-
-  @Benchmark def carac_warm_lambda_ddbidx(blackhole: Blackhole): Unit = {
+  @Benchmark def warm_lambda_ddbidx(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
     val engine = new StagedExecutionEngine(new DuckDBStorageManager(indexed = true), jo)
     val mode = "lambda_ddbidx"
     run_warm_carac(blackhole, mode, engine)
   }
 
-  @Benchmark def carac_warm_lambda_ddbn(blackhole: Blackhole): Unit = {
+  @Benchmark def warm_lambda_ddbn(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
     val engine = new StagedExecutionEngine(new DuckDBStorageManager(indexed = false), jo)
     val mode = "lambda_ddbn"
     run_warm_carac(blackhole, mode, engine)
   }
 
-  @Benchmark def carac_warm_interp_ddbn(blackhole: Blackhole): Unit = {
+  @Benchmark def warm_interp_ddbn(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
     val engine = new StagedExecutionEngine(new DuckDBStorageManager(indexed = false), jo)
     val mode = "interp_ddbn"
     run_warm_carac(blackhole, mode, engine)
   }
 
-  @Benchmark def carac_warm_interp_ddbidx(blackhole: Blackhole): Unit = {
+  @Benchmark def warm_interp_ddbidx(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
     val engine = new StagedExecutionEngine(new DuckDBStorageManager(indexed = true), jo)
     val mode = "interp_ddbidx"
     run_warm_carac(blackhole, mode, engine)
   }
 
-  @Benchmark def carac_warm_lambda_collidx(blackhole: Blackhole): Unit = {
+  @Benchmark def warm_lambda_collidx(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
     val engine = new StagedExecutionEngine(new IndexedStorageManager(), jo)
     val mode = "lambda_collidx"
     run_warm_carac(blackhole, mode, engine)
   }
 
-  @Benchmark def carac_warm_interp_collidx(blackhole: Blackhole): Unit = {
+  @Benchmark def warm_interp_collidx(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
     val engine = new StagedExecutionEngine(new IndexedStorageManager(), jo)
     val mode = "interp_collidx"
     run_warm_carac(blackhole, mode, engine)
   }
-
-  @Benchmark def souffle__compile(blackhole: Blackhole): Unit =
-    run_souffle("compile", blackhole)
-
-  @Benchmark def souffle__interp(blackhole: Blackhole): Unit =
-    run_souffle("interp", blackhole)
-
-  @Benchmark def souffle_profile_compile(blackhole: Blackhole): Unit =
-    run_souffle("profile-compile", blackhole)
-
-  @Benchmark def souffle_profile_interp(blackhole: Blackhole): Unit =
-    run_souffle("profile-interp", blackhole)
 
   //  @Benchmark def carac_native_lambda(blackhole: Blackhole): Unit = {
   //    val b = "lambda"
@@ -512,11 +553,11 @@ class BenchRQB_cspa extends rqb_cspa {
 }
 
 @Fork(1) // # of jvms that it will use
-@Warmup(iterations = 10, time = 10, timeUnit = TimeUnit.SECONDS, batchSize = 1)
-@Measurement(iterations = 10, time = 10, timeUnit = TimeUnit.SECONDS, batchSize = 1)
+@Warmup(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
+@Measurement(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
-class BenchRQB_cspa_carac_embedded() extends ExampleBenchmarkGenerator(
+class BenchRQB_cspa_embedded() extends ExampleBenchmarkGenerator(
   "rqb_cspa"
 ) with rqb_cspa {
   @Benchmark def jit_indexed_sel__0_blocking_DELTA_lambda_EOL(blackhole: Blackhole): Unit = {
@@ -563,12 +604,11 @@ class BenchRQB_cspa_carac_embedded() extends ExampleBenchmarkGenerator(
 }
 
 @Fork(1) // # of jvms that it will use
-@Warmup(iterations = 10, time = 10, timeUnit = TimeUnit.SECONDS, batchSize = 1)
-@Measurement(iterations = 10, time = 10, timeUnit = TimeUnit.SECONDS, batchSize= 1)
+@Warmup(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
+@Measurement(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
 @State(Scope.Thread)
-//@TearDown(Level.Invocation)
 @BenchmarkMode(Array(Mode.AverageTime))
-class BenchRQB_ancestry extends rqb_ancestry {
+class BenchRQB_ancestry_carac extends rqb_ancestry {
   val pattern = """.*examples/(.*?)/facts.*""".r
   val benchmark = pattern.findFirstMatchIn(factDirectory).get.group(1)
   var directory = null
@@ -587,40 +627,52 @@ class BenchRQB_ancestry extends rqb_ancestry {
       writer.write(result)
     }
   }
-
-  private def run_souffle(mode: String, blackhole: Blackhole): Unit = {
-    val pb = Process(Seq("src/test/scala/carac/benchmarks/souffle/souffle-driver.sh", SOUFFLE_BIN, benchmark, mode))
-    val exitCode = pb.!
-    if (exitCode != 0) throw new Exception(s"Souffle $mode failed with code $exitCode")
-    blackhole.consume(exitCode)
-  }
-
-  @Benchmark def carac_warm_lambda_ddbidx(blackhole: Blackhole): Unit = {
+  @Benchmark def warm_lambda_ddbidx(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
     val storage = new DuckDBStorageManager(indexed = true)
     val mode = "lambda_ddbidx"
     run_warm_carac(blackhole, mode, storage, jo)
   }
 
-  @Benchmark def carac_warm_lambda_ddbn(blackhole: Blackhole): Unit = {
+  @Benchmark def warm_lambda_ddbn(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
     val storage = new DuckDBStorageManager(indexed = false)
     val mode = "lambda_ddbn"
     run_warm_carac(blackhole, mode, storage, jo)
   }
 
-  @Benchmark def carac_warm_interp_ddbn(blackhole: Blackhole): Unit = {
+  @Benchmark def warm_interp_ddbn(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
     val storage = new DuckDBStorageManager(indexed = false)
     val mode = "interp_ddbn"
     run_warm_carac(blackhole, mode, storage, jo)
   }
 
-  @Benchmark def carac_warm_interp_ddbidx(blackhole: Blackhole): Unit = {
+  @Benchmark def warm_interp_ddbidx(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
     val storage = new DuckDBStorageManager(indexed = true)
     val mode = "interp_ddbidx"
     run_warm_carac(blackhole, mode, storage, jo)
+  }
+}
+
+@Fork(1) // # of jvms that it will use
+@Warmup(iterations = 0, batchSize = 1)
+@Measurement(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS, batchSize= 1)
+@State(Scope.Thread)
+@BenchmarkMode(Array(Mode.AverageTime))
+class BenchRQB_ancestry_souffle extends rqb_ancestry {
+  val pattern = """.*examples/(.*?)/facts.*""".r
+  val benchmark = pattern.findFirstMatchIn(factDirectory).get.group(1)
+  var directory = null
+
+  RQB_Bench.cleanup(benchmark)
+
+  private def run_souffle(mode: String, blackhole: Blackhole): Unit = {
+    val pb = Process(Seq("src/test/scala/carac/benchmarks/souffle/souffle-driver.sh", SOUFFLE_BIN, benchmark, mode))
+    val exitCode = pb.!
+    if (exitCode != 0) throw new Exception(s"Souffle $mode failed with code $exitCode")
+    blackhole.consume(exitCode)
   }
 
   @Benchmark def souffle__compile(blackhole: Blackhole): Unit =
@@ -634,46 +686,14 @@ class BenchRQB_ancestry extends rqb_ancestry {
 
   @Benchmark def souffle_profile_interp(blackhole: Blackhole): Unit =
     run_souffle("profile-interp", blackhole)
-
-  //  @Benchmark def carac_native_lambda(blackhole: Blackhole): Unit = {
-  //    val b = "lambda"
-  //    val pb = Process(Seq(s"../target/native-image/carac", benchmark, b))
-  //    val exitCode = pb.!
-  //    if (exitCode != 0) throw new Exception(s"Carac $benchmark and $b exited with code $exitCode")
-  //    blackhole.consume(exitCode) // prob unnecessary
-  //  }
-
-  //  @Benchmark def carac_jar_lambda(blackhole: Blackhole): Unit = {
-  //    val b = "lambda"
-  //    val pb = Process(Seq(s"../target/pack/bin/main", benchmark, b))
-  //    val exitCode = pb.!
-  //    if (exitCode != 0) throw new Exception(s"Carac $benchmark and $b exited with code $exitCode")
-  //    blackhole.consume(exitCode) // prob unnecessary
-  //  }
-  //
-  //  @Benchmark def carac_jar_bytecode(blackhole: Blackhole): Unit = {
-  //    val b = "bytecode"
-  //    val pb = Process(Seq(s"../target/pack/bin/main", benchmark, b))
-  //    val exitCode = pb.!
-  //    if (exitCode != 0) throw new Exception(s"Carac $benchmark and $b exited with code $exitCode")
-  //    blackhole.consume(exitCode) // prob unnecessary
-  //  }
-  //
-  //  @Benchmark def carac_jar_interp(blackhole: Blackhole): Unit = {
-  //    val b = "Interpreted"
-  //    val pb = Process(Seq(s"../target/pack/bin/main", benchmark, b))
-  //    val exitCode = pb.!
-  //    if (exitCode != 0) throw new Exception(s"Carac $benchmark and $b exited with code $exitCode")
-  //    blackhole.consume(exitCode) // prob unnecessary
-  //  }
 }
 
 @Fork(1) // # of jvms that it will use
-@Warmup(iterations = 10, time = 10, timeUnit = TimeUnit.SECONDS, batchSize = 1)
-@Measurement(iterations = 10, time = 10, timeUnit = TimeUnit.SECONDS, batchSize = 1)
+@Warmup(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
+@Measurement(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
-class BenchRQB_ancestry_carac_embedded() extends ExampleBenchmarkGenerator(
+class BenchRQB_ancestry_embedded() extends ExampleBenchmarkGenerator(
   "rqb_ancestry"
 ) with rqb_ancestry {
   @Benchmark def jit_ddb_sel__0_blocking_DELTA_lambda_EOL(blackhole: Blackhole): Unit = {
@@ -706,12 +726,11 @@ class BenchRQB_ancestry_carac_embedded() extends ExampleBenchmarkGenerator(
 }
 
 @Fork(1) // # of jvms that it will use
-@Warmup(iterations = 10, time = 10, timeUnit = TimeUnit.SECONDS, batchSize = 1)
-@Measurement(iterations = 10, time = 10, timeUnit = TimeUnit.SECONDS, batchSize= 1)
+@Warmup(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
+@Measurement(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
 @State(Scope.Thread)
-//@TearDown(Level.Invocation)
 @BenchmarkMode(Array(Mode.AverageTime))
-class BenchRQB_sssp extends rqb_sssp {
+class BenchRQB_sssp_carac extends rqb_sssp {
   val pattern = """.*examples/(.*?)/facts.*""".r
   val benchmark = pattern.findFirstMatchIn(factDirectory).get.group(1)
   var directory = null
@@ -730,40 +749,52 @@ class BenchRQB_sssp extends rqb_sssp {
       writer.write(result)
     }
   }
-
-  private def run_souffle(mode: String, blackhole: Blackhole): Unit = {
-    val pb = Process(Seq("src/test/scala/carac/benchmarks/souffle/souffle-driver.sh", SOUFFLE_BIN, benchmark, mode))
-    val exitCode = pb.!
-    if (exitCode != 0) throw new Exception(s"Souffle $mode failed with code $exitCode")
-    blackhole.consume(exitCode)
-  }
-
-  @Benchmark def carac_warm_lambda_ddbidx(blackhole: Blackhole): Unit = {
+  @Benchmark def warm_lambda_ddbidx(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
     val storage = new DuckDBStorageManager(indexed = true)
     val mode = "lambda_ddbidx"
     run_warm_carac(blackhole, mode, storage, jo)
   }
 
-  @Benchmark def carac_warm_lambda_ddbn(blackhole: Blackhole): Unit = {
+  @Benchmark def warm_lambda_ddbn(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
     val storage = new DuckDBStorageManager(indexed = false)
     val mode = "lambda_ddbn"
     run_warm_carac(blackhole, mode, storage, jo)
   }
 
-  @Benchmark def carac_warm_interp_ddbn(blackhole: Blackhole): Unit = {
+  @Benchmark def warm_interp_ddbn(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
     val storage = new DuckDBStorageManager(indexed = false)
     val mode = "interp_ddbn"
     run_warm_carac(blackhole, mode, storage, jo)
   }
 
-  @Benchmark def carac_warm_interp_ddbidx(blackhole: Blackhole): Unit = {
+  @Benchmark def warm_interp_ddbidx(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
     val storage = new DuckDBStorageManager(indexed = true)
     val mode = "interp_ddbidx"
     run_warm_carac(blackhole, mode, storage, jo)
+  }
+}
+
+@Fork(1) // # of jvms that it will use
+@Warmup(iterations = 0, batchSize = 1)
+@Measurement(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS, batchSize= 1)
+@State(Scope.Thread)
+@BenchmarkMode(Array(Mode.AverageTime))
+class BenchRQB_sssp_souffle extends rqb_sssp {
+  val pattern = """.*examples/(.*?)/facts.*""".r
+  val benchmark = pattern.findFirstMatchIn(factDirectory).get.group(1)
+  var directory = null
+
+  RQB_Bench.cleanup(benchmark)
+
+  private def run_souffle(mode: String, blackhole: Blackhole): Unit = {
+    val pb = Process(Seq("src/test/scala/carac/benchmarks/souffle/souffle-driver.sh", SOUFFLE_BIN, benchmark, mode))
+    val exitCode = pb.!
+    if (exitCode != 0) throw new Exception(s"Souffle $mode failed with code $exitCode")
+    blackhole.consume(exitCode)
   }
 
   @Benchmark def souffle__compile(blackhole: Blackhole): Unit =
@@ -777,45 +808,14 @@ class BenchRQB_sssp extends rqb_sssp {
 
   @Benchmark def souffle_profile_interp(blackhole: Blackhole): Unit =
     run_souffle("profile-interp", blackhole)
-
-  //  @Benchmark def carac_native_lambda(blackhole: Blackhole): Unit = {
-  //    val b = "lambda"
-  //    val pb = Process(Seq(s"../target/native-image/carac", benchmark, b))
-  //    val exitCode = pb.!
-  //    if (exitCode != 0) throw new Exception(s"Carac $benchmark and $b exited with code $exitCode")
-  //    blackhole.consume(exitCode) // prob unnecessary
-  //  }
-
-  //  @Benchmark def carac_jar_lambda(blackhole: Blackhole): Unit = {
-  //    val b = "lambda"
-  //    val pb = Process(Seq(s"../target/pack/bin/main", benchmark, b))
-  //    val exitCode = pb.!
-  //    if (exitCode != 0) throw new Exception(s"Carac $benchmark and $b exited with code $exitCode")
-  //    blackhole.consume(exitCode) // prob unnecessary
-  //  }
-  //
-  //  @Benchmark def carac_jar_bytecode(blackhole: Blackhole): Unit = {
-  //    val b = "bytecode"
-  //    val pb = Process(Seq(s"../target/pack/bin/main", benchmark, b))
-  //    val exitCode = pb.!
-  //    if (exitCode != 0) throw new Exception(s"Carac $benchmark and $b exited with code $exitCode")
-  //    blackhole.consume(exitCode) // prob unnecessary
-  //  }
-  //
-  //  @Benchmark def carac_jar_interp(blackhole: Blackhole): Unit = {
-  //    val b = "Interpreted"
-  //    val pb = Process(Seq(s"../target/pack/bin/main", benchmark, b))
-  //    val exitCode = pb.!
-  //    if (exitCode != 0) throw new Exception(s"Carac $benchmark and $b exited with code $exitCode")
-  //    blackhole.consume(exitCode) // prob unnecessary
-  //  }
 }
+
 @Fork(1) // # of jvms that it will use
-@Warmup(iterations = 10, time = 10, timeUnit = TimeUnit.SECONDS, batchSize = 1)
-@Measurement(iterations = 10, time = 10, timeUnit = TimeUnit.SECONDS, batchSize = 1)
+@Warmup(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
+@Measurement(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
-class BenchRQB_sssp_carac_embedded() extends ExampleBenchmarkGenerator(
+class BenchRQB_sssp_embedded() extends ExampleBenchmarkGenerator(
   "rqb_sssp"
 ) with rqb_sssp {
   @Benchmark def jit_ddb_sel__0_blocking_DELTA_lambda_EOL(blackhole: Blackhole): Unit = {
@@ -846,14 +846,12 @@ class BenchRQB_sssp_carac_embedded() extends ExampleBenchmarkGenerator(
     blackhole.consume(run_ddb(sqlString, programs(p), result))
   }
 }
-
 @Fork(1) // # of jvms that it will use
-@Warmup(iterations = 10, time = 10, timeUnit = TimeUnit.SECONDS, batchSize = 1)
-@Measurement(iterations = 10, time = 10, timeUnit = TimeUnit.SECONDS, batchSize= 1)
+@Warmup(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
+@Measurement(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
 @State(Scope.Thread)
-//@TearDown(Level.Invocation)
 @BenchmarkMode(Array(Mode.AverageTime))
-class BenchRQB_bom extends rqb_bom {
+class BenchRQB_bom_carac extends rqb_bom {
   val pattern = """.*examples/(.*?)/facts.*""".r
   val benchmark = pattern.findFirstMatchIn(factDirectory).get.group(1)
   var directory = null
@@ -872,40 +870,52 @@ class BenchRQB_bom extends rqb_bom {
       writer.write(result)
     }
   }
-
-  private def run_souffle(mode: String, blackhole: Blackhole): Unit = {
-    val pb = Process(Seq("src/test/scala/carac/benchmarks/souffle/souffle-driver.sh", SOUFFLE_BIN, benchmark, mode))
-    val exitCode = pb.!
-    if (exitCode != 0) throw new Exception(s"Souffle $mode failed with code $exitCode")
-    blackhole.consume(exitCode)
-  }
-
-  @Benchmark def carac_warm_lambda_ddbidx(blackhole: Blackhole): Unit = {
+  @Benchmark def warm_lambda_ddbidx(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
     val storage = new DuckDBStorageManager(indexed = true)
     val mode = "lambda_ddbidx"
     run_warm_carac(blackhole, mode, storage, jo)
   }
 
-  @Benchmark def carac_warm_lambda_ddbn(blackhole: Blackhole): Unit = {
+  @Benchmark def warm_lambda_ddbn(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
     val storage = new DuckDBStorageManager(indexed = false)
     val mode = "lambda_ddbn"
     run_warm_carac(blackhole, mode, storage, jo)
   }
 
-  @Benchmark def carac_warm_interp_ddbn(blackhole: Blackhole): Unit = {
+  @Benchmark def warm_interp_ddbn(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
     val storage = new DuckDBStorageManager(indexed = false)
     val mode = "interp_ddbn"
     run_warm_carac(blackhole, mode, storage, jo)
   }
 
-  @Benchmark def carac_warm_interp_ddbidx(blackhole: Blackhole): Unit = {
+  @Benchmark def warm_interp_ddbidx(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
     val storage = new DuckDBStorageManager(indexed = true)
     val mode = "interp_ddbidx"
     run_warm_carac(blackhole, mode, storage, jo)
+  }
+}
+
+@Fork(1) // # of jvms that it will use
+@Warmup(iterations = 0, batchSize = 1)
+@Measurement(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS, batchSize= 1)
+@State(Scope.Thread)
+@BenchmarkMode(Array(Mode.AverageTime))
+class BenchRQB_bom_souffle extends rqb_bom {
+  val pattern = """.*examples/(.*?)/facts.*""".r
+  val benchmark = pattern.findFirstMatchIn(factDirectory).get.group(1)
+  var directory = null
+
+  RQB_Bench.cleanup(benchmark)
+
+  private def run_souffle(mode: String, blackhole: Blackhole): Unit = {
+    val pb = Process(Seq("src/test/scala/carac/benchmarks/souffle/souffle-driver.sh", SOUFFLE_BIN, benchmark, mode))
+    val exitCode = pb.!
+    if (exitCode != 0) throw new Exception(s"Souffle $mode failed with code $exitCode")
+    blackhole.consume(exitCode)
   }
 
   @Benchmark def souffle__compile(blackhole: Blackhole): Unit =
@@ -919,45 +929,14 @@ class BenchRQB_bom extends rqb_bom {
 
   @Benchmark def souffle_profile_interp(blackhole: Blackhole): Unit =
     run_souffle("profile-interp", blackhole)
-
-  //  @Benchmark def carac_native_lambda(blackhole: Blackhole): Unit = {
-  //    val b = "lambda"
-  //    val pb = Process(Seq(s"../target/native-image/carac", benchmark, b))
-  //    val exitCode = pb.!
-  //    if (exitCode != 0) throw new Exception(s"Carac $benchmark and $b exited with code $exitCode")
-  //    blackhole.consume(exitCode) // prob unnecessary
-  //  }
-
-  //  @Benchmark def carac_jar_lambda(blackhole: Blackhole): Unit = {
-  //    val b = "lambda"
-  //    val pb = Process(Seq(s"../target/pack/bin/main", benchmark, b))
-  //    val exitCode = pb.!
-  //    if (exitCode != 0) throw new Exception(s"Carac $benchmark and $b exited with code $exitCode")
-  //    blackhole.consume(exitCode) // prob unnecessary
-  //  }
-  //
-  //  @Benchmark def carac_jar_bytecode(blackhole: Blackhole): Unit = {
-  //    val b = "bytecode"
-  //    val pb = Process(Seq(s"../target/pack/bin/main", benchmark, b))
-  //    val exitCode = pb.!
-  //    if (exitCode != 0) throw new Exception(s"Carac $benchmark and $b exited with code $exitCode")
-  //    blackhole.consume(exitCode) // prob unnecessary
-  //  }
-  //
-  //  @Benchmark def carac_jar_interp(blackhole: Blackhole): Unit = {
-  //    val b = "Interpreted"
-  //    val pb = Process(Seq(s"../target/pack/bin/main", benchmark, b))
-  //    val exitCode = pb.!
-  //    if (exitCode != 0) throw new Exception(s"Carac $benchmark and $b exited with code $exitCode")
-  //    blackhole.consume(exitCode) // prob unnecessary
-  //  }
 }
+
 @Fork(1) // # of jvms that it will use
-@Warmup(iterations = 10, time = 10, timeUnit = TimeUnit.SECONDS, batchSize = 1)
-@Measurement(iterations = 10, time = 10, timeUnit = TimeUnit.SECONDS, batchSize = 1)
+@Warmup(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
+@Measurement(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
-class BenchRQB_bom_carac_embedded() extends ExampleBenchmarkGenerator(
+class BenchRQB_bom_embedded() extends ExampleBenchmarkGenerator(
   "rqb_bom"
 ) with rqb_bom {
   @Benchmark def jit_ddb_sel__0_blocking_DELTA_lambda_EOL(blackhole: Blackhole): Unit = {

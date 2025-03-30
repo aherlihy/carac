@@ -5,8 +5,8 @@ import carac.dsl.{Constant, Program}
 import test.ExampleTestGenerator
 
 import java.nio.file.Paths
-class cba_worst_test extends ExampleTestGenerator("rqb_cba") with rqb_cba_worst
-trait rqb_cba_worst {
+class cba_worst_test extends ExampleTestGenerator("rqb_cba") with rqb_cba
+trait rqb_cba {
   val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/rqb_cba/facts"
   val toSolve = "data_term"
   def pretest(program: Program): Unit = {
