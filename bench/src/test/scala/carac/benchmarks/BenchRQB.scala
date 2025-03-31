@@ -79,7 +79,7 @@ class BenchRQB_andersen_souffle extends rqb_andersen {
 
 @Fork(1) // # of jvms that it will use
 @Warmup(iterations = 3, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
-@Measurement(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS, batchSize= 1)
+@Measurement(iterations = 3, time = 1, timeUnit = TimeUnit.SECONDS, batchSize= 1)
 @State(Scope.Thread)
 //@TearDown(Level.Invocation)
 @BenchmarkMode(Array(Mode.AverageTime))
@@ -201,7 +201,7 @@ class BenchRQB_andersen_carac extends rqb_andersen {
 
 @Fork(1) // # of jvms that it will use
 @Warmup(iterations = 3, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
-@Measurement(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
+@Measurement(iterations = 3, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class BenchRQB_andersen_embedded() extends ExampleBenchmarkGenerator(
@@ -285,7 +285,7 @@ class BenchRQB_cba_souffle extends rqb_cba {
 
 @Fork(1) // # of jvms that it will use
 @Warmup(iterations = 3, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
-@Measurement(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
+@Measurement(iterations = 3, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
 @State(Scope.Thread)
 //@TearDown(Level.Invocation)
 @BenchmarkMode(Array(Mode.AverageTime))
@@ -415,7 +415,7 @@ class BenchRQB_cba_carac extends rqb_cba {
 
 @Fork(1) // # of jvms that it will use
 @Warmup(iterations = 3, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
-@Measurement(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
+@Measurement(iterations = 3, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class BenchRQB_cba_embedded() extends ExampleBenchmarkGenerator(
@@ -500,7 +500,7 @@ class BenchRQB_cspa_souffle extends rqb_cspa {
 
 @Fork(1) // # of jvms that it will use
 @Warmup(iterations = 3, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
-@Measurement(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
+@Measurement(iterations = 3, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
 @State(Scope.Thread)
 //@TearDown(Level.Invocation)
 @BenchmarkMode(Array(Mode.AverageTime))
@@ -617,7 +617,7 @@ class BenchRQB_cspa_carac extends rqb_cspa {
 
 @Fork(1) // # of jvms that it will use
 @Warmup(iterations = 3, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
-@Measurement(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
+@Measurement(iterations = 3, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class BenchRQB_cspa_embedded() extends ExampleBenchmarkGenerator(
@@ -667,8 +667,8 @@ class BenchRQB_cspa_embedded() extends ExampleBenchmarkGenerator(
 }
 
 @Fork(1) // # of jvms that it will use
-@Warmup(iterations = 3, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
-@Measurement(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
+@Warmup(iterations = 1, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
+@Measurement(iterations = 3, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class BenchRQB_ancestry_carac extends rqb_ancestry {
@@ -759,7 +759,7 @@ class BenchRQB_ancestry_souffle extends rqb_ancestry {
 
 @Fork(1) // # of jvms that it will use
 @Warmup(iterations = 3, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
-@Measurement(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
+@Measurement(iterations = 3, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class BenchRQB_ancestry_embedded() extends ExampleBenchmarkGenerator(
@@ -796,7 +796,7 @@ class BenchRQB_ancestry_embedded() extends ExampleBenchmarkGenerator(
 
 @Fork(1) // # of jvms that it will use
 @Warmup(iterations = 3, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
-@Measurement(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
+@Measurement(iterations = 3, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class BenchRQB_sssp_carac extends rqb_sssp {
@@ -890,7 +890,7 @@ class BenchRQB_sssp_souffle extends rqb_sssp {
 
 @Fork(1) // # of jvms that it will use
 @Warmup(iterations = 3, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
-@Measurement(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
+@Measurement(iterations = 3, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class BenchRQB_sssp_embedded() extends ExampleBenchmarkGenerator(
@@ -926,7 +926,7 @@ class BenchRQB_sssp_embedded() extends ExampleBenchmarkGenerator(
 }
 @Fork(1) // # of jvms that it will use
 @Warmup(iterations = 3, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
-@Measurement(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
+@Measurement(iterations = 3, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class BenchRQB_bom_carac extends rqb_bom {
@@ -1020,7 +1020,7 @@ class BenchRQB_bom_souffle extends rqb_bom {
 
 @Fork(1) // # of jvms that it will use
 @Warmup(iterations = 3, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
-@Measurement(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
+@Measurement(iterations = 3, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class BenchRQB_bom_embedded() extends ExampleBenchmarkGenerator(
