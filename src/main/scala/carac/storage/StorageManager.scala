@@ -49,4 +49,6 @@ trait StorageManager(val ns: NS) {
   def addConstantsToDomain(constants: Seq[StorageTerm]): Unit
   def getComplement(rId: RelationId, arity: Int): EDB
   def diff(lhs: EDB, rhs: EDB): EDB
+
+  def cleanup(): Unit
 }

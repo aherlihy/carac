@@ -314,6 +314,10 @@ class DuckDBStorageManager(ns: NS = new NS(), indexed: Boolean = true) extends S
 //      ).mkString("", ",\n", "")
 //    }")
   }
+  
+  def cleanup(): Unit = {
+    databases.foreach(_.clear().execute_cache())
+  }
 
   def inferTypes(ruleHashes: mutable.Map[RelationId, mutable.ArrayBuffer[String]]): Unit = {
     // Quick and dirty type inference

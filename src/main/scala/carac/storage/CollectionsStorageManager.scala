@@ -281,4 +281,13 @@ class GeneralCollectionsStorageManager(ns: NS = new NS(), indexed: Boolean = fal
   override def diff(lhsEDB: EDB, rhsEDB: EDB): EDB =
     val lhs = if indexed then IndexedCollectionsCasts.asIndexedCollectionsEDB(lhsEDB) else CollectionsCasts.asCollectionsEDB(lhsEDB)
     lhs.diff(rhsEDB)
+
+  override def cleanup(): Unit = {
+    edbs.clear()
+    derivedDB.clear()
+    deltaDB.foreach(_.clear())
+    indexCandidates.clear()
+    relationArity.clear()
+    edbDomain.clear()
+  }
 }
