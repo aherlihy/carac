@@ -658,7 +658,7 @@ class BenchRQB_ancestry_carac extends rqb_ancestry {
 
 @Fork(1) // # of jvms that it will use
 @Warmup(iterations = 0, batchSize = 1)
-@Measurement(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS, batchSize= 1)
+@Measurement(iterations = 1, time = 1, timeUnit = TimeUnit.SECONDS, batchSize= 1)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class BenchRQB_ancestry_souffle extends rqb_ancestry {
@@ -780,7 +780,7 @@ class BenchRQB_sssp_carac extends rqb_sssp {
 
 @Fork(1) // # of jvms that it will use
 @Warmup(iterations = 0, batchSize = 1)
-@Measurement(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS, batchSize= 1)
+@Measurement(iterations = 1, time = 1, timeUnit = TimeUnit.SECONDS, batchSize= 1)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class BenchRQB_sssp_souffle extends rqb_sssp {
@@ -901,7 +901,7 @@ class BenchRQB_bom_carac extends rqb_bom {
 
 @Fork(1) // # of jvms that it will use
 @Warmup(iterations = 0, batchSize = 1)
-@Measurement(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS, batchSize= 1)
+@Measurement(iterations = 1, time = 1, timeUnit = TimeUnit.SECONDS, batchSize= 1)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class BenchRQB_bom_souffle extends rqb_bom {
