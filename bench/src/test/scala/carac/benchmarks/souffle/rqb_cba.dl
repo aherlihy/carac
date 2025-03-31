@@ -53,7 +53,6 @@
 .decl ctrl_term( i:number, f:number )
 
 
-.input kind(IO=file, header=false)
 .input term(IO=file, header=false)
 .input lits(IO=file, header=false)
 .input vars(IO=file, header=false)
