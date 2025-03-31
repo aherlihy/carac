@@ -17,7 +17,7 @@ import java.util.concurrent.TimeUnit
 import scala.sys.process.Process
 import scala.util.Using
 
-val SOUFFLE_BIN="/scratch/herlihy/souffle/build/src/souffle"
+val SOUFFLE_BIN="souffle"///scratch/herlihy/souffle/build/src/souffle"
 
 object RQB_Bench {
   def cleanup(benchmark: String): Unit = {

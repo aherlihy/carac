@@ -12,7 +12,7 @@ trait rqb_andersen {
  def pretest(program: Program): Unit = {
   val addressOf = program.namedRelation("addressOf")
   val assign = program.namedRelation("assign")
-  val load = program.namedRelation("load")
+  val loadT = program.namedRelation("loadT")
   val store = program.namedRelation("store")
 
   val x, y, z, w = program.variable()
@@ -23,7 +23,7 @@ trait rqb_andersen {
   pointsTo(y, x) :- (assign(y, z), pointsTo(z, x))
 
   pointsTo(y, w) :- (
-    load(y, x),
+    loadT(y, x),
     pointsTo(x, z),
     pointsTo(z, w))
 

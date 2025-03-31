@@ -10,8 +10,8 @@ trait rqb_cspa {
   val toSolve = "ValueFlow"
 
   def pretest(program: Program): Unit = {
-    val Assign = program.namedRelation[Int]("Assign")
-    val Dereference = program.namedRelation[Int]("Dereference")
+    val assign = program.namedRelation[Int]("assign")
+    val dereference = program.namedRelation[Int]("dereference")
 
     val ValueFlow = program.relation[Int]("ValueFlow")
     val ValueAlias = program.relation[Int]("ValueAlias")
@@ -19,19 +19,19 @@ trait rqb_cspa {
 
     val w, x, y, z = program.variable()
 
-    ValueFlow(y, x) :- Assign(y, x)
-    ValueFlow(x, y) :- (Assign(x, z), MemoryAlias(z, y))
+    ValueFlow(y, x) :- assign(y, x)
+    ValueFlow(x, y) :- (assign(x, z), MemoryAlias(z, y))
     ValueFlow(x, y) :- (ValueFlow(x, z), ValueFlow(z, y))
 
-    MemoryAlias(x, w) :- (Dereference(y, x), ValueAlias(y, z), Dereference(z, w))
+    MemoryAlias(x, w) :- (dereference(y, x), ValueAlias(y, z), dereference(z, w))
 
     ValueAlias(x, y) :- (ValueFlow(z, x), ValueFlow(z, y))
     ValueAlias(x, y) :- (ValueFlow(z, x), MemoryAlias(z, w), ValueFlow(w, y))
 
-    ValueFlow(x, x) :- Assign(x, y)
-    ValueFlow(x, x) :- Assign(y, x)
+    ValueFlow(x, x) :- assign(x, y)
+    ValueFlow(x, x) :- assign(y, x)
 
-    MemoryAlias(x, x) :- Assign(y, x)
-    MemoryAlias(x, x) :- Assign(x, y)
+    MemoryAlias(x, x) :- assign(y, x)
+    MemoryAlias(x, x) :- assign(x, y)
   }
 }
