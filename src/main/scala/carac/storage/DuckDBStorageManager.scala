@@ -5,6 +5,8 @@ import carac.execution.AllIndexes
 import carac.storage.DatabasePrefix.*
 import carac.storage.StorageTerm
 
+import scala.jdk.CollectionConverters._
+import java.nio.file.{Path, Paths, Files}
 import java.sql.{Connection, DriverManager, ResultSet}
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.{immutable, mutable}
@@ -146,6 +148,31 @@ class DuckDBStorageManager(ns: NS = new NS(), indexed: Boolean = true) extends S
   val schema: mutable.Map[RelationId, Seq[(String, DatabaseType)]] = mutable.Map[RelationId, Seq[(String, DatabaseType)]]() // relationId => [(column name, type)*]
   connect()
 
+  def getCSVFiles(directoryPath: String): Seq[Path] =
+    val dirPath = Paths.get(directoryPath)
+    if (Files.isDirectory(dirPath)) {
+      Files.list(dirPath)
+        .iterator()
+        .asScala
+        .filter(path => Files.isRegularFile(path) && path.toString.endsWith(".facts"))
+        .toSeq
+    } else {
+      throw new Exception(s"$directoryPath is not a directory")
+    }
+
+  def loadFacts(datadir: String): Unit =
+//    runUpdate(ddl)
+    val allCSV = getCSVFiles(datadir)
+    allCSV.foreach(csv =>
+      val table = csv.getFileName().toString.replace(".facts", "")
+      edbs.commandCache.addOne(s"COPY edb_$table FROM '$csv' (HEADER)")
+      edbs.execute_cache()
+      // print ok:
+//      val checkQ = runQuery(s"SELECT COUNT(*) FROM edb_$table")
+//      checkQ.next()
+//      println(s"LOADED into edb_$table: ${checkQ.getInt(1)}")
+    )
+
   private def connect(): Unit =
     Class.forName("org.duckdb.DuckDBDriver")
     connection = DriverManager.getConnection("jdbc:duckdb:")
@@ -174,7 +201,7 @@ class DuckDBStorageManager(ns: NS = new NS(), indexed: Boolean = true) extends S
 
 //  val edbDomain: mutable.Set[StorageTerm] = mutable.Set.empty // incrementally grow the total domain of all EDBs, used for calculating complement of negated predicates
 
-  protected val edbs: DuckDBDatabase = DuckDBDatabase(edb, runQuery, runUpdate)
+  val edbs: DuckDBDatabase = DuckDBDatabase(edb, runQuery, runUpdate)
   protected val tmpDB: DuckDBDatabase = DuckDBDatabase(tmp, runQuery, runUpdate)
   protected val derivedDB: DuckDBDatabase = DuckDBDatabase(derived, runQuery, runUpdate)
   protected val deltaDB: DuckDBDatabase = DuckDBDatabase(delta, runQuery, runUpdate)
@@ -314,7 +341,7 @@ class DuckDBStorageManager(ns: NS = new NS(), indexed: Boolean = true) extends S
 //      ).mkString("", ",\n", "")
 //    }")
   }
-  
+
   def cleanup(): Unit = {
     databases.foreach(_.clear().execute_cache())
   }

@@ -2,7 +2,7 @@ package carac.benchmarks
 
 import carac.dsl.*
 import carac.execution.{Backend, CompileSync, ExecutionEngine, Granularity, JITOptions, SortOrder, StagedExecutionEngine, Mode as CaracMode}
-import carac.storage.{DuckDBStorageManager, IndexedStorageManager}
+import carac.storage.{DatabaseType, DuckDBStorageManager, IndexedStorageManager}
 import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.Blackhole
 import test.examples.rqb_andersen.rqb_andersen
@@ -90,9 +90,24 @@ class BenchRQB_andersen_carac extends rqb_andersen {
 
   RQB_Bench.cleanup(benchmark)
 
-  private def run_warm_carac(blackhole: Blackhole, mode: String, engine: ExecutionEngine): Unit = {
+  private def run_warm_carac(blackhole: Blackhole, mode: String, engine: ExecutionEngine, duckDBStorageManager: DuckDBStorageManager): Unit = {
     val program = Program(engine)
-    program.loadFromFactDir(factDirectory)
+    if (duckDBStorageManager != null)
+      val addressOf = program.relation("addressOf")
+      val assign = program.relation("assign")
+      val loadT = program.relation("loadT")
+      val store = program.relation("store")
+      duckDBStorageManager.declareTable(addressOf.id, Seq(("c0", DatabaseType.TEXT), ("c1", DatabaseType.TEXT)))
+      duckDBStorageManager.declareTable(assign.id, Seq(("c0", DatabaseType.TEXT), ("c1", DatabaseType.TEXT)))
+      duckDBStorageManager.declareTable(loadT.id, Seq(("c0", DatabaseType.TEXT), ("c1", DatabaseType.TEXT)))
+      duckDBStorageManager.declareTable(store.id, Seq(("c0", DatabaseType.TEXT), ("c1", DatabaseType.TEXT)))
+      duckDBStorageManager.edbs.initializeTable(addressOf.id, "addressOf", Seq(("c0", DatabaseType.TEXT), ("c1", DatabaseType.TEXT)))
+      duckDBStorageManager.edbs.initializeTable(assign.id, "assign", Seq(("c0", DatabaseType.TEXT), ("c1", DatabaseType.TEXT)))
+      duckDBStorageManager.edbs.initializeTable(loadT.id, "loadT", Seq(("c0", DatabaseType.TEXT), ("c1", DatabaseType.TEXT)))
+      duckDBStorageManager.edbs.initializeTable(store.id, "store", Seq(("c0", DatabaseType.TEXT), ("c1", DatabaseType.TEXT)))
+      duckDBStorageManager.loadFacts(factDirectory)
+    else
+      program.loadFromFactDir(factDirectory)
     pretest(program)
     blackhole.consume(
       program.namedRelation(toSolve).solve()
@@ -107,44 +122,48 @@ class BenchRQB_andersen_carac extends rqb_andersen {
 
   @Benchmark def warm_lambda_ddbidx(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
-    val engine = new StagedExecutionEngine(new DuckDBStorageManager(indexed = true), jo)
+    val storageManager = new DuckDBStorageManager(indexed = true)
+    val engine = new StagedExecutionEngine(storageManager, jo)
     val mode = "lambda_ddbidx"
-    run_warm_carac(blackhole, mode, engine)
+    run_warm_carac(blackhole, mode, engine, storageManager)
   }
 
   @Benchmark def warm_lambda_ddbn(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
-    val engine = new StagedExecutionEngine(new DuckDBStorageManager(indexed = false), jo)
+    val storageManager = new DuckDBStorageManager(indexed = false)
+    val engine = new StagedExecutionEngine(storageManager, jo)
     val mode = "lambda_ddbn"
-    run_warm_carac(blackhole, mode, engine)
+    run_warm_carac(blackhole, mode, engine, storageManager)
   }
 
   @Benchmark def warm_interp_ddbn(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
-    val engine = new StagedExecutionEngine(new DuckDBStorageManager(indexed = false), jo)
+    val storageManager = new DuckDBStorageManager(indexed = false)
+    val engine = new StagedExecutionEngine(storageManager, jo)
     val mode = "interp_ddbn"
-    run_warm_carac(blackhole, mode, engine)
+    run_warm_carac(blackhole, mode, engine, storageManager)
   }
 
   @Benchmark def warm_interp_ddbidx(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
-    val engine = new StagedExecutionEngine(new DuckDBStorageManager(indexed = true), jo)
+    val storageManager = new DuckDBStorageManager(indexed = true)
+    val engine = new StagedExecutionEngine(storageManager, jo)
     val mode = "interp_ddbidx"
-    run_warm_carac(blackhole, mode, engine)
+    run_warm_carac(blackhole, mode, engine, storageManager)
   }
 
   @Benchmark def warm_lambda_collidx(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
     val engine = new StagedExecutionEngine(new IndexedStorageManager(), jo)
     val mode = "lambda_collidx"
-    run_warm_carac(blackhole, mode, engine)
+    run_warm_carac(blackhole, mode, engine, null)
   }
 
   @Benchmark def warm_interp_collidx(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
     val engine = new StagedExecutionEngine(new IndexedStorageManager(), jo)
     val mode = "interp_collidx"
-    run_warm_carac(blackhole, mode, engine)
+    run_warm_carac(blackhole, mode, engine, null)
   }
 
   //  @Benchmark def carac_native_lambda(blackhole: Blackhole): Unit = {
@@ -277,9 +296,32 @@ class BenchRQB_cba_carac extends rqb_cba {
 
   RQB_Bench.cleanup(benchmark)
 
-  private def run_warm_carac(blackhole: Blackhole, mode: String, engine: ExecutionEngine): Unit = {
+  private def run_warm_carac(blackhole: Blackhole, mode: String, engine: ExecutionEngine, duckDBStorageManager: DuckDBStorageManager): Unit = {
     val program = Program(engine)
-    program.loadFromFactDir(factDirectory)
+    if (duckDBStorageManager != null)
+      val term = program.relation("term")
+      val termS = Seq(("c0", DatabaseType.INTEGER), ("c1", DatabaseType.TEXT), ("c2", DatabaseType.INTEGER))
+      duckDBStorageManager.declareTable(term.id, termS)
+      duckDBStorageManager.edbs.initializeTable(term.id, "term", termS)
+      val vars = program.relation("vars")
+      val varsS = Seq(("c0", DatabaseType.INTEGER), ("c1", DatabaseType.TEXT))
+      duckDBStorageManager.declareTable(vars.id, varsS)
+      duckDBStorageManager.edbs.initializeTable(vars.id, "vars", varsS)
+      val app = program.relation("app")
+      val appS = Seq(("c0", DatabaseType.INTEGER), ("c1", DatabaseType.INTEGER), ("c2", DatabaseType.INTEGER))
+      duckDBStorageManager.declareTable(app.id, appS)
+      duckDBStorageManager.edbs.initializeTable(app.id, "app", appS)
+      val lits = program.relation("lits")
+      val litsS = Seq(("c0", DatabaseType.INTEGER), ("c1", DatabaseType.TEXT))
+      duckDBStorageManager.declareTable(lits.id, litsS)
+      duckDBStorageManager.edbs.initializeTable(lits.id, "lits", litsS)
+      val abs = program.relation("abs")
+      val absS = Seq(("c0", DatabaseType.INTEGER), ("c1", DatabaseType.INTEGER), ("c2", DatabaseType.INTEGER))
+      duckDBStorageManager.declareTable(abs.id, absS)
+      duckDBStorageManager.edbs.initializeTable(abs.id, "abs", absS)
+      duckDBStorageManager.loadFacts(factDirectory)
+    else
+      program.loadFromFactDir(factDirectory)
     pretest(program)
     blackhole.consume(
       program.namedRelation(toSolve).solve()
@@ -294,44 +336,48 @@ class BenchRQB_cba_carac extends rqb_cba {
 
   @Benchmark def warm_lambda_ddbidx(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
-    val engine = new StagedExecutionEngine(new DuckDBStorageManager(indexed = true), jo)
+    val storageManager = new DuckDBStorageManager(indexed = true)
+    val engine = new StagedExecutionEngine(storageManager, jo)
     val mode = "lambda_ddbidx"
-    run_warm_carac(blackhole, mode, engine)
+    run_warm_carac(blackhole, mode, engine, storageManager)
   }
 
   @Benchmark def warm_lambda_ddbn(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
-    val engine = new StagedExecutionEngine(new DuckDBStorageManager(indexed = false), jo)
+    val storageManager = new DuckDBStorageManager(indexed = false)
+    val engine = new StagedExecutionEngine(storageManager, jo)
     val mode = "lambda_ddbn"
-    run_warm_carac(blackhole, mode, engine)
+    run_warm_carac(blackhole, mode, engine, storageManager)
   }
 
   @Benchmark def warm_interp_ddbn(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
-    val engine = new StagedExecutionEngine(new DuckDBStorageManager(indexed = false), jo)
+    val storageManager = new DuckDBStorageManager(indexed = false)
+    val engine = new StagedExecutionEngine(storageManager, jo)
     val mode = "interp_ddbn"
-    run_warm_carac(blackhole, mode, engine)
+    run_warm_carac(blackhole, mode, engine, storageManager)
   }
 
   @Benchmark def warm_interp_ddbidx(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
-    val engine = new StagedExecutionEngine(new DuckDBStorageManager(indexed = true), jo)
+    val storageManager = new DuckDBStorageManager(indexed = true)
+    val engine = new StagedExecutionEngine(storageManager, jo)
     val mode = "interp_ddbidx"
-    run_warm_carac(blackhole, mode, engine)
+    run_warm_carac(blackhole, mode, engine, storageManager)
   }
 
   @Benchmark def warm_lambda_collidx(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
     val engine = new StagedExecutionEngine(new IndexedStorageManager(), jo)
     val mode = "lambda_collidx"
-    run_warm_carac(blackhole, mode, engine)
+    run_warm_carac(blackhole, mode, engine, null)
   }
 
   @Benchmark def warm_interp_collidx(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
     val engine = new StagedExecutionEngine(new IndexedStorageManager(), jo)
     val mode = "interp_collidx"
-    run_warm_carac(blackhole, mode, engine)
+    run_warm_carac(blackhole, mode, engine, null)
   }
 
   //  @Benchmark def carac_native_lambda(blackhole: Blackhole): Unit = {
@@ -465,9 +511,20 @@ class BenchRQB_cspa_carac extends rqb_cspa {
 
   RQB_Bench.cleanup(benchmark)
 
-  private def run_warm_carac(blackhole: Blackhole, mode: String, engine: ExecutionEngine): Unit = {
+  private def run_warm_carac(blackhole: Blackhole, mode: String, engine: ExecutionEngine, duckDBStorageManager: DuckDBStorageManager): Unit = {
     val program = Program(engine)
-    program.loadFromFactDir(factDirectory)
+    if (duckDBStorageManager != null)
+      val assign = program.relation("assign")
+      val assignS = Seq(("c0", DatabaseType.INTEGER), ("c1", DatabaseType.INTEGER))
+      duckDBStorageManager.declareTable(assign.id, assignS)
+      duckDBStorageManager.edbs.initializeTable(assign.id, "assign", assignS)
+      val dereference = program.relation("dereference")
+      val dereferenceS = Seq(("c0", DatabaseType.INTEGER), ("c1", DatabaseType.INTEGER))
+      duckDBStorageManager.declareTable(dereference.id, dereferenceS)
+      duckDBStorageManager.edbs.initializeTable(dereference.id, "dereference", dereferenceS)
+      duckDBStorageManager.loadFacts(factDirectory)
+    else
+      program.loadFromFactDir(factDirectory)
     pretest(program)
     blackhole.consume(
       program.namedRelation(toSolve).solve()
@@ -482,46 +539,49 @@ class BenchRQB_cspa_carac extends rqb_cspa {
 
   @Benchmark def warm_lambda_ddbidx(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
-    val engine = new StagedExecutionEngine(new DuckDBStorageManager(indexed = true), jo)
+    val storageManager = new DuckDBStorageManager(indexed = true)
+    val engine = new StagedExecutionEngine(storageManager, jo)
     val mode = "lambda_ddbidx"
-    run_warm_carac(blackhole, mode, engine)
+    run_warm_carac(blackhole, mode, engine, storageManager)
   }
 
   @Benchmark def warm_lambda_ddbn(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
-    val engine = new StagedExecutionEngine(new DuckDBStorageManager(indexed = false), jo)
+    val storageManager = new DuckDBStorageManager(indexed = false)
+    val engine = new StagedExecutionEngine(storageManager, jo)
     val mode = "lambda_ddbn"
-    run_warm_carac(blackhole, mode, engine)
+    run_warm_carac(blackhole, mode, engine, storageManager)
   }
 
   @Benchmark def warm_interp_ddbn(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
-    val engine = new StagedExecutionEngine(new DuckDBStorageManager(indexed = false), jo)
+    val storageManager = new DuckDBStorageManager(indexed = false)
+    val engine = new StagedExecutionEngine(storageManager, jo)
     val mode = "interp_ddbn"
-    run_warm_carac(blackhole, mode, engine)
+    run_warm_carac(blackhole, mode, engine, storageManager)
   }
 
   @Benchmark def warm_interp_ddbidx(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
-    val engine = new StagedExecutionEngine(new DuckDBStorageManager(indexed = true), jo)
+    val storageManager = new DuckDBStorageManager(indexed = true)
+    val engine = new StagedExecutionEngine(storageManager, jo)
     val mode = "interp_ddbidx"
-    run_warm_carac(blackhole, mode, engine)
+    run_warm_carac(blackhole, mode, engine, storageManager)
   }
 
   @Benchmark def warm_lambda_collidx(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
     val engine = new StagedExecutionEngine(new IndexedStorageManager(), jo)
     val mode = "lambda_collidx"
-    run_warm_carac(blackhole, mode, engine)
+    run_warm_carac(blackhole, mode, engine, null)
   }
 
   @Benchmark def warm_interp_collidx(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
     val engine = new StagedExecutionEngine(new IndexedStorageManager(), jo)
     val mode = "interp_collidx"
-    run_warm_carac(blackhole, mode, engine)
+    run_warm_carac(blackhole, mode, engine, null)
   }
-
   //  @Benchmark def carac_native_lambda(blackhole: Blackhole): Unit = {
   //    val b = "lambda"
   //    val pb = Process(Seq(s"../target/native-image/carac", benchmark, b))
@@ -621,7 +681,11 @@ class BenchRQB_ancestry_carac extends rqb_ancestry {
   private def run_warm_carac(blackhole: Blackhole, mode: String, storage: DuckDBStorageManager, options: JITOptions): Unit = {
     val engine = StagedExecutionEngine(storage, options)
     val program = Program(engine)
-    program.loadFromFactDir(factDirectory)
+    val parents = program.relation("parents")
+    val parentsS = Seq(("c0", DatabaseType.TEXT), ("c1", DatabaseType.TEXT))
+    storage.declareTable(parents.id, parentsS)
+    storage.edbs.initializeTable(parents.id, "parents", parentsS)
+    storage.loadFacts(factDirectory)
     pretest(program)
     val result = storage.resultSetToString(storage.runQuery(sqlString))
     blackhole.consume(result)
@@ -631,6 +695,7 @@ class BenchRQB_ancestry_carac extends rqb_ancestry {
     }
     engine.storageManager.cleanup()
   }
+
   @Benchmark def warm_lambda_ddbidx(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
     val storage = new DuckDBStorageManager(indexed = true)
@@ -744,7 +809,15 @@ class BenchRQB_sssp_carac extends rqb_sssp {
   private def run_warm_carac(blackhole: Blackhole, mode: String, storage: DuckDBStorageManager, options: JITOptions): Unit = {
     val engine = StagedExecutionEngine(storage, options)
     val program = Program(engine)
-    program.loadFromFactDir(factDirectory)
+    val base = program.relation("base")
+    val baseS = Seq(("c0", DatabaseType.INTEGER), ("c1", DatabaseType.INTEGER))
+    storage.declareTable(base.id, baseS)
+    storage.edbs.initializeTable(base.id, "base", baseS)
+    val edge = program.relation("edge")
+    val edgeS = Seq(("c0", DatabaseType.INTEGER), ("c1", DatabaseType.INTEGER), ("c2", DatabaseType.INTEGER))
+    storage.declareTable(edge.id, edgeS)
+    storage.edbs.initializeTable(edge.id, "edge", edgeS)
+    storage.loadFacts(factDirectory)
     pretest(program)
     val result = storage.resultSetToString(storage.runQuery(sqlString))
     blackhole.consume(result)
@@ -866,7 +939,15 @@ class BenchRQB_bom_carac extends rqb_bom {
   private def run_warm_carac(blackhole: Blackhole, mode: String, storage: DuckDBStorageManager, options: JITOptions): Unit = {
     val engine = StagedExecutionEngine(storage, options)
     val program = Program(engine)
-    program.loadFromFactDir(factDirectory)
+    val assbl = program.relation("assbl")
+    val assblS = Seq(("c0", DatabaseType.TEXT), ("c1", DatabaseType.TEXT))
+    storage.declareTable(assbl.id, assblS)
+    storage.edbs.initializeTable(assbl.id, "assbl", assblS)
+    val basic = program.relation("basic")
+    val basicS = Seq(("c0", DatabaseType.TEXT), ("c1", DatabaseType.INTEGER))
+    storage.declareTable(basic.id, basicS)
+    storage.edbs.initializeTable(basic.id, "basic", basicS)
+    storage.loadFacts(factDirectory)
     pretest(program)
     val result = storage.resultSetToString(storage.runQuery(sqlString))
     blackhole.consume(result)
