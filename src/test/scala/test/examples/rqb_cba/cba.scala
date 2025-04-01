@@ -40,7 +40,7 @@ trait rqb_cba {
 
     /*x*/ ctrl_var( i, v ) :- ( ctrl_term(a, f), ctrl_term(b, v),  abs(f, i, any2), app(any1, a, b) )
   }
-  
+
   def loadSchema(program: Program, duckDBStorageManager: DuckDBStorageManager): Unit =
     val term = program.relation("term")
     val termS = Seq(("c0", DatabaseType.INTEGER), ("c1", DatabaseType.TEXT), ("c2", DatabaseType.INTEGER))

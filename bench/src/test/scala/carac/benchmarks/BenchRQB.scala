@@ -18,6 +18,8 @@ import scala.sys.process.Process
 import scala.util.Using
 
 val SOUFFLE_BIN="/scratch/herlihy/souffle/build/src/souffle"
+val DB_DIR = "/tmp/my_database"
+val DB_URI = s"jdbc:duckdb:$DB_DIR"
 
 object RQB_Bench {
   def cleanup(benchmark: String): Unit = {
@@ -98,6 +100,10 @@ class BenchRQB_andersen_carac extends rqb_andersen {
 
   RQB_Bench.cleanup(benchmark)
 
+//  @Setup(Level.Invocation)
+//  def cleanDB(): Unit =
+//    Process(s"rm -rf $DB_URI").!
+
   private def run_warm_carac(blackhole: Blackhole, mode: String, engine: ExecutionEngine, duckDBStorageManager: DuckDBStorageManager): Unit = {
     val program = Program(engine)
     if (duckDBStorageManager != null)
@@ -127,7 +133,7 @@ class BenchRQB_andersen_carac extends rqb_andersen {
 
   @Benchmark def warm_lambda_ddbn(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
-    val storageManager = new DuckDBStorageManager(indexed = false)
+    val storageManager = new DuckDBStorageManager(indexed = false, dbUri = DB_URI)
     val engine = new StagedExecutionEngine(storageManager, jo)
     val mode = "lambda_ddbn"
     run_warm_carac(blackhole, mode, engine, storageManager)
@@ -202,7 +208,7 @@ class BenchRQB_andersen_carac extends rqb_andersen {
 @BenchmarkMode(Array(Mode.AverageTime))
 class BenchRQB_andersen_embedded() extends rqb_andersen {
   val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
-  val ddb_storageManager = new DuckDBStorageManager(indexed = false)
+  val ddb_storageManager = new DuckDBStorageManager(indexed = false, dbUri = DB_URI)
   val ddb_engine = new StagedExecutionEngine(ddb_storageManager, jo)
   val ddb_program = Program(ddb_engine)
   val coll_storageManager = new IndexedStorageManager()
@@ -312,7 +318,7 @@ class BenchRQB_cba_carac extends rqb_cba {
 
   @Benchmark def warm_lambda_ddbn(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
-    val storageManager = new DuckDBStorageManager(indexed = false)
+    val storageManager = new DuckDBStorageManager(indexed = false, dbUri = DB_URI)
     val engine = new StagedExecutionEngine(storageManager, jo)
     val mode = "lambda_ddbn"
     run_warm_carac(blackhole, mode, engine, storageManager)
@@ -387,7 +393,7 @@ class BenchRQB_cba_carac extends rqb_cba {
 @BenchmarkMode(Array(Mode.AverageTime))
 class BenchRQB_cba_embedded extends rqb_cba {
   val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
-  val ddb_storageManager = new DuckDBStorageManager(indexed = false)
+  val ddb_storageManager = new DuckDBStorageManager(indexed = false, dbUri = DB_URI)
   val ddb_engine = new StagedExecutionEngine(ddb_storageManager, jo)
   val ddb_program = Program(ddb_engine)
   val coll_storageManager = new IndexedStorageManager()
@@ -497,7 +503,7 @@ class BenchRQB_cspa_carac extends rqb_cspa {
 
   @Benchmark def warm_lambda_ddbn(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
-    val storageManager = new DuckDBStorageManager(indexed = false)
+    val storageManager = new DuckDBStorageManager(indexed = false, dbUri = DB_URI)
     val engine = new StagedExecutionEngine(storageManager, jo)
     val mode = "lambda_ddbn"
     run_warm_carac(blackhole, mode, engine, storageManager)
@@ -571,7 +577,7 @@ class BenchRQB_cspa_carac extends rqb_cspa {
 @BenchmarkMode(Array(Mode.AverageTime))
 class BenchRQB_cspa_embedded extends rqb_cspa {
   val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
-  val ddb_storageManager = new DuckDBStorageManager(indexed = false)
+  val ddb_storageManager = new DuckDBStorageManager(indexed = false, dbUri = DB_URI)
   val ddb_engine = new StagedExecutionEngine(ddb_storageManager, jo)
   val ddb_program = Program(ddb_engine)
   val coll_storageManager = new IndexedStorageManager()
@@ -633,7 +639,7 @@ class BenchRQB_ancestry_carac extends rqb_ancestry {
 
   @Benchmark def warm_lambda_ddbn(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
-    val storage = new DuckDBStorageManager(indexed = false)
+    val storage = new DuckDBStorageManager(indexed = false, dbUri = DB_URI)
     val mode = "lambda_ddbn"
     run_warm_carac(blackhole, mode, storage, jo)
   }
@@ -700,7 +706,7 @@ class BenchRQB_ancestry_souffle extends rqb_ancestry {
 @BenchmarkMode(Array(Mode.AverageTime))
 class BenchRQB_ancestry_embedded extends rqb_ancestry {
   val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
-  val ddb_storageManager = new DuckDBStorageManager(indexed = false)
+  val ddb_storageManager = new DuckDBStorageManager(indexed = false, dbUri = DB_URI)
   val ddb_engine = new StagedExecutionEngine(ddb_storageManager, jo)
   val ddb_program = Program(ddb_engine)
 
@@ -751,7 +757,7 @@ class BenchRQB_sssp_carac extends rqb_sssp {
 
   @Benchmark def warm_lambda_ddbn(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
-    val storage = new DuckDBStorageManager(indexed = false)
+    val storage = new DuckDBStorageManager(indexed = false, dbUri = DB_URI)
     val mode = "lambda_ddbn"
     run_warm_carac(blackhole, mode, storage, jo)
   }
@@ -818,7 +824,7 @@ class BenchRQB_sssp_souffle extends rqb_sssp {
 @BenchmarkMode(Array(Mode.AverageTime))
 class BenchRQB_sssp_embedded extends rqb_sssp {
   val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
-  val ddb_storageManager = new DuckDBStorageManager(indexed = false)
+  val ddb_storageManager = new DuckDBStorageManager(indexed = false, dbUri = DB_URI)
   val ddb_engine = new StagedExecutionEngine(ddb_storageManager, jo)
   val ddb_program = Program(ddb_engine)
 
@@ -869,7 +875,7 @@ class BenchRQB_bom_carac extends rqb_bom {
 
   @Benchmark def warm_lambda_ddbn(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
-    val storage = new DuckDBStorageManager(indexed = false)
+    val storage = new DuckDBStorageManager(indexed = false, dbUri = DB_URI)
     val mode = "lambda_ddbn"
     run_warm_carac(blackhole, mode, storage, jo)
   }
@@ -936,7 +942,7 @@ class BenchRQB_bom_souffle extends rqb_bom {
 @BenchmarkMode(Array(Mode.AverageTime))
 class BenchRQB_bom_embedded() extends rqb_bom {
   val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
-  val ddb_storageManager = new DuckDBStorageManager(indexed = false)
+  val ddb_storageManager = new DuckDBStorageManager(indexed = false, dbUri = DB_URI)
   val ddb_engine = new StagedExecutionEngine(ddb_storageManager, jo)
   val ddb_program = Program(ddb_engine)
 

@@ -92,7 +92,7 @@ case class DuckDBDatabase(prefix: DatabasePrefix, run: String => ResultSet, upda
           case _ => t
         s"$s $dbtype"
       ).mkString("(", ", ", ")")
-      val schemaString = s"CREATE TABLE ${newEdb.prefixedName} $types"
+      val schemaString = s"CREATE OR REPLACE TABLE ${newEdb.prefixedName} $types"
       commandCache.addOne(schemaString)
       if idxTODO.contains(rId) then
         val idx = idxTODO(rId)
@@ -141,7 +141,7 @@ case class DuckDBDatabase(prefix: DatabasePrefix, run: String => ResultSet, upda
 /**
  * Collections-based storage manager, index or no index.
  */
-class DuckDBStorageManager(ns: NS = new NS(), indexed: Boolean = true) extends StorageManager(ns) {
+class DuckDBStorageManager(ns: NS = new NS(), indexed: Boolean = true, dbUri: String = "") extends StorageManager(ns) {
   // "database", i.e. relationID => Relation
   var connection: Connection = null
   var initialized: Boolean = false
@@ -173,14 +173,25 @@ class DuckDBStorageManager(ns: NS = new NS(), indexed: Boolean = true) extends S
 //      println(s"LOADED into edb_$table: ${checkQ.getInt(1)}")
     )
 
+
   private def connect(): Unit =
+//    val dbUri = "jdbc:duckdb:/tmp/my_database"
     Class.forName("org.duckdb.DuckDBDriver")
-    connection = DriverManager.getConnection("jdbc:duckdb:")
+    connection = DriverManager.getConnection(dbUri)
 
   private def close() = connection.close()
 
+  private val threadLocalConnection = new ThreadLocal[Connection]() {
+    override def initialValue(): Connection = {
+      Class.forName("org.duckdb.DuckDBDriver")
+//      val dbUri = "jdbc:duckdb:/tmp/my_database"
+      DriverManager.getConnection(dbUri)
+    }
+  }
+
   val runQuery: String => ResultSet = sqlString =>
-    val lastStmt = connection.createStatement()
+    val conn = threadLocalConnection.get()
+    val lastStmt = conn.createStatement()
     //    println(s"running query: $sqlString")
     //    lastStmt.setQueryTimeout(timeout)
     try
@@ -191,8 +202,9 @@ class DuckDBStorageManager(ns: NS = new NS(), indexed: Boolean = true) extends S
 
   val runUpdate: String => Unit = sqlString =>
 //    println(s"running update: $sqlString")
-    val lastStmt = connection.createStatement()
-//    lastStmt.setQueryTimeout(timeout)
+    val conn = threadLocalConnection.get()
+    val lastStmt = conn.createStatement()
+  //    lastStmt.setQueryTimeout(timeout)
     try
       lastStmt.executeUpdate(sqlString)
     catch
