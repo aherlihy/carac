@@ -56,6 +56,8 @@ class BenchRQB_andersen_souffle extends rqb_andersen {
   var directory = null
 
   RQB_Bench.cleanup(benchmark)
+  val exit = Process(Seq("src/test/scala/carac/benchmarks/souffle/souffle-driver.sh", SOUFFLE_BIN, benchmark, "generate-preprofile")).!
+  if (exit != 0) throw new Exception(s"Souffle preprofiling failed with code $exit")
 
   private def run_souffle(mode: String, blackhole: Blackhole): Unit = {
     val pb = Process(Seq("src/test/scala/carac/benchmarks/souffle/souffle-driver.sh", SOUFFLE_BIN, benchmark, mode))
@@ -238,6 +240,8 @@ class BenchRQB_cba_souffle extends rqb_cba {
   var directory = null
 
   RQB_Bench.cleanup(benchmark)
+  val exit = Process(Seq("src/test/scala/carac/benchmarks/souffle/souffle-driver.sh", SOUFFLE_BIN, benchmark, "generate-preprofile")).!
+  if (exit != 0) throw new Exception(s"Souffle preprofiling failed with code $exit")
 
   private def run_souffle(mode: String, blackhole: Blackhole): Unit = {
     val pb = Process(Seq("src/test/scala/carac/benchmarks/souffle/souffle-driver.sh", SOUFFLE_BIN, benchmark, mode))
@@ -421,6 +425,8 @@ class BenchRQB_cspa_souffle extends rqb_cspa {
   var directory = null
 
   RQB_Bench.cleanup(benchmark)
+  val exit = Process(Seq("src/test/scala/carac/benchmarks/souffle/souffle-driver.sh", SOUFFLE_BIN, benchmark, "generate-preprofile")).!
+  if (exit != 0) throw new Exception(s"Souffle preprofiling failed with code $exit")
 
   private def run_souffle(mode: String, blackhole: Blackhole): Unit = {
     val pb = Process(Seq("src/test/scala/carac/benchmarks/souffle/souffle-driver.sh", SOUFFLE_BIN, benchmark, mode))
@@ -658,6 +664,8 @@ class BenchRQB_ancestry_souffle extends rqb_ancestry {
   var directory = null
 
   RQB_Bench.cleanup(benchmark)
+  val exit = Process(Seq("src/test/scala/carac/benchmarks/souffle/souffle-driver.sh", SOUFFLE_BIN, benchmark, "generate-preprofile")).!
+  if (exit != 0) throw new Exception(s"Souffle preprofiling failed with code $exit")
 
   private def run_souffle(mode: String, blackhole: Blackhole): Unit = {
     val pb = Process(Seq("src/test/scala/carac/benchmarks/souffle/souffle-driver.sh", SOUFFLE_BIN, benchmark, mode))
@@ -774,6 +782,8 @@ class BenchRQB_sssp_souffle extends rqb_sssp {
   var directory = null
 
   RQB_Bench.cleanup(benchmark)
+  val exit = Process(Seq("src/test/scala/carac/benchmarks/souffle/souffle-driver.sh", SOUFFLE_BIN, benchmark, "generate-preprofile")).!
+  if (exit != 0) throw new Exception(s"Souffle preprofiling failed with code $exit")
 
   private def run_souffle(mode: String, blackhole: Blackhole): Unit = {
     val pb = Process(Seq("src/test/scala/carac/benchmarks/souffle/souffle-driver.sh", SOUFFLE_BIN, benchmark, mode))
@@ -890,6 +900,8 @@ class BenchRQB_bom_souffle extends rqb_bom {
   var directory = null
 
   RQB_Bench.cleanup(benchmark)
+  val exit = Process(Seq("src/test/scala/carac/benchmarks/souffle/souffle-driver.sh", SOUFFLE_BIN, benchmark, "generate-preprofile")).!
+  if (exit != 0) throw new Exception(s"Souffle preprofiling failed with code $exit")
 
   private def run_souffle(mode: String, blackhole: Blackhole): Unit = {
     val pb = Process(Seq("src/test/scala/carac/benchmarks/souffle/souffle-driver.sh", SOUFFLE_BIN, benchmark, mode))

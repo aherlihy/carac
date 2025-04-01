@@ -66,48 +66,48 @@ fi
 # Soufflé execution per mode
 case "$MODE" in
   compile)
-    $SOUFFLE_BIN -c -F "$FACTDIR" "$PROGRAM" -D "$OUTDIR" --jobs=1 \
+    $SOUFFLE_BIN -c -F "$FACTDIR" "$PROGRAM" -D "$OUTDIR"  \
       --wno=var-appears-once --wno=no-rules-nor-facts
     ;;
 
   interp)
-    $SOUFFLE_BIN -F "$FACTDIR" "$PROGRAM" -D "$OUTDIR" --jobs=1 \
+    $SOUFFLE_BIN -F "$FACTDIR" "$PROGRAM" -D "$OUTDIR"  \
       --wno=var-appears-once --wno=no-rules-nor-facts
     ;;
 
   generate-preprofile)
     $SOUFFLE_BIN --profile="$BENCHMARK-preprofile" --emit-statistics \
-      -F "$FACTDIR" "$PROGRAM" --jobs=1 \
+      -F "$FACTDIR" "$PROGRAM"  \
       --wno=var-appears-once --wno=no-rules-nor-facts
     ;;
 
   preprofiled-compile)
     $SOUFFLE_BIN -c --a="$BENCHMARK-preprofile" -F "$FACTDIR" "$PROGRAM" -D "$OUTDIR" \
-      --jobs=1 --wno=var-appears-once --wno=no-rules-nor-facts
+       --wno=var-appears-once --wno=no-rules-nor-facts
     ;;
 
   preprofiled-interp)
     $SOUFFLE_BIN --a="$BENCHMARK-preprofile" -F "$FACTDIR" "$PROGRAM" -D "$OUTDIR" \
-      --jobs=1 --wno=var-appears-once --wno=no-rules-nor-facts
+       --wno=var-appears-once --wno=no-rules-nor-facts
     ;;
 
   profile-compile)
     $SOUFFLE_BIN -c --profile="$BENCHMARK-profile-compile" --emit-statistics \
-      -F "$FACTDIR" "$PROGRAM" -D "$OUTDIR" --jobs=1 \
+      -F "$FACTDIR" "$PROGRAM" -D "$OUTDIR"  \
       --wno=var-appears-once --wno=no-rules-nor-facts
 
     $SOUFFLE_BIN -c --a="$BENCHMARK-profile-compile" \
-      -F "$FACTDIR" "$PROGRAM" -D "$OUTDIR" --jobs=1 \
+      -F "$FACTDIR" "$PROGRAM" -D "$OUTDIR"  \
       --wno=var-appears-once --wno=no-rules-nor-facts
     ;;
 
   profile-interp)
     $SOUFFLE_BIN --profile="$BENCHMARK-profile-interp" --emit-statistics \
-      -F "$FACTDIR" "$PROGRAM" -D "$OUTDIR" --jobs=1 \
+      -F "$FACTDIR" "$PROGRAM" -D "$OUTDIR"  \
       --wno=var-appears-once --wno=no-rules-nor-facts
 
     $SOUFFLE_BIN --a="$BENCHMARK-profile-interp" \
-      -F "$FACTDIR" "$PROGRAM" -D "$OUTDIR" --jobs=1 \
+      -F "$FACTDIR" "$PROGRAM" -D "$OUTDIR"  \
       --wno=var-appears-once --wno=no-rules-nor-facts
     ;;
 esac
