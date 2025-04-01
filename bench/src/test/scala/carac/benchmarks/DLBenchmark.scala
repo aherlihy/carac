@@ -147,6 +147,7 @@ abstract class DLBenchmark {
     expectedFacts.keys.foreach(relation => {
       result(relation) = program.namedRelation(relation).solve()
     })
+    program.ee.storageManager.cleanup(clearEdbs = false)
   }
 
   def run_ddb(query: String, program: Program, result: mutable.Map[String, Set[Seq[StorageTerm]]]): Unit = {
@@ -154,6 +155,7 @@ abstract class DLBenchmark {
     expectedFacts.keys.foreach(relation => {
       storage.resultSetToString(storage.runQuery(query))
     })
+    program.ee.storageManager.cleanup(clearEdbs = false)
   }
 
   def finish(): Unit = {

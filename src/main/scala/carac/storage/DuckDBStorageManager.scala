@@ -342,8 +342,11 @@ class DuckDBStorageManager(ns: NS = new NS(), indexed: Boolean = true) extends S
 //    }")
   }
 
-  def cleanup(): Unit = {
-    databases.foreach(_.clear().execute_cache())
+  def cleanup(clearEdbs: Boolean = true): Unit = {
+    if clearEdbs then
+      databases.foreach(_.clear().execute_cache())
+    else
+      databases.drop(1).foreach(_.clear().execute_cache())
   }
 
   def inferTypes(ruleHashes: mutable.Map[RelationId, mutable.ArrayBuffer[String]]): Unit = {

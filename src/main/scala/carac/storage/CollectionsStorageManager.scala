@@ -282,12 +282,11 @@ class GeneralCollectionsStorageManager(ns: NS = new NS(), indexed: Boolean = fal
     val lhs = if indexed then IndexedCollectionsCasts.asIndexedCollectionsEDB(lhsEDB) else CollectionsCasts.asCollectionsEDB(lhsEDB)
     lhs.diff(rhsEDB)
 
-  override def cleanup(): Unit = {
-    edbs.clear()
+  override def cleanup(clearEdbs: Boolean = true): Unit = {
+    if clearEdbs then 
+      edbs.clear()
+      edbDomain.clear()
     derivedDB.clear()
     deltaDB.foreach(_.clear())
-    indexCandidates.clear()
-    relationArity.clear()
-    edbDomain.clear()
   }
 }

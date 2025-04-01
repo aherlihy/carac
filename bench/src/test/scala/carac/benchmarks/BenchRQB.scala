@@ -74,6 +74,12 @@ class BenchRQB_andersen_souffle extends rqb_andersen {
 
   @Benchmark def souffle_profile_interp(blackhole: Blackhole): Unit =
     run_souffle("profile-interp", blackhole)
+
+  @Benchmark def zsouffle_preprofiled_compile(blackhole: Blackhole): Unit =
+    run_souffle("preprofiled-compile", blackhole)
+
+  @Benchmark def zsouffle_preprofiled_interp(blackhole: Blackhole): Unit =
+    run_souffle("preprofiled-interp", blackhole)
 }
 
 
@@ -120,13 +126,13 @@ class BenchRQB_andersen_carac extends rqb_andersen {
     engine.storageManager.cleanup()
   }
 
-  @Benchmark def warm_lambda_ddbidx(blackhole: Blackhole): Unit = {
-    val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
-    val storageManager = new DuckDBStorageManager(indexed = true)
-    val engine = new StagedExecutionEngine(storageManager, jo)
-    val mode = "lambda_ddbidx"
-    run_warm_carac(blackhole, mode, engine, storageManager)
-  }
+//  @Benchmark def warm_lambda_ddbidx(blackhole: Blackhole): Unit = {
+//    val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
+//    val storageManager = new DuckDBStorageManager(indexed = true)
+//    val engine = new StagedExecutionEngine(storageManager, jo)
+//    val mode = "lambda_ddbidx"
+//    run_warm_carac(blackhole, mode, engine, storageManager)
+//  }
 
   @Benchmark def warm_lambda_ddbn(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
@@ -135,22 +141,21 @@ class BenchRQB_andersen_carac extends rqb_andersen {
     val mode = "lambda_ddbn"
     run_warm_carac(blackhole, mode, engine, storageManager)
   }
-
-  @Benchmark def warm_interp_ddbn(blackhole: Blackhole): Unit = {
-    val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
-    val storageManager = new DuckDBStorageManager(indexed = false)
-    val engine = new StagedExecutionEngine(storageManager, jo)
-    val mode = "interp_ddbn"
-    run_warm_carac(blackhole, mode, engine, storageManager)
-  }
-
-  @Benchmark def warm_interp_ddbidx(blackhole: Blackhole): Unit = {
-    val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
-    val storageManager = new DuckDBStorageManager(indexed = true)
-    val engine = new StagedExecutionEngine(storageManager, jo)
-    val mode = "interp_ddbidx"
-    run_warm_carac(blackhole, mode, engine, storageManager)
-  }
+//  @Benchmark def warm_interp_ddbn(blackhole: Blackhole): Unit = {
+//    val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
+//    val storageManager = new DuckDBStorageManager(indexed = false)
+//    val engine = new StagedExecutionEngine(storageManager, jo)
+//    val mode = "interp_ddbn"
+//    run_warm_carac(blackhole, mode, engine, storageManager)
+//  }
+//
+//  @Benchmark def warm_interp_ddbidx(blackhole: Blackhole): Unit = {
+//    val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
+//    val storageManager = new DuckDBStorageManager(indexed = true)
+//    val engine = new StagedExecutionEngine(storageManager, jo)
+//    val mode = "interp_ddbidx"
+//    run_warm_carac(blackhole, mode, engine, storageManager)
+//  }
 
   @Benchmark def warm_lambda_collidx(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
@@ -159,12 +164,12 @@ class BenchRQB_andersen_carac extends rqb_andersen {
     run_warm_carac(blackhole, mode, engine, null)
   }
 
-  @Benchmark def warm_interp_collidx(blackhole: Blackhole): Unit = {
-    val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
-    val engine = new StagedExecutionEngine(new IndexedStorageManager(), jo)
-    val mode = "interp_collidx"
-    run_warm_carac(blackhole, mode, engine, null)
-  }
+//  @Benchmark def warm_interp_collidx(blackhole: Blackhole): Unit = {
+//    val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
+//    val engine = new StagedExecutionEngine(new IndexedStorageManager(), jo)
+//    val mode = "interp_collidx"
+//    run_warm_carac(blackhole, mode, engine, null)
+//  }
 
   //  @Benchmark def carac_native_lambda(blackhole: Blackhole): Unit = {
   //    val b = "lambda"
@@ -214,26 +219,26 @@ class BenchRQB_andersen_embedded() extends ExampleBenchmarkGenerator(
     blackhole.consume(run(programs(p), result))
   }
 
-  @Benchmark def interpreted_indexed_sel__0____EOL(blackhole: Blackhole): Unit = {
-    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
-    if (!programs.contains(p))
-      throw new Exception(f"Error: program for '$p' not found")
-    blackhole.consume(run(programs(p), result))
-  }
-
-  @Benchmark def jit_ddb_sel__0_blocking_DELTA_lambda_EOL(blackhole: Blackhole): Unit = {
-    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
-    if (!programs.contains(p))
-      throw new Exception(f"Error: program for '$p' not found")
-    blackhole.consume(run(programs(p), result))
-  }
-
-  @Benchmark def interpreted_ddb_sel__0____EOL(blackhole: Blackhole): Unit = {
-    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
-    if (!programs.contains(p))
-      throw new Exception(f"Error: program for '$p' not found")
-    blackhole.consume(run(programs(p), result))
-  }
+//  @Benchmark def interpreted_indexed_sel__0____EOL(blackhole: Blackhole): Unit = {
+//    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+//    if (!programs.contains(p))
+//      throw new Exception(f"Error: program for '$p' not found")
+//    blackhole.consume(run(programs(p), result))
+//  }
+//
+//  @Benchmark def jit_ddb_sel__0_blocking_DELTA_lambda_EOL(blackhole: Blackhole): Unit = {
+//    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+//    if (!programs.contains(p))
+//      throw new Exception(f"Error: program for '$p' not found")
+//    blackhole.consume(run(programs(p), result))
+//  }
+//
+//  @Benchmark def interpreted_ddb_sel__0____EOL(blackhole: Blackhole): Unit = {
+//    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+//    if (!programs.contains(p))
+//      throw new Exception(f"Error: program for '$p' not found")
+//    blackhole.consume(run(programs(p), result))
+//  }
   @Benchmark def jit_ddbnidx_sel__0_blocking_DELTA_lambda_EOL(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
     if (!programs.contains(p))
@@ -241,12 +246,11 @@ class BenchRQB_andersen_embedded() extends ExampleBenchmarkGenerator(
     blackhole.consume(run(programs(p), result))
   }
 
-  @Benchmark def interpreted_ddbnidx_sel__0____EOL(blackhole: Blackhole): Unit = {
-    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
-    if (!programs.contains(p))
-      throw new Exception(f"Error: program for '$p' not found")
-    blackhole.consume(run(programs(p), result))
-  }
+//  @Benchmark def interpreted_ddbnidx_sel__0____EOL(blackhole: Blackhole): Unit = {//    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+//    if (!programs.contains(p))
+//      throw new Exception(f"Error: program for '$p' not found")
+//    blackhole.consume(run(programs(p), result))
+//  }
 }
 
 @Fork(1) // # of jvms that it will use
@@ -280,6 +284,12 @@ class BenchRQB_cba_souffle extends rqb_cba {
 
   @Benchmark def souffle_profile_interp(blackhole: Blackhole): Unit =
     run_souffle("profile-interp", blackhole)
+
+  @Benchmark def zsouffle_preprofiled_compile(blackhole: Blackhole): Unit =
+    run_souffle("preprofiled-compile", blackhole)
+
+  @Benchmark def zsouffle_preprofiled_interp(blackhole: Blackhole): Unit =
+    run_souffle("preprofiled-interp", blackhole)
 }
 
 
@@ -334,13 +344,13 @@ class BenchRQB_cba_carac extends rqb_cba {
     engine.storageManager.cleanup()
   }
 
-  @Benchmark def warm_lambda_ddbidx(blackhole: Blackhole): Unit = {
-    val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
-    val storageManager = new DuckDBStorageManager(indexed = true)
-    val engine = new StagedExecutionEngine(storageManager, jo)
-    val mode = "lambda_ddbidx"
-    run_warm_carac(blackhole, mode, engine, storageManager)
-  }
+//  @Benchmark def warm_lambda_ddbidx(blackhole: Blackhole): Unit = {
+//    val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
+//    val storageManager = new DuckDBStorageManager(indexed = true)
+//    val engine = new StagedExecutionEngine(storageManager, jo)
+//    val mode = "lambda_ddbidx"
+//    run_warm_carac(blackhole, mode, engine, storageManager)
+//  }
 
   @Benchmark def warm_lambda_ddbn(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
@@ -349,22 +359,21 @@ class BenchRQB_cba_carac extends rqb_cba {
     val mode = "lambda_ddbn"
     run_warm_carac(blackhole, mode, engine, storageManager)
   }
-
-  @Benchmark def warm_interp_ddbn(blackhole: Blackhole): Unit = {
-    val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
-    val storageManager = new DuckDBStorageManager(indexed = false)
-    val engine = new StagedExecutionEngine(storageManager, jo)
-    val mode = "interp_ddbn"
-    run_warm_carac(blackhole, mode, engine, storageManager)
-  }
-
-  @Benchmark def warm_interp_ddbidx(blackhole: Blackhole): Unit = {
-    val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
-    val storageManager = new DuckDBStorageManager(indexed = true)
-    val engine = new StagedExecutionEngine(storageManager, jo)
-    val mode = "interp_ddbidx"
-    run_warm_carac(blackhole, mode, engine, storageManager)
-  }
+//  @Benchmark def warm_interp_ddbn(blackhole: Blackhole): Unit = {
+//    val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
+//    val storageManager = new DuckDBStorageManager(indexed = false)
+//    val engine = new StagedExecutionEngine(storageManager, jo)
+//    val mode = "interp_ddbn"
+//    run_warm_carac(blackhole, mode, engine, storageManager)
+//  }
+//
+//  @Benchmark def warm_interp_ddbidx(blackhole: Blackhole): Unit = {
+//    val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
+//    val storageManager = new DuckDBStorageManager(indexed = true)
+//    val engine = new StagedExecutionEngine(storageManager, jo)
+//    val mode = "interp_ddbidx"
+//    run_warm_carac(blackhole, mode, engine, storageManager)
+//  }
 
   @Benchmark def warm_lambda_collidx(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
@@ -373,12 +382,12 @@ class BenchRQB_cba_carac extends rqb_cba {
     run_warm_carac(blackhole, mode, engine, null)
   }
 
-  @Benchmark def warm_interp_collidx(blackhole: Blackhole): Unit = {
-    val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
-    val engine = new StagedExecutionEngine(new IndexedStorageManager(), jo)
-    val mode = "interp_collidx"
-    run_warm_carac(blackhole, mode, engine, null)
-  }
+//  @Benchmark def warm_interp_collidx(blackhole: Blackhole): Unit = {
+//    val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
+//    val engine = new StagedExecutionEngine(new IndexedStorageManager(), jo)
+//    val mode = "interp_collidx"
+//    run_warm_carac(blackhole, mode, engine, null)
+//  }
 
   //  @Benchmark def carac_native_lambda(blackhole: Blackhole): Unit = {
   //    val b = "lambda"
@@ -428,26 +437,26 @@ class BenchRQB_cba_embedded() extends ExampleBenchmarkGenerator(
     blackhole.consume(run(programs(p), result))
   }
 
-  @Benchmark def interpreted_indexed_sel__0____EOL(blackhole: Blackhole): Unit = {
-    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
-    if (!programs.contains(p))
-      throw new Exception(f"Error: program for '$p' not found")
-    blackhole.consume(run(programs(p), result))
-  }
-
-  @Benchmark def jit_ddb_sel__0_blocking_DELTA_lambda_EOL(blackhole: Blackhole): Unit = {
-    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
-    if (!programs.contains(p))
-      throw new Exception(f"Error: program for '$p' not found")
-    blackhole.consume(run(programs(p), result))
-  }
-
-  @Benchmark def interpreted_ddb_sel__0____EOL(blackhole: Blackhole): Unit = {
-    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
-    if (!programs.contains(p))
-      throw new Exception(f"Error: program for '$p' not found")
-    blackhole.consume(run(programs(p), result))
-  }
+//  @Benchmark def interpreted_indexed_sel__0____EOL(blackhole: Blackhole): Unit = {
+//    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+//    if (!programs.contains(p))
+//      throw new Exception(f"Error: program for '$p' not found")
+//    blackhole.consume(run(programs(p), result))
+//  }
+//
+//  @Benchmark def jit_ddb_sel__0_blocking_DELTA_lambda_EOL(blackhole: Blackhole): Unit = {
+//    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+//    if (!programs.contains(p))
+//      throw new Exception(f"Error: program for '$p' not found")
+//    blackhole.consume(run(programs(p), result))
+//  }
+//
+//  @Benchmark def interpreted_ddb_sel__0____EOL(blackhole: Blackhole): Unit = {
+//    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+//    if (!programs.contains(p))
+//      throw new Exception(f"Error: program for '$p' not found")
+//    blackhole.consume(run(programs(p), result))
+//  }
 
   @Benchmark def jit_ddbnidx_sel__0_blocking_DELTA_lambda_EOL(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
@@ -456,12 +465,11 @@ class BenchRQB_cba_embedded() extends ExampleBenchmarkGenerator(
     blackhole.consume(run(programs(p), result))
   }
 
-  @Benchmark def interpreted_ddbnidx_sel__0____EOL(blackhole: Blackhole): Unit = {
-    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
-    if (!programs.contains(p))
-      throw new Exception(f"Error: program for '$p' not found")
-    blackhole.consume(run(programs(p), result))
-  }
+//  @Benchmark def interpreted_ddbnidx_sel__0____EOL(blackhole: Blackhole): Unit = {//    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+//    if (!programs.contains(p))
+//      throw new Exception(f"Error: program for '$p' not found")
+//    blackhole.consume(run(programs(p), result))
+//  }
 }
 
 @Fork(1) // # of jvms that it will use
@@ -495,6 +503,12 @@ class BenchRQB_cspa_souffle extends rqb_cspa {
 
   @Benchmark def souffle_profile_interp(blackhole: Blackhole): Unit =
     run_souffle("profile-interp", blackhole)
+
+  @Benchmark def zsouffle_preprofiled_compile(blackhole: Blackhole): Unit =
+    run_souffle("preprofiled-compile", blackhole)
+
+  @Benchmark def zsouffle_preprofiled_interp(blackhole: Blackhole): Unit =
+    run_souffle("preprofiled-interp", blackhole)
 }
 
 
@@ -537,13 +551,13 @@ class BenchRQB_cspa_carac extends rqb_cspa {
     engine.storageManager.cleanup()
   }
 
-  @Benchmark def warm_lambda_ddbidx(blackhole: Blackhole): Unit = {
-    val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
-    val storageManager = new DuckDBStorageManager(indexed = true)
-    val engine = new StagedExecutionEngine(storageManager, jo)
-    val mode = "lambda_ddbidx"
-    run_warm_carac(blackhole, mode, engine, storageManager)
-  }
+//  @Benchmark def warm_lambda_ddbidx(blackhole: Blackhole): Unit = {
+//    val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
+//    val storageManager = new DuckDBStorageManager(indexed = true)
+//    val engine = new StagedExecutionEngine(storageManager, jo)
+//    val mode = "lambda_ddbidx"
+//    run_warm_carac(blackhole, mode, engine, storageManager)
+//  }
 
   @Benchmark def warm_lambda_ddbn(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
@@ -552,22 +566,21 @@ class BenchRQB_cspa_carac extends rqb_cspa {
     val mode = "lambda_ddbn"
     run_warm_carac(blackhole, mode, engine, storageManager)
   }
-
-  @Benchmark def warm_interp_ddbn(blackhole: Blackhole): Unit = {
-    val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
-    val storageManager = new DuckDBStorageManager(indexed = false)
-    val engine = new StagedExecutionEngine(storageManager, jo)
-    val mode = "interp_ddbn"
-    run_warm_carac(blackhole, mode, engine, storageManager)
-  }
-
-  @Benchmark def warm_interp_ddbidx(blackhole: Blackhole): Unit = {
-    val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
-    val storageManager = new DuckDBStorageManager(indexed = true)
-    val engine = new StagedExecutionEngine(storageManager, jo)
-    val mode = "interp_ddbidx"
-    run_warm_carac(blackhole, mode, engine, storageManager)
-  }
+//  @Benchmark def warm_interp_ddbn(blackhole: Blackhole): Unit = {
+//    val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
+//    val storageManager = new DuckDBStorageManager(indexed = false)
+//    val engine = new StagedExecutionEngine(storageManager, jo)
+//    val mode = "interp_ddbn"
+//    run_warm_carac(blackhole, mode, engine, storageManager)
+//  }
+//
+//  @Benchmark def warm_interp_ddbidx(blackhole: Blackhole): Unit = {
+//    val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
+//    val storageManager = new DuckDBStorageManager(indexed = true)
+//    val engine = new StagedExecutionEngine(storageManager, jo)
+//    val mode = "interp_ddbidx"
+//    run_warm_carac(blackhole, mode, engine, storageManager)
+//  }
 
   @Benchmark def warm_lambda_collidx(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
@@ -576,12 +589,12 @@ class BenchRQB_cspa_carac extends rqb_cspa {
     run_warm_carac(blackhole, mode, engine, null)
   }
 
-  @Benchmark def warm_interp_collidx(blackhole: Blackhole): Unit = {
-    val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
-    val engine = new StagedExecutionEngine(new IndexedStorageManager(), jo)
-    val mode = "interp_collidx"
-    run_warm_carac(blackhole, mode, engine, null)
-  }
+//  @Benchmark def warm_interp_collidx(blackhole: Blackhole): Unit = {
+//    val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
+//    val engine = new StagedExecutionEngine(new IndexedStorageManager(), jo)
+//    val mode = "interp_collidx"
+//    run_warm_carac(blackhole, mode, engine, null)
+//  }
   //  @Benchmark def carac_native_lambda(blackhole: Blackhole): Unit = {
   //    val b = "lambda"
   //    val pb = Process(Seq(s"../target/native-image/carac", benchmark, b))
@@ -630,26 +643,26 @@ class BenchRQB_cspa_embedded() extends ExampleBenchmarkGenerator(
     blackhole.consume(run(programs(p), result))
   }
 
-  @Benchmark def interpreted_indexed_sel__0____EOL(blackhole: Blackhole): Unit = {
-    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
-    if (!programs.contains(p))
-      throw new Exception(f"Error: program for '$p' not found")
-    blackhole.consume(run(programs(p), result))
-  }
-
-  @Benchmark def jit_ddb_sel__0_blocking_DELTA_lambda_EOL(blackhole: Blackhole): Unit = {
-    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
-    if (!programs.contains(p))
-      throw new Exception(f"Error: program for '$p' not found")
-    blackhole.consume(run(programs(p), result))
-  }
-
-  @Benchmark def interpreted_ddb_sel__0____EOL(blackhole: Blackhole): Unit = {
-    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
-    if (!programs.contains(p))
-      throw new Exception(f"Error: program for '$p' not found")
-    blackhole.consume(run(programs(p), result))
-  }
+//  @Benchmark def interpreted_indexed_sel__0____EOL(blackhole: Blackhole): Unit = {
+//    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+//    if (!programs.contains(p))
+//      throw new Exception(f"Error: program for '$p' not found")
+//    blackhole.consume(run(programs(p), result))
+//  }
+//
+//  @Benchmark def jit_ddb_sel__0_blocking_DELTA_lambda_EOL(blackhole: Blackhole): Unit = {
+//    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+//    if (!programs.contains(p))
+//      throw new Exception(f"Error: program for '$p' not found")
+//    blackhole.consume(run(programs(p), result))
+//  }
+//
+//  @Benchmark def interpreted_ddb_sel__0____EOL(blackhole: Blackhole): Unit = {
+//    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+//    if (!programs.contains(p))
+//      throw new Exception(f"Error: program for '$p' not found")
+//    blackhole.consume(run(programs(p), result))
+//  }
 
   @Benchmark def jit_ddbnidx_sel__0_blocking_DELTA_lambda_EOL(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
@@ -658,12 +671,11 @@ class BenchRQB_cspa_embedded() extends ExampleBenchmarkGenerator(
     blackhole.consume(run(programs(p), result))
   }
 
-  @Benchmark def interpreted_ddbnidx_sel__0____EOL(blackhole: Blackhole): Unit = {
-    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
-    if (!programs.contains(p))
-      throw new Exception(f"Error: program for '$p' not found")
-    blackhole.consume(run(programs(p), result))
-  }
+//  @Benchmark def interpreted_ddbnidx_sel__0____EOL(blackhole: Blackhole): Unit = {//    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+//    if (!programs.contains(p))
+//      throw new Exception(f"Error: program for '$p' not found")
+//    blackhole.consume(run(programs(p), result))
+//  }
 }
 
 @Fork(1) // # of jvms that it will use
@@ -696,12 +708,12 @@ class BenchRQB_ancestry_carac extends rqb_ancestry {
     engine.storageManager.cleanup()
   }
 
-  @Benchmark def warm_lambda_ddbidx(blackhole: Blackhole): Unit = {
-    val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
-    val storage = new DuckDBStorageManager(indexed = true)
-    val mode = "lambda_ddbidx"
-    run_warm_carac(blackhole, mode, storage, jo)
-  }
+//  @Benchmark def warm_lambda_ddbidx(blackhole: Blackhole): Unit = {
+//    val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
+//    val storage = new DuckDBStorageManager(indexed = true)
+//    val mode = "lambda_ddbidx"
+//    run_warm_carac(blackhole, mode, storage, jo)
+//  }
 
   @Benchmark def warm_lambda_ddbn(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
@@ -710,19 +722,19 @@ class BenchRQB_ancestry_carac extends rqb_ancestry {
     run_warm_carac(blackhole, mode, storage, jo)
   }
 
-  @Benchmark def warm_interp_ddbn(blackhole: Blackhole): Unit = {
-    val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
-    val storage = new DuckDBStorageManager(indexed = false)
-    val mode = "interp_ddbn"
-    run_warm_carac(blackhole, mode, storage, jo)
-  }
-
-  @Benchmark def warm_interp_ddbidx(blackhole: Blackhole): Unit = {
-    val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
-    val storage = new DuckDBStorageManager(indexed = true)
-    val mode = "interp_ddbidx"
-    run_warm_carac(blackhole, mode, storage, jo)
-  }
+//  @Benchmark def warm_interp_ddbn(blackhole: Blackhole): Unit = {
+//    val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
+//    val storage = new DuckDBStorageManager(indexed = false)
+//    val mode = "interp_ddbn"
+//    run_warm_carac(blackhole, mode, storage, jo)
+//  }
+//
+//  @Benchmark def warm_interp_ddbidx(blackhole: Blackhole): Unit = {
+//    val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
+//    val storage = new DuckDBStorageManager(indexed = true)
+//    val mode = "interp_ddbidx"
+//    run_warm_carac(blackhole, mode, storage, jo)
+//  }
 }
 
 @Fork(1) // # of jvms that it will use
@@ -755,6 +767,12 @@ class BenchRQB_ancestry_souffle extends rqb_ancestry {
 
   @Benchmark def souffle_profile_interp(blackhole: Blackhole): Unit =
     run_souffle("profile-interp", blackhole)
+
+  @Benchmark def zsouffle_preprofiled_compile(blackhole: Blackhole): Unit =
+    run_souffle("preprofiled-compile", blackhole)
+
+  @Benchmark def zsouffle_preprofiled_interp(blackhole: Blackhole): Unit =
+    run_souffle("preprofiled-interp", blackhole)
 }
 
 @Fork(1) // # of jvms that it will use
@@ -765,19 +783,19 @@ class BenchRQB_ancestry_souffle extends rqb_ancestry {
 class BenchRQB_ancestry_embedded() extends ExampleBenchmarkGenerator(
   "rqb_ancestry"
 ) with rqb_ancestry {
-  @Benchmark def jit_ddb_sel__0_blocking_DELTA_lambda_EOL(blackhole: Blackhole): Unit = {
-    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
-    if (!programs.contains(p))
-      throw new Exception(f"Error: program for '$p' not found")
-    blackhole.consume(run_ddb(sqlString, programs(p), result))
-  }
-
-  @Benchmark def interpreted_ddb_sel__0____EOL(blackhole: Blackhole): Unit = {
-    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
-    if (!programs.contains(p))
-      throw new Exception(f"Error: program for '$p' not found")
-    blackhole.consume(run_ddb(sqlString, programs(p), result))
-  }
+//  @Benchmark def jit_ddb_sel__0_blocking_DELTA_lambda_EOL(blackhole: Blackhole): Unit = {
+//    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+//    if (!programs.contains(p))
+//      throw new Exception(f"Error: program for '$p' not found")
+//    blackhole.consume(run_ddb(sqlString, programs(p), result))
+//  }
+//
+//  @Benchmark def interpreted_ddb_sel__0____EOL(blackhole: Blackhole): Unit = {
+//    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+//    if (!programs.contains(p))
+//      throw new Exception(f"Error: program for '$p' not found")
+//    blackhole.consume(run_ddb(sqlString, programs(p), result))
+//  }
 
   @Benchmark def jit_ddbnidx_sel__0_blocking_DELTA_lambda_EOL(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
@@ -786,12 +804,12 @@ class BenchRQB_ancestry_embedded() extends ExampleBenchmarkGenerator(
     blackhole.consume(run_ddb(sqlString, programs(p), result))
   }
 
-  @Benchmark def interpreted_ddbnidx_sel__0____EOL(blackhole: Blackhole): Unit = {
-    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
-    if (!programs.contains(p))
-      throw new Exception(f"Error: program for '$p' not found")
-    blackhole.consume(run_ddb(sqlString, programs(p), result))
-  }
+//  @Benchmark def interpreted_ddbnidx_sel__0____EOL(blackhole: Blackhole): Unit = {
+//    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+//    if (!programs.contains(p))
+//      throw new Exception(f"Error: program for '$p' not found")
+//    blackhole.consume(run_ddb(sqlString, programs(p), result))
+//  }
 }
 
 @Fork(1) // # of jvms that it will use
@@ -827,12 +845,12 @@ class BenchRQB_sssp_carac extends rqb_sssp {
     }
     engine.storageManager.cleanup()
   }
-  @Benchmark def warm_lambda_ddbidx(blackhole: Blackhole): Unit = {
-    val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
-    val storage = new DuckDBStorageManager(indexed = true)
-    val mode = "lambda_ddbidx"
-    run_warm_carac(blackhole, mode, storage, jo)
-  }
+//  @Benchmark def warm_lambda_ddbidx(blackhole: Blackhole): Unit = {
+//    val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
+//    val storage = new DuckDBStorageManager(indexed = true)
+//    val mode = "lambda_ddbidx"
+//    run_warm_carac(blackhole, mode, storage, jo)
+//  }
 
   @Benchmark def warm_lambda_ddbn(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
@@ -841,19 +859,19 @@ class BenchRQB_sssp_carac extends rqb_sssp {
     run_warm_carac(blackhole, mode, storage, jo)
   }
 
-  @Benchmark def warm_interp_ddbn(blackhole: Blackhole): Unit = {
-    val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
-    val storage = new DuckDBStorageManager(indexed = false)
-    val mode = "interp_ddbn"
-    run_warm_carac(blackhole, mode, storage, jo)
-  }
-
-  @Benchmark def warm_interp_ddbidx(blackhole: Blackhole): Unit = {
-    val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
-    val storage = new DuckDBStorageManager(indexed = true)
-    val mode = "interp_ddbidx"
-    run_warm_carac(blackhole, mode, storage, jo)
-  }
+//  @Benchmark def warm_interp_ddbn(blackhole: Blackhole): Unit = {
+//    val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
+//    val storage = new DuckDBStorageManager(indexed = false)
+//    val mode = "interp_ddbn"
+//    run_warm_carac(blackhole, mode, storage, jo)
+//  }
+//
+//  @Benchmark def warm_interp_ddbidx(blackhole: Blackhole): Unit = {
+//    val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
+//    val storage = new DuckDBStorageManager(indexed = true)
+//    val mode = "interp_ddbidx"
+//    run_warm_carac(blackhole, mode, storage, jo)
+//  }
 }
 
 @Fork(1) // # of jvms that it will use
@@ -886,6 +904,12 @@ class BenchRQB_sssp_souffle extends rqb_sssp {
 
   @Benchmark def souffle_profile_interp(blackhole: Blackhole): Unit =
     run_souffle("profile-interp", blackhole)
+
+  @Benchmark def zsouffle_preprofiled_compile(blackhole: Blackhole): Unit =
+    run_souffle("preprofiled-compile", blackhole)
+
+  @Benchmark def zsouffle_preprofiled_interp(blackhole: Blackhole): Unit =
+    run_souffle("preprofiled-interp", blackhole)
 }
 
 @Fork(1) // # of jvms that it will use
@@ -896,19 +920,19 @@ class BenchRQB_sssp_souffle extends rqb_sssp {
 class BenchRQB_sssp_embedded() extends ExampleBenchmarkGenerator(
   "rqb_sssp"
 ) with rqb_sssp {
-  @Benchmark def jit_ddb_sel__0_blocking_DELTA_lambda_EOL(blackhole: Blackhole): Unit = {
-    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
-    if (!programs.contains(p))
-      throw new Exception(f"Error: program for '$p' not found")
-    blackhole.consume(run_ddb(sqlString, programs(p), result))
-  }
-
-  @Benchmark def interpreted_ddb_sel__0____EOL(blackhole: Blackhole): Unit = {
-    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
-    if (!programs.contains(p))
-      throw new Exception(f"Error: program for '$p' not found")
-    blackhole.consume(run_ddb(sqlString, programs(p), result))
-  }
+//  @Benchmark def jit_ddb_sel__0_blocking_DELTA_lambda_EOL(blackhole: Blackhole): Unit = {
+//    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+//    if (!programs.contains(p))
+//      throw new Exception(f"Error: program for '$p' not found")
+//    blackhole.consume(run_ddb(sqlString, programs(p), result))
+//  }
+//
+//  @Benchmark def interpreted_ddb_sel__0____EOL(blackhole: Blackhole): Unit = {
+//    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+//    if (!programs.contains(p))
+//      throw new Exception(f"Error: program for '$p' not found")
+//    blackhole.consume(run_ddb(sqlString, programs(p), result))
+//  }
 
   @Benchmark def jit_ddbnidx_sel__0_blocking_DELTA_lambda_EOL(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
@@ -917,12 +941,12 @@ class BenchRQB_sssp_embedded() extends ExampleBenchmarkGenerator(
     blackhole.consume(run_ddb(sqlString, programs(p), result))
   }
 
-  @Benchmark def interpreted_ddbnidx_sel__0____EOL(blackhole: Blackhole): Unit = {
-    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
-    if (!programs.contains(p))
-      throw new Exception(f"Error: program for '$p' not found")
-    blackhole.consume(run_ddb(sqlString, programs(p), result))
-  }
+//  @Benchmark def interpreted_ddbnidx_sel__0____EOL(blackhole: Blackhole): Unit = {
+//    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+//    if (!programs.contains(p))
+//      throw new Exception(f"Error: program for '$p' not found")
+//    blackhole.consume(run_ddb(sqlString, programs(p), result))
+//  }
 }
 @Fork(1) // # of jvms that it will use
 @Warmup(iterations = 3, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
@@ -957,12 +981,12 @@ class BenchRQB_bom_carac extends rqb_bom {
     }
     engine.storageManager.cleanup()
   }
-  @Benchmark def warm_lambda_ddbidx(blackhole: Blackhole): Unit = {
-    val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
-    val storage = new DuckDBStorageManager(indexed = true)
-    val mode = "lambda_ddbidx"
-    run_warm_carac(blackhole, mode, storage, jo)
-  }
+//  @Benchmark def warm_lambda_ddbidx(blackhole: Blackhole): Unit = {
+//    val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
+//    val storage = new DuckDBStorageManager(indexed = true)
+//    val mode = "lambda_ddbidx"
+//    run_warm_carac(blackhole, mode, storage, jo)
+//  }
 
   @Benchmark def warm_lambda_ddbn(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
@@ -971,19 +995,19 @@ class BenchRQB_bom_carac extends rqb_bom {
     run_warm_carac(blackhole, mode, storage, jo)
   }
 
-  @Benchmark def warm_interp_ddbn(blackhole: Blackhole): Unit = {
-    val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
-    val storage = new DuckDBStorageManager(indexed = false)
-    val mode = "interp_ddbn"
-    run_warm_carac(blackhole, mode, storage, jo)
-  }
-
-  @Benchmark def warm_interp_ddbidx(blackhole: Blackhole): Unit = {
-    val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
-    val storage = new DuckDBStorageManager(indexed = true)
-    val mode = "interp_ddbidx"
-    run_warm_carac(blackhole, mode, storage, jo)
-  }
+//  @Benchmark def warm_interp_ddbn(blackhole: Blackhole): Unit = {
+//    val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
+//    val storage = new DuckDBStorageManager(indexed = false)
+//    val mode = "interp_ddbn"
+//    run_warm_carac(blackhole, mode, storage, jo)
+//  }
+//
+//  @Benchmark def warm_interp_ddbidx(blackhole: Blackhole): Unit = {
+//    val jo = JITOptions(mode = CaracMode.Interpreted, sortOrder = SortOrder.Sel)
+//    val storage = new DuckDBStorageManager(indexed = true)
+//    val mode = "interp_ddbidx"
+//    run_warm_carac(blackhole, mode, storage, jo)
+//  }
 }
 
 @Fork(1) // # of jvms that it will use
@@ -1016,6 +1040,12 @@ class BenchRQB_bom_souffle extends rqb_bom {
 
   @Benchmark def souffle_profile_interp(blackhole: Blackhole): Unit =
     run_souffle("profile-interp", blackhole)
+
+  @Benchmark def zsouffle_preprofiled_compile(blackhole: Blackhole): Unit =
+    run_souffle("preprofiled-compile", blackhole)
+
+  @Benchmark def zsouffle_preprofiled_interp(blackhole: Blackhole): Unit =
+    run_souffle("preprofiled-interp", blackhole)
 }
 
 @Fork(1) // # of jvms that it will use
@@ -1026,19 +1056,19 @@ class BenchRQB_bom_souffle extends rqb_bom {
 class BenchRQB_bom_embedded() extends ExampleBenchmarkGenerator(
   "rqb_bom"
 ) with rqb_bom {
-  @Benchmark def jit_ddb_sel__0_blocking_DELTA_lambda_EOL(blackhole: Blackhole): Unit = {
-    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
-    if (!programs.contains(p))
-      throw new Exception(f"Error: program for '$p' not found")
-    blackhole.consume(run_ddb(sqlString, programs(p), result))
-  }
-
-  @Benchmark def interpreted_ddb_sel__0____EOL(blackhole: Blackhole): Unit = {
-    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
-    if (!programs.contains(p))
-      throw new Exception(f"Error: program for '$p' not found")
-    blackhole.consume(run_ddb(sqlString, programs(p), result))
-  }
+//  @Benchmark def jit_ddb_sel__0_blocking_DELTA_lambda_EOL(blackhole: Blackhole): Unit = {
+//    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+//    if (!programs.contains(p))
+//      throw new Exception(f"Error: program for '$p' not found")
+//    blackhole.consume(run_ddb(sqlString, programs(p), result))
+//  }
+//
+//  @Benchmark def interpreted_ddb_sel__0____EOL(blackhole: Blackhole): Unit = {
+//    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+//    if (!programs.contains(p))
+//      throw new Exception(f"Error: program for '$p' not found")
+//    blackhole.consume(run_ddb(sqlString, programs(p), result))
+//  }
 
   @Benchmark def jit_ddbnidx_sel__0_blocking_DELTA_lambda_EOL(blackhole: Blackhole): Unit = {
     val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
@@ -1047,10 +1077,10 @@ class BenchRQB_bom_embedded() extends ExampleBenchmarkGenerator(
     blackhole.consume(run_ddb(sqlString, programs(p), result))
   }
 
-  @Benchmark def interpreted_ddbnidx_sel__0____EOL(blackhole: Blackhole): Unit = {
-    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
-    if (!programs.contains(p))
-      throw new Exception(f"Error: program for '$p' not found")
-    blackhole.consume(run_ddb(sqlString, programs(p), result))
-  }
+//  @Benchmark def interpreted_ddbnidx_sel__0____EOL(blackhole: Blackhole): Unit = {
+//    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
+//    if (!programs.contains(p))
+//      throw new Exception(f"Error: program for '$p' not found")
+//    blackhole.consume(run_ddb(sqlString, programs(p), result))
+//  }
 }
