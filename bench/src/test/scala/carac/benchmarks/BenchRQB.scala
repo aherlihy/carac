@@ -18,7 +18,7 @@ import scala.sys.process.Process
 import scala.util.Using
 
 val SOUFFLE_BIN="/scratch/herlihy/souffle/build/src/souffle"
-val DB_DIR = "/tmp/my_database"
+val DB_DIR = "/scratch2/herlihy/carac/mydatabase"
 val DB_URI = s"jdbc:duckdb:$DB_DIR"
 
 object RQB_Bench {
