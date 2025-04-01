@@ -15,7 +15,7 @@ trait rqb_bom {
     """
       WITH RECURSIVE recursive1 AS
         ((SELECT c0 as part, c1 as days FROM edb_basic as edb_basic1)
-        UNION ALL
+        UNION
         ((SELECT edb_assbl3.c0 as part, ref1.days as days
           FROM edb_assbl as edb_assbl3, recursive1 as ref1
           WHERE edb_assbl3.c1 = ref1.part)))
