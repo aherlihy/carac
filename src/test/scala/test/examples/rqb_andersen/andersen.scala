@@ -2,6 +2,7 @@ package test.examples.rqb_andersen
 
 import buildinfo.BuildInfo
 import carac.dsl.{Constant, Program}
+import carac.storage.{DatabaseType, DuckDBStorageManager}
 import test.ExampleTestGenerator
 
 import java.nio.file.Paths
@@ -32,6 +33,20 @@ trait rqb_andersen {
     pointsTo(y, z),
     pointsTo(x, w))
  }
+
+ def loadSchema(program: Program, duckDBStorageManager: DuckDBStorageManager): Unit =
+   val addressOf = program.relation("addressOf")
+   val assign = program.relation("assign")
+   val loadT = program.relation("loadT")
+   val store = program.relation("store")
+   duckDBStorageManager.declareTable(addressOf.id, Seq(("c0", DatabaseType.TEXT), ("c1", DatabaseType.TEXT)))
+   duckDBStorageManager.declareTable(assign.id, Seq(("c0", DatabaseType.TEXT), ("c1", DatabaseType.TEXT)))
+   duckDBStorageManager.declareTable(loadT.id, Seq(("c0", DatabaseType.TEXT), ("c1", DatabaseType.TEXT)))
+   duckDBStorageManager.declareTable(store.id, Seq(("c0", DatabaseType.TEXT), ("c1", DatabaseType.TEXT)))
+   duckDBStorageManager.edbs.initializeTable(addressOf.id, "addressOf", Seq(("c0", DatabaseType.TEXT), ("c1", DatabaseType.TEXT)))
+   duckDBStorageManager.edbs.initializeTable(assign.id, "assign", Seq(("c0", DatabaseType.TEXT), ("c1", DatabaseType.TEXT)))
+   duckDBStorageManager.edbs.initializeTable(loadT.id, "loadT", Seq(("c0", DatabaseType.TEXT), ("c1", DatabaseType.TEXT)))
+   duckDBStorageManager.edbs.initializeTable(store.id, "store", Seq(("c0", DatabaseType.TEXT), ("c1", DatabaseType.TEXT)))
 }
 
 class rqb_andersen_test() extends ExampleTestGenerator("rqb_andersen") with rqb_andersen

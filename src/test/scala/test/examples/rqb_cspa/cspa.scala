@@ -3,6 +3,7 @@ package test.examples.rqb_cspa
 import buildinfo.BuildInfo
 import carac.dsl.{Constant, Program}
 import test.{ExampleTestGenerator, Tags}
+import carac.storage.{DatabaseType, DuckDBStorageManager}
 
 class rqb_cspa_test extends ExampleTestGenerator("rqb_cspa") with rqb_cspa
 trait rqb_cspa {
@@ -34,4 +35,14 @@ trait rqb_cspa {
     MemoryAlias(x, x) :- assign(y, x)
     MemoryAlias(x, x) :- assign(x, y)
   }
+
+  def loadSchema(program: Program, duckDBStorageManager: DuckDBStorageManager): Unit =
+    val assign = program.relation("assign")
+    val assignS = Seq(("c0", DatabaseType.INTEGER), ("c1", DatabaseType.INTEGER))
+    duckDBStorageManager.declareTable(assign.id, assignS)
+    duckDBStorageManager.edbs.initializeTable(assign.id, "assign", assignS)
+    val dereference = program.relation("dereference")
+    val dereferenceS = Seq(("c0", DatabaseType.INTEGER), ("c1", DatabaseType.INTEGER))
+    duckDBStorageManager.declareTable(dereference.id, dereferenceS)
+    duckDBStorageManager.edbs.initializeTable(dereference.id, "dereference", dereferenceS)
 }

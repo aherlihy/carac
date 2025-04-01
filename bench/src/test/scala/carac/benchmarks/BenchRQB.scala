@@ -99,18 +99,7 @@ class BenchRQB_andersen_carac extends rqb_andersen {
   private def run_warm_carac(blackhole: Blackhole, mode: String, engine: ExecutionEngine, duckDBStorageManager: DuckDBStorageManager): Unit = {
     val program = Program(engine)
     if (duckDBStorageManager != null)
-      val addressOf = program.relation("addressOf")
-      val assign = program.relation("assign")
-      val loadT = program.relation("loadT")
-      val store = program.relation("store")
-      duckDBStorageManager.declareTable(addressOf.id, Seq(("c0", DatabaseType.TEXT), ("c1", DatabaseType.TEXT)))
-      duckDBStorageManager.declareTable(assign.id, Seq(("c0", DatabaseType.TEXT), ("c1", DatabaseType.TEXT)))
-      duckDBStorageManager.declareTable(loadT.id, Seq(("c0", DatabaseType.TEXT), ("c1", DatabaseType.TEXT)))
-      duckDBStorageManager.declareTable(store.id, Seq(("c0", DatabaseType.TEXT), ("c1", DatabaseType.TEXT)))
-      duckDBStorageManager.edbs.initializeTable(addressOf.id, "addressOf", Seq(("c0", DatabaseType.TEXT), ("c1", DatabaseType.TEXT)))
-      duckDBStorageManager.edbs.initializeTable(assign.id, "assign", Seq(("c0", DatabaseType.TEXT), ("c1", DatabaseType.TEXT)))
-      duckDBStorageManager.edbs.initializeTable(loadT.id, "loadT", Seq(("c0", DatabaseType.TEXT), ("c1", DatabaseType.TEXT)))
-      duckDBStorageManager.edbs.initializeTable(store.id, "store", Seq(("c0", DatabaseType.TEXT), ("c1", DatabaseType.TEXT)))
+      loadSchema(program, duckDBStorageManager)
       duckDBStorageManager.loadFacts(factDirectory)
     else
       program.loadFromFactDir(factDirectory)
@@ -209,48 +198,32 @@ class BenchRQB_andersen_carac extends rqb_andersen {
 @Measurement(iterations = 3, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
-class BenchRQB_andersen_embedded() extends ExampleBenchmarkGenerator(
-  "rqb_andersen"
-) with rqb_andersen {
-  @Benchmark def jit_indexed_sel__0_blocking_DELTA_lambda_EOL(blackhole: Blackhole): Unit = {
-    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
-    if (!programs.contains(p))
-      throw new Exception(f"Error: program for '$p' not found")
-    blackhole.consume(run(programs(p), result))
-  }
+class BenchRQB_andersen_embedded() extends rqb_andersen {
+  val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
+  val ddb_storageManager = new DuckDBStorageManager(indexed = false)
+  val ddb_engine = new StagedExecutionEngine(ddb_storageManager, jo)
+  val ddb_program = Program(ddb_engine)
+  val coll_storageManager = new IndexedStorageManager()
+  val coll_engine = new StagedExecutionEngine(coll_storageManager, jo)
+  val coll_program = Program(coll_engine)
 
-//  @Benchmark def interpreted_indexed_sel__0____EOL(blackhole: Blackhole): Unit = {
-//    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
-//    if (!programs.contains(p))
-//      throw new Exception(f"Error: program for '$p' not found")
-//    blackhole.consume(run(programs(p), result))
-//  }
-//
-//  @Benchmark def jit_ddb_sel__0_blocking_DELTA_lambda_EOL(blackhole: Blackhole): Unit = {
-//    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
-//    if (!programs.contains(p))
-//      throw new Exception(f"Error: program for '$p' not found")
-//    blackhole.consume(run(programs(p), result))
-//  }
-//
-//  @Benchmark def interpreted_ddb_sel__0____EOL(blackhole: Blackhole): Unit = {
-//    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
-//    if (!programs.contains(p))
-//      throw new Exception(f"Error: program for '$p' not found")
-//    blackhole.consume(run(programs(p), result))
-//  }
-  @Benchmark def jit_ddbnidx_sel__0_blocking_DELTA_lambda_EOL(blackhole: Blackhole): Unit = {
-    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
-    if (!programs.contains(p))
-      throw new Exception(f"Error: program for '$p' not found")
-    blackhole.consume(run(programs(p), result))
-  }
+  loadSchema(ddb_program, ddb_storageManager)
+  ddb_storageManager.loadFacts(factDirectory)
+  coll_program.loadFromFactDir(factDirectory)
 
-//  @Benchmark def interpreted_ddbnidx_sel__0____EOL(blackhole: Blackhole): Unit = {//    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
-//    if (!programs.contains(p))
-//      throw new Exception(f"Error: program for '$p' not found")
-//    blackhole.consume(run(programs(p), result))
-//  }
+  pretest(coll_program)
+  pretest(ddb_program)
+
+  @Benchmark def embedded_lambda_ddbn(blackhole: Blackhole): Unit = {
+    blackhole.consume(
+      ddb_program.namedRelation(toSolve).solve()
+    )
+  }
+  @Benchmark def embedded_lambda_collidx(blackhole: Blackhole): Unit = {
+    blackhole.consume(
+      coll_program.namedRelation(toSolve).solve()
+    )
+  }
 }
 
 @Fork(1) // # of jvms that it will use
@@ -309,26 +282,7 @@ class BenchRQB_cba_carac extends rqb_cba {
   private def run_warm_carac(blackhole: Blackhole, mode: String, engine: ExecutionEngine, duckDBStorageManager: DuckDBStorageManager): Unit = {
     val program = Program(engine)
     if (duckDBStorageManager != null)
-      val term = program.relation("term")
-      val termS = Seq(("c0", DatabaseType.INTEGER), ("c1", DatabaseType.TEXT), ("c2", DatabaseType.INTEGER))
-      duckDBStorageManager.declareTable(term.id, termS)
-      duckDBStorageManager.edbs.initializeTable(term.id, "term", termS)
-      val vars = program.relation("vars")
-      val varsS = Seq(("c0", DatabaseType.INTEGER), ("c1", DatabaseType.TEXT))
-      duckDBStorageManager.declareTable(vars.id, varsS)
-      duckDBStorageManager.edbs.initializeTable(vars.id, "vars", varsS)
-      val app = program.relation("app")
-      val appS = Seq(("c0", DatabaseType.INTEGER), ("c1", DatabaseType.INTEGER), ("c2", DatabaseType.INTEGER))
-      duckDBStorageManager.declareTable(app.id, appS)
-      duckDBStorageManager.edbs.initializeTable(app.id, "app", appS)
-      val lits = program.relation("lits")
-      val litsS = Seq(("c0", DatabaseType.INTEGER), ("c1", DatabaseType.TEXT))
-      duckDBStorageManager.declareTable(lits.id, litsS)
-      duckDBStorageManager.edbs.initializeTable(lits.id, "lits", litsS)
-      val abs = program.relation("abs")
-      val absS = Seq(("c0", DatabaseType.INTEGER), ("c1", DatabaseType.INTEGER), ("c2", DatabaseType.INTEGER))
-      duckDBStorageManager.declareTable(abs.id, absS)
-      duckDBStorageManager.edbs.initializeTable(abs.id, "abs", absS)
+      loadSchema(program, duckDBStorageManager)
       duckDBStorageManager.loadFacts(factDirectory)
     else
       program.loadFromFactDir(factDirectory)
@@ -427,49 +381,32 @@ class BenchRQB_cba_carac extends rqb_cba {
 @Measurement(iterations = 3, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
-class BenchRQB_cba_embedded() extends ExampleBenchmarkGenerator(
-  "rqb_cba"
-) with rqb_cba {
-  @Benchmark def jit_indexed_sel__0_blocking_DELTA_lambda_EOL(blackhole: Blackhole): Unit = {
-    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
-    if (!programs.contains(p))
-      throw new Exception(f"Error: program for '$p' not found")
-    blackhole.consume(run(programs(p), result))
+class BenchRQB_cba_embedded extends rqb_cba {
+  val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
+  val ddb_storageManager = new DuckDBStorageManager(indexed = false)
+  val ddb_engine = new StagedExecutionEngine(ddb_storageManager, jo)
+  val ddb_program = Program(ddb_engine)
+  val coll_storageManager = new IndexedStorageManager()
+  val coll_engine = new StagedExecutionEngine(coll_storageManager, jo)
+  val coll_program = Program(coll_engine)
+
+  loadSchema(ddb_program, ddb_storageManager)
+  ddb_storageManager.loadFacts(factDirectory)
+  coll_program.loadFromFactDir(factDirectory)
+
+  pretest(coll_program)
+  pretest(ddb_program)
+
+  @Benchmark def embedded_lambda_ddbn(blackhole: Blackhole): Unit = {
+    blackhole.consume(
+      ddb_program.namedRelation(toSolve).solve()
+    )
   }
-
-//  @Benchmark def interpreted_indexed_sel__0____EOL(blackhole: Blackhole): Unit = {
-//    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
-//    if (!programs.contains(p))
-//      throw new Exception(f"Error: program for '$p' not found")
-//    blackhole.consume(run(programs(p), result))
-//  }
-//
-//  @Benchmark def jit_ddb_sel__0_blocking_DELTA_lambda_EOL(blackhole: Blackhole): Unit = {
-//    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
-//    if (!programs.contains(p))
-//      throw new Exception(f"Error: program for '$p' not found")
-//    blackhole.consume(run(programs(p), result))
-//  }
-//
-//  @Benchmark def interpreted_ddb_sel__0____EOL(blackhole: Blackhole): Unit = {
-//    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
-//    if (!programs.contains(p))
-//      throw new Exception(f"Error: program for '$p' not found")
-//    blackhole.consume(run(programs(p), result))
-//  }
-
-  @Benchmark def jit_ddbnidx_sel__0_blocking_DELTA_lambda_EOL(blackhole: Blackhole): Unit = {
-    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
-    if (!programs.contains(p))
-      throw new Exception(f"Error: program for '$p' not found")
-    blackhole.consume(run(programs(p), result))
+  @Benchmark def embedded_lambda_collidx(blackhole: Blackhole): Unit = {
+    blackhole.consume(
+      coll_program.namedRelation(toSolve).solve()
+    )
   }
-
-//  @Benchmark def interpreted_ddbnidx_sel__0____EOL(blackhole: Blackhole): Unit = {//    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
-//    if (!programs.contains(p))
-//      throw new Exception(f"Error: program for '$p' not found")
-//    blackhole.consume(run(programs(p), result))
-//  }
 }
 
 @Fork(1) // # of jvms that it will use
@@ -528,14 +465,7 @@ class BenchRQB_cspa_carac extends rqb_cspa {
   private def run_warm_carac(blackhole: Blackhole, mode: String, engine: ExecutionEngine, duckDBStorageManager: DuckDBStorageManager): Unit = {
     val program = Program(engine)
     if (duckDBStorageManager != null)
-      val assign = program.relation("assign")
-      val assignS = Seq(("c0", DatabaseType.INTEGER), ("c1", DatabaseType.INTEGER))
-      duckDBStorageManager.declareTable(assign.id, assignS)
-      duckDBStorageManager.edbs.initializeTable(assign.id, "assign", assignS)
-      val dereference = program.relation("dereference")
-      val dereferenceS = Seq(("c0", DatabaseType.INTEGER), ("c1", DatabaseType.INTEGER))
-      duckDBStorageManager.declareTable(dereference.id, dereferenceS)
-      duckDBStorageManager.edbs.initializeTable(dereference.id, "dereference", dereferenceS)
+      loadSchema(program, duckDBStorageManager)
       duckDBStorageManager.loadFacts(factDirectory)
     else
       program.loadFromFactDir(factDirectory)
@@ -633,49 +563,32 @@ class BenchRQB_cspa_carac extends rqb_cspa {
 @Measurement(iterations = 3, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
-class BenchRQB_cspa_embedded() extends ExampleBenchmarkGenerator(
-  "rqb_cspa"
-) with rqb_cspa {
-  @Benchmark def jit_indexed_sel__0_blocking_DELTA_lambda_EOL(blackhole: Blackhole): Unit = {
-    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
-    if (!programs.contains(p))
-      throw new Exception(f"Error: program for '$p' not found")
-    blackhole.consume(run(programs(p), result))
+class BenchRQB_cspa_embedded extends rqb_cspa {
+  val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
+  val ddb_storageManager = new DuckDBStorageManager(indexed = false)
+  val ddb_engine = new StagedExecutionEngine(ddb_storageManager, jo)
+  val ddb_program = Program(ddb_engine)
+  val coll_storageManager = new IndexedStorageManager()
+  val coll_engine = new StagedExecutionEngine(coll_storageManager, jo)
+  val coll_program = Program(coll_engine)
+
+  loadSchema(ddb_program, ddb_storageManager)
+  ddb_storageManager.loadFacts(factDirectory)
+  coll_program.loadFromFactDir(factDirectory)
+
+  pretest(coll_program)
+  pretest(ddb_program)
+
+  @Benchmark def embedded_lambda_ddbn(blackhole: Blackhole): Unit = {
+    blackhole.consume(
+      ddb_program.namedRelation(toSolve).solve()
+    )
   }
-
-//  @Benchmark def interpreted_indexed_sel__0____EOL(blackhole: Blackhole): Unit = {
-//    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
-//    if (!programs.contains(p))
-//      throw new Exception(f"Error: program for '$p' not found")
-//    blackhole.consume(run(programs(p), result))
-//  }
-//
-//  @Benchmark def jit_ddb_sel__0_blocking_DELTA_lambda_EOL(blackhole: Blackhole): Unit = {
-//    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
-//    if (!programs.contains(p))
-//      throw new Exception(f"Error: program for '$p' not found")
-//    blackhole.consume(run(programs(p), result))
-//  }
-//
-//  @Benchmark def interpreted_ddb_sel__0____EOL(blackhole: Blackhole): Unit = {
-//    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
-//    if (!programs.contains(p))
-//      throw new Exception(f"Error: program for '$p' not found")
-//    blackhole.consume(run(programs(p), result))
-//  }
-
-  @Benchmark def jit_ddbnidx_sel__0_blocking_DELTA_lambda_EOL(blackhole: Blackhole): Unit = {
-    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
-    if (!programs.contains(p))
-      throw new Exception(f"Error: program for '$p' not found")
-    blackhole.consume(run(programs(p), result))
+  @Benchmark def embedded_lambda_collidx(blackhole: Blackhole): Unit = {
+    blackhole.consume(
+      coll_program.namedRelation(toSolve).solve()
+    )
   }
-
-//  @Benchmark def interpreted_ddbnidx_sel__0____EOL(blackhole: Blackhole): Unit = {//    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
-//    if (!programs.contains(p))
-//      throw new Exception(f"Error: program for '$p' not found")
-//    blackhole.consume(run(programs(p), result))
-//  }
 }
 
 @Fork(1) // # of jvms that it will use
@@ -693,10 +606,7 @@ class BenchRQB_ancestry_carac extends rqb_ancestry {
   private def run_warm_carac(blackhole: Blackhole, mode: String, storage: DuckDBStorageManager, options: JITOptions): Unit = {
     val engine = StagedExecutionEngine(storage, options)
     val program = Program(engine)
-    val parents = program.relation("parents")
-    val parentsS = Seq(("c0", DatabaseType.TEXT), ("c1", DatabaseType.TEXT))
-    storage.declareTable(parents.id, parentsS)
-    storage.edbs.initializeTable(parents.id, "parents", parentsS)
+    loadSchema(program, storage)
     storage.loadFacts(factDirectory)
     pretest(program)
     val result = storage.resultSetToString(storage.runQuery(sqlString))
@@ -780,36 +690,22 @@ class BenchRQB_ancestry_souffle extends rqb_ancestry {
 @Measurement(iterations = 3, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
-class BenchRQB_ancestry_embedded() extends ExampleBenchmarkGenerator(
-  "rqb_ancestry"
-) with rqb_ancestry {
-//  @Benchmark def jit_ddb_sel__0_blocking_DELTA_lambda_EOL(blackhole: Blackhole): Unit = {
-//    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
-//    if (!programs.contains(p))
-//      throw new Exception(f"Error: program for '$p' not found")
-//    blackhole.consume(run_ddb(sqlString, programs(p), result))
-//  }
-//
-//  @Benchmark def interpreted_ddb_sel__0____EOL(blackhole: Blackhole): Unit = {
-//    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
-//    if (!programs.contains(p))
-//      throw new Exception(f"Error: program for '$p' not found")
-//    blackhole.consume(run_ddb(sqlString, programs(p), result))
-//  }
+class BenchRQB_ancestry_embedded extends rqb_ancestry {
+  val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
+  val ddb_storageManager = new DuckDBStorageManager(indexed = false)
+  val ddb_engine = new StagedExecutionEngine(ddb_storageManager, jo)
+  val ddb_program = Program(ddb_engine)
 
-  @Benchmark def jit_ddbnidx_sel__0_blocking_DELTA_lambda_EOL(blackhole: Blackhole): Unit = {
-    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
-    if (!programs.contains(p))
-      throw new Exception(f"Error: program for '$p' not found")
-    blackhole.consume(run_ddb(sqlString, programs(p), result))
+  loadSchema(ddb_program, ddb_storageManager)
+  ddb_storageManager.loadFacts(factDirectory)
+
+  pretest(ddb_program)
+
+  @Benchmark def embedded_lambda_ddbn(blackhole: Blackhole): Unit = {
+    blackhole.consume(
+      ddb_storageManager.resultSetToString(ddb_storageManager.runQuery(sqlString))
+    )
   }
-
-//  @Benchmark def interpreted_ddbnidx_sel__0____EOL(blackhole: Blackhole): Unit = {
-//    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
-//    if (!programs.contains(p))
-//      throw new Exception(f"Error: program for '$p' not found")
-//    blackhole.consume(run_ddb(sqlString, programs(p), result))
-//  }
 }
 
 @Fork(1) // # of jvms that it will use
@@ -827,14 +723,7 @@ class BenchRQB_sssp_carac extends rqb_sssp {
   private def run_warm_carac(blackhole: Blackhole, mode: String, storage: DuckDBStorageManager, options: JITOptions): Unit = {
     val engine = StagedExecutionEngine(storage, options)
     val program = Program(engine)
-    val base = program.relation("base")
-    val baseS = Seq(("c0", DatabaseType.INTEGER), ("c1", DatabaseType.INTEGER))
-    storage.declareTable(base.id, baseS)
-    storage.edbs.initializeTable(base.id, "base", baseS)
-    val edge = program.relation("edge")
-    val edgeS = Seq(("c0", DatabaseType.INTEGER), ("c1", DatabaseType.INTEGER), ("c2", DatabaseType.INTEGER))
-    storage.declareTable(edge.id, edgeS)
-    storage.edbs.initializeTable(edge.id, "edge", edgeS)
+    loadSchema(program, storage)
     storage.loadFacts(factDirectory)
     pretest(program)
     val result = storage.resultSetToString(storage.runQuery(sqlString))
@@ -917,37 +806,24 @@ class BenchRQB_sssp_souffle extends rqb_sssp {
 @Measurement(iterations = 3, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
-class BenchRQB_sssp_embedded() extends ExampleBenchmarkGenerator(
-  "rqb_sssp"
-) with rqb_sssp {
-//  @Benchmark def jit_ddb_sel__0_blocking_DELTA_lambda_EOL(blackhole: Blackhole): Unit = {
-//    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
-//    if (!programs.contains(p))
-//      throw new Exception(f"Error: program for '$p' not found")
-//    blackhole.consume(run_ddb(sqlString, programs(p), result))
-//  }
-//
-//  @Benchmark def interpreted_ddb_sel__0____EOL(blackhole: Blackhole): Unit = {
-//    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
-//    if (!programs.contains(p))
-//      throw new Exception(f"Error: program for '$p' not found")
-//    blackhole.consume(run_ddb(sqlString, programs(p), result))
-//  }
+class BenchRQB_sssp_embedded extends rqb_sssp {
+  val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
+  val ddb_storageManager = new DuckDBStorageManager(indexed = false)
+  val ddb_engine = new StagedExecutionEngine(ddb_storageManager, jo)
+  val ddb_program = Program(ddb_engine)
 
-  @Benchmark def jit_ddbnidx_sel__0_blocking_DELTA_lambda_EOL(blackhole: Blackhole): Unit = {
-    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
-    if (!programs.contains(p))
-      throw new Exception(f"Error: program for '$p' not found")
-    blackhole.consume(run_ddb(sqlString, programs(p), result))
+  loadSchema(ddb_program, ddb_storageManager)
+  ddb_storageManager.loadFacts(factDirectory)
+
+  pretest(ddb_program)
+
+  @Benchmark def embedded_lambda_ddbn(blackhole: Blackhole): Unit = {
+    blackhole.consume(
+      ddb_storageManager.resultSetToString(ddb_storageManager.runQuery(sqlString))
+    )
   }
-
-//  @Benchmark def interpreted_ddbnidx_sel__0____EOL(blackhole: Blackhole): Unit = {
-//    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
-//    if (!programs.contains(p))
-//      throw new Exception(f"Error: program for '$p' not found")
-//    blackhole.consume(run_ddb(sqlString, programs(p), result))
-//  }
 }
+
 @Fork(1) // # of jvms that it will use
 @Warmup(iterations = 3, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
 @Measurement(iterations = 3, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
@@ -963,14 +839,7 @@ class BenchRQB_bom_carac extends rqb_bom {
   private def run_warm_carac(blackhole: Blackhole, mode: String, storage: DuckDBStorageManager, options: JITOptions): Unit = {
     val engine = StagedExecutionEngine(storage, options)
     val program = Program(engine)
-    val assbl = program.relation("assbl")
-    val assblS = Seq(("c0", DatabaseType.TEXT), ("c1", DatabaseType.TEXT))
-    storage.declareTable(assbl.id, assblS)
-    storage.edbs.initializeTable(assbl.id, "assbl", assblS)
-    val basic = program.relation("basic")
-    val basicS = Seq(("c0", DatabaseType.TEXT), ("c1", DatabaseType.INTEGER))
-    storage.declareTable(basic.id, basicS)
-    storage.edbs.initializeTable(basic.id, "basic", basicS)
+    loadSchema(program, storage)
     storage.loadFacts(factDirectory)
     pretest(program)
     val result = storage.resultSetToString(storage.runQuery(sqlString))
@@ -1053,34 +922,20 @@ class BenchRQB_bom_souffle extends rqb_bom {
 @Measurement(iterations = 3, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
-class BenchRQB_bom_embedded() extends ExampleBenchmarkGenerator(
-  "rqb_bom"
-) with rqb_bom {
-//  @Benchmark def jit_ddb_sel__0_blocking_DELTA_lambda_EOL(blackhole: Blackhole): Unit = {
-//    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
-//    if (!programs.contains(p))
-//      throw new Exception(f"Error: program for '$p' not found")
-//    blackhole.consume(run_ddb(sqlString, programs(p), result))
-//  }
-//
-//  @Benchmark def interpreted_ddb_sel__0____EOL(blackhole: Blackhole): Unit = {
-//    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
-//    if (!programs.contains(p))
-//      throw new Exception(f"Error: program for '$p' not found")
-//    blackhole.consume(run_ddb(sqlString, programs(p), result))
-//  }
+class BenchRQB_bom_embedded() extends rqb_bom {
+  val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
+  val ddb_storageManager = new DuckDBStorageManager(indexed = false)
+  val ddb_engine = new StagedExecutionEngine(ddb_storageManager, jo)
+  val ddb_program = Program(ddb_engine)
 
-  @Benchmark def jit_ddbnidx_sel__0_blocking_DELTA_lambda_EOL(blackhole: Blackhole): Unit = {
-    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
-    if (!programs.contains(p))
-      throw new Exception(f"Error: program for '$p' not found")
-    blackhole.consume(run_ddb(sqlString, programs(p), result))
+  loadSchema(ddb_program, ddb_storageManager)
+  ddb_storageManager.loadFacts(factDirectory)
+
+  pretest(ddb_program)
+
+  @Benchmark def embedded_lambda_ddbn(blackhole: Blackhole): Unit = {
+    blackhole.consume(
+      ddb_storageManager.resultSetToString(ddb_storageManager.runQuery(sqlString))
+    )
   }
-
-//  @Benchmark def interpreted_ddbnidx_sel__0____EOL(blackhole: Blackhole): Unit = {
-//    val p = s"${Thread.currentThread.getStackTrace()(2).getMethodName.split("_EOL").head}"
-//    if (!programs.contains(p))
-//      throw new Exception(f"Error: program for '$p' not found")
-//    blackhole.consume(run_ddb(sqlString, programs(p), result))
-//  }
 }
