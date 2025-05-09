@@ -1,6 +1,7 @@
 package carac.dsl
 
 import carac.execution.ExecutionEngine
+import carac.storage.DatabaseType
 
 import java.nio.file.{Files, Path}
 import scala.collection.mutable
@@ -15,12 +16,12 @@ class Program(engine: ExecutionEngine) extends AbstractProgram {
     Variable(varCounter - 1)
   }
   var relCounter = 0
-  def relation[T <: Constant](userName: String = relCounter.toString): Relation[T] = {
+  def relation[T <: Constant](userName: String = relCounter.toString, schema: Option[Seq[(String, DatabaseType)]] = None): Relation[T] = {
     if (ee.storageManager.ns.contains(userName)) {
       throw new Exception("Named relation '" + userName + "' already exists")
     }
     relCounter += 1
-    Relation[T](relCounter - 1, userName)
+    Relation[T](relCounter - 1, userName, schema)
   }
 
   def namedRelation[T <: Constant](userName: String): Relation[T] = {
@@ -28,7 +29,7 @@ class Program(engine: ExecutionEngine) extends AbstractProgram {
       throw new Exception("Named relation '" + userName + "' does not exist")
     }
     val rId = ee.storageManager.ns(userName)
-    Relation[T](rId, userName)
+    Relation[T](rId, userName, None)
   }
 
   // TODO: also provide solve for multiple/all predicates, or return table so users can query over the derived DB

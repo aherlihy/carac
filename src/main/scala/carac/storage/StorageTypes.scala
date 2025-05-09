@@ -8,7 +8,7 @@ import scala.collection.mutable
 
 type RelationId = Int
 enum DB:
-  case Derived, Delta
+  case Derived, Delta, EDB
 
 /* TODO: expand to other types, right now we just support Variables + Constants that are either Int or String.
  * When expended, may want the DSL types and the storage types to diverge, so use type aliases (for now) instead of DSL types. */

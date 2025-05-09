@@ -1,9 +1,10 @@
 package carac.execution.ir
 
 import carac.execution.{JITOptions, JoinIndexes, SortOrder, ir}
-import carac.storage.{DB, EDB, RelationId, StorageManager}
+import carac.storage.{DB, DuckDBStorageManager, EDB, RelationId, StorageManager}
 import carac.tools.Debug
 import carac.tools.Debug.debug
+import tyql.{QueryIRNode, RelationOp}
 
 import scala.collection.immutable
 import scala.concurrent.{ExecutionContext, Future}
@@ -16,7 +17,8 @@ enum OpCode:
   SPJ, UNION, DIFF,
   INSERT_INTO, RESET_DELTA,
   DEBUG, DEBUGP, DOWHILE, UPDATE_DISCOVERED,
-  EVAL_STRATUM, EVAL_RULE_NAIVE, EVAL_RULE_SN, EVAL_RULE_BODY, EVAL_NAIVE, EVAL_SN, LOOP_BODY, OTHER // convenience labels for generating functions
+  EVAL_STRATUM, EVAL_RULE_NAIVE, EVAL_RULE_SN, EVAL_RULE_BODY, EVAL_NAIVE, EVAL_SN, LOOP_BODY, OTHER, // convenience labels for generating functions
+  RAWSQL
 object OpCode {
   def relational(opCode: OpCode): Boolean =
     Seq(SCAN, OpCode.SCANEDB, OpCode.SPJ, OpCode.UNION, OpCode.DIFF, OpCode.EVAL_RULE_BODY, OpCode.EVAL_RULE_NAIVE, OpCode.EVAL_RULE_SN).contains(opCode)
@@ -120,7 +122,7 @@ case class DoWhileOp(toCmp: DB, override val children:IROp[Any]*)(using JITOptio
     var i = 0
     while ( {
       children.head.children.head.run(storageManager) // swap
-//      println(s"DBs start of semi-naive iteration $i: ${storageManager.toString}")
+      println(s"DoWhile: DBs start of semi-naive iteration $i: ${storageManager.toString}")
       children.head.children(1).run(storageManager)
 //      children.head.run(storageManager)
       i += 1
@@ -312,4 +314,18 @@ case class DebugPeek(prefix: String, dbg: () => String, override val children:IR
     val res = children.head.run(storageManager)
     debug(prefix, () => s"${dbg()} ${storageManager.printer.factToString(res)}")
     res
+}
+
+case class TyQLSQLNode(query: RelationOp, from: DB, into: RelationId, diff: Boolean = false, translate: Boolean = true)(using JITOptions) extends IROp[EDB] {
+  val code: OpCode = OpCode.RAWSQL
+
+  override def run(storageManager: StorageManager): EDB =
+    storageManager match
+      case s: DuckDBStorageManager =>
+        s.execute_tyQLSQL(query, from, into, diff, translate)
+      case _ =>
+        throw new Exception("SQLNode only supported for DuckDBStorageManager")
+
+  override def run_continuation(storageManager: StorageManager, opFns: Seq[CompiledFn[EDB]]): EDB =
+    run(storageManager) // bc leaf node, no difference for continuation or run
 }

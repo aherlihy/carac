@@ -146,6 +146,8 @@ class Printer[S <: StorageManager](val sm: S) {
       case ComplementOp(rId, arity) => s"${ctx.storageManager.ns(rId)}:COMPL|$arity|"
       case DebugNode(prefix, dbg) => s"DEBUG: $prefix"
       case DebugPeek(prefix, dbg, children*) => s"DEBUG PEEK: $prefix into: ${printIR(children.head)}"
+      case TyQLSQLNode(query, from, into, diff, translate) =>
+        s"TYQL: into ${ctx.storageManager.ns(into)} on $from => ${query.toSQLString()} (diff=$diff, translate=$translate)"
     })
   }
 }

@@ -8,7 +8,7 @@ import carac.tools.Debug.debug
 import java.util.function.Predicate
 import scala.collection.mutable
 
-class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
+class IRTreeGenerator(using val ctx: CaracInterpreterContext)(using JITOptions) {
   def naiveEval(ruleMap: mutable.Map[RelationId, ASTNode], sortedRelations: Seq[RelationId], copyToDelta: Boolean = false): IROp[Any] = {
     val queries = sortedRelations
       .filter(ruleMap.contains)
@@ -149,7 +149,6 @@ class IRTreeGenerator(using val ctx: InterpreterContext)(using JITOptions) {
         if (idx < stratifiedAST.length - 1)
           SequenceOp(OpCode.EVAL_STRATUM,
             innerP,
-//            UpdateDiscoveredOp()
           )
         else
           innerP

@@ -60,7 +60,7 @@ class GeneralCollectionsStorageManager(ns: NS = new NS(), indexed: Boolean = fal
 
   val printer: Printer[this.type] = Printer[this.type](this)
 
-  def initRelation(rId: RelationId, name: String): Unit = {
+  def initRelation(rId: RelationId, name: String, schemaOpt: Option[Seq[(String, DatabaseType)]]): Unit = {
     ns(rId) = name
   }
   /**
@@ -157,9 +157,8 @@ class GeneralCollectionsStorageManager(ns: NS = new NS(), indexed: Boolean = fal
   def deltasEmpty(): Boolean =
     deltaDB(writeDeltaDbId).exists((k, v) => v.nonEmpty)
 
-  def verifyEDBs(ruleHashes: mutable.Map[RelationId, mutable.ArrayBuffer[String]]): Unit = {
-    val idbList = ruleHashes.keys.to(mutable.Set)
-      ns.rIds().foreach(rId =>
+  def verifyEDBs(idbList: Seq[RelationId], ruleHashes: Option[mutable.Map[RelationId, mutable.ArrayBuffer[String]]]): Unit = {
+    ns.rIds().foreach(rId =>
       if (!edbs.contains(rId) && !idbList.contains(rId))
         // NOTE: no longer treat undefined relations as empty edbs, instead error
         if (!relationArity.contains(rId))

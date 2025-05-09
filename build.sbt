@@ -10,7 +10,7 @@ inThisBuild(Seq(
   version := "0.1",
 ))
 
-scalacOptions ++= Seq("-deprecation", "-feature")
+scalacOptions ++= Seq("-deprecation", "-feature", "-experimental")
 
 lazy val root = project.in(file("."))
   .enablePlugins(PackPlugin)
@@ -47,6 +47,7 @@ lazy val root = project.in(file("."))
       "org.glavo" % "classfile" % "0.4.0", // Copy of jdk.internal.classfile, won't be necessary when https://openjdk.org/jeps/8280389 is done.
       "org.scalameta" %% "munit" % "0.7.29" % Test,
       "org.duckdb" % "duckdb_jdbc" % "1.1.1",
+      "ch.epfl.lamp" %% "tyql" % "0.0.1"
     ),
 
     buildInfoKeys := Seq[BuildInfoKey](baseDirectory),

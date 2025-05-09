@@ -13,7 +13,7 @@ trait StorageManager(val ns: NS) {
 
   val printer: Printer[this.type]
 
-  def initRelation(rId: RelationId, name: String): Unit
+  def initRelation(rId: RelationId, name: String, schemaOpt: Option[Seq[(String, DatabaseType)]]): Unit
   def initEvaluation(): Unit
 
   def updateAliases(aliases: mutable.Map[RelationId, RelationId]): Unit
@@ -39,7 +39,7 @@ trait StorageManager(val ns: NS) {
   def swapReadWriteDeltas(): Unit
   def deltasEmpty(): Boolean
 
-  def verifyEDBs(idbList: mutable.Map[RelationId, mutable.ArrayBuffer[String]]): Unit
+  def verifyEDBs(idbList: Seq[RelationId], ruleHashes: Option[mutable.Map[RelationId, mutable.ArrayBuffer[String]]]): Unit
 
   // Helper method to merge the select-project-join operations.
   def selectProjectJoinHelper(inputs: Seq[EDB], rId: Int, hash: String, onlineSort: Boolean): EDB

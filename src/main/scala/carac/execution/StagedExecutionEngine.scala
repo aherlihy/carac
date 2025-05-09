@@ -5,7 +5,7 @@ import carac.execution
 import carac.execution.ast.*
 import carac.execution.ast.transform.{ASTTransformerContext, CopyEliminationPass, Transformer}
 import carac.execution.ir.*
-import carac.storage.{EDB, StorageManager, StorageTerm, RelationId}
+import carac.storage.{DatabaseType, EDB, RelationId, StorageManager, StorageTerm}
 import carac.tools.Debug.debug
 
 import java.util.concurrent.{Executors, ForkJoinPool}
@@ -33,11 +33,15 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
 
   var stragglers: mutable.WeakHashMap[Int, Future[CompiledFn[?]]] = mutable.WeakHashMap.empty // should be ok since we are only removing by ref and then iterating on values only?
 
-  def createIR(ast: ASTNode)(using InterpreterContext): IROp[Any] = IRTreeGenerator().generateTopLevelProgram(ast, naive=false)
+  def createIR(ast: ASTNode)(using CaracInterpreterContext): IROp[Any] = IRTreeGenerator().generateTopLevelProgram(ast, naive=true)
 
-  def initRelation(rId: Int, name: String): Unit = {
+  def initRelation(rId: Int, name: String, schemaOpt: Option[Seq[(String, DatabaseType)]]): Unit = {
+    if storageManager.ns.contains(rId) then
+      throw new Exception(s"Relation already exists with id $rId")
+    if storageManager.ns.contains(name) then
+      throw new Exception(s"Relation already exists with name $name")
     storageManager.ns(rId) = name
-    storageManager.initRelation(rId, name)
+    storageManager.initRelation(rId, name, schemaOpt)
   }
 
   def get(rId: Int): Set[Seq[StorageTerm]] = {
@@ -143,19 +147,19 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
   }
 
   // Separate out for easier benchmarking tree stuff vs. compilation
-  def solveCompiled(irTree: IROp[Any], ctx: InterpreterContext): Set[Seq[StorageTerm]] = {
+  def solveCompiled(irTree: IROp[?], ctx: InterpreterContext): Set[Seq[StorageTerm]] = {
     val compiled = compiler.compile(irTree)
     compiled(storageManager)
-    storageManager.getIDBResult(ctx.toSolve)
+    ctx.finalSolve()
   }
 
-  def solveInterpreted[T](irTree: IROp[Any], ctx: InterpreterContext):  Set[Seq[StorageTerm]] = {
+  def solveInterpreted[T](irTree: IROp[?], ctx: InterpreterContext):  Set[Seq[StorageTerm]] = {
     debug("", () => "interpret-only mode")
     irTree.run(storageManager)
-    storageManager.getIDBResult(ctx.toSolve)
+    ctx.finalSolve()
   }
 
-  def solveJIT(irTree: IROp[Any], ctx: InterpreterContext)(using jitOptions: JITOptions): Set[Seq[StorageTerm]] = {
+  def solveJIT(irTree: IROp[?], ctx: InterpreterContext)(using jitOptions: JITOptions): Set[Seq[StorageTerm]] = {
     debug("", () => s"JIT with options $jitOptions")
     val executionContext = if (jitOptions.compileSync == CompileSync.Async && !jitOptions.useGlobalContext)
 //      threadpool = Executors.newFixedThreadPool(Runtime.getRuntime.availableProcessors())
@@ -167,7 +171,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
     given ExecutionContext = executionContext
 
     jit(irTree)
-    storageManager.getIDBResult(ctx.toSolve)
+    ctx.finalSolve()
   }
 
   inline def checkResult[T](value: Future[StorageManager => T], op: IROp[T], default: () => T)(using jitOptions: JITOptions): T = {
@@ -361,7 +365,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
 //    println(s"jit opts==${defaultJITOptions.toBenchmark}")
     debug("", () => s"solve $rId with options $defaultJITOptions")
     // verify setup
-    storageManager.verifyEDBs(keyHashs)
+    storageManager.verifyEDBs(keyHashs.keys.toSeq, Some(keyHashs))
     if (storageManager.edbContains(rId) && !precedenceGraph.idbs.contains(rId)) { // if just an edb predicate then return
       debug("Returning EDB without any IDB rule: ", () => storageManager.ns(rId))
       return storageManager.getEDBResult(rId)
@@ -383,14 +387,14 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
       }
     }
 
-    given irCtx: InterpreterContext = InterpreterContext(storageManager, precedenceGraph, toSolve)
-    debug("AST: ", () => storageManager.printer.printAST(ast))
+    given irCtx: CaracInterpreterContext = CaracInterpreterContext(storageManager, precedenceGraph, toSolve)
+    println(s"AST: : ${storageManager.printer.printAST(ast)}")
     debug("TRANSFORMED: ", () => storageManager.printer.printAST(transformedAST))
     debug("PG: ", () => precedenceGraph.toString())
 
     val irTree = createIR(transformedAST)
 
-    debug("IRTree: ", () => storageManager.printer.printIR(irTree))
+    println(s"IRTree: ${ storageManager.printer.printIR(irTree)}")
 //    println(s"INIT STORAGE: ${storageManager.toString}")
     defaultJITOptions.mode match
       case Mode.Interpreted => solveInterpreted(irTree, irCtx)
@@ -399,5 +403,5 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
   }
 }
 class NaiveStagedExecutionEngine(storageManager: StorageManager, defaultJITOptions: JITOptions = JITOptions(mode = Mode.Interpreted)) extends StagedExecutionEngine(storageManager, defaultJITOptions) {
-  override def createIR(ast: ASTNode)(using InterpreterContext): IROp[Any] = IRTreeGenerator().generateTopLevelProgram(ast, naive=true)
+  override def createIR(ast: ASTNode)(using CaracInterpreterContext): IROp[Any] = IRTreeGenerator().generateTopLevelProgram(ast, naive=true)
 }

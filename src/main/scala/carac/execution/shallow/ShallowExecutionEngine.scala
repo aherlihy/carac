@@ -1,7 +1,7 @@
 package carac.execution
 
 import carac.dsl.{Atom, StorageAtom}
-import carac.storage.{EDB, RelationId, StorageManager, StorageTerm}
+import carac.storage.{DatabaseType, EDB, RelationId, StorageManager, StorageTerm}
 import carac.tools.Debug.debug
 
 import scala.collection.mutable
@@ -100,9 +100,9 @@ class NaiveShallowExecutionEngine(val storageManager: StorageManager, stratified
   val idbs: mutable.Map[RelationId, mutable.ArrayBuffer[IndexedSeq[Atom]]] = mutable.Map()
   val keyHashs: mutable.Map[RelationId, mutable.ArrayBuffer[String]] = mutable.Map()
 
-  def initRelation(rId: RelationId, name: String): Unit = {
+  def initRelation(rId: RelationId, name: String, schemaOpt: Option[Seq[(String, DatabaseType)]]): Unit = {
     storageManager.ns(rId) = name
-    storageManager.initRelation(rId, name)
+    storageManager.initRelation(rId, name, schemaOpt)
   }
 
   def get(rId: RelationId): Set[Seq[StorageTerm]] = {
@@ -215,7 +215,7 @@ class NaiveShallowExecutionEngine(val storageManager: StorageManager, stratified
   }
 
   def solve(toSolve: RelationId): Set[Seq[StorageTerm]] = {
-    storageManager.verifyEDBs(keyHashs)
+    storageManager.verifyEDBs(keyHashs.keys.toSeq, Some(keyHashs))
     if (storageManager.edbContains(toSolve) && !idbs.contains(toSolve)) { // if just an edb predicate then return
       return storageManager.getEDBResult(toSolve)
     }

@@ -1,13 +1,13 @@
 package carac.execution
 
 import carac.dsl.{Atom, StorageAtom}
-import carac.storage.{RelationId, StorageManager, StorageTerm}
+import carac.storage.{DatabaseType, RelationId, StorageManager, StorageTerm}
 
 
 trait ExecutionEngine {
   val precedenceGraph: PrecedenceGraph
   val storageManager: StorageManager // TODO: exposed for testing, for now
-  def initRelation(rId: RelationId, name: String): Unit
+  def initRelation(rId: RelationId, name: String, schemaOpt: Option[Seq[(String, DatabaseType)]]): Unit
 
   def insertIDB(rId: RelationId, rule: Seq[Atom]): Unit
   def insertEDB(body: StorageAtom): Unit

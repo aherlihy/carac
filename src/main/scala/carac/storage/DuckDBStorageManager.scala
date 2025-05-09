@@ -4,10 +4,12 @@ import carac.dsl.{Constant, StorageAtom, Term, Variable}
 import carac.execution.AllIndexes
 import carac.storage.DatabasePrefix.*
 import carac.storage.StorageTerm
+import tyql.SelectFlags.{ExprLevel, Top}
+import tyql.{NaryRelationOp, QueryIRNode, RecursiveIRVar, RelationOp, SelectAllQuery, SelectQuery, TableLeaf, MultiRecursiveRelationOp}
 
-import scala.jdk.CollectionConverters._
-import java.nio.file.{Path, Paths, Files}
-import java.sql.{Connection, DriverManager, ResultSet}
+import scala.jdk.CollectionConverters.*
+import java.nio.file.{Files, Path, Paths}
+import java.sql.{Connection, DriverManager, ResultSet, ResultSetMetaData}
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.{immutable, mutable}
 
@@ -17,8 +19,11 @@ enum DatabasePrefix:
 enum DatabaseType:
   case INTEGER, TEXT, UNKNOWN
 
-case class DuckDBEDB(rId: RelationId, name: String, prefix: DatabasePrefix,
-                     run: String => ResultSet, columnTypes: Seq[(String, DatabaseType)],
+case class DuckDBEDB(rId: RelationId,
+                     name: String,
+                     prefix: DatabasePrefix,
+                     run: String => ResultSet,
+                     columnTypes: Option[Seq[(String, DatabaseType)]],
                      cmdOpt: Option[String] = None) extends EDB:
   val prefixedName: String = s"${prefix}_$name"
   val cmd: String = cmdOpt.getOrElse(s"(SELECT * FROM $prefixedName)")
@@ -35,11 +40,10 @@ case class DuckDBEDB(rId: RelationId, name: String, prefix: DatabasePrefix,
   def union(other: DuckDBEDB): DuckDBEDB =
     DuckDBEDB(rId, name, prefix, run, columnTypes, Some(s"$cmd UNION ${other.cmd}"))
 
-  def execute_toSetOfSeq(): Set[Seq[StorageTerm]] =
-    val result = run(cmd)
+  def getWithColumnTypes(result: ResultSet): Set[Seq[StorageTerm]] =
     var rows = Set[Seq[StorageTerm]]()
     while (result.next()) {
-      val row = columnTypes.map(_._2).zipWithIndex.map((typ, idx) =>
+      val row = columnTypes.get.map(_._2).zipWithIndex.map((typ, idx) =>
         typ match {
           case typ@DatabaseType.INTEGER => result.getInt(idx + 1)
           case typ@DatabaseType.TEXT => result.getString(idx + 1)
@@ -48,6 +52,31 @@ case class DuckDBEDB(rId: RelationId, name: String, prefix: DatabasePrefix,
       rows = rows + row
     }
     rows
+
+  def getWithMD(rs: ResultSet): Set[Seq[StorageTerm]] =
+    val meta: ResultSetMetaData = rs.getMetaData
+    val columnCount = meta.getColumnCount
+    val columnTypes = (1 to columnCount).map(meta.getColumnType)
+
+    var rows = Set[Seq[StorageTerm]]()
+    while (rs.next()) {
+      val row = (0 until columnCount).map { i =>
+        columnTypes(i) match {
+          case java.sql.Types.INTEGER => rs.getInt(i + 1)
+          case java.sql.Types.VARCHAR => rs.getString(i + 1)
+          case _ => ???
+        }
+      }
+      rows = rows + row
+    }
+    rows
+
+  def execute_toSetOfSeq(): Set[Seq[StorageTerm]] =
+    val result = run(cmd)
+    if columnTypes.isEmpty then
+      getWithMD(result)
+    else
+      getWithColumnTypes(result)
 
   override def factToString: String =
     val result = execute_toSetOfSeq().toSeq
@@ -84,7 +113,7 @@ case class DuckDBDatabase(prefix: DatabasePrefix, run: String => ResultSet, upda
 
   def initializeTable(rId: RelationId, name: String, schema: Seq[(String, DatabaseType)]): DuckDBDatabase =
     if (!contains(rId))
-      val newEdb = DuckDBEDB(rId, name, prefix, run, schema)
+      val newEdb = DuckDBEDB(rId, name, prefix, run, Some(schema))
       tables(rId) = newEdb // use name for easier debuggablity
       val types = schema.map((s, t) =>
         val dbtype = t match
@@ -124,9 +153,9 @@ case class DuckDBDatabase(prefix: DatabasePrefix, run: String => ResultSet, upda
     )
     this
 
-  def resetTableFrom(other: DuckDBEDB): DuckDBDatabase =
-    commandCache.addOne(s"DELETE FROM ${prefix}_${other.name}")
-    commandCache.addOne(s"INSERT INTO ${prefix}_${other.name} ${other.cmd}")
+  def resetTableFrom(name: String, other: DuckDBEDB): DuckDBDatabase =
+    commandCache.addOne(s"DELETE FROM ${prefix}_${name}")
+    commandCache.addOne(s"INSERT INTO ${prefix}_${name} ${other.cmd}")
     this
 
   def execute_nonEmpty(): Boolean =
@@ -181,7 +210,7 @@ class DuckDBStorageManager(ns: NS = new NS(), indexed: Boolean = true) extends S
 
   val runQuery: String => ResultSet = sqlString =>
     val lastStmt = connection.createStatement()
-    //    println(s"running query: $sqlString")
+//    println(s"running query: $sqlString")
     //    lastStmt.setQueryTimeout(timeout)
     try
       lastStmt.executeQuery(sqlString)
@@ -266,7 +295,7 @@ class DuckDBStorageManager(ns: NS = new NS(), indexed: Boolean = true) extends S
 
   // Derive relation schema. In the future can require it to be declared, but for now derived using inference.
   def registerRelationSchema(rId: RelationId, terms: Seq[Term], hashOpt: Option[String]): Unit =
-    val s = generateSchema(terms, throwOnVar = false)
+    val s = schema.getOrElse(rId, generateSchema(terms, throwOnVar = false))
     declareTable(rId, s)
     hashOpt.foreach(hash =>
       try {
@@ -311,8 +340,9 @@ class DuckDBStorageManager(ns: NS = new NS(), indexed: Boolean = true) extends S
 
   val printer: Printer[this.type] = Printer[this.type](this)
 
-  def initRelation(rId: RelationId, name: String): Unit = {
+  def initRelation(rId: RelationId, name: String, schemaOpt: Option[Seq[(String, DatabaseType)]]): Unit = {
     ns(rId) = name
+    schemaOpt.foreach(s => schema(rId) = s)
   }
   /**
    * Initialize derivedDB to clone EDBs, initialize deltaDB to empty for both new and known
@@ -370,15 +400,14 @@ class DuckDBStorageManager(ns: NS = new NS(), indexed: Boolean = true) extends S
    * Verify that all EDBs are initialized, and if not, initialize them.
    * @param idbList
    */
-  def verifyEDBs(ruleHashes: mutable.Map[RelationId, mutable.ArrayBuffer[String]]): Unit = {
-    val idbList = ruleHashes.keys.to(mutable.Set)
+  def verifyEDBs(idbList: Seq[RelationId], ruleHashes: Option[mutable.Map[RelationId, mutable.ArrayBuffer[String]]]): Unit = {
     ns.rIds().foreach(rId =>
       if (!edbs.contains(rId) && !idbList.contains(rId))
         if (!schema.contains(rId))
           throw new Exception(s"Error: using EDB $rId (${ns(rId)}) but no known schema")
         edbs.initializeTable(rId, ns(rId), schema(rId)) // initialize empty table
     )
-    inferTypes(ruleHashes)
+    ruleHashes.foreach(inferTypes)
 
     ns.rIds().foreach(rId =>
       if schema(rId).map(_._2).contains(DatabaseType.UNKNOWN) then throw new Exception(s"Error: could not infer schema of IDB $rId (${ns(rId)}): ${schema(rId)}")
@@ -388,17 +417,22 @@ class DuckDBStorageManager(ns: NS = new NS(), indexed: Boolean = true) extends S
       )
     )
   }
+  def initializeIDBFromTyQL(rId: RelationId, schema: Seq[(String, DatabaseType)]): Unit =
+    databases.dropRight(1).foreach(_.initializeTable(rId, ns(rId), schema))
 
   // Read & Write EDBs
   override def insertEDB(rule: StorageAtom): Unit = {
-    val edbSchema = generateSchema(rule.terms, throwOnVar = true)
+    val edbSchema = schema.getOrElse(rule.rId, generateSchema(rule.terms, throwOnVar = true))
     declareTable(rule.rId, edbSchema)
     if (!edbs.contains(rule.rId))
       databases.foreach(_.initializeTable(rule.rId, ns(rule.rId), schema(rule.rId)))
     edbs.insertRow(rule.rId, rule.terms).execute_cache() // for now greedily insert.
 //    edbDomain.addAll(rule.terms)
   }
-  def getEDB(rId: RelationId): DuckDBEDB = edbs.get(rId, ns(rId))
+  def getEDB(rId: RelationId): DuckDBEDB =
+    val r = edbs.get(rId, ns(rId))
+    r
+
   def edbContains(rId: RelationId): Boolean = edbs.contains(rId)
   def getAllEDBS(): mutable.Map[RelationId, Any] = edbs.tables.asInstanceOf[mutable.Map[RelationId, Any]]
 
@@ -424,7 +458,7 @@ class DuckDBStorageManager(ns: NS = new NS(), indexed: Boolean = true) extends S
     databases(derivedIdx).insertAllFrom(databases(writeDeltaIdx)).execute_cache()
 
   def writeNewDelta(rId: RelationId, rules: EDB): Unit =
-    databases(writeDeltaIdx).resetTableFrom(rules.asInstanceOf[DuckDBEDB]).execute_cache()
+    databases(writeDeltaIdx).resetTableFrom(ns(rId), rules.asInstanceOf[DuckDBEDB]).execute_cache()
 
   def clearPreviousDeltas(): Unit =
     databases(writeDeltaIdx).clear().execute_cache()
@@ -440,7 +474,8 @@ class DuckDBStorageManager(ns: NS = new NS(), indexed: Boolean = true) extends S
 
   def union(edbs: Seq[EDB]): EDB =
     val ddbedbs = edbs.map(e => e.asInstanceOf[DuckDBEDB])
-    ddbedbs.reduceLeft((a: DuckDBEDB, b: DuckDBEDB) => a.union(b))
+    val res = ddbedbs.reduceLeft((a: DuckDBEDB, b: DuckDBEDB) => a.union(b))
+    res
 
   override def selectProjectJoinHelper(inputsEDB: Seq[EDB], rId: Int, hash: String, onlineSort: Boolean): DuckDBEDB =
     if onlineSort then throw new Exception("Unimplemented: online sort with DuckDB")
@@ -454,9 +489,12 @@ class DuckDBStorageManager(ns: NS = new NS(), indexed: Boolean = true) extends S
 
     // (EDB index, EDB instance, relative column name, relative position, type)
     val edbColumnMapping: Seq[(Int, DuckDBEDB, String, Int, DatabaseType)] = inputs.zipWithIndex.flatMap { case (edb, edbIdx) =>
-      edb.columnTypes.zipWithIndex.map { case ((colName, colType), colIdx) =>
-        (edbIdx, edb, colName, colIdx, colType)
-      }
+      edb.columnTypes match
+        case Some(value) =>
+          value.zipWithIndex.map { case ((colName, colType), colIdx) =>
+            (edbIdx, edb, colName, colIdx, colType)
+          }
+        case None => throw new Exception(s"Cannot run SPJU on raw SQL EDB")
     }
 
     val projectAliasesTypes = k.projIndexes.map {
@@ -506,7 +544,7 @@ class DuckDBStorageManager(ns: NS = new NS(), indexed: Boolean = true) extends S
 
     val newSchema = projectAliasesTypes.map(_._2).zipWithIndex.map((s, i) => (s"c$i", s))
 
-    DuckDBEDB(rId, ns(rId), tmp, runQuery, newSchema, Some(plan))
+    DuckDBEDB(rId, ns(rId), tmp, runQuery, Some(newSchema), Some(plan))
 
   def resultSetToString(resultSet: ResultSet, meta: String = ""): String =
     val metaData = resultSet.getMetaData
@@ -554,4 +592,33 @@ class DuckDBStorageManager(ns: NS = new NS(), indexed: Boolean = true) extends S
   override def diff(lhsEDB: EDB, rhsEDB: EDB): EDB = ???
 //    val lhs = if indexed then IndexedCollectionsCasts.asIndexedCollectionsEDB(lhsEDB) else CollectionsCasts.asCollectionsEDB(lhsEDB)
 //    lhs.diff(rhsEDB)
+
+  def execute_tyQLSQL(ir: RelationOp, db: DB, into: RelationId, diff: Boolean, translate: Boolean): EDB =
+    val prefix = db match
+      case DB.Derived => databases(derivedIdx).prefix
+      case DB.Delta => databases(readDeltaIdx).prefix
+      case DB.EDB => edb
+    def translateSource(ir: RelationOp): RelationOp =
+      val t = ir match
+        case MultiRecursiveRelationOp(aliases, query, finalQ, carriedSymbols, ast) =>
+          val translatedQuery = query.map(translateSource)
+          val translatedFinalQ = translateSource(finalQ)
+          MultiRecursiveRelationOp(aliases, translatedQuery, translatedFinalQ, carriedSymbols, ast)
+        case RecursiveIRVar(ptA, a, ast) =>
+          if db == DB.Derived || db == DB.Delta then RecursiveIRVar(s"${prefix}_$ptA", a, ast) else RecursiveIRVar(ptA, a, ast)
+        case SelectAllQuery(from, where, overrideAlias, ast) => SelectAllQuery(from.map(translateSource), where, overrideAlias, ast)
+        case SelectQuery(project, from, where, overrideAlias, ast) => SelectQuery(project, from.map(translateSource), where, overrideAlias, ast)
+        case NaryRelationOp(children, op, _, ast) => NaryRelationOp(children.map( c => c match
+          case r: RelationOp => translateSource(r)
+          case _ => c
+        ), op, Some(ir.alias), ast)
+        case TableLeaf(tableName, _, ast) =>
+          if db == DB.EDB then TableLeaf(s"${prefix}_$tableName", Some(ir.alias), ast) else TableLeaf(tableName, Some(ir.alias), ast)
+        case _ => ir
+      t.appendFlags(ir.flags)
+
+    val sql = (if translate then translateSource(ir) else ir).appendFlag(ExprLevel).toSQLString().replaceAll("\"", "'")
+    val diffedSQL = if diff then s"($sql) EXCEPT (SELECT * FROM ${databases(derivedIdx).get(into, ns(into)).prefixedName})" else sql
+
+    DuckDBEDB(into, ns(into), prefix, runQuery, None, Some(diffedSQL))
 }

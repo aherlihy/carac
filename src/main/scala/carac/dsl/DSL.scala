@@ -1,14 +1,14 @@
 package carac.dsl
 
 import carac.execution.ExecutionEngine
-import carac.storage.StorageTerm
+import carac.storage.{DatabaseType, StorageTerm}
 
 import scala.collection.immutable.ArraySeq
 import scala.collection.mutable
-import scala.reflect.{classTag, ClassTag}
+import scala.reflect.{ClassTag, classTag}
 import scala.quoted.{Expr, Quotes}
 
-trait AbstractProgram // TODO: alternate program?
+trait AbstractProgram
 
 type Constant = Int | String // TODO: other constant types?
 
@@ -19,7 +19,7 @@ case class Variable(oid: Int, anon: Boolean = false) {
   override def equals(that: Any): Boolean =
     that match {
       case v: Variable => !anon && !v.anon && oid == v.oid
-      case _ => false // TODO: is this ok?
+      case _ => false
     }
 }
 
@@ -35,9 +35,9 @@ class Atom(val rId: Int, val terms: ArraySeq[Term], val negated: Boolean) {
 }
 type StorageAtom = Atom { val terms: ArraySeq[StorageTerm] }
 
-case class Relation[T <: Constant](id: Int, name: String)(using ee: ExecutionEngine) {
+case class Relation[T <: Constant](id: Int, name: String, schema: Option[Seq[(String, DatabaseType)]])(using ee: ExecutionEngine) {
   type RelTerm = T | Variable
-  ee.initRelation(id, name)
+  ee.initRelation(id, name, schema)
 
   case class RelAtom(override val terms: ArraySeq[RelTerm],
                      override val negated: Boolean = false,
