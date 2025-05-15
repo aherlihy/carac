@@ -144,7 +144,8 @@ class IRTreeGenerator(using val ctx: CaracInterpreterContext)(using JITOptions) 
   def generateStratified(stratifiedAST: Seq[mutable.Map[RelationId, ASTNode]], naive: Boolean): IROp[Any] = {
     SequenceOp(OpCode.SEQ,
       stratifiedAST.zipWithIndex.map((rules, idx) =>
-        val innerP = if (naive) generateNaive(rules, rules.keys.toSeq) else generateSemiNaive(rules, rules.keys.toSeq)
+        val sorted = rules.keys.filter(ctx.storageManager.edbContains).toSeq ++ rules.keys.filterNot(ctx.storageManager.edbContains).toSeq
+        val innerP = if (naive) generateNaive(rules, sorted) else generateSemiNaive(rules, sorted)
 
         if (idx < stratifiedAST.length - 1)
           SequenceOp(OpCode.EVAL_STRATUM,

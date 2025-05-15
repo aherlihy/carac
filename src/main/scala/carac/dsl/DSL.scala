@@ -52,7 +52,7 @@ case class Relation[T <: Constant](id: Int, name: String, schema: Option[Seq[(St
     override def :-(body: Unit): Unit =
       if (negated)
         throw new Exception("Cannot have negated EDB, define a new EDB")
-      ee.insertEDB(this.asInstanceOf[StorageAtom])
+      ee.insertEDB(this.asInstanceOf[StorageAtom], schema)
 
     override def toString = name + terms.mkString("(", ", ", ")")
   }

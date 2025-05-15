@@ -1,7 +1,7 @@
 package carac.execution.ir
 
-import carac.execution.PrecedenceGraph
-import carac.storage.{DuckDBStorageManager, RelationId, StorageManager, StorageTerm, EDB}
+import carac.execution.{PrecedenceGraph, TyQLExecutionEngine}
+import carac.storage.{DuckDBStorageManager, EDB, RelationId, StorageManager, StorageTerm}
 import carac.tools.Debug.debug
 
 trait InterpreterContext(val storageManager: StorageManager, val finalSolve: () => Set[Seq[StorageTerm]])
@@ -13,5 +13,6 @@ class CaracInterpreterContext(sm: StorageManager,
   var count: Int = 0
 }
 
-class TyQLInterpreterContext(sm: DuckDBStorageManager,
-                             finalSolve: () => Set[Seq[StorageTerm]]) extends InterpreterContext(sm, finalSolve)
+class TyQLInterpreterContext(val ddb: DuckDBStorageManager,
+                             val ee: TyQLExecutionEngine,
+                             finalSolve: () => Set[Seq[StorageTerm]]) extends InterpreterContext(ddb, finalSolve)

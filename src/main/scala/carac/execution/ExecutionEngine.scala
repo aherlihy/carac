@@ -10,7 +10,7 @@ trait ExecutionEngine {
   def initRelation(rId: RelationId, name: String, schemaOpt: Option[Seq[(String, DatabaseType)]]): Unit
 
   def insertIDB(rId: RelationId, rule: Seq[Atom]): Unit
-  def insertEDB(body: StorageAtom): Unit
+  def insertEDB(body: StorageAtom, schema: Option[Seq[(String, DatabaseType)]]): Unit
 
   def solve(rId: RelationId): Set[Seq[StorageTerm]]
   def get(rId: RelationId): Set[Seq[StorageTerm]]

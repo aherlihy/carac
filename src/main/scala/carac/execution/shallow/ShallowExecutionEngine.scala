@@ -148,7 +148,7 @@ class NaiveShallowExecutionEngine(val storageManager: StorageManager, stratified
     storageManager.addConstantsToDomain(k.constIndexes.values.toSeq)
   }
 
-  def insertEDB(rule: StorageAtom): Unit = {
+  def insertEDB(rule: StorageAtom, schema: Option[Seq[(String, DatabaseType)]]): Unit = {
     storageManager.insertEDB(rule)
   }
 

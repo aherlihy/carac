@@ -103,7 +103,8 @@ case class DuckDBDatabase(prefix: DatabasePrefix, run: String => ResultSet, upda
         currentIdx.addOne(i)
         // for now add single-column indexes
         if tables.contains(rId) then
-          val idx = s"CREATE INDEX ${tables(rId).prefixedName}_c${i}_idx ON ${tables(rId).prefixedName} (c$i)"
+          val colName = tables(rId).columnTypes.getOrElse(throw new Exception(s"Error: no schema available for ${tables(rId).prefixedName}"))(i)._1
+          val idx = s"CREATE INDEX ${tables(rId).prefixedName}_${colName}_idx ON ${tables(rId).prefixedName} ($colName)"
 //          println(s"creating index: $idx")
           commandCache.addOne(idx)
         else
@@ -126,7 +127,8 @@ case class DuckDBDatabase(prefix: DatabasePrefix, run: String => ResultSet, upda
       if idxTODO.contains(rId) then
         val idx = idxTODO(rId)
         idx.foreach(i =>
-          val idx = s"CREATE INDEX ${newEdb.prefixedName}_c${i}_idx ON ${newEdb.prefixedName} (c$i)"
+          val colName = newEdb.columnTypes.getOrElse(throw new Exception(s"Error: no schema available for ${newEdb.prefixedName}"))(i)._1
+          val idx = s"CREATE INDEX ${newEdb.prefixedName}_${colName}_idx ON ${newEdb.prefixedName} ($colName)"
 //          println(s"creating index: $idx")
           commandCache.addOne(idx)
         )
@@ -482,8 +484,9 @@ class DuckDBStorageManager(ns: NS = new NS(), indexed: Boolean = true) extends S
 
     val originalK = allRulesAllIndexes(rId)(hash)
     val inputs = inputsEDB.map(e => e.asInstanceOf[DuckDBEDB])
-    //    println(s"Rule: ${printer.ruleToString(originalK.atoms)}")
-    //    println(s"input rels: ${inputs.map(e => e.factToString).mkString("[", "*", "]")}")
+
+    println(s"Rule k: ${originalK.toStringWithNS(ns)}")
+    println(s"input rels: ${inputs.map(e => e.factToString).mkString("[", "*", "]")}")
 
     val k = originalK
 
@@ -496,6 +499,8 @@ class DuckDBStorageManager(ns: NS = new NS(), indexed: Boolean = true) extends S
           }
         case None => throw new Exception(s"Cannot run SPJU on raw SQL EDB")
     }
+
+    println(s"EDB col mapping=${edbColumnMapping.map(t => s"(edbIdx=${t._1}, colName=${t._3}, colPos=${t._4}, colType=${t._5})").mkString(",")}")
 
     val projectAliasesTypes = k.projIndexes.map {
       case ("v", varIdx: Int) =>

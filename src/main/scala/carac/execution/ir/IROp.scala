@@ -223,7 +223,7 @@ case class ProjectJoinFilterOp(rId: RelationId, var k: JoinIndexes, override val
     )
   override def run(storageManager: StorageManager): EDB =
     val inputs = children.map(s => s.run(storageManager))
-//    println(s"inputs in SPJU=${inputs.map(_.factToString)}")
+    println(s"inputs in SPJU=${inputs.map(_.factToString)} and k=${k.toStringWithNS(storageManager.ns)}")
     val res = storageManager.selectProjectJoinHelper(
         inputs,
         rId,

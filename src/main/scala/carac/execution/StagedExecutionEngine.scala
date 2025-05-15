@@ -33,7 +33,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
 
   var stragglers: mutable.WeakHashMap[Int, Future[CompiledFn[?]]] = mutable.WeakHashMap.empty // should be ok since we are only removing by ref and then iterating on values only?
 
-  def createIR(ast: ASTNode)(using CaracInterpreterContext): IROp[Any] = IRTreeGenerator().generateTopLevelProgram(ast, naive=true)
+  def createIR(ast: ASTNode)(using CaracInterpreterContext): IROp[Any] = IRTreeGenerator().generateTopLevelProgram(ast, false)
 
   def initRelation(rId: Int, name: String, schemaOpt: Option[Seq[(String, DatabaseType)]]): Unit = {
     if storageManager.ns.contains(rId) then
@@ -140,7 +140,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
       ))
   }
 
-  def insertEDB(rule: StorageAtom): Unit = {
+  def insertEDB(rule: StorageAtom, schema: Option[Seq[(String, DatabaseType)]]): Unit = {
     storageManager.insertEDB(rule)
     val allRules = ast.rules.getOrElseUpdate(rule.rId, AllRulesNode(mutable.ArrayBuffer.empty, rule.rId)).asInstanceOf[AllRulesNode]
     allRules.edb = true
@@ -388,13 +388,13 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
     }
 
     given irCtx: CaracInterpreterContext = CaracInterpreterContext(storageManager, precedenceGraph, toSolve)
-    println(s"AST: : ${storageManager.printer.printAST(ast)}")
+    println(s"Carac AST: : ${storageManager.printer.printAST(ast)}")
     debug("TRANSFORMED: ", () => storageManager.printer.printAST(transformedAST))
     debug("PG: ", () => precedenceGraph.toString())
 
     val irTree = createIR(transformedAST)
 
-    println(s"IRTree: ${ storageManager.printer.printIR(irTree)}")
+    println(s"Carac IRTree: ${ storageManager.printer.printIR(irTree)}")
 //    println(s"INIT STORAGE: ${storageManager.toString}")
     defaultJITOptions.mode match
       case Mode.Interpreted => solveInterpreted(irTree, irCtx)
