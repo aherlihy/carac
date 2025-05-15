@@ -5,7 +5,7 @@ import carac.execution.AllIndexes
 import carac.storage.DatabasePrefix.*
 import carac.storage.StorageTerm
 import tyql.SelectFlags.{ExprLevel, Top}
-import tyql.{NaryRelationOp, QueryIRNode, RecursiveIRVar, RelationOp, SelectAllQuery, SelectQuery, TableLeaf, MultiRecursiveRelationOp}
+import tyql.{GroupByQuery, MultiRecursiveRelationOp, NaryRelationOp, QueryIRNode, RecursiveIRVar, RelationOp, SelectAllQuery, SelectQuery, TableLeaf}
 
 import scala.jdk.CollectionConverters.*
 import java.nio.file.{Files, Path, Paths}
@@ -406,6 +406,7 @@ class DuckDBStorageManager(ns: NS = new NS(), indexed: Boolean = true) extends S
    * @param idbList
    */
   def verifyEDBs(idbList: Seq[RelationId], ruleHashes: Option[mutable.Map[RelationId, mutable.ArrayBuffer[String]]]): Unit = {
+    println(s"Verifying EDBs: ${idbList.map(ns(_))}")
     ns.rIds().foreach(rId =>
       if (!edbs.contains(rId) && !idbList.contains(rId))
         if (!schema.contains(rId))
@@ -624,8 +625,13 @@ class DuckDBStorageManager(ns: NS = new NS(), indexed: Boolean = true) extends S
           case _ => c
         ), op, Some(ir.alias), ast)
         case TableLeaf(tableName, _, ast) =>
-          if db == DB.EDB then TableLeaf(s"${prefix}_$tableName", Some(ir.alias), ast) else TableLeaf(tableName, Some(ir.alias), ast)
-        case _ => ir
+          // always transate EDBs
+          TableLeaf(s"${edb}_$tableName", Some(ir.alias), ast)
+        case GroupByQuery(source, groupBy, having, overrideAlias, ast) =>
+          GroupByQuery(translateSource(source), groupBy, having, Some(ir.alias), ast)  
+        case _ => 
+          println(s"Translating source: found other: ${ir}")
+          ir
       t.appendFlags(ir.flags)
 
     val sql = (if translate then translateSource(ir) else ir).appendFlag(ExprLevel).toSQLString().replaceAll("\"", "'")

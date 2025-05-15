@@ -3,7 +3,7 @@ package carac.execution
 import carac.dsl.StorageAtom
 import carac.execution.ast.ASTNode
 import carac.execution.ir.OpCode.OTHER
-import tyql.{DatabaseAST, Expr, MultiRecursiveRelationOp, NaryRelationOp, QueryIRNode, RelationOp, ResultTag}
+import tyql.{DatabaseAST, Expr, GroupByQuery, MultiRecursiveRelationOp, NaryRelationOp, QueryIRNode, RelationOp, ResultTag}
 import carac.execution.ir.{IROp, InsertDeltaNewIntoDerived, InterpreterContext, OpCode, ProgramOp, ResetDeltaOp, SequenceOp, TyQLInterpreterContext, TyQLSQLNode, TyQLToIROp}
 import carac.storage.{DB, DatabaseType, DuckDBEDB, DuckDBStorageManager, EDB, RelationId, StorageManager, StorageTerm}
 import tyql.Query.MultiRecursive
@@ -81,26 +81,34 @@ class TyQLExecutionEngine(val ddb: DuckDBStorageManager,
     tyqlIR match
       case MultiRecursiveRelationOp(aliases, queries, finalQIR, _, ast) =>
         val linear = ast.asInstanceOf[MultiRecursive[?]].$linear.getOrElse(false)
-        storageManager match
-          case ddb: DuckDBStorageManager =>
-            if linear then
+        if linear then
+          (SequenceOp(OTHER), TyQLSQLNode(tyqlIR.asInstanceOf[RelationOp], DB.EDB, -1))
+        else
+          val ruleSchemas = extractSchemas(tyqlIR)
+          val ruleMap = ruleSchemas.map((rId, metadata) =>
+            val (alias, schema, subqueries) = metadata
+            println(s"Adding rule rId=$rId, alias=$alias")
+            if storageManager.ns.contains(rId) then
+              throw new Exception(s"Using RelationId $rId for $alias, but already exists in storage")
+            storageManager.ns(rId) = alias
+            storageManager.declareTable(rId, schema)
+            (rId, subqueries)
+          )
+          storageManager.verifyEDBs(ruleMap.keys.toSeq, None)
+          val program = TyQLToIROp().generateTopLevelProgram(ruleMap, naive)
+          val finalQ = TyQLSQLNode(finalQIR, DB.Derived, ruleMap.keys.head)
+          storageManager.initEvaluation()
+          (program, finalQ)
+      case GroupByQuery(source, groupBy, having, _, _) =>
+        source match
+          case MultiRecursiveRelationOp(aliases, query, finalQ, carriedSymbols, ast) =>
+            val linear = ast.asInstanceOf[MultiRecursive[?]].$linear.getOrElse(false)
+            if (linear)
               (SequenceOp(OTHER), TyQLSQLNode(tyqlIR.asInstanceOf[RelationOp], DB.EDB, -1))
             else
-              val ruleSchemas = extractSchemas(tyqlIR)
-              val ruleMap = ruleSchemas.map((rId, metadata) =>
-                val (alias, schema, subqueries) = metadata
-                if storageManager.ns.contains(rId) then
-                  throw new Exception(s"Using RelationId $rId for $alias, but already exists in storage")
-                storageManager.ns(rId) = alias
-                storageManager.declareTable(rId, schema)
-                (rId, subqueries)
-              )
-              storageManager.verifyEDBs(ruleMap.keys.toSeq, None)
-              val program = TyQLToIROp().generateTopLevelProgram(ruleMap, naive)
-              val finalQ = TyQLSQLNode(finalQIR, DB.Derived, ruleMap.keys.head)
-              (program, finalQ)
-          case _ => throw new Exception(s"Unimplemented: currently only DuckDBStorageManager is supported for TyQL frontend")
-      case _ => throw new Exception(s"Unimplemented: Currently only recursive queries are supported: $tyqlIR")
+              throw new Exception(s"Unimplemented: Currently only recursive queries are supported in groupBy: $tyqlIR")
+      case _ =>
+        throw new Exception(s"Unimplemented: Currently only recursive queries are supported: $tyqlIR")
 
 
   def solveTyQL(tyqlAST: DatabaseAST[?], naive: Boolean = false): Set[Seq[StorageTerm]] =
@@ -114,7 +122,6 @@ class TyQLExecutionEngine(val ddb: DuckDBStorageManager,
         // use temporary context to generate tree, then later set finalSolve based on TyQL AST
         val initCtx = TyQLInterpreterContext(ddb, this, () => ???)
         val (irTree, finalNode) = toCaracIR(tyqlAST, naive)(using initCtx)
-        ddb.initEvaluation()
 
         val irCtx = TyQLInterpreterContext(ddb, this, () => finalNode.run(ddb).asInstanceOf[DuckDBEDB].execute_toSetOfSeq())
 

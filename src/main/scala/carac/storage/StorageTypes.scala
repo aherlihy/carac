@@ -41,7 +41,7 @@ class NS() {
   private val nameToRid = mutable.Map[String, RelationId]()
   private val rIdToName = mutable.Map[RelationId, String]()
   def apply(name: String): RelationId =
-    nameToRid.getOrElse(name, -1)
+    nameToRid.getOrElse(name, Int.MaxValue)
   def apply(rId: RelationId): String =
     rIdToName.getOrElse(rId, s"<$rId>")
 
@@ -66,4 +66,6 @@ class NS() {
     val neg = if (h.head.contains("!")) "!" else ""
 //    s"${rIdToName(h.head.toInt)}${h.drop(1).mkString("(", ", ", ")")}"
     s"$neg${rIdToName(head.toInt)}.${h(1)}"
+
+  override def toString: String = s"Names->RIDs: ${nameToRid.mkString(", ")}\nRIDs->Names: ${rIdToName.mkString(", ")}"
 }

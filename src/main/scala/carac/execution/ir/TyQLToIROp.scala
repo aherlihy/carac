@@ -100,11 +100,16 @@ class TyQLToIROp(using val ctx: TyQLInterpreterContext)(using JITOptions) {
   def jIdxHelper(rId: RelationId, from: Seq[RelationOp], where: Seq[QueryIRNode], project: Option[QueryIRNode]): JoinIndexes =
     val deps = from.map { // Seq[RelationId]
       case TableLeaf(rName, _, _) =>
+        if !ctx.storageManager.ns.contains(rName) then
+          throw new Exception(s"Relation $rName not found in storage")
         ctx.storageManager.ns(rName)
       case RecursiveIRVar(rName, _, _) =>
+        if !ctx.storageManager.ns.contains(rName) then
+          throw new Exception(s"Relation $rName not found in storage")
         ctx.storageManager.ns(rName)
       case _ => ???
     }
+    println(s"deps=$deps, ns=${ctx.ddb.ns.toString}")
     val depsSchema = deps.map(rId => // Seq[(AttrName, DatabaseType)]
       ctx.ddb.schema(rId)
     )
@@ -118,32 +123,44 @@ class TyQLToIROp(using val ctx: TyQLInterpreterContext)(using JITOptions) {
               getPosition(from, child, depsSchema)
           )
 
-    var varIndexes = Seq[Seq[Int]]()
+    val varIndexes = mutable.ListBuffer[Seq[Int]]()
     val constIndexes = mutable.Map[Int, Constant]()
+
+    def calculatePos(lhs: QueryIRNode, rhs: QueryIRNode) =
+      val lhsPos = getPosition(from, lhs, depsSchema)
+      val rhsPos = getPosition(from, rhs, depsSchema)
+      if lhsPos._1 == "v" && rhsPos._1 == "v" then
+        varIndexes.append(Seq(lhsPos._2, rhsPos._2).asInstanceOf[Seq[Int]])
+      else if lhsPos._1 == "c" && rhsPos._1 == "v" then
+        constIndexes(rhsPos._2.asInstanceOf[Int]) = lhsPos._2
+      else if lhsPos._1 == "v" && rhsPos._1 == "c" then
+        constIndexes(lhsPos._2.asInstanceOf[Int]) = rhsPos._2
+      else
+        ???
+
+    def mapBinOp(c: QueryIRNode): Unit =
+      c match {
+        case BinExprOp(lhs, rhs, op, ast) =>
+          ast match
+            case Expr.Eq(_, _) =>
+              calculatePos(lhs, rhs)
+            case Expr.And(_, _) =>
+              mapBinOp(lhs)
+              mapBinOp(rhs)
+            case _ =>
+              throw new Exception(s"Unsupported operation in WHERE clause: $ast")
+      }
+
     where.map(wc => wc match {
       case WhereClause(children, ast) =>
-        children.map(c => c match {
-          case BinExprOp(lhs, rhs, op, ast) =>
-            if !ast.isInstanceOf[Expr.Eq[?, ?, ?, ?]] then
-              throw new Exception(s"Unsupported operation in WHERE clause: $ast")
-            val lhsPos = getPosition(from, lhs, depsSchema)
-            val rhsPos = getPosition(from, rhs, depsSchema)
-            if lhsPos._1 == "v" && rhsPos._1 == "v" then
-              varIndexes = varIndexes :+ Seq(lhsPos._2, rhsPos._2).asInstanceOf[Seq[Int]] // TODO: cleanup
-            else if lhsPos._1 == "c" && rhsPos._1 == "v" then
-              constIndexes(rhsPos._2.asInstanceOf[Int]) = lhsPos._2
-            else if lhsPos._1 == "v" && rhsPos._1 == "c" then
-              constIndexes(lhsPos._2.asInstanceOf[Int]) = rhsPos._2
-            else
-              ???
-        })
+        children.map(mapBinOp)
     })
 
     val isEdb = varIndexes.isEmpty && constIndexes.isEmpty && deps.forall(ctx.storageManager.edbContains)
-    val ruleAtoms = toAtomsFromK(rId, varIndexes, constIndexes, projIndexes, deps, depsSchema)
+    val ruleAtoms = toAtomsFromK(rId, varIndexes.toSeq, constIndexes, projIndexes, deps, depsSchema)
     //    println(s"deps=$deps, depsSchema=$depsSchema, projIndexes=$projIndexes")
     JoinIndexes(
-      varIndexes,
+      varIndexes.toSeq,
       constIndexes,
       projIndexes,
       deps.map(d => (PredicateType.POSITIVE, d)),
@@ -156,6 +173,7 @@ class TyQLToIROp(using val ctx: TyQLInterpreterContext)(using JITOptions) {
   def queryIRToJoinIndex(rId: RelationId, queryIR: QueryIRNode): JoinIndexes =
     queryIR match
       case SelectAllQuery(from, where, _, _) =>
+        println(s"SelectAllQuery: from=$from, where=$where")
         jIdxHelper(rId, from, where, None)
       case SelectQuery(project, from, where, _, _) =>
         jIdxHelper(rId, from, where, Some(project))
@@ -163,8 +181,9 @@ class TyQLToIROp(using val ctx: TyQLInterpreterContext)(using JITOptions) {
 
   def semiNaiveEvalRule(rId: RelationId, tyqlIR: Seq[QueryIRNode]): IROp[?] =
     val allRes = tyqlIR.map(subquery =>
+      println(s"For query: ${subquery.toSQLString()}:")
       val k = queryIRToJoinIndex(rId, subquery)
-      println(s"For query: ${subquery.toSQLString()}: k=${k.toStringWithNS(ctx.ddb.ns)}}")
+      println(s"\tk=${k.toStringWithNS(ctx.ddb.ns)}}")
       ctx.ee.insertIDB(rId, k)
 
       var idx = -1 // if dep is featured more than once, only use delta once, but at a different pos each time

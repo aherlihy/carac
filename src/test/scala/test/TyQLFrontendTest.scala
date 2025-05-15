@@ -11,39 +11,35 @@ import scala.jdk.StreamConverters.*
 import language.experimental.namedTuples
 import scala.collection.mutable
 
-trait TyQLFrontendTest extends munit.FunSuite with TyQLComparative {
+trait TyQLOnlyTest extends munit.FunSuite with RunTyQL {
   test(s"Interpreted") {
-    val (result_tyql, result_carac) = runTest(JITOptions(mode = Mode.Interpreted))
-    assertEquals(result_tyql, result_carac, s"TyQL and Carac results do not match")
-//    assertEquals(result_carac, expectedFacts)
+    val opts = JITOptions(mode = Mode.Interpreted)
+    val result_tyql = runTyQL(opts)
+    println(s"TyQL result: $result_tyql")
+    println(s"Expected result: $expectedFacts")
     assertEquals(result_tyql, expectedFacts, s"Expected directory does not match")
   }
 }
 
-trait TyQLComparative {
+trait TyQLComparativeTest extends munit.FunSuite with TyQLComparative {
+  test(s"Interpreted") {
+    val opts = JITOptions(mode = Mode.Interpreted)
+    val result_tyql = runTyQL(opts)
+    val result_carac = runCarac(opts)
+    println(s"TyQL result: $result_tyql")
+    println(s"Carac result: $result_carac")
+    println(s"Expected result: $expectedFacts")
+    assertEquals(result_tyql, result_carac, s"TyQL and Carac results do not match")
+    assertEquals(result_tyql, expectedFacts, s"Expected directory does not match")
+  }
+}
+
+trait RunTyQL {
+  def loadSchema(program: Program, storage: DuckDBStorageManager): Unit = ???
   def loadData(program: Program): Unit
-  def generateCarac(program: Program): Relation[Constant]
   def generateTyQL(program: Program): DatabaseAST[?]
   val expectedFacts: Set[Seq[Constant]]
-
-  def runTest(jitOptions: JITOptions): (Set[Seq[StorageTerm]], Set[Seq[StorageTerm]]) = {
-    val storage_tyql = new DuckDBStorageManager()
-    val engine_tyql = new TyQLExecutionEngine(storage_tyql, jitOptions)
-    val program_tyql = Program(engine_tyql)
-    loadData(program_tyql)
-    val query_tyql = generateTyQL(program_tyql)
-    val result_tyql = engine_tyql.solveTyQL(query_tyql)
-
-    val storage_carac = new DuckDBStorageManager()
-    val engine_carac = new StagedExecutionEngine(storage_carac)
-    val program_carac = Program(engine_carac)
-    loadData(program_carac)
-    val toSolve_carac = generateCarac(program_carac)
-    val result_carac = engine_carac.solve(toSolve_carac.id)
-    (result_tyql, result_carac)
-  }
-
-  def loadExpectedFile(expectedDirectory: Path): mutable.Map[String, Set[Seq[Constant]]] =
+  def loadExpectedFile(expectedDirectory: Path): mutable.Map[String, Set[Seq[Constant]]] = {
     val expectedFacts = mutable.Map[String, Set[Seq[Constant]]]()
     if (!Files.exists(expectedDirectory)) throw new Exception(s"Missing expected directory '$expectedDirectory'")
     Files.walk(expectedDirectory, 1)
@@ -65,6 +61,38 @@ trait TyQLComparative {
         reader.close()
       })
     expectedFacts
+  }
+
+  def loadDataFromFile(program: Program, directory: String): Unit =
+    val factDirectory = Paths.get(directory, "facts")
+    program.ee.storageManager match
+      case ddb: DuckDBStorageManager =>
+        ddb.cleanup()
+        loadSchema(program, ddb)
+        ddb.loadFacts(factDirectory.toString)
+      case _ =>
+        program.loadFromFactDir(factDirectory.toString)
+
+  def runTyQL(jitOptions: JITOptions): Set[Seq[StorageTerm]] =
+    val storage_tyql = new DuckDBStorageManager()
+    val engine_tyql = new TyQLExecutionEngine(storage_tyql, jitOptions)
+    val program_tyql = Program(engine_tyql)
+    loadData(program_tyql)
+    val query_tyql = generateTyQL(program_tyql)
+    engine_tyql.solveTyQL(query_tyql)
+}
+
+trait TyQLComparative extends RunTyQL {
+  def generateCarac(program: Program): Relation[Constant]
+  def runCarac(jitOptions: JITOptions): Set[Seq[StorageTerm]] = {
+    val storage_carac = new DuckDBStorageManager()
+    val engine_carac = new StagedExecutionEngine(storage_carac)
+    val program_carac = Program(engine_carac)
+    loadData(program_carac)
+    val toSolve_carac = generateCarac(program_carac)
+    val result_carac = engine_carac.solve(toSolve_carac.id)
+    result_carac
+  }
 }
 
 class TyQLFrontendNaiveTest extends munit.FunSuite {

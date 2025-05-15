@@ -1,15 +1,52 @@
 package test.examples.rqb_sssp
 
 import buildinfo.BuildInfo
-import carac.dsl.{Constant, Program}
-import test.{ExampleTestGenerator, Tags}
+import carac.dsl.{Constant, Program, Relation}
+import test.{ExampleTestGenerator, RunTyQL, Tags, TyQLComparative, TyQLOnlyTest}
 import carac.storage.{DatabaseType, DuckDBStorageManager}
+import tyql.Expr.{IntLit, min}
+import tyql.{Ord, Query, Table}
 
-trait rqb_sssp {
-  val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/rqb_sssp/facts"
+import java.nio.file.Paths
+import language.experimental.namedTuples
+
+import java.nio.file.Paths
+
+class TyQLSSSPTest extends TyQLOnlyTest with rqb_sssp
+
+trait rqb_sssp extends RunTyQL {
+  val directory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/rqb_sssp"
   val toSolve = "cost"
 
-  def pretest(program: Program): Unit = {}
+  override def loadData(program: Program): Unit =
+    loadDataFromFile(program, directory)
+
+  override val expectedFacts = loadExpectedFile(Paths.get(directory, "expected"))("cost")
+
+  override def generateTyQL(program: Program) =
+    type WeightedEdge = (src: Int, dst: Int, cost: Int)
+    type ResultEdge = (dst: Int, cost: Int)
+    type WeightedGraphDB = (edge: WeightedEdge, base: ResultEdge)
+    val tyqlDB = (
+      edge = Table[WeightedEdge]("edge"),
+      base = Table[ResultEdge]("base")
+    )
+
+    val base = tyqlDB.base
+    val queryT = Query.dispatchedFix(Tuple1(base))(spT =>
+      val sp = spT._1
+      val res = tyqlDB.edge.flatMap(edge =>
+        sp
+          .filter(s => s.dst == edge.src)
+          .map(s => (dst = edge.dst, cost = s.cost + edge.cost).toRow)
+      ).distinct
+      Tuple1(res)
+    )
+    val query = queryT._1
+      .aggregate(s => (dst = s.dst, cost = min(s.cost)).toGroupingRow)
+      .groupBySource(s => (dst = s._1.dst).toRow)
+
+    query
 
   val sqlString =
     """WITH RECURSIVE recursive1 AS
@@ -20,13 +57,13 @@ trait rqb_sssp {
           WHERE ref1.dst = edb_edge3.c0)))
       SELECT * FROM recursive1
     """
-  def loadSchema(program: Program, storage: DuckDBStorageManager): Unit =
+  override def loadSchema(program: Program, storage: DuckDBStorageManager): Unit =
     val base = program.relation("base")
-    val baseS = Seq(("c0", DatabaseType.INTEGER), ("c1", DatabaseType.INTEGER))
+    val baseS = Seq(("dst", DatabaseType.INTEGER), ("cost", DatabaseType.INTEGER))
     storage.declareTable(base.id, baseS)
     storage.edbs.initializeTable(base.id, "base", baseS)
     val edge = program.relation("edge")
-    val edgeS = Seq(("c0", DatabaseType.INTEGER), ("c1", DatabaseType.INTEGER), ("c2", DatabaseType.INTEGER))
+    val edgeS = Seq(("src", DatabaseType.INTEGER), ("dst", DatabaseType.INTEGER), ("cost", DatabaseType.INTEGER))
     storage.declareTable(edge.id, edgeS)
     storage.edbs.initializeTable(edge.id, "edge", edgeS)
 }
