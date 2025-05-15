@@ -1,12 +1,71 @@
 package test
 
 import carac.dsl.{Constant, Program, Relation}
-import carac.execution.{StagedExecutionEngine, TyQLExecutionEngine}
+import carac.execution.{JITOptions, Mode, StagedExecutionEngine, TyQLExecutionEngine}
 import carac.execution.ir.{IRTreeGenerator, InterpreterContext, TyQLInterpreterContext}
-import carac.storage.{DatabaseType, DuckDBStorageManager}
+import carac.storage.{DatabaseType, DuckDBStorageManager, StorageTerm}
 import tyql.*
 
+import java.nio.file.{Files, Paths, Path}
+import scala.jdk.StreamConverters.*
 import language.experimental.namedTuples
+import scala.collection.mutable
+
+trait TyQLFrontendTest extends munit.FunSuite with TyQLComparative {
+  test(s"Interpreted") {
+    val (result_tyql, result_carac) = runTest(JITOptions(mode = Mode.Interpreted))
+    assertEquals(result_tyql, result_carac, s"TyQL and Carac results do not match")
+//    assertEquals(result_carac, expectedFacts)
+    assertEquals(result_tyql, expectedFacts, s"Expected directory does not match")
+  }
+}
+
+trait TyQLComparative {
+  def loadData(program: Program): Unit
+  def generateCarac(program: Program): Relation[Constant]
+  def generateTyQL(program: Program): DatabaseAST[?]
+  val expectedFacts: Set[Seq[Constant]]
+
+  def runTest(jitOptions: JITOptions): (Set[Seq[StorageTerm]], Set[Seq[StorageTerm]]) = {
+    val storage_tyql = new DuckDBStorageManager()
+    val engine_tyql = new TyQLExecutionEngine(storage_tyql, jitOptions)
+    val program_tyql = Program(engine_tyql)
+    loadData(program_tyql)
+    val query_tyql = generateTyQL(program_tyql)
+    val result_tyql = engine_tyql.solveTyQL(query_tyql)
+
+    val storage_carac = new DuckDBStorageManager()
+    val engine_carac = new StagedExecutionEngine(storage_carac)
+    val program_carac = Program(engine_carac)
+    loadData(program_carac)
+    val toSolve_carac = generateCarac(program_carac)
+    val result_carac = engine_carac.solve(toSolve_carac.id)
+    (result_tyql, result_carac)
+  }
+
+  def loadExpectedFile(expectedDirectory: Path): mutable.Map[String, Set[Seq[Constant]]] =
+    val expectedFacts = mutable.Map[String, Set[Seq[Constant]]]()
+    if (!Files.exists(expectedDirectory)) throw new Exception(s"Missing expected directory '$expectedDirectory'")
+    Files.walk(expectedDirectory, 1)
+      .filter(p => Files.isRegularFile(p) && p.toString.endsWith(".csv"))
+      .forEach(f => {
+        val rule = f.getFileName.toString.replaceFirst("[.][^.]+$", "")
+        val reader = Files.newBufferedReader(f)
+        val headers = reader.readLine().split("\t")
+        val expected = reader.lines()
+          .map(l => l.split("\t").zipWithIndex.map((s, i) =>
+            (headers(i) match {
+              case "Int" => s.toInt
+              case "String" => s
+              case _ => throw new Exception(s"Unknown type ${headers(i)} in file ${f.getFileName}")
+            }).asInstanceOf[StorageTerm]
+          ).toSeq)
+          .toScala(Set)
+        expectedFacts(rule) = expected
+        reader.close()
+      })
+    expectedFacts
+}
 
 class TyQLFrontendNaiveTest extends munit.FunSuite {
   test("TC linear") {
