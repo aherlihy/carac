@@ -213,7 +213,7 @@ class TyQLToIROp(using val ctx: TyQLInterpreterContext)(using JITOptions) {
         else
           ???
       case t: SelectQuery =>
-        TyQLSQLNode(t, DB.Derived, rId, diff = false)
+        TyQLSQLNode(t, DB.Derived, rId, diff = true)
       case _ => ???
     }
     if allRes.length == 1 then

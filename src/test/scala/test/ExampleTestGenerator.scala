@@ -19,7 +19,7 @@ abstract class ExampleTestGenerator(testname: String,
 abstract class TestGenerator(directory: Path,
                              skip: Set[String] = Set(),
                              val tags: Set[String] = Set()) extends munit.FunSuite {
-  val dotty = staging.Compiler.make(getClass.getClassLoader)
+  val dotty = staging.Compiler.make(getClass.getClassLoader)(using staging.Compiler.Settings.make(outDir = None, compilerArgs = List("-experimental")))
   def pretest(program: Program): Unit
   val mTags = tags.map(t => new munit.Tag(t))
   val toSolve: String

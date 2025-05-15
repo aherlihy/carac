@@ -297,7 +297,10 @@ class DuckDBStorageManager(ns: NS = new NS(), indexed: Boolean = true) extends S
 
   // Derive relation schema. In the future can require it to be declared, but for now derived using inference.
   def registerRelationSchema(rId: RelationId, terms: Seq[Term], hashOpt: Option[String]): Unit =
-    val s = schema.getOrElse(rId, generateSchema(terms, throwOnVar = false))
+    val s = if !schema.contains(rId) || (schema.contains(rId) && schema(rId).map(_._2).contains(DatabaseType.UNKNOWN)) then
+      generateSchema(terms, throwOnVar = false)
+    else
+      schema(rId)
     declareTable(rId, s)
     hashOpt.foreach(hash =>
       try {
@@ -424,7 +427,10 @@ class DuckDBStorageManager(ns: NS = new NS(), indexed: Boolean = true) extends S
 
   // Read & Write EDBs
   override def insertEDB(rule: StorageAtom): Unit = {
-    val edbSchema = schema.getOrElse(rule.rId, generateSchema(rule.terms, throwOnVar = true))
+    val edbSchema = if !schema.contains(rule.rId) || (schema.contains(rule.rId) && schema(rule.rId).map(_._2).contains(DatabaseType.UNKNOWN)) then
+      generateSchema(rule.terms, throwOnVar = true)
+    else
+      schema(rule.rId)
     declareTable(rule.rId, edbSchema)
     if (!edbs.contains(rule.rId))
       databases.foreach(_.initializeTable(rule.rId, ns(rule.rId), schema(rule.rId)))
@@ -485,8 +491,8 @@ class DuckDBStorageManager(ns: NS = new NS(), indexed: Boolean = true) extends S
     val originalK = allRulesAllIndexes(rId)(hash)
     val inputs = inputsEDB.map(e => e.asInstanceOf[DuckDBEDB])
 
-    println(s"Rule k: ${originalK.toStringWithNS(ns)}")
-    println(s"input rels: ${inputs.map(e => e.factToString).mkString("[", "*", "]")}")
+//    println(s"Rule k: ${originalK.toStringWithNS(ns)}")
+//    println(s"input rels: ${inputs.map(e => e.factToString).mkString("[", "*", "]")}")
 
     val k = originalK
 
@@ -500,7 +506,7 @@ class DuckDBStorageManager(ns: NS = new NS(), indexed: Boolean = true) extends S
         case None => throw new Exception(s"Cannot run SPJU on raw SQL EDB")
     }
 
-    println(s"EDB col mapping=${edbColumnMapping.map(t => s"(edbIdx=${t._1}, colName=${t._3}, colPos=${t._4}, colType=${t._5})").mkString(",")}")
+//    println(s"EDB col mapping=${edbColumnMapping.map(t => s"(edbIdx=${t._1}, colName=${t._3}, colPos=${t._4}, colType=${t._5})").mkString(",")}")
 
     val projectAliasesTypes = k.projIndexes.map {
       case ("v", varIdx: Int) =>

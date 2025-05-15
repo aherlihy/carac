@@ -35,9 +35,9 @@ class Atom(val rId: Int, val terms: ArraySeq[Term], val negated: Boolean) {
 }
 type StorageAtom = Atom { val terms: ArraySeq[StorageTerm] }
 
-case class Relation[T <: Constant](id: Int, name: String, schema: Option[Seq[(String, DatabaseType)]])(using ee: ExecutionEngine) {
+case class Relation[T <: Constant](id: Int, name: String, schema: Option[Seq[(String, DatabaseType)]], init: Boolean = true)(using ee: ExecutionEngine) {
   type RelTerm = T | Variable
-  ee.initRelation(id, name, schema)
+  if init then ee.initRelation(id, name, schema)
 
   case class RelAtom(override val terms: ArraySeq[RelTerm],
                      override val negated: Boolean = false,

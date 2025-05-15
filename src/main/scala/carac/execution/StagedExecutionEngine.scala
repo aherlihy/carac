@@ -388,13 +388,13 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
     }
 
     given irCtx: CaracInterpreterContext = CaracInterpreterContext(storageManager, precedenceGraph, toSolve)
-    println(s"Carac AST: : ${storageManager.printer.printAST(ast)}")
+//    println(s"Carac AST: : ${storageManager.printer.printAST(ast)}")
     debug("TRANSFORMED: ", () => storageManager.printer.printAST(transformedAST))
     debug("PG: ", () => precedenceGraph.toString())
 
     val irTree = createIR(transformedAST)
 
-    println(s"Carac IRTree: ${ storageManager.printer.printIR(irTree)}")
+//    println(s"Carac IRTree: ${ storageManager.printer.printIR(irTree)}")
 //    println(s"INIT STORAGE: ${storageManager.toString}")
     defaultJITOptions.mode match
       case Mode.Interpreted => solveInterpreted(irTree, irCtx)

@@ -59,6 +59,7 @@ lazy val bench = project.in(file("bench"))
   .dependsOn(root % "test->test")
   .enablePlugins(JmhPlugin)
   .settings(
+    scalacOptions += "-experimental",
     Jmh/sourceDirectory := (Test/sourceDirectory).value,
     Jmh/classDirectory := (Test/classDirectory).value,
     Jmh/dependencyClasspath := (Test/dependencyClasspath).value,

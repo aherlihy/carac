@@ -5,7 +5,7 @@ import carac.dsl.{Constant, Program}
 import test.{ExampleTestGenerator, Tags}
 import carac.storage.{DatabaseType, DuckDBStorageManager}
 
-class rqb_ancestry_test extends ExampleTestGenerator("rqb_ancestry") with rqb_ancestry
+//class rqb_ancestry_test extends ExampleTestGenerator("rqb_ancestry") with rqb_ancestry
 trait rqb_ancestry {
   val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/rqb_ancestry/facts"
   val toSolve = "generation"

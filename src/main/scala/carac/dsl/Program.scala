@@ -29,7 +29,7 @@ class Program(engine: ExecutionEngine) extends AbstractProgram {
       throw new Exception("Named relation '" + userName + "' does not exist")
     }
     val rId = ee.storageManager.ns(userName)
-    Relation[T](rId, userName, None)
+    Relation[T](rId, userName, None, init = false)
   }
 
   // TODO: also provide solve for multiple/all predicates, or return table so users can query over the derived DB

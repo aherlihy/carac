@@ -114,12 +114,12 @@ class TyQLExecutionEngine(val ddb: DuckDBStorageManager,
         // use temporary context to generate tree, then later set finalSolve based on TyQL AST
         val initCtx = TyQLInterpreterContext(ddb, this, () => ???)
         val (irTree, finalNode) = toCaracIR(tyqlAST, naive)(using initCtx)
-        println(s"schemas=${ddb.schema}")
         ddb.initEvaluation()
 
         val irCtx = TyQLInterpreterContext(ddb, this, () => finalNode.run(ddb).asInstanceOf[DuckDBEDB].execute_toSetOfSeq())
 
         println(s"IRTree from TyQL: ${ddb.printer.printIR(irTree)(using irCtx)}")
+        println(s"FinalNode from TyQL: ${ddb.printer.printIR(finalNode)(using irCtx)}")
 //        println(s"INIT STORAGE: ${storageManager.toString}")
         defaultJITOptions.mode match
           case Mode.Interpreted => solveInterpreted(irTree, irCtx)

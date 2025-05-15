@@ -14,7 +14,7 @@ import scala.quoted.staging
  * Used for both hand-written benchmarks (ex: TransitiveClosure) to be run on all configs, and also auto-generated (ex: Examples).
  */
 abstract class DLBenchmark {
-  val dotty = staging.Compiler.make(getClass.getClassLoader)
+  val dotty = staging.Compiler.make(getClass.getClassLoader)(using staging.Compiler.Settings.make(outDir = None, compilerArgs = List("-experimental")))
   def pretest(program: Program): Unit
   val toSolve: String
   val description: String
@@ -159,7 +159,7 @@ abstract class DLBenchmark {
   }
 
   def finish(): Unit = {
-    debug("in finish: ", () => programs.keys.mkString("[", ", ", "]"))
+//    debug("in finish: ", () => programs.keys.mkString("[", ", ", "]"))
 //    programs.keys.filter(k => k.contains("JITStaged")).foreach(k =>
 //      programs(k).ee.asInstanceOf[StagedExecutionEngine].waitForStragglers()
 //    )

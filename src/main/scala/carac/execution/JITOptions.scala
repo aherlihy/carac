@@ -34,7 +34,7 @@ case class JITOptions(
                        onlineSort: Boolean = false,
                        backend: Backend = Backend.Quotes,
                        fuzzy: Int = DEFAULT_FUZZY,
-                       dotty: staging.Compiler = staging.Compiler.make(getClass.getClassLoader),
+                       dotty: staging.Compiler = staging.Compiler.make(getClass.getClassLoader)(using staging.Compiler.Settings.make(outDir = None, compilerArgs = List("-experimental"))),
                        useGlobalContext: Boolean = true,
                        storage: String = "default"
                      ) {

@@ -35,7 +35,7 @@ class BenchCLI_tastyslistlibinverse extends tastyslistlibinverse_worst {
   val pattern = """.*examples/(.*?)/facts.*""".r
   val benchmark = pattern.findFirstMatchIn(factDirectory).get.group(1)
   var directory = null
-  val dotty = staging.Compiler.make(getClass.getClassLoader)
+  val dotty = staging.Compiler.make(getClass.getClassLoader)(using staging.Compiler.Settings.make(outDir = None, compilerArgs = List("-experimental")))
 
 //  @Setup(Level.Trial)
 //  def mkdirs(): Unit = {
@@ -182,7 +182,7 @@ class BenchCLI_tastyslistlib extends tastyslistlib_worst {
   val pattern = """.*examples/(.*?)/facts.*""".r
   val benchmark = pattern.findFirstMatchIn(factDirectory).get.group(1)
   var directory = null
-  val dotty = staging.Compiler.make(getClass.getClassLoader)
+  val dotty = staging.Compiler.make(getClass.getClassLoader)(using staging.Compiler.Settings.make(outDir = None, compilerArgs = List("-experimental")))
 
   //  @Setup(Level.Trial)
   //  def mkdirs(): Unit = {
@@ -329,7 +329,7 @@ class BenchCLI_ackermann extends ackermann_worst {
   val pattern = """.*examples/(.*?)/facts.*""".r
   val benchmark = pattern.findFirstMatchIn(factDirectory).get.group(1)
   var directory = null
-  val dotty = staging.Compiler.make(getClass.getClassLoader)
+  val dotty = staging.Compiler.make(getClass.getClassLoader)(using staging.Compiler.Settings.make(outDir = None, compilerArgs = List("-experimental")))
 
   //  @Setup(Level.Trial)
   //  def mkdirs(): Unit = {
@@ -476,7 +476,7 @@ class BenchCLI_cbaexprvalue extends cbaexprvalue_worst {
   val pattern = """.*examples/(.*?)/facts.*""".r
   val benchmark = pattern.findFirstMatchIn(factDirectory).get.group(1)
   var directory = null
-  val dotty = staging.Compiler.make(getClass.getClassLoader)
+  val dotty = staging.Compiler.make(getClass.getClassLoader)(using staging.Compiler.Settings.make(outDir = None, compilerArgs = List("-experimental")))
 
   //  @Setup(Level.Trial)
   //  def mkdirs(): Unit = {
@@ -623,7 +623,7 @@ class BenchCLI_equal extends equal_worst {
   val pattern = """.*examples/(.*?)/facts.*""".r
   val benchmark = pattern.findFirstMatchIn(factDirectory).get.group(1)
   var directory = null
-  val dotty = staging.Compiler.make(getClass.getClassLoader)
+  val dotty = staging.Compiler.make(getClass.getClassLoader)(using staging.Compiler.Settings.make(outDir = None, compilerArgs = List("-experimental")))
 
   //  @Setup(Level.Trial)
   //  def mkdirs(): Unit = {
@@ -770,7 +770,7 @@ class BenchCLI_prime extends prime_worst {
   val pattern = """.*examples/(.*?)/facts.*""".r
   val benchmark = pattern.findFirstMatchIn(factDirectory).get.group(1)
   var directory = null
-  val dotty = staging.Compiler.make(getClass.getClassLoader)
+  val dotty = staging.Compiler.make(getClass.getClassLoader)(using staging.Compiler.Settings.make(outDir = None, compilerArgs = List("-experimental")))
 
   //  @Setup(Level.Trial)
   //  def mkdirs(): Unit = {
@@ -917,7 +917,7 @@ class BenchCLI_fib extends fib_worst {
   val pattern = """.*examples/(.*?)/facts.*""".r
   val benchmark = pattern.findFirstMatchIn(factDirectory).get.group(1)
   var directory = null
-  val dotty = staging.Compiler.make(getClass.getClassLoader)
+  val dotty = staging.Compiler.make(getClass.getClassLoader)(using staging.Compiler.Settings.make(outDir = None, compilerArgs = List("-experimental")))
 
   //  @Setup(Level.Trial)
   //  def mkdirs(): Unit = {

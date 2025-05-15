@@ -122,7 +122,7 @@ case class DoWhileOp(toCmp: DB, override val children:IROp[Any]*)(using JITOptio
     var i = 0
     while ( {
       children.head.children.head.run(storageManager) // swap
-      println(s"DoWhile: DBs start of semi-naive iteration $i: ${storageManager.toString}")
+//      println(s"DoWhile: DBs start of semi-naive iteration $i: ${storageManager.toString}")
       children.head.children(1).run(storageManager)
 //      children.head.run(storageManager)
       i += 1
@@ -223,7 +223,7 @@ case class ProjectJoinFilterOp(rId: RelationId, var k: JoinIndexes, override val
     )
   override def run(storageManager: StorageManager): EDB =
     val inputs = children.map(s => s.run(storageManager))
-    println(s"inputs in SPJU=${inputs.map(_.factToString)} and k=${k.toStringWithNS(storageManager.ns)}")
+//    println(s"inputs in SPJU=${inputs.map(_.factToString)} and k=${k.toStringWithNS(storageManager.ns)}")
     val res = storageManager.selectProjectJoinHelper(
         inputs,
         rId,
