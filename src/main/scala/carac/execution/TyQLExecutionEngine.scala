@@ -16,11 +16,11 @@ class TyQLExecutionEngine(val ddb: DuckDBStorageManager,
   import tyql.TreePrettyPrinter.*
   val idbSchemas: mutable.Map[RelationId, Seq[(String, String)]] = mutable.Map.empty
 
-  def deUnion(ast: QueryIRNode): Seq[QueryIRNode] =
-    ast match
-      case NaryRelationOp(children, op, _, _) if op == "UNION" || op == "UNION ALL" =>
+  def deUnion(tyqlIR: QueryIRNode): Seq[QueryIRNode] =
+    tyqlIR match
+      case NaryRelationOp(children, op, _, _, _) if op == "UNION" || op == "UNION ALL" =>
         children.flatMap(deUnion)
-      case _ => Seq(ast)
+      case _ => Seq(tyqlIR)
   def resultTagToDatabaseType(t: ResultTag[?]): DatabaseType =
     t match
       case ResultTag.IntTag => DatabaseType.INTEGER
@@ -56,38 +56,34 @@ class TyQLExecutionEngine(val ddb: DuckDBStorageManager,
     // TODO: for now skip presort and pre-generating hashes
 
 
-  def extractSchemas(ast: QueryIRNode): Map[RelationId, (String, Seq[(String, DatabaseType)], Seq[QueryIRNode])] =
-    ast match
-      case MultiRecursiveRelationOp(alias, queries, finalQ, _, _) =>
+  def extractSchemas(tyqlIR: QueryIRNode): Map[RelationId, (String, Seq[(String, DatabaseType)], Seq[QueryIRNode])] =
+    tyqlIR match
+      case MultiRecursiveRelationOp(alias, queries, finalQ, _, linear, schema, _) =>
         // generate IDB for each recursive relation defined within stratum
         alias.zipWithIndex.map((a, i) =>
           val tempRID: RelationId = -(i + 2)
           val subqueries = deUnion(queries(i))
           val base = subqueries.head
-          val tag = base.ast match
-            case t: DatabaseAST[?] => t.qTag
-            case e: Expr[?, ?, ?] => e.tag
-            case _ => ???
-          val schema = tag match
+          // TODO: Move type tag into IR not just AST
+          val schema = base.schema match
             case ResultTag.NamedTupleTag(names, types) =>
               names.zip(types).map((name, typ) => (name, resultTagToDatabaseType(typ)))
             case _ => ???
           (tempRID, (alias(i), schema, subqueries))
         ).toMap
-      case _ => throw new Exception(s"Unimplemented: Currently only recursive queries are supported: $ast")
+      case _ => throw new Exception(s"Unimplemented: Currently only recursive queries are supported: $tyqlIR")
 
   def toCaracIR(tyqlAST: DatabaseAST[?], naive: Boolean)(using ctx: TyQLInterpreterContext): (IROp[?], IROp[EDB]) =
     val tyqlIR = tyqlAST.toQueryIR
     tyqlIR match
-      case MultiRecursiveRelationOp(aliases, queries, finalQIR, _, ast) =>
-        val linear = ast.asInstanceOf[MultiRecursive[?]].$linear.getOrElse(false)
+      case MultiRecursiveRelationOp(aliases, queries, finalQIR, _, linearIR, _, _) =>
+        val linear = linearIR.getOrElse(false)
         if linear then
           (SequenceOp(OTHER), TyQLSQLNode(tyqlIR.asInstanceOf[RelationOp], DB.EDB, -1))
         else
           val ruleSchemas = extractSchemas(tyqlIR)
           val ruleMap = ruleSchemas.map((rId, metadata) =>
             val (alias, schema, subqueries) = metadata
-            println(s"Adding rule rId=$rId, alias=$alias")
             if storageManager.ns.contains(rId) then
               throw new Exception(s"Using RelationId $rId for $alias, but already exists in storage")
             storageManager.ns(rId) = alias
@@ -99,10 +95,10 @@ class TyQLExecutionEngine(val ddb: DuckDBStorageManager,
           val finalQ = TyQLSQLNode(finalQIR, DB.Derived, ruleMap.keys.head)
           storageManager.initEvaluation()
           (program, finalQ)
-      case GroupByQuery(source, groupBy, having, _, _) =>
+      case GroupByQuery(source, groupBy, having, _, _, _) =>
         source match
-          case MultiRecursiveRelationOp(aliases, query, finalQ, carriedSymbols, ast) =>
-            val linear = ast.asInstanceOf[MultiRecursive[?]].$linear.getOrElse(false)
+          case MultiRecursiveRelationOp(aliases, query, finalQ, carriedSymbols, linearIR, _, _) =>
+            val linear = linearIR.getOrElse(false)
             if (linear)
               (SequenceOp(OTHER), TyQLSQLNode(tyqlIR.asInstanceOf[RelationOp], DB.EDB, -1))
             else
@@ -127,6 +123,7 @@ class TyQLExecutionEngine(val ddb: DuckDBStorageManager,
 
         println(s"IRTree from TyQL: ${ddb.printer.printIR(irTree)(using irCtx)}")
         println(s"FinalNode from TyQL: ${ddb.printer.printIR(finalNode)(using irCtx)}")
+        println(s"Schemas: ${ddb.schema.map((rId, s) => (ddb.ns(rId), s)).mkString("[\n\t", ",\n\t", "\n]")}")
 //        println(s"INIT STORAGE: ${storageManager.toString}")
         defaultJITOptions.mode match
           case Mode.Interpreted => solveInterpreted(irTree, irCtx)

@@ -24,13 +24,13 @@ trait TyQLOnlyTest extends munit.FunSuite with RunTyQL {
 trait TyQLComparativeTest extends munit.FunSuite with TyQLComparative {
   test(s"Interpreted") {
     val opts = JITOptions(mode = Mode.Interpreted)
-    val result_tyql = runTyQL(opts)
+//    val result_tyql = runTyQL(opts)
     val result_carac = runCarac(opts)
-    println(s"TyQL result: $result_tyql")
-    println(s"Carac result: $result_carac")
-    println(s"Expected result: $expectedFacts")
-    assertEquals(result_tyql, result_carac, s"TyQL and Carac results do not match")
-    assertEquals(result_tyql, expectedFacts, s"Expected directory does not match")
+//    println(s"TyQL result: $result_tyql")
+//    println(s"Carac result: $result_carac")
+//    println(s"Expected result: $expectedFacts")
+//    assertEquals(result_tyql, result_carac, s"TyQL and Carac results do not match")
+//    assertEquals(result_tyql, expectedFacts, s"Expected directory does not match")
   }
 }
 

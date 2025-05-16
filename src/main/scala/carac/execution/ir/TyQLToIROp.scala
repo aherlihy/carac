@@ -43,7 +43,7 @@ class TyQLToIROp(using val ctx: TyQLInterpreterContext)(using JITOptions) {
 
   def getPosition(from: Seq[RelationOp], arg: QueryIRNode, depsSchema: Seq[Seq[(String, DatabaseType)]]): (String, Constant) =
     arg match {
-      case SelectExpr(attrName, src, _) =>
+      case SelectExpr(attrName, src, _, _) =>
         val toFind = src match
           case QueryIRVar(toSub, name, _) =>
             toSub.alias
@@ -52,7 +52,7 @@ class TyQLToIROp(using val ctx: TyQLInterpreterContext)(using JITOptions) {
         val position = depsSchema.slice(0, fromIdx).map(_.length).sum + projIdx
 //        println(s"in SelectExpr: attrName=$attrName, from=$from, fromIdx=$fromIdx, projIdx=$projIdx, position=$position")
         ("v", position)
-      case Literal(stringRep, _) =>
+      case Literal(stringRep, _, _) =>
         ("c", stringRep)
     }
 
@@ -97,19 +97,18 @@ class TyQLToIROp(using val ctx: TyQLInterpreterContext)(using JITOptions) {
       head +: bodyAtoms
 
 
-  def jIdxHelper(rId: RelationId, from: Seq[RelationOp], where: Seq[QueryIRNode], project: Option[QueryIRNode]): JoinIndexes =
+  def jIdxHelper(rId: RelationId, from: Seq[RelationOp], where: Seq[QueryIRNode], project: Option[QueryIRNode], schema: ResultTag[?]): JoinIndexes =
     val deps = from.map { // Seq[RelationId]
-      case TableLeaf(rName, _, _) =>
+      case TableLeaf(rName, _, _, _) =>
         if !ctx.storageManager.ns.contains(rName) then
           throw new Exception(s"Relation $rName not found in storage")
         ctx.storageManager.ns(rName)
-      case RecursiveIRVar(rName, _, _) =>
+      case RecursiveIRVar(rName, _, _, _) =>
         if !ctx.storageManager.ns.contains(rName) then
           throw new Exception(s"Relation $rName not found in storage")
         ctx.storageManager.ns(rName)
       case _ => ???
     }
-    println(s"deps=$deps, ns=${ctx.ddb.ns.toString}")
     val depsSchema = deps.map(rId => // Seq[(AttrName, DatabaseType)]
       ctx.ddb.schema(rId)
     )
@@ -117,9 +116,9 @@ class TyQLToIROp(using val ctx: TyQLInterpreterContext)(using JITOptions) {
       depsSchema.flatten.indices.map(i => ("v", i.asInstanceOf[Constant]))
     else
       project.get match
-        case ProjectClause(children, ast) =>
+        case ProjectClause(children, _, _) =>
           children.map(c => c match
-            case AttrExpr(child, _, _) =>
+            case AttrExpr(child, _, _, _) =>
               getPosition(from, child, depsSchema)
           )
 
@@ -140,7 +139,7 @@ class TyQLToIROp(using val ctx: TyQLInterpreterContext)(using JITOptions) {
 
     def mapBinOp(c: QueryIRNode): Unit =
       c match {
-        case BinExprOp(lhs, rhs, op, ast) =>
+        case BinExprOp(lhs, rhs, op, _, ast) =>
           ast match
             case Expr.Eq(_, _) =>
               calculatePos(lhs, rhs)
@@ -172,18 +171,17 @@ class TyQLToIROp(using val ctx: TyQLInterpreterContext)(using JITOptions) {
 
   def queryIRToJoinIndex(rId: RelationId, queryIR: QueryIRNode): JoinIndexes =
     queryIR match
-      case SelectAllQuery(from, where, _, _) =>
-        println(s"SelectAllQuery: from=$from, where=$where")
-        jIdxHelper(rId, from, where, None)
-      case SelectQuery(project, from, where, _, _) =>
-        jIdxHelper(rId, from, where, Some(project))
+      case SelectAllQuery(from, where, _, schema, _) =>
+        jIdxHelper(rId, from, where, None, schema)
+      case SelectQuery(project, from, where, _, schema, _) =>
+        jIdxHelper(rId, from, where, Some(project), schema)
       case _ => ???
 
   def semiNaiveEvalRule(rId: RelationId, tyqlIR: Seq[QueryIRNode]): IROp[?] =
     val allRes = tyqlIR.map(subquery =>
-      println(s"For query: ${subquery.toSQLString()}:")
+//      println(s"For query: ${subquery.toSQLString()}:")
       val k = queryIRToJoinIndex(rId, subquery)
-      println(s"\tk=${k.toStringWithNS(ctx.ddb.ns)}}")
+//      println(s"\tk=${k.toStringWithNS(ctx.ddb.ns)}}")
       ctx.ee.insertIDB(rId, k)
 
       var idx = -1 // if dep is featured more than once, only use delta once, but at a different pos each time
@@ -223,10 +221,10 @@ class TyQLToIROp(using val ctx: TyQLInterpreterContext)(using JITOptions) {
 
   def naiveEvalRule(rId: RelationId, tyqlIR: Seq[QueryIRNode]): IROp[?] =
     val allRes = tyqlIR.map {
-      case SelectAllQuery(from, where, overrideAlias, ast) =>
+      case SelectAllQuery(from, where, _, _, _) =>
         if where.isEmpty && from.length == 1 then
           from.head match
-            case TableLeaf(rName, _, _) =>
+            case TableLeaf(rName, _, _, _) =>
               ScanOp(ctx.storageManager.ns(rName), DB.Derived)
             case _ => ???
         else

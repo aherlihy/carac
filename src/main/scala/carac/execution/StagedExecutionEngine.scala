@@ -394,7 +394,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
 
     val irTree = createIR(transformedAST)
 
-//    println(s"Carac IRTree: ${ storageManager.printer.printIR(irTree)}")
+    println(s"Carac IRTree: ${ storageManager.printer.printIR(irTree)}")
 //    println(s"INIT STORAGE: ${storageManager.toString}")
     defaultJITOptions.mode match
       case Mode.Interpreted => solveInterpreted(irTree, irCtx)

@@ -406,7 +406,6 @@ class DuckDBStorageManager(ns: NS = new NS(), indexed: Boolean = true) extends S
    * @param idbList
    */
   def verifyEDBs(idbList: Seq[RelationId], ruleHashes: Option[mutable.Map[RelationId, mutable.ArrayBuffer[String]]]): Unit = {
-    println(s"Verifying EDBs: ${idbList.map(ns(_))}")
     ns.rIds().foreach(rId =>
       if (!edbs.contains(rId) && !idbList.contains(rId))
         if (!schema.contains(rId))
@@ -612,24 +611,24 @@ class DuckDBStorageManager(ns: NS = new NS(), indexed: Boolean = true) extends S
       case DB.EDB => edb
     def translateSource(ir: RelationOp): RelationOp =
       val t = ir match
-        case MultiRecursiveRelationOp(aliases, query, finalQ, carriedSymbols, ast) =>
+        case MultiRecursiveRelationOp(aliases, query, finalQ, carriedSymbols, linear, schema, ast) =>
           val translatedQuery = query.map(translateSource)
           val translatedFinalQ = translateSource(finalQ)
-          MultiRecursiveRelationOp(aliases, translatedQuery, translatedFinalQ, carriedSymbols, ast)
-        case RecursiveIRVar(ptA, a, ast) =>
-          if db == DB.Derived || db == DB.Delta then RecursiveIRVar(s"${prefix}_$ptA", a, ast) else RecursiveIRVar(ptA, a, ast)
-        case SelectAllQuery(from, where, overrideAlias, ast) => SelectAllQuery(from.map(translateSource), where, overrideAlias, ast)
-        case SelectQuery(project, from, where, overrideAlias, ast) => SelectQuery(project, from.map(translateSource), where, overrideAlias, ast)
-        case NaryRelationOp(children, op, _, ast) => NaryRelationOp(children.map( c => c match
+          MultiRecursiveRelationOp(aliases, translatedQuery, translatedFinalQ, carriedSymbols, linear, schema, ast)
+        case RecursiveIRVar(ptA, a, s, ast) =>
+          if db == DB.Derived || db == DB.Delta then RecursiveIRVar(s"${prefix}_$ptA", a, s, ast) else RecursiveIRVar(ptA, a, s, ast)
+        case SelectAllQuery(from, where, overrideAlias, s, ast) => SelectAllQuery(from.map(translateSource), where, overrideAlias, s, ast)
+        case SelectQuery(project, from, where, overrideAlias, s, ast) => SelectQuery(project, from.map(translateSource), where, overrideAlias, s, ast)
+        case NaryRelationOp(children, op, _, s, ast) => NaryRelationOp(children.map( c => c match
           case r: RelationOp => translateSource(r)
           case _ => c
-        ), op, Some(ir.alias), ast)
-        case TableLeaf(tableName, _, ast) =>
+        ), op, Some(ir.alias), s, ast)
+        case TableLeaf(tableName, _, s, ast) =>
           // always transate EDBs
-          TableLeaf(s"${edb}_$tableName", Some(ir.alias), ast)
-        case GroupByQuery(source, groupBy, having, overrideAlias, ast) =>
-          GroupByQuery(translateSource(source), groupBy, having, Some(ir.alias), ast)  
-        case _ => 
+          TableLeaf(s"${edb}_$tableName", Some(ir.alias), s, ast)
+        case GroupByQuery(source, groupBy, having, overrideAlias, s, ast) =>
+          GroupByQuery(translateSource(source), groupBy, having, Some(ir.alias), s, ast)
+        case _ =>
           println(s"Translating source: found other: ${ir}")
           ir
       t.appendFlags(ir.flags)
