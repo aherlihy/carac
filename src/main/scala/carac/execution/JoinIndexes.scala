@@ -105,7 +105,7 @@ object JoinIndexes {
 
     // produces (atom, { # repeated vars => atom } )
     val cxns = precalculatedCxns.getOrElse(
-      calculateCxns(rule)
+      calculateCxns(body)
     )
 
     new JoinIndexes(bodyVars, constants.to(mutable.Map), projects, deps, rule, cxns)
