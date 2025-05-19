@@ -160,16 +160,16 @@ class IRTreeGenerator(using val ctx: CaracInterpreterContext)(using JITOptions) 
   def generateTopLevelProgram(ast: ASTNode, naive: Boolean): IROp[Any] = {
     ast match {
       case ProgramNode(ruleMap) =>
-        val scc = ctx.precedenceGraph.scc(ctx.toSolve)
+        val scc = ctx.precedenceGraph.idbs.toSeq//scc(ctx.toSolve)
         val innerProgram =
-          if (scc.length <= 1) // || !stratified)
-            if (naive)
-              generateNaive(ruleMap, scc.flatten)
-            else
-              generateSemiNaive(ruleMap, scc.flatten)
-          else
-            val strata = scc.map(stratum => stratum.map(r => (r, ruleMap(r))).to(mutable.Map))
-            generateStratified(strata, naive)
+//          if (scc.length <= 1) // || !stratified)
+//            if (naive)
+//              generateNaive(ruleMap, scc.flatten)
+//            else
+              generateSemiNaive(ruleMap, scc)//.flatten)
+//          else
+//            val strata = scc.map(stratum => stratum.map(r => (r, ruleMap(r))).to(mutable.Map))
+//            generateStratified(strata, naive)
         ProgramOp(innerProgram)
       case _ => throw new Exception("Non-root AST passed to IR Generator")
     }

@@ -553,6 +553,7 @@ class DuckDBStorageManager(ns: NS = new NS(), indexed: Boolean = true) extends S
 
     val plan = s"(SELECT $projectClause FROM $fromClause$whereClause EXCEPT (SELECT * FROM ${databases(derivedIdx).get(rId, ns(rId)).prefixedName}))"
 
+//    println(s"PLAN = $plan")
     val newSchema = projectAliasesTypes.map(_._2).zipWithIndex.map((s, i) => (s"c$i", s))
 
     DuckDBEDB(rId, ns(rId), tmp, runQuery, Some(newSchema), Some(plan))

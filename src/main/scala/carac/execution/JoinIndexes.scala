@@ -105,20 +105,24 @@ object JoinIndexes {
 
     // produces (atom, { # repeated vars => atom } )
     val cxns = precalculatedCxns.getOrElse(
-      body.zipWithIndex.map((atom, idx) => (
-        atom.hash,
-        body.zipWithIndex
-          .map((atom2, idx2) =>
-            (idx2, atom2.hash, atom.terms.filter(t => t.isInstanceOf[Variable]).intersect(atom2.terms).size))
-          .filter((idx2, rId, count) => idx != idx2 && count != 0)
-          .map(t => (t._2, t._3))
-          .groupBy(_._2)
-          .map((count, hashs) => (count, hashs.map((hash, count2) => hash).toSeq))
-          .to(mutable.Map)
-      )).to(mutable.Map)
+      calculateCxns(rule)
     )
 
     new JoinIndexes(bodyVars, constants.to(mutable.Map), projects, deps, rule, cxns)
+  }
+
+  def calculateCxns(body: Seq[Atom]): mutable.Map[String, mutable.Map[Int, Seq[String]]] = {
+    body.zipWithIndex.map((atom, idx) => (
+      atom.hash,
+      body.zipWithIndex
+        .map((atom2, idx2) =>
+          (idx2, atom2.hash, atom.terms.filter(t => t.isInstanceOf[Variable]).intersect(atom2.terms).size))
+        .filter((idx2, rId, count) => idx != idx2 && count != 0)
+        .map(t => (t._2, t._3))
+        .groupBy(_._2)
+        .map((count, hashs) => (count, hashs.map((hash, count2) => hash).toSeq))
+        .to(mutable.Map)
+    )).to(mutable.Map)
   }
 
   // used to approximate poor user-defined order

@@ -5,6 +5,8 @@ import carac.storage.{DatabaseType, RelationId, StorageManager, StorageTerm}
 
 
 trait ExecutionEngine {
+  var relCounter: Int = 0
+  var varCounter: Int = 0
   val precedenceGraph: PrecedenceGraph
   val storageManager: StorageManager // TODO: exposed for testing, for now
   def initRelation(rId: RelationId, name: String, schemaOpt: Option[Seq[(String, DatabaseType)]]): Unit

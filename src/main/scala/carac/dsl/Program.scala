@@ -10,18 +10,16 @@ import scala.collection.immutable.ArraySeq
 // TODO: better to have program as given instance?
 class Program(engine: ExecutionEngine) extends AbstractProgram {
   given ee: ExecutionEngine = engine
-  var varCounter = 0
   def variable(): Variable = {
-    varCounter += 1
-    Variable(varCounter - 1)
+    ee.varCounter += 1
+    Variable(ee.varCounter - 1)
   }
-  var relCounter = 0
-  def relation[T <: Constant](userName: String = relCounter.toString, schema: Option[Seq[(String, DatabaseType)]] = None): Relation[T] = {
+  def relation[T <: Constant](userName: String = ee.relCounter.toString, schema: Option[Seq[(String, DatabaseType)]] = None): Relation[T] = {
     if (ee.storageManager.ns.contains(userName)) {
       throw new Exception("Named relation '" + userName + "' already exists")
     }
-    relCounter += 1
-    Relation[T](relCounter - 1, userName, schema)
+    ee.relCounter += 1
+    Relation[T](ee.relCounter - 1, userName, schema)
   }
 
   def namedRelation[T <: Constant](userName: String): Relation[T] = {

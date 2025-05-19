@@ -61,7 +61,8 @@ class TyQLExecutionEngine(val ddb: DuckDBStorageManager,
       case MultiRecursiveRelationOp(alias, queries, finalQ, _, linear, schema, _) =>
         // generate IDB for each recursive relation defined within stratum
         alias.zipWithIndex.map((a, i) =>
-          val tempRID: RelationId = -(i + 2)
+          relCounter += 1
+          val tempRID: RelationId = relCounter
           val subqueries = deUnion(queries(i))
           val base = subqueries.head
           // TODO: Move type tag into IR not just AST
@@ -121,13 +122,14 @@ class TyQLExecutionEngine(val ddb: DuckDBStorageManager,
 
         val irCtx = TyQLInterpreterContext(ddb, this, () => finalNode.run(ddb).asInstanceOf[DuckDBEDB].execute_toSetOfSeq())
 
-        println(s"IRTree from TyQL: ${ddb.printer.printIR(irTree)(using irCtx)}")
-        println(s"FinalNode from TyQL: ${ddb.printer.printIR(finalNode)(using irCtx)}")
-        println(s"Schemas: ${ddb.schema.map((rId, s) => (ddb.ns(rId), s)).mkString("[\n\t", ",\n\t", "\n]")}")
+//        println(s"IRTree from TyQL: ${ddb.printer.printIR(irTree)(using irCtx)}")
+//        println(s"FinalNode from TyQL: ${ddb.printer.printIR(finalNode)(using irCtx)}")
+//        println(s"Schemas: ${ddb.schema.map((rId, s) => (ddb.ns(rId), s)).mkString("[\n\t", ",\n\t", "\n]")}")
 //        println(s"INIT STORAGE: ${storageManager.toString}")
-        defaultJITOptions.mode match
+        val res = defaultJITOptions.mode match
           case Mode.Interpreted => solveInterpreted(irTree, irCtx)
           case Mode.Compiled => solveCompiled(irTree, irCtx)
           case Mode.JIT => solveJIT(irTree, irCtx)
+        res
       case _ => throw new Exception(s"Unimplemented: currently only DuckDBStorageManager is supported for TyQL frontend")
 }

@@ -63,43 +63,40 @@ class TyQLToIROp(using val ctx: TyQLInterpreterContext)(using JITOptions) {
 
   def toAtomsFromK(rId: RelationId, varIndexes: Seq[Seq[Int]], constIndexes: mutable.Map[Int, Constant], projIndexes: Seq[(String, Constant)], deps: Seq[RelationId], depsSchema: Seq[Seq[(String, DatabaseType)]]): Seq[Atom] =
       val allTerms = mutable.Map[Int, Term]() // flat input position -> Variable or Constant
-      val seenVars = mutable.Map[Int, Variable]() // normalized to one Var per position
 
-      varIndexes.foreach {
-        case Seq(i1, i2) =>
-          val v = seenVars.getOrElseUpdate(i1, Variable(i1))
-          seenVars(i2) = v
-          allTerms(i1) = v
-          allTerms(i2) = v
-      }
+      val idxToVar = varIndexes.flatMap(idxsOfShared =>
+        ctx.ee.varCounter += 1
+        val newVar = Variable(ctx.ee.varCounter - 1)
+        idxsOfShared.map(i => (i, newVar))
+      ).toMap
 
-      constIndexes.foreach { case (idx, const) =>
-        allTerms(idx) = const
-      }
-
-      // fill in remaining positions with anonymous vars
-      for i <- 0 until depsSchema.flatten.size do
-        if !allTerms.contains(i) then
-          allTerms(i) = Variable(i, anon = true)
+      var offset = 0
+      val posToTerm = mutable.Map[Int, Term]()
+      val body = deps.zip(depsSchema).map((rId, schema) =>
+        val arity = schema.size
+        val terms = (offset until offset + arity).map(pos =>
+          val term = if idxToVar.contains(pos) then
+            idxToVar(pos)
+          else if constIndexes.contains(pos) then
+            constIndexes(pos)
+          else
+            ctx.ee.varCounter += 1
+            Variable(ctx.ee.varCounter - 1)
+          posToTerm(pos) = term
+          term
+        )
+        offset += arity
+        Atom(rId, collection.immutable.ArraySeq.from(terms), negated = false)
+      )
 
       // construct head atom using projected positions
       val headTerms = projIndexes.map {
-        case ("v", pos: Int) => allTerms(pos)
+        case ("v", pos: Int) => posToTerm(pos)
         case ("c", c: Constant) => c
       }
 
       val head = Atom(rId, collection.immutable.ArraySeq.from(headTerms), negated = false)
-
-      // construct one atom per relation in the FROM clause
-      val bodyAtoms = deps.zipWithIndex.map { case (relId, idx) =>
-        val arity = depsSchema(idx).size
-        val offset = depsSchema.take(idx).map(_.size).sum
-
-        val terms = (0 until arity).map(j => allTerms(offset + j)).to(collection.immutable.ArraySeq)
-        Atom(rId, terms, negated = false)
-      }
-
-      head +: bodyAtoms
+      head +: body
 
 
   def jIdxHelper(rId: RelationId, from: Seq[RelationOp], where: Seq[QueryIRNode], project: Option[QueryIRNode], schema: ResultTag[?]): JoinIndexes =
@@ -162,6 +159,7 @@ class TyQLToIROp(using val ctx: TyQLInterpreterContext)(using JITOptions) {
 
     val isEdb = varIndexes.isEmpty && constIndexes.isEmpty && deps.forall(ctx.storageManager.edbContains)
     val ruleAtoms = toAtomsFromK(rId, varIndexes.toSeq, constIndexes, projIndexes, deps, depsSchema)
+//    println(s"RuleAtom=${ctx.ddb.printer.ruleToString(ruleAtoms)}")
     //    println(s"deps=$deps, depsSchema=$depsSchema, projIndexes=$projIndexes")
     JoinIndexes(
       varIndexes.toSeq,
@@ -169,7 +167,7 @@ class TyQLToIROp(using val ctx: TyQLInterpreterContext)(using JITOptions) {
       projIndexes,
       deps.map(d => (PredicateType.POSITIVE, d)),
       ruleAtoms,
-      mutable.Map(),
+      JoinIndexes.calculateCxns(ruleAtoms.drop(1)),
       edb = isEdb
     )
 
