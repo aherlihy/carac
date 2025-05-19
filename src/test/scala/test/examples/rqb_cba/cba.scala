@@ -69,8 +69,8 @@ trait rqb_cba extends TyQLComparative {
       vars = Table[Vars]("vars"),
       abs = Table[Abs]("abs"),
       app = Table[App]("app"),
-      baseData = Table[BaseData]("baseData"),
-      baseCtrl = Table[BaseCtrl]("baseCtrl")
+      baseData = Table[BaseData]("baseDataVar"),
+      baseCtrl = Table[BaseCtrl]("baseCtrlVar")
     )
     val dataTermBase = tyqlDB.term.flatMap(t =>
       tyqlDB.lits
@@ -165,13 +165,13 @@ trait rqb_cba extends TyQLComparative {
     duckDBStorageManager.declareTable(abs.id, absS)
     duckDBStorageManager.edbs.initializeTable(abs.id, "abs", absS)
 
-    val baseData = program.relation("baseData")
+    val baseData = program.relation("baseDataVar")
     val baseDataS = Seq(("x", DatabaseType.INTEGER), ("y", DatabaseType.TEXT))
     duckDBStorageManager.declareTable(baseData.id, baseDataS)
-    duckDBStorageManager.edbs.initializeTable(baseData.id, "baseData", baseDataS)
+    duckDBStorageManager.edbs.initializeTable(baseData.id, "baseDataVar", baseDataS)
 
-    val baseCtrl = program.relation("baseCtrl")
+    val baseCtrl = program.relation("baseCtrlVar")
     val baseCtrlS = Seq(("x", DatabaseType.INTEGER), ("y", DatabaseType.INTEGER))
     duckDBStorageManager.declareTable(baseCtrl.id, baseCtrlS)
-    duckDBStorageManager.edbs.initializeTable(baseCtrl.id, "baseCtrl", baseCtrlS)
+    duckDBStorageManager.edbs.initializeTable(baseCtrl.id, "baseCtrlVar", baseCtrlS)
 }

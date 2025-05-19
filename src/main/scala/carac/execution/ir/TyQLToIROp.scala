@@ -52,8 +52,13 @@ class TyQLToIROp(using val ctx: TyQLInterpreterContext)(using JITOptions) {
         val position = depsSchema.slice(0, fromIdx).map(_.length).sum + projIdx
 //        println(s"in SelectExpr: attrName=$attrName, from=$from, fromIdx=$fromIdx, projIdx=$projIdx, position=$position")
         ("v", position)
-      case Literal(stringRep, _, _) =>
-        ("c", stringRep)
+      case Literal(stringRep, schema, _) =>
+        val str  = schema match
+          case ResultTag.IntTag =>
+            stringRep.toInt
+          case ResultTag.StringTag =>
+            stringRep.slice(1, stringRep.length - 1) // remove quotes
+        ("c", str)
     }
 
   def toAtomsFromK(rId: RelationId, varIndexes: Seq[Seq[Int]], constIndexes: mutable.Map[Int, Constant], projIndexes: Seq[(String, Constant)], deps: Seq[RelationId], depsSchema: Seq[Seq[(String, DatabaseType)]]): Seq[Atom] =

@@ -223,14 +223,14 @@ case class ProjectJoinFilterOp(rId: RelationId, var k: JoinIndexes, override val
     )
   override def run(storageManager: StorageManager): EDB =
     val inputs = children.map(s => s.run(storageManager))
-    println(s"inputs in SPJU=${inputs.map(_.factToString)} and k=${k.toStringWithNS(storageManager.ns)}")
+//    println(s"inputs in SPJU=${inputs.map(_.factToString)} and k=${k.toStringWithNS(storageManager.ns)}")
     val res = storageManager.selectProjectJoinHelper(
         inputs,
         rId,
         k.hash,
         jitOptions.onlineSort
       )
-    println(s"=> result of SPJU on ${storageManager.printer.ruleToString(k.atoms)}: ${storageManager.ns(rId)}=${res.factToString}")
+//    println(s"=> result of SPJU on ${storageManager.printer.ruleToString(k.atoms)}: ${storageManager.ns(rId)}=${res.factToString}")
     res
 }
 

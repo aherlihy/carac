@@ -36,6 +36,7 @@ class Printer[S <: StorageManager](val sm: S) {
   def edbToString(db: Database[?]): String = {
     immutable.ListMap(db.toSeq.sortBy(_._1)*)
       .map((k, v) => (sm.ns(k), factToString(v)))
+      //      .toSeq.sortBy(_._1).map((k, v) => s"$k -> $v")
       .mkString("[\n  ", ",\n  ", "]")
   }
 
