@@ -11,6 +11,7 @@ import test.examples.rqb_cspa.rqb_cspa
 import test.examples.rqb_ancestry.rqb_ancestry
 import test.examples.rqb_sssp.rqb_sssp
 import test.examples.rqb_bom.rqb_bom
+import tyql.DatabaseAST
 
 import java.nio.file.{Files, Paths}
 import java.util.concurrent.TimeUnit
@@ -387,9 +388,9 @@ class BenchRQB_cba_embedded() extends rqb_cba {
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class BenchRQB_ancestry_souffle extends rqb_ancestry {
+  val factDirectory = s"$directory/facts"
   val pattern = """.*examples/(.*?)/facts.*""".r
-  val benchmark = pattern.findFirstMatchIn(directory).get.group(1)
-//  var directory = null
+  val benchmark = pattern.findFirstMatchIn(factDirectory).get.group(1)
 
   RQB_Bench.cleanup(benchmark, linear)
   val exit = Process(Seq("src/test/scala/carac/benchmarks/souffle/souffle-driver.sh", SOUFFLE_BIN, benchmark, "generate-preprofile")).!
@@ -587,9 +588,9 @@ class BenchRQB_ancestry_embedded() extends rqb_ancestry {
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
 class BenchRQB_sssp_souffle extends rqb_sssp {
+  val factDirectory = s"$directory/facts"
   val pattern = """.*examples/(.*?)/facts.*""".r
-  val benchmark = pattern.findFirstMatchIn(directory).get.group(1)
-//  var directory = null
+  val benchmark = pattern.findFirstMatchIn(factDirectory).get.group(1)
 
   RQB_Bench.cleanup(benchmark, linear)
   val exit = Process(Seq("src/test/scala/carac/benchmarks/souffle/souffle-driver.sh", SOUFFLE_BIN, benchmark, "generate-preprofile")).!
