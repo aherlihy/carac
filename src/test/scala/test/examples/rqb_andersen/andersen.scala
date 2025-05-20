@@ -17,6 +17,7 @@ class TyQLAndersenTest extends TyQLComparativeTest with rqb_andersen
 trait rqb_andersen extends TyQLComparative {
  val directory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/rqb_andersen"
  val toSolve = "pointsTo"
+  val linear = false
 
   override def loadData(program: Program): Unit =
     loadDataFromFile(program, directory)

@@ -15,6 +15,7 @@ class TyQLCBA extends TyQLComparativeTest with rqb_cba
 trait rqb_cba extends TyQLComparative {
   val directory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/rqb_cba"
   val toSolve = "data_term"
+  val linear = false
 
   override def loadData(program: Program): Unit =
     loadDataFromFile(program, directory)
@@ -27,10 +28,10 @@ trait rqb_cba extends TyQLComparative {
     val lits = program.namedRelation[Constant]("lits")
     val vars = program.namedRelation[Constant]("vars")
     val abs = program.namedRelation[Constant]("abs")
-    val data_term = program.relation[Constant]("recursive1")//data_term")
-    val data_var = program.relation[Constant]("recursive2")//data_var")
-    val ctrl_term = program.relation[Constant]("recursive3")//ctrl_term")
-    val ctrl_var = program.relation[Constant]("recursive4")//ctrl_var")
+    val data_term = program.relation[Constant]("data_term")
+    val data_var = program.relation[Constant]("data_var")
+    val ctrl_term = program.relation[Constant]("ctrl_term")
+    val ctrl_var = program.relation[Constant]("ctrl_var")
 
     val i, v, l, x, t1, f, b, a = program.variable()
     val any1, any2 = program.variable()

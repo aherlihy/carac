@@ -17,6 +17,7 @@ class TyQLSSSPTest extends TyQLOnlyTest with rqb_sssp
 trait rqb_sssp extends RunTyQL {
   val directory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/rqb_sssp"
   val toSolve = "cost"
+  val linear = true
 
   override def loadData(program: Program): Unit =
     loadDataFromFile(program, directory)
@@ -50,11 +51,11 @@ trait rqb_sssp extends RunTyQL {
 
   val sqlString =
     """WITH RECURSIVE recursive1 AS
-        ((SELECT c0 as dst, c1 as cost FROM edb_base as edb_base1)
+        ((SELECT dst as dst, cost as cost FROM edb_base as edb_base1)
         UNION
-        ((SELECT edb_edge3.c1 as dst, ref1.cost + edb_edge3.c2 as cost
+        ((SELECT edb_edge3.dst as dst1, ref1.cost + edb_edge3.cost as cost1
           FROM edb_edge as edb_edge3, recursive1 as ref1
-          WHERE ref1.dst = edb_edge3.c0)))
+          WHERE ref1.dst = edb_edge3.src)))
       SELECT * FROM recursive1
     """
   override def loadSchema(program: Program, storage: DuckDBStorageManager): Unit =

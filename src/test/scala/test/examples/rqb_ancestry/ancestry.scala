@@ -14,6 +14,7 @@ class TyQLAncestryTest extends TyQLOnlyTest with rqb_ancestry
 trait rqb_ancestry extends RunTyQL {
   val directory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/rqb_ancestry"
   val toSolve = "generation"
+  val linear = true
 
   override def loadData(program: Program): Unit =
     loadDataFromFile(program, directory)
@@ -41,7 +42,7 @@ trait rqb_ancestry extends RunTyQL {
 
   val sqlString = //"""SELECT edb_parents1.c1 as name, 1 as gen FROM edb_parents as edb_parents1 WHERE edb_parents1.c0 = '1'"""
     """WITH RECURSIVE recursive1 AS
-        ((SELECT edb_parents1.c1 as name, 1 as gen FROM edb_parents as edb_parents1 WHERE edb_parents1.c0 = '1') UNION ((SELECT edb_parents3.c1 as name, ref3.gen + 1 as gen FROM edb_parents as edb_parents3, recursive1 as ref3 WHERE edb_parents3.c0 = ref3.name)))
+        ((SELECT edb_parents1.child as name, 1 as gen FROM edb_parents as edb_parents1 WHERE edb_parents1.parent = '1') UNION ((SELECT edb_parents3.child as name, ref3.gen + 1 as gen FROM edb_parents as edb_parents3, recursive1 as ref3 WHERE edb_parents3.parent = ref3.name)))
         SELECT recref0.name as name FROM recursive1 as recref0 WHERE recref0.gen = 2
     """
   override def loadSchema(program: Program, storage: DuckDBStorageManager): Unit =
