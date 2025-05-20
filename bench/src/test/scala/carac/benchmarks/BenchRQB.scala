@@ -144,13 +144,13 @@ class BenchRQB_andersen_warm extends rqb_andersen {
     run_warm_carac(blackhole, mode, engine)
   }
 
-  @Benchmark def warm_lambda_collidx_carac(blackhole: Blackhole): Unit = {
-    val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
-    val storageManager = new IndexedStorageManager()
-    val engine = new StagedExecutionEngine(storageManager, jo)
-    val mode = "lambda_collidx_carac"
-    run_warm_carac(blackhole, mode, engine)
-  }
+//  @Benchmark def warm_lambda_collidx_carac(blackhole: Blackhole): Unit = {
+//    val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
+//    val storageManager = new IndexedStorageManager()
+//    val engine = new StagedExecutionEngine(storageManager, jo)
+//    val mode = "lambda_collidx_carac"
+//    run_warm_carac(blackhole, mode, engine)
+//  }
 }
 
 @Fork(1) // # of jvms that it will use
@@ -199,11 +199,11 @@ class BenchRQB_andersen_embedded() extends rqb_andersen {
     )
   }
 
-  @Benchmark def embedded_lambda_collidx_carac(blackhole: Blackhole): Unit = {
-    blackhole.consume(
-      caracQueryColl.solve()
-    )
-  }
+//  @Benchmark def embedded_lambda_collidx_carac(blackhole: Blackhole): Unit = {
+//    blackhole.consume(
+//      caracQueryColl.solve()
+//    )
+//  }
 
   @Benchmark def embedded_lambda_ddbn_carac(blackhole: Blackhole): Unit = {
     blackhole.consume(
