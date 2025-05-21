@@ -18,7 +18,7 @@ import java.util.concurrent.TimeUnit
 import scala.sys.process.Process
 import scala.util.Using
 
-val SOUFFLE_BIN="souffle"///scratch/herlihy/souffle/build/src/souffle"
+val SOUFFLE_BIN="/scratch/herlihy/souffle/build/src/souffle"
 
 object RQB_Bench {
   def cleanup(benchmark: String, linear: Boolean): Unit = {
@@ -187,14 +187,14 @@ class BenchRQB_andersen_caql_embedded() extends rqb_andersen {
   val caracQueryColl = generateCarac(coll_program_carac)
   val caracQueryDDb = generateCarac(ddb_program_carac)
 
-  @Benchmark def tyqlWQ_ddbn(blackhole: Blackhole): Unit = {
+  @Benchmark def tyql_ddbn(blackhole: Blackhole): Unit = {
     val query = generateTyQL(ddb_program_tyql2)
     blackhole.consume(
       ddb_engine_tyql2.solveTyQL(query)
     )
   }
 
-  @Benchmark def tyql_ddbn(blackhole: Blackhole): Unit = {
+  @Benchmark def tyqlNQ_ddbn(blackhole: Blackhole): Unit = {
     blackhole.consume(
       ddb_engine_tyql.solveTyQL(tyqlQuery)
     )
@@ -371,14 +371,14 @@ class BenchRQB_cba_caql_embedded() extends rqb_cba {
   val caracQueryColl = generateCarac(coll_program_carac)
   val caracQueryDDb = generateCarac(ddb_program_carac)
 
-  @Benchmark def tyqlWQ_ddbn(blackhole: Blackhole): Unit = {
+  @Benchmark def tyql_ddbn(blackhole: Blackhole): Unit = {
     val query = generateTyQL(ddb_program_tyql2)
     blackhole.consume(
       ddb_engine_tyql2.solveTyQL(query)
     )
   }
 
-  @Benchmark def tyql_ddbn(blackhole: Blackhole): Unit = {
+  @Benchmark def tyqlNQ_ddbn(blackhole: Blackhole): Unit = {
     blackhole.consume(
       ddb_engine_tyql.solveTyQL(tyqlQueryDDB)
     )
@@ -570,13 +570,13 @@ class BenchRQB_ancestry_caql_embedded() extends rqb_ancestry {
 //  val caracQueryColl = generateCarac(coll_program_carac)
 //  val caracQueryDDb = generateCarac(ddb_program_carac)
 
-  @Benchmark def tyql_ddbn(blackhole: Blackhole): Unit = {
+  @Benchmark def tyqlNQ_ddbn(blackhole: Blackhole): Unit = {
     blackhole.consume(
       ddb_engine_tyql.solveTyQL(tyqlQuery)
     )
   }
 
-  @Benchmark def tyqlWQ_ddbn(blackhole: Blackhole): Unit = {
+  @Benchmark def tyql_ddbn(blackhole: Blackhole): Unit = {
     val query = generateTyQL(ddb_program_tyql2)
     blackhole.consume(
       ddb_engine_tyql2.solveTyQL(query)
@@ -770,13 +770,13 @@ class BenchRQB_sssp_caql_embedded() extends rqb_sssp {
   //  val caracQueryColl = generateCarac(coll_program_carac)
   //  val caracQueryDDb = generateCarac(ddb_program_carac)
 
-  @Benchmark def tyql_ddbn(blackhole: Blackhole): Unit = {
+  @Benchmark def tyqlNQ_ddbn(blackhole: Blackhole): Unit = {
     blackhole.consume(
       ddb_engine_tyql.solveTyQL(tyqlQuery)
     )
   }
 
-  @Benchmark def tyqlWQ_ddbn(blackhole: Blackhole): Unit = {
+  @Benchmark def tyql_ddbn(blackhole: Blackhole): Unit = {
     val query = generateTyQL(ddb_program_tyql2)
     blackhole.consume(
       ddb_engine_tyql2.solveTyQL(query)
