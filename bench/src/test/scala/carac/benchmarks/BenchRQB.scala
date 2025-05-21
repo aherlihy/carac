@@ -18,7 +18,7 @@ import java.util.concurrent.TimeUnit
 import scala.sys.process.Process
 import scala.util.Using
 
-val SOUFFLE_BIN="/scratch/herlihy/souffle/build/src/souffle"
+val SOUFFLE_BIN="souffle"///scratch/herlihy/souffle/build/src/souffle"
 
 object RQB_Bench {
   def cleanup(benchmark: String, linear: Boolean): Unit = {
@@ -66,22 +66,22 @@ class BenchRQB_andersen_souffle extends rqb_andersen {
     if (exitCode != 0) throw new Exception(s"Souffle $mode failed with code $exitCode")
     blackhole.consume(exitCode)
   }
-  @Benchmark def souffle__compile(blackhole: Blackhole): Unit =
+  @Benchmark def souffle_compile(blackhole: Blackhole): Unit =
     run_souffle("compile", blackhole)
 
-  @Benchmark def souffle__interp(blackhole: Blackhole): Unit =
+  @Benchmark def souffle_interp(blackhole: Blackhole): Unit =
     run_souffle("interp", blackhole)
 
-  @Benchmark def souffle_profile_compile(blackhole: Blackhole): Unit =
+  @Benchmark def souffle_profilecompile(blackhole: Blackhole): Unit =
     run_souffle("profile-compile", blackhole)
 
-  @Benchmark def souffle_profile_interp(blackhole: Blackhole): Unit =
+  @Benchmark def souffle_profileinterp(blackhole: Blackhole): Unit =
     run_souffle("profile-interp", blackhole)
 
-  @Benchmark def zsouffle_preprofiled_compile(blackhole: Blackhole): Unit =
+  @Benchmark def souffle_preprofiledcompile(blackhole: Blackhole): Unit =
     run_souffle("preprofiled-compile", blackhole)
 
-  @Benchmark def zsouffle_preprofiled_interp(blackhole: Blackhole): Unit =
+  @Benchmark def souffle_preprofiledinterp(blackhole: Blackhole): Unit =
     run_souffle("preprofiled-interp", blackhole)
 }
 
@@ -91,7 +91,7 @@ class BenchRQB_andersen_souffle extends rqb_andersen {
 @State(Scope.Thread)
 //@TearDown(Level.Invocation)
 @BenchmarkMode(Array(Mode.AverageTime))
-class BenchRQB_andersen_warm extends rqb_andersen {
+class BenchRQB_andersen_caql_warm extends rqb_andersen {
   val factDirectory = s"$directory/facts"
   val pattern = """.*examples/(.*?)/facts.*""".r
   val benchmark = pattern.findFirstMatchIn(factDirectory).get.group(1)
@@ -128,7 +128,7 @@ class BenchRQB_andersen_warm extends rqb_andersen {
     engine.storageManager.cleanup()
   }
 
-  @Benchmark def warm_lambda_ddbn_tyql(blackhole: Blackhole): Unit = {
+  @Benchmark def tyql_ddbn(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
     val storageManager = new DuckDBStorageManager(indexed = false)
     val engine = new TyQLExecutionEngine(storageManager, jo)
@@ -136,7 +136,7 @@ class BenchRQB_andersen_warm extends rqb_andersen {
     run_warm_tyql(blackhole, mode, engine)
   }
 
-  @Benchmark def warm_lambda_ddbn_carac(blackhole: Blackhole): Unit = {
+  @Benchmark def carac_ddbn(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
     val storageManager = new DuckDBStorageManager(indexed = false)
     val engine = new StagedExecutionEngine(storageManager, jo)
@@ -144,7 +144,7 @@ class BenchRQB_andersen_warm extends rqb_andersen {
     run_warm_carac(blackhole, mode, engine)
   }
 
-//  @Benchmark def warm_lambda_collidx_carac(blackhole: Blackhole): Unit = {
+//  @Benchmark def carac_collidx(blackhole: Blackhole): Unit = {
 //    val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
 //    val storageManager = new IndexedStorageManager()
 //    val engine = new StagedExecutionEngine(storageManager, jo)
@@ -158,7 +158,7 @@ class BenchRQB_andersen_warm extends rqb_andersen {
 @Measurement(iterations = 3, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
-class BenchRQB_andersen_embedded() extends rqb_andersen {
+class BenchRQB_andersen_caql_embedded() extends rqb_andersen {
   val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
 
   val ddb_storageManager_tyql = new DuckDBStorageManager(indexed = false)
@@ -186,26 +186,26 @@ class BenchRQB_andersen_embedded() extends rqb_andersen {
   val caracQueryColl = generateCarac(coll_program_carac)
   val caracQueryDDb = generateCarac(ddb_program_carac)
 
-  @Benchmark def embedded_lambda_ddbn_tyql_wquery(blackhole: Blackhole): Unit = {
+  @Benchmark def tyqlWQ_ddbn(blackhole: Blackhole): Unit = {
     val query = generateTyQL(ddb_program_tyql2)
     blackhole.consume(
       ddb_engine_tyql2.solveTyQL(query)
     )
   }
 
-  @Benchmark def embedded_lambda_ddbn_tyql(blackhole: Blackhole): Unit = {
+  @Benchmark def tyql_ddbn(blackhole: Blackhole): Unit = {
     blackhole.consume(
       ddb_engine_tyql.solveTyQL(tyqlQuery)
     )
   }
 
-//  @Benchmark def embedded_lambda_collidx_carac(blackhole: Blackhole): Unit = {
+//  @Benchmark def carac_collidx(blackhole: Blackhole): Unit = {
 //    blackhole.consume(
 //      caracQueryColl.solve()
 //    )
 //  }
 
-  @Benchmark def embedded_lambda_ddbn_carac(blackhole: Blackhole): Unit = {
+  @Benchmark def carac_ddbn(blackhole: Blackhole): Unit = {
     blackhole.consume(
       caracQueryDDb.solve()
     )
@@ -234,22 +234,22 @@ class BenchRQB_cba_souffle extends rqb_cba {
     blackhole.consume(exitCode)
   }
 
-  @Benchmark def souffle__compile(blackhole: Blackhole): Unit =
+  @Benchmark def souffle_compile(blackhole: Blackhole): Unit =
     run_souffle("compile", blackhole)
 
-  @Benchmark def souffle__interp(blackhole: Blackhole): Unit =
+  @Benchmark def souffle_interp(blackhole: Blackhole): Unit =
     run_souffle("interp", blackhole)
 
-  @Benchmark def souffle_profile_compile(blackhole: Blackhole): Unit =
+  @Benchmark def souffle_profilecompile(blackhole: Blackhole): Unit =
     run_souffle("profile-compile", blackhole)
 
-  @Benchmark def souffle_profile_interp(blackhole: Blackhole): Unit =
+  @Benchmark def souffle_profileinterp(blackhole: Blackhole): Unit =
     run_souffle("profile-interp", blackhole)
 
-  @Benchmark def zsouffle_preprofiled_compile(blackhole: Blackhole): Unit =
+  @Benchmark def souffle_preprofiledcompile(blackhole: Blackhole): Unit =
     run_souffle("preprofiled-compile", blackhole)
 
-  @Benchmark def zsouffle_preprofiled_interp(blackhole: Blackhole): Unit =
+  @Benchmark def souffle_preprofiledinterp(blackhole: Blackhole): Unit =
     run_souffle("preprofiled-interp", blackhole)
 }
 
@@ -260,7 +260,7 @@ class BenchRQB_cba_souffle extends rqb_cba {
 @State(Scope.Thread)
 //@TearDown(Level.Invocation)
 @BenchmarkMode(Array(Mode.AverageTime))
-class BenchRQB_cba_warm extends rqb_cba {
+class BenchRQB_cba_caql_warm extends rqb_cba {
   val factDirectory = s"$directory/facts"
   val pattern = """.*examples/(.*?)/facts.*""".r
   val benchmark = pattern.findFirstMatchIn(factDirectory).get.group(1)
@@ -297,7 +297,7 @@ class BenchRQB_cba_warm extends rqb_cba {
     engine.storageManager.cleanup()
   }
 
-  @Benchmark def warm_lambda_ddbn_tyql(blackhole: Blackhole): Unit = {
+  @Benchmark def tyql_ddbn(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
     val storageManager = new DuckDBStorageManager(indexed = false)
     val engine = new TyQLExecutionEngine(storageManager, jo)
@@ -305,7 +305,7 @@ class BenchRQB_cba_warm extends rqb_cba {
     run_warm_tyql(blackhole, mode, engine)
   }
 
-  @Benchmark def warm_lambda_ddbn_carac(blackhole: Blackhole): Unit = {
+  @Benchmark def carac_ddbn(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
     val storageManager = new DuckDBStorageManager(indexed = false)
     val engine = new StagedExecutionEngine(storageManager, jo)
@@ -313,7 +313,7 @@ class BenchRQB_cba_warm extends rqb_cba {
     run_warm_carac(blackhole, mode, engine)
   }
 
-  @Benchmark def warm_lambda_collidx_carac(blackhole: Blackhole): Unit = {
+  @Benchmark def carac_collidx(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
     val storageManager = new IndexedStorageManager()
     val engine = new StagedExecutionEngine(storageManager, jo)
@@ -327,7 +327,7 @@ class BenchRQB_cba_warm extends rqb_cba {
 @Measurement(iterations = 3, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
-class BenchRQB_cba_embedded() extends rqb_cba {
+class BenchRQB_cba_caql_embedded() extends rqb_cba {
   val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
 
   val ddb_storageManager_tyql = new DuckDBStorageManager(indexed = false)
@@ -356,26 +356,26 @@ class BenchRQB_cba_embedded() extends rqb_cba {
   val caracQueryColl = generateCarac(coll_program_carac)
   val caracQueryDDb = generateCarac(ddb_program_carac)
 
-  @Benchmark def embedded_lambda_ddbn_tyql_wquery(blackhole: Blackhole): Unit = {
+  @Benchmark def tyqlWQ_ddbn(blackhole: Blackhole): Unit = {
     val query = generateTyQL(ddb_program_tyql2)
     blackhole.consume(
       ddb_engine_tyql2.solveTyQL(query)
     )
   }
 
-  @Benchmark def embedded_lambda_ddbn_tyql(blackhole: Blackhole): Unit = {
+  @Benchmark def tyql_ddbn(blackhole: Blackhole): Unit = {
     blackhole.consume(
       ddb_engine_tyql.solveTyQL(tyqlQuery)
     )
   }
 
-  @Benchmark def embedded_lambda_collidx_carac(blackhole: Blackhole): Unit = {
+  @Benchmark def carac_collidx(blackhole: Blackhole): Unit = {
     blackhole.consume(
       caracQueryColl.solve()
     )
   }
 
-  @Benchmark def embedded_lambda_ddbn_carac(blackhole: Blackhole): Unit = {
+  @Benchmark def carac_ddbn(blackhole: Blackhole): Unit = {
     blackhole.consume(
       caracQueryDDb.solve()
     )
@@ -403,22 +403,22 @@ class BenchRQB_ancestry_souffle extends rqb_ancestry {
     blackhole.consume(exitCode)
   }
 
-  @Benchmark def souffle__compile(blackhole: Blackhole): Unit =
+  @Benchmark def souffle_compile(blackhole: Blackhole): Unit =
     run_souffle("compile", blackhole)
 
-  @Benchmark def souffle__interp(blackhole: Blackhole): Unit =
+  @Benchmark def souffle_interp(blackhole: Blackhole): Unit =
     run_souffle("interp", blackhole)
 
-  @Benchmark def souffle_profile_compile(blackhole: Blackhole): Unit =
+  @Benchmark def souffle_profilecompile(blackhole: Blackhole): Unit =
     run_souffle("profile-compile", blackhole)
 
-  @Benchmark def souffle_profile_interp(blackhole: Blackhole): Unit =
+  @Benchmark def souffle_profileinterp(blackhole: Blackhole): Unit =
     run_souffle("profile-interp", blackhole)
 
-  @Benchmark def zsouffle_preprofiled_compile(blackhole: Blackhole): Unit =
+  @Benchmark def souffle_preprofiledcompile(blackhole: Blackhole): Unit =
     run_souffle("preprofiled-compile", blackhole)
 
-  @Benchmark def zsouffle_preprofiled_interp(blackhole: Blackhole): Unit =
+  @Benchmark def souffle_preprofiledinterp(blackhole: Blackhole): Unit =
     run_souffle("preprofiled-interp", blackhole)
 }
 
@@ -428,7 +428,7 @@ class BenchRQB_ancestry_souffle extends rqb_ancestry {
 @State(Scope.Thread)
 //@TearDown(Level.Invocation)
 @BenchmarkMode(Array(Mode.AverageTime))
-class BenchRQB_ancestry_warm extends rqb_ancestry {
+class BenchRQB_ancestry_caql_warm extends rqb_ancestry {
   val factDirectory = s"$directory/facts"
   val pattern = """.*examples/(.*?)/facts.*""".r
   val benchmark = pattern.findFirstMatchIn(factDirectory).get.group(1)
@@ -478,7 +478,7 @@ class BenchRQB_ancestry_warm extends rqb_ancestry {
     engine.storageManager.cleanup()
   }
 
-  @Benchmark def warm_lambda_ddbn_tyql(blackhole: Blackhole): Unit = {
+  @Benchmark def tyql_ddbn(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
     val storageManager = new DuckDBStorageManager(indexed = false)
     val engine = new TyQLExecutionEngine(storageManager, jo)
@@ -486,7 +486,7 @@ class BenchRQB_ancestry_warm extends rqb_ancestry {
     run_warm_tyql(blackhole, mode, engine, storageManager)
   }
 
-//  @Benchmark def warm_lambda_ddbn_carac(blackhole: Blackhole): Unit = {
+//  @Benchmark def carac_ddbn(blackhole: Blackhole): Unit = {
 //    val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
 //    val storageManager = new DuckDBStorageManager(indexed = false)
 //    val engine = new StagedExecutionEngine(storageManager, jo)
@@ -494,7 +494,7 @@ class BenchRQB_ancestry_warm extends rqb_ancestry {
 //    run_warm_carac(blackhole, mode, engine, storageManager)
 //  }
 //
-//  @Benchmark def warm_lambda_collidx_carac(blackhole: Blackhole): Unit = {
+//  @Benchmark def carac_collidx(blackhole: Blackhole): Unit = {
 //    val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
 //    val storageManager = new IndexedStorageManager()
 //    val engine = new StagedExecutionEngine(storageManager, jo)
@@ -502,7 +502,7 @@ class BenchRQB_ancestry_warm extends rqb_ancestry {
 //    run_warm_carac(blackhole, mode, engine, storageManager)
 //  }
 
-  @Benchmark def warm_lambda_ddbn_sqlstr(blackhole: Blackhole): Unit = {
+  @Benchmark def sqlstr_ddbn(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
     val storageManager = new DuckDBStorageManager(indexed = false)
     val engine = new StagedExecutionEngine(storageManager, jo)
@@ -516,7 +516,7 @@ class BenchRQB_ancestry_warm extends rqb_ancestry {
 @Measurement(iterations = 3, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
-class BenchRQB_ancestry_embedded() extends rqb_ancestry {
+class BenchRQB_ancestry_caql_embedded() extends rqb_ancestry {
   val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
 
   val ddb_storageManager_tyql = new DuckDBStorageManager(indexed = false)
@@ -549,32 +549,32 @@ class BenchRQB_ancestry_embedded() extends rqb_ancestry {
 //  val caracQueryColl = generateCarac(coll_program_carac)
 //  val caracQueryDDb = generateCarac(ddb_program_carac)
 
-  @Benchmark def embedded_lambda_ddbn_tyql(blackhole: Blackhole): Unit = {
+  @Benchmark def tyql_ddbn(blackhole: Blackhole): Unit = {
     blackhole.consume(
       ddb_engine_tyql.solveTyQL(tyqlQuery)
     )
   }
 
-  @Benchmark def embedded_lambda_ddbn_tyql_wquery(blackhole: Blackhole): Unit = {
+  @Benchmark def tyqlWQ_ddbn(blackhole: Blackhole): Unit = {
     val query = generateTyQL(ddb_program_tyql2)
     blackhole.consume(
       ddb_engine_tyql2.solveTyQL(query)
     )
   }
 
-  @Benchmark def embedded_ddbn_sqlstr(blackhole: Blackhole): Unit = {
+  @Benchmark def sqlstr_ddbn(blackhole: Blackhole): Unit = {
     blackhole.consume(
       ddb_storageManager_tyql3.resultSetToString(ddb_storageManager_tyql3.runQuery(sqlString))
     )
   }
 
-//  @Benchmark def embedded_lambda_collidx_carac(blackhole: Blackhole): Unit = {
+//  @Benchmark def carac_collidx(blackhole: Blackhole): Unit = {
 //    blackhole.consume(
 //      caracQueryColl.solve()
 //    )
 //  }
 //
-//  @Benchmark def embedded_lambda_ddbn_carac(blackhole: Blackhole): Unit = {
+//  @Benchmark def carac_ddbn(blackhole: Blackhole): Unit = {
 //    blackhole.consume(
 //      caracQueryDDb.solve()
 //    )
@@ -603,22 +603,22 @@ class BenchRQB_sssp_souffle extends rqb_sssp {
     blackhole.consume(exitCode)
   }
 
-  @Benchmark def souffle__compile(blackhole: Blackhole): Unit =
+  @Benchmark def souffle_compile(blackhole: Blackhole): Unit =
     run_souffle("compile", blackhole)
 
-  @Benchmark def souffle__interp(blackhole: Blackhole): Unit =
+  @Benchmark def souffle_interp(blackhole: Blackhole): Unit =
     run_souffle("interp", blackhole)
 
-  @Benchmark def souffle_profile_compile(blackhole: Blackhole): Unit =
+  @Benchmark def souffle_profilecompile(blackhole: Blackhole): Unit =
     run_souffle("profile-compile", blackhole)
 
-  @Benchmark def souffle_profile_interp(blackhole: Blackhole): Unit =
+  @Benchmark def souffle_profileinterp(blackhole: Blackhole): Unit =
     run_souffle("profile-interp", blackhole)
 
-  @Benchmark def zsouffle_preprofiled_compile(blackhole: Blackhole): Unit =
+  @Benchmark def souffle_preprofiledcompile(blackhole: Blackhole): Unit =
     run_souffle("preprofiled-compile", blackhole)
 
-  @Benchmark def zsouffle_preprofiled_interp(blackhole: Blackhole): Unit =
+  @Benchmark def souffle_preprofiledinterp(blackhole: Blackhole): Unit =
     run_souffle("preprofiled-interp", blackhole)
 }
 
@@ -628,7 +628,7 @@ class BenchRQB_sssp_souffle extends rqb_sssp {
 @State(Scope.Thread)
 //@TearDown(Level.Invocation)
 @BenchmarkMode(Array(Mode.AverageTime))
-class BenchRQB_sssp_warm extends rqb_sssp {
+class BenchRQB_sssp_caql_warm extends rqb_sssp {
   val factDirectory = s"$directory/facts"
   val pattern = """.*examples/(.*?)/facts.*""".r
   val benchmark = pattern.findFirstMatchIn(factDirectory).get.group(1)
@@ -678,7 +678,7 @@ class BenchRQB_sssp_warm extends rqb_sssp {
     engine.storageManager.cleanup()
   }
 
-  @Benchmark def warm_lambda_ddbn_tyql(blackhole: Blackhole): Unit = {
+  @Benchmark def tyql_ddbn(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
     val storageManager = new DuckDBStorageManager(indexed = false)
     val engine = new TyQLExecutionEngine(storageManager, jo)
@@ -686,7 +686,7 @@ class BenchRQB_sssp_warm extends rqb_sssp {
     run_warm_tyql(blackhole, mode, engine, storageManager)
   }
 
-  //  @Benchmark def warm_lambda_ddbn_carac(blackhole: Blackhole): Unit = {
+  //  @Benchmark def carac_ddbn(blackhole: Blackhole): Unit = {
   //    val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
   //    val storageManager = new DuckDBStorageManager(indexed = false)
   //    val engine = new StagedExecutionEngine(storageManager, jo)
@@ -694,7 +694,7 @@ class BenchRQB_sssp_warm extends rqb_sssp {
   //    run_warm_carac(blackhole, mode, engine, storageManager)
   //  }
   //
-  //  @Benchmark def warm_lambda_collidx_carac(blackhole: Blackhole): Unit = {
+  //  @Benchmark def carac_collidx(blackhole: Blackhole): Unit = {
   //    val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
   //    val storageManager = new IndexedStorageManager()
   //    val engine = new StagedExecutionEngine(storageManager, jo)
@@ -702,7 +702,7 @@ class BenchRQB_sssp_warm extends rqb_sssp {
   //    run_warm_carac(blackhole, mode, engine, storageManager)
   //  }
 
-  @Benchmark def warm_lambda_ddbn_sqlstr(blackhole: Blackhole): Unit = {
+  @Benchmark def sqlstr_ddbn(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
     val storageManager = new DuckDBStorageManager(indexed = false)
     val engine = new StagedExecutionEngine(storageManager, jo)
@@ -716,7 +716,7 @@ class BenchRQB_sssp_warm extends rqb_sssp {
 @Measurement(iterations = 3, time = 1, timeUnit = TimeUnit.SECONDS, batchSize = 1)
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.AverageTime))
-class BenchRQB_sssp_embedded() extends rqb_sssp {
+class BenchRQB_sssp_caql_embedded() extends rqb_sssp {
   val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
 
   val ddb_storageManager_tyql = new DuckDBStorageManager(indexed = false)
@@ -749,33 +749,33 @@ class BenchRQB_sssp_embedded() extends rqb_sssp {
   //  val caracQueryColl = generateCarac(coll_program_carac)
   //  val caracQueryDDb = generateCarac(ddb_program_carac)
 
-  @Benchmark def embedded_lambda_ddbn_tyql(blackhole: Blackhole): Unit = {
+  @Benchmark def tyql_ddbn(blackhole: Blackhole): Unit = {
     blackhole.consume(
       ddb_engine_tyql.solveTyQL(tyqlQuery)
     )
   }
 
-  @Benchmark def embedded_lambda_ddbn_tyql_wquery(blackhole: Blackhole): Unit = {
+  @Benchmark def tyqlWQ_ddbn(blackhole: Blackhole): Unit = {
     val query = generateTyQL(ddb_program_tyql2)
     blackhole.consume(
       ddb_engine_tyql2.solveTyQL(query)
     )
   }
 
-  @Benchmark def embedded_ddbn_sqlstr(blackhole: Blackhole): Unit = {
+  @Benchmark def sqlstr_ddbn(blackhole: Blackhole): Unit = {
     blackhole.consume(
       ddb_storageManager_tyql3.resultSetToString(ddb_storageManager_tyql3.runQuery(sqlString))
     )
   }
 
 
-  //  @Benchmark def embedded_lambda_collidx_carac(blackhole: Blackhole): Unit = {
+  //  @Benchmark def carac_collidx(blackhole: Blackhole): Unit = {
   //    blackhole.consume(
   //      caracQueryColl.solve()
   //    )
   //  }
   //
-  //  @Benchmark def embedded_lambda_ddbn_carac(blackhole: Blackhole): Unit = {
+  //  @Benchmark def carac_ddbn(blackhole: Blackhole): Unit = {
   //    blackhole.consume(
   //      caracQueryDDb.solve()
   //    )
