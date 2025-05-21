@@ -41,7 +41,9 @@ class NS() {
   private val nameToRid = mutable.Map[String, RelationId]()
   private val rIdToName = mutable.Map[RelationId, String]()
   def apply(name: String): RelationId =
-    nameToRid.getOrElse(name, Int.MaxValue)
+    if !nameToRid.contains(name) then
+      throw new Exception(s"Relation $name not found in namespace")
+    nameToRid(name)
   def apply(rId: RelationId): String =
     rIdToName.getOrElse(rId, s"<$rId>")
 

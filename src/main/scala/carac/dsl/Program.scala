@@ -33,7 +33,7 @@ class Program(engine: ExecutionEngine) extends AbstractProgram {
   // TODO: also provide solve for multiple/all predicates, or return table so users can query over the derived DB
   def solve(rId: Int): Set[Seq[Term]] = ee.solve(rId).map(s => s.toSeq).toSet
 
-  def loadFromFactDir(directory: String): Unit = {
+  def loadFromFactDir(directory: String, init: Boolean = true): Unit = {
     val factdir = Path.of(directory)
     if (Files.exists(factdir)) {
       Files.walk(factdir, 1)
@@ -46,7 +46,7 @@ class Program(engine: ExecutionEngine) extends AbstractProgram {
           if (firstLine != null) { // empty file, empty EDB
             val headers = firstLine.split("\t")
             val allInts = headers.forall(_ == "Int")
-            val fact = relation[Constant](edbName)
+            val fact = if init then relation[Constant](edbName) else namedRelation[Constant](edbName)
             reader.lines()
               .forEach(l => {
                 val splittedInput = l.split('\t')

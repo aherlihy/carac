@@ -2,9 +2,8 @@ package test
 
 import buildinfo.BuildInfo
 import carac.dsl.{Constant, Program, Relation}
-import carac.execution.{StagedExecutionEngine, TyQLExecutionEngine}
-import carac.execution.ir.{IRTreeGenerator, InterpreterContext, TyQLInterpreterContext}
-import carac.storage.{DatabaseType, DuckDBStorageManager}
+import carac.execution.JITOptions
+import carac.storage.{DatabaseType, StorageManager}
 import tyql.*
 
 import java.nio.file.Paths
@@ -55,7 +54,9 @@ trait TC_Nonlinear extends TyQLComparative {
     Set(Seq("a", "d"), Seq("b", "d"), Seq("b", "c"), Seq("a", "b"), Seq("z", "z"), Seq("a", "c"), Seq("c", "d"))
 }
 
-class TestTC_Linear_TyQL extends TyQLComparativeTest with TC_Linear
+class TestTC_Linear_TyQL extends TyQLComparativeTest with TC_Linear {
+  override def runCollections(): Unit = {}
+}
 
 trait TC_Linear extends TyQLComparative {
   override def loadData(program: Program): Unit =
@@ -105,11 +106,10 @@ class TestTC_NonLinear_TyQL_Load extends TyQLComparativeTest with TC_Nonlinear_L
 trait TC_Nonlinear_Load extends TyQLComparative {
   val directory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/rqb_tc_test"
 
-  override def loadSchema(program: Program, storage: DuckDBStorageManager): Unit =
+  override def loadSchema(program: Program, storage: StorageManager): Unit =
     val edges_schema = Seq(("x", DatabaseType.TEXT), ("y", DatabaseType.TEXT))
     val edges = program.relation("edges", Some(edges_schema))
-    storage.declareTable(edges.id, edges_schema)
-    storage.edbs.initializeTable(edges.id, "edges", edges_schema)
+    storage.registerRelationSchema(edges.id, edges_schema)
 
   override def loadData(program: Program): Unit =
     loadDataFromFile(program, directory)

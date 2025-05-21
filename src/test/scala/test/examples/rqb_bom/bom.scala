@@ -3,7 +3,7 @@ package test.examples.rqb_bom
 import buildinfo.BuildInfo
 import carac.dsl.{Constant, Program}
 import test.{ExampleTestGenerator, Tags}
-import carac.storage.{DatabaseType, DuckDBStorageManager}
+import carac.storage.{DatabaseType, StorageManager}
 
 trait rqb_bom {
   val factDirectory = s"${BuildInfo.baseDirectory}/src/test/scala/test/examples/rqb_bom/facts"
@@ -22,13 +22,11 @@ trait rqb_bom {
       SELECT * FROM recursive1
     """
     // SELECT recref0.part as part, MAX(recref0.days) as max FROM recursive1 as recref0 GROUP BY recref0.part
-  def loadSchema(program: Program, storage: DuckDBStorageManager): Unit =
+  def loadSchema(program: Program, storage: StorageManager): Unit =
     val assbl = program.relation("assbl")
     val assblS = Seq(("c0", DatabaseType.TEXT), ("c1", DatabaseType.TEXT))
-    storage.declareTable(assbl.id, assblS)
-    storage.edbs.initializeTable(assbl.id, "assbl", assblS)
+    storage.registerRelationSchema(assbl.id, assblS)
     val basic = program.relation("basic")
     val basicS = Seq(("c0", DatabaseType.TEXT), ("c1", DatabaseType.INTEGER))
-    storage.declareTable(basic.id, basicS)
-    storage.edbs.initializeTable(basic.id, "basic", basicS)
+    storage.registerRelationSchema(basic.id, basicS)
 }

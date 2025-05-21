@@ -3,7 +3,7 @@ package test.examples.rqb_cba
 import buildinfo.BuildInfo
 import carac.dsl.{Constant, Program, Relation}
 import test.{ExampleTestGenerator, RunTyQL, Tags, TyQLComparative, TyQLComparativeTest}
-import carac.storage.{DatabaseType, DuckDBStorageManager}
+import carac.storage.{DatabaseType, StorageManager}
 import tyql.Expr.{IntLit, StringLit}
 import tyql.{DatabaseAST, Ord, Query, Table}
 
@@ -144,35 +144,26 @@ trait rqb_cba extends TyQLComparative {
       })
       dataTerm
   
-  override def loadSchema(program: Program, duckDBStorageManager: DuckDBStorageManager): Unit =
+  override def loadSchema(program: Program, storageManager: StorageManager): Unit =
     val term = program.relation("term")
     val termS = Seq(("x", DatabaseType.INTEGER), ("y", DatabaseType.TEXT), ("z", DatabaseType.INTEGER))
-    duckDBStorageManager.declareTable(term.id, termS)
-    duckDBStorageManager.edbs.initializeTable(term.id, "term", termS)
+    storageManager.registerRelationSchema(term.id, termS)
     val vars = program.relation("vars")
     val varsS = Seq(("x", DatabaseType.INTEGER), ("y", DatabaseType.TEXT))
-    duckDBStorageManager.declareTable(vars.id, varsS)
-    duckDBStorageManager.edbs.initializeTable(vars.id, "vars", varsS)
+    storageManager.registerRelationSchema(vars.id, varsS)
     val app = program.relation("app")
     val appS = Seq(("x", DatabaseType.INTEGER), ("y", DatabaseType.INTEGER), ("z", DatabaseType.INTEGER))
-    duckDBStorageManager.declareTable(app.id, appS)
-    duckDBStorageManager.edbs.initializeTable(app.id, "app", appS)
+    storageManager.registerRelationSchema(app.id, appS)
     val lits = program.relation("lits")
     val litsS = Seq(("x", DatabaseType.INTEGER), ("y", DatabaseType.TEXT))
-    duckDBStorageManager.declareTable(lits.id, litsS)
-    duckDBStorageManager.edbs.initializeTable(lits.id, "lits", litsS)
+    storageManager.registerRelationSchema(lits.id, litsS)
     val abs = program.relation("abs")
     val absS = Seq(("x", DatabaseType.INTEGER), ("y", DatabaseType.INTEGER), ("z", DatabaseType.INTEGER))
-    duckDBStorageManager.declareTable(abs.id, absS)
-    duckDBStorageManager.edbs.initializeTable(abs.id, "abs", absS)
-
+    storageManager.registerRelationSchema(abs.id, absS)
     val baseData = program.relation("baseDataVar")
     val baseDataS = Seq(("x", DatabaseType.INTEGER), ("y", DatabaseType.TEXT))
-    duckDBStorageManager.declareTable(baseData.id, baseDataS)
-    duckDBStorageManager.edbs.initializeTable(baseData.id, "baseDataVar", baseDataS)
-
+    storageManager.registerRelationSchema(baseData.id, baseDataS)
     val baseCtrl = program.relation("baseCtrlVar")
     val baseCtrlS = Seq(("x", DatabaseType.INTEGER), ("y", DatabaseType.INTEGER))
-    duckDBStorageManager.declareTable(baseCtrl.id, baseCtrlS)
-    duckDBStorageManager.edbs.initializeTable(baseCtrl.id, "baseCtrlVar", baseCtrlS)
+    storageManager.registerRelationSchema(baseCtrl.id, baseCtrlS)
 }

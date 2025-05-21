@@ -10,7 +10,7 @@ import tyql.*
 
 import scala.collection.mutable
 
-class TyQLToIROp(using val ctx: TyQLInterpreterContext)(using JITOptions) {
+class TyQLToIROp(sqlCompat: Boolean)(using val ctx: InterpreterContext)(using JITOptions) {
 
   def naiveEval(ruleMap: Map[RelationId, Seq[QueryIRNode]], sortedRelations: Seq[RelationId]): IROp[Any] =
     val queries = ruleMap.keys.toSeq
@@ -112,7 +112,7 @@ class TyQLToIROp(using val ctx: TyQLInterpreterContext)(using JITOptions) {
       case _ => ???
     }
     val depsSchema = deps.map(rId => // Seq[(AttrName, DatabaseType)]
-      ctx.ddb.schema(rId)
+      ctx.storageManager.schema(rId)
     )
     val projIndexes = if (project.isEmpty)
       depsSchema.flatten.indices.map(i => ("v", i.asInstanceOf[Constant]))
@@ -185,7 +185,7 @@ class TyQLToIROp(using val ctx: TyQLInterpreterContext)(using JITOptions) {
 //      println(s"For query: ${subquery.toSQLString()}:")
       val k = queryIRToJoinIndex(rId, subquery)
 //      println(s"\tk=${k.toStringWithNS(ctx.ddb.ns)}}")
-      ctx.ee.insertIDB(rId, k)
+      ctx.ee.insertIDB(rId, k.atoms)
 
       var idx = -1 // if dep is featured more than once, only use delta once, but at a different pos each time
       UnionSPJOp( // a single rule body
@@ -232,8 +232,18 @@ class TyQLToIROp(using val ctx: TyQLInterpreterContext)(using JITOptions) {
             case _ => ???
         else
           ???
-      case t: SelectQuery =>
+      case t: SelectQuery if sqlCompat =>
         TyQLSQLNode(t, DB.Derived, rId, diff = true)
+      case subquery: SelectQuery =>
+        val k = queryIRToJoinIndex(rId, subquery)
+        ctx.ee.insertIDB(rId, k.atoms)
+
+        ProjectJoinFilterOp(rId, k,
+          k.deps.zipWithIndex.map((md, i) => {
+            val (typ, r) = md
+            ScanOp(r, DB.Derived)
+          })*
+        )
       case _ => ???
     }
     if allRes.length == 1 then

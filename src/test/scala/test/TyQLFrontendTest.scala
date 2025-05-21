@@ -2,8 +2,8 @@ package test
 
 import carac.dsl.{Constant, Program, Relation}
 import carac.execution.{Backend, CompileSync, Granularity, JITOptions, Mode, SortOrder, StagedExecutionEngine, TyQLExecutionEngine}
-import carac.execution.ir.{IRTreeGenerator, InterpreterContext, TyQLInterpreterContext}
-import carac.storage.{DatabaseType, DuckDBStorageManager, StorageTerm}
+import carac.execution.ir.{IRTreeGenerator, InterpreterContext}
+import carac.storage.{DatabaseType, DuckDBStorageManager, IndexedStorageManager, StorageManager, StorageTerm}
 import tyql.*
 
 import java.nio.file.{Files, Path, Paths}
@@ -63,6 +63,20 @@ trait TyQLComparativeTest extends munit.FunSuite with TyQLComparative {
     assertEquals(result_tyql, result_carac, s"TyQL and Carac results do not match")
     assertEquals(result_tyql, expectedFacts, s"Expected directory does not match")
   }
+
+  def runCollections(): Unit =
+    val opts = JITOptions(mode = Mode.JIT, granularity = Granularity.ALL, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
+    val result_tyql = runTyQL_collections(opts)
+    val result_carac = runCarac(opts)
+    //    println(s"TyQL result: $result_tyql")
+    //    println(s"Carac result: $result_carac")
+    //    println(s"Expected result: $expectedFacts")
+    assertEquals(result_tyql, result_carac, s"TyQL and Carac results do not match")
+    assertEquals(result_tyql, expectedFacts, s"Expected directory does not match")
+
+  test(s"JIT Lambda Collections") {
+    runCollections()
+  }
   test(s"JIT Quotes") {
     val opts = JITOptions(mode = Mode.JIT, granularity = Granularity.ALL, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Quotes)
     val result_tyql = runTyQL(opts)
@@ -87,7 +101,7 @@ trait TyQLComparativeTest extends munit.FunSuite with TyQLComparative {
 }
 
 trait RunTyQL {
-  def loadSchema(program: Program, storage: DuckDBStorageManager): Unit = ???
+  def loadSchema(program: Program, storage: StorageManager): Unit = ???
   def loadData(program: Program): Unit
   def generateTyQL(program: Program): DatabaseAST[?]
   val expectedFacts: Set[Seq[Constant]]
@@ -123,11 +137,20 @@ trait RunTyQL {
         loadSchema(program, ddb)
         ddb.loadFacts(factDirectory.toString)
       case _ =>
-        program.loadFromFactDir(factDirectory.toString)
+        loadSchema(program, program.ee.storageManager)
+        program.loadFromFactDir(factDirectory.toString, false)
 
   def runTyQL(jitOptions: JITOptions): Set[Seq[StorageTerm]] =
     val storage_tyql = new DuckDBStorageManager()
     val engine_tyql = new TyQLExecutionEngine(storage_tyql, jitOptions)
+    val program_tyql = Program(engine_tyql)
+    loadData(program_tyql)
+    val query_tyql = generateTyQL(program_tyql)
+    engine_tyql.solveTyQL(query_tyql)
+
+  def runTyQL_collections(JITOptions: JITOptions): Set[Seq[StorageTerm]] =
+    val storage_tyql = new IndexedStorageManager()
+    val engine_tyql = new TyQLExecutionEngine(storage_tyql, JITOptions)
     val program_tyql = Program(engine_tyql)
     loadData(program_tyql)
     val query_tyql = generateTyQL(program_tyql)

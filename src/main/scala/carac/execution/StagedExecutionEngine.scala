@@ -33,7 +33,7 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
 
   var stragglers: mutable.WeakHashMap[Int, Future[CompiledFn[?]]] = mutable.WeakHashMap.empty // should be ok since we are only removing by ref and then iterating on values only?
 
-  def createIR(ast: ASTNode)(using CaracInterpreterContext): IROp[Any] = IRTreeGenerator().generateTopLevelProgram(ast, false)
+  def createIR(ast: ASTNode, toSolve: RelationId)(using InterpreterContext): IROp[Any] = IRTreeGenerator().generateTopLevelProgram(ast, false, toSolve)
 
   def initRelation(rId: Int, name: String, schemaOpt: Option[Seq[(String, DatabaseType)]]): Unit = {
     if storageManager.ns.contains(rId) then
@@ -390,12 +390,13 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
       }
     }
 
-    given irCtx: CaracInterpreterContext = CaracInterpreterContext(storageManager, precedenceGraph, toSolve)
+    given irCtx: InterpreterContext = InterpreterContext(storageManager, this, Some(precedenceGraph), () => storageManager.getIDBResult(toSolve))
+    storageManager.initEvaluation()
 //    println(s"Carac AST: : ${storageManager.printer.printAST(ast)}")
     debug("TRANSFORMED: ", () => storageManager.printer.printAST(transformedAST))
     debug("PG: ", () => precedenceGraph.toString())
 
-    val irTree = createIR(transformedAST)
+    val irTree = createIR(transformedAST, toSolve)
 
 //    println(s"Carac IRTree: ${ storageManager.printer.printIR(irTree)}")
 //    println(s"INIT STORAGE: ${storageManager.toString}")
@@ -406,5 +407,5 @@ class StagedExecutionEngine(val storageManager: StorageManager, val defaultJITOp
   }
 }
 class NaiveStagedExecutionEngine(storageManager: StorageManager, defaultJITOptions: JITOptions = JITOptions(mode = Mode.Interpreted)) extends StagedExecutionEngine(storageManager, defaultJITOptions) {
-  override def createIR(ast: ASTNode)(using CaracInterpreterContext): IROp[Any] = IRTreeGenerator().generateTopLevelProgram(ast, naive=true)
+  override def createIR(ast: ASTNode, toSolve: RelationId)(using InterpreterContext): IROp[Any] = IRTreeGenerator().generateTopLevelProgram(ast, naive=true, toSolve)
 }

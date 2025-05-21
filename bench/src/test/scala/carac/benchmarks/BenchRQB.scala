@@ -40,6 +40,7 @@ object RQB_Bench {
     if linear then
       Process(s"mkdir -p  carac-scala-out/$benchmark/lambda_ddbn_sqlstr").!
     else
+      Process(s"mkdir -p  carac-scala-out/$benchmark/lambda_collidx_tyql").!
       Process(s"mkdir -p  carac-scala-out/$benchmark/lambda_collidx_carac").!
       Process(s"mkdir -p  carac-scala-out/$benchmark/lambda_ddbn_carac").!
   }
@@ -320,6 +321,14 @@ class BenchRQB_cba_caql_warm extends rqb_cba {
     val mode = "lambda_collidx_carac"
     run_warm_carac(blackhole, mode, engine)
   }
+
+  @Benchmark def tyql_collidx(blackhole: Blackhole): Unit = {
+    val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
+    val storageManager = new IndexedStorageManager()
+    val engine = new TyQLExecutionEngine(storageManager, jo)
+    val mode = "lambda_collidx_tyql"
+    run_warm_tyql(blackhole, mode, engine)
+  }
 }
 
 @Fork(1) // # of jvms that it will use
@@ -343,16 +352,22 @@ class BenchRQB_cba_caql_embedded() extends rqb_cba {
   val ddb_engine_carac = new StagedExecutionEngine(ddb_storageManager_carac, jo)
   val ddb_program_carac = Program(ddb_engine_carac)
 
-  val coll_storageManager = new IndexedStorageManager()
-  val coll_engine = new StagedExecutionEngine(coll_storageManager, jo)
-  val coll_program_carac = Program(coll_engine)
+  val coll_storageManager_carac = new IndexedStorageManager()
+  val coll_engine_carac = new StagedExecutionEngine(coll_storageManager_carac, jo)
+  val coll_program_carac = Program(coll_engine_carac)
+
+  val coll_storageManager_tyql = new IndexedStorageManager()
+  val coll_engine_tyql = new TyQLExecutionEngine(coll_storageManager_tyql, jo)
+  val coll_program_tyql = Program(coll_engine_tyql)
 
   loadDataFromFile(ddb_program_tyql, directory)
   loadDataFromFile(ddb_program_carac, directory)
   loadDataFromFile(coll_program_carac, directory)
+  loadDataFromFile(coll_program_tyql, directory)
   loadDataFromFile(ddb_program_tyql2, directory)
 
-  val tyqlQuery = generateTyQL(ddb_program_tyql)
+  val tyqlQueryDDB = generateTyQL(ddb_program_tyql)
+  val tyqlQueryColl = generateTyQL(coll_program_tyql)
   val caracQueryColl = generateCarac(coll_program_carac)
   val caracQueryDDb = generateCarac(ddb_program_carac)
 
@@ -365,7 +380,13 @@ class BenchRQB_cba_caql_embedded() extends rqb_cba {
 
   @Benchmark def tyql_ddbn(blackhole: Blackhole): Unit = {
     blackhole.consume(
-      ddb_engine_tyql.solveTyQL(tyqlQuery)
+      ddb_engine_tyql.solveTyQL(tyqlQueryDDB)
+    )
+  }
+
+  @Benchmark def tyql_collidx(blackhole: Blackhole): Unit = {
+    blackhole.consume(
+      coll_engine_tyql.solveTyQL(tyqlQueryColl)
     )
   }
 

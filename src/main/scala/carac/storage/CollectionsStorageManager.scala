@@ -52,7 +52,14 @@ class GeneralCollectionsStorageManager(ns: NS = new NS(), indexed: Boolean = fal
       indexCandidates.getOrElseUpdate(rId, mutable.BitSet()).addAll(idxs)
     )
   }
-  // Store relation arity. In the future can require it to be declared, but for now derived.
+
+  def declareTable(rId: RelationId, s: Seq[(String, DatabaseType)]): Unit =
+    registerRelationSchema(rId, s)
+
+  def registerRelationSchema(rId: RelationId, s: Seq[(String, DatabaseType)]): Unit =
+    schema(rId) = s
+    relationArity(rId) = s.length
+
   def registerRelationSchema(rId: RelationId, terms: Seq[Term], hashOpt: Option[String]): Unit =
     val arity = terms.length
     if relationArity.contains(rId) then if arity != relationArity(rId) then throw new Exception(s"Derived relation $rId (${ns(rId)}) declared with arity $arity but previously declared with arity ${relationArity(rId)}")
@@ -62,6 +69,7 @@ class GeneralCollectionsStorageManager(ns: NS = new NS(), indexed: Boolean = fal
 
   def initRelation(rId: RelationId, name: String, schemaOpt: Option[Seq[(String, DatabaseType)]]): Unit = {
     ns(rId) = name
+    schemaOpt.foreach(s => registerRelationSchema(rId, s))
   }
   /**
    * Initialize derivedDB to clone EDBs, initialize deltaDB to empty for both new and known

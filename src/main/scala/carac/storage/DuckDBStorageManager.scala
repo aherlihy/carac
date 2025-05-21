@@ -176,7 +176,6 @@ class DuckDBStorageManager(ns: NS = new NS(), indexed: Boolean = true) extends S
   // "database", i.e. relationID => Relation
   var connection: Connection = null
   var initialized: Boolean = false
-  val schema: mutable.Map[RelationId, Seq[(String, DatabaseType)]] = mutable.Map[RelationId, Seq[(String, DatabaseType)]]() // relationId => [(column name, type)*]
   connect()
 
   def getCSVFiles(directoryPath: String): Seq[Path] =
@@ -295,7 +294,13 @@ class DuckDBStorageManager(ns: NS = new NS(), indexed: Boolean = true) extends S
     else
       schema(rId) = s
 
-  // Derive relation schema. In the future can require it to be declared, but for now derived using inference.
+
+  // Declare relation schema, skip inference
+  def registerRelationSchema(rId: RelationId, schema: Seq[(String, DatabaseType)]): Unit =
+    declareTable(rId, schema)
+    edbs.initializeTable(rId, ns(rId), schema)
+
+  // Derive relation schema
   def registerRelationSchema(rId: RelationId, terms: Seq[Term], hashOpt: Option[String]): Unit =
     val s = if !schema.contains(rId) || (schema.contains(rId) && schema(rId).map(_._2).contains(DatabaseType.UNKNOWN)) then
       generateSchema(terms, throwOnVar = false)

@@ -3,7 +3,7 @@ package test.examples.rqb_andersen
 import buildinfo.BuildInfo
 import carac.dsl.{Constant, Program, Relation}
 import test.{ExampleTestGenerator, RunTyQL, Tags, TyQLComparative, TyQLOnlyTest, TyQLComparativeTest}
-import carac.storage.{DatabaseType, DuckDBStorageManager}
+import carac.storage.{DatabaseType, StorageManager}
 import tyql.Expr.IntLit
 import tyql.{Ord, Query, Table}
 
@@ -77,17 +77,17 @@ trait rqb_andersen extends TyQLComparative {
                 (x = pt1.y, y = pt2.y).toRow)))))
     query
 
- override def loadSchema(program: Program, duckDBStorageManager: DuckDBStorageManager): Unit =
+ override def loadSchema(program: Program, storageManager: StorageManager): Unit =
    val addressOf = program.relation("addressOf")
    val assign = program.relation("assign")
    val loadT = program.relation("loadT")
    val store = program.relation("store")
-   duckDBStorageManager.declareTable(addressOf.id, Seq(("x", DatabaseType.TEXT), ("y", DatabaseType.TEXT)))
-   duckDBStorageManager.declareTable(assign.id, Seq(("x", DatabaseType.TEXT), ("y", DatabaseType.TEXT)))
-   duckDBStorageManager.declareTable(loadT.id, Seq(("x", DatabaseType.TEXT), ("y", DatabaseType.TEXT)))
-   duckDBStorageManager.declareTable(store.id, Seq(("x", DatabaseType.TEXT), ("y", DatabaseType.TEXT)))
-   duckDBStorageManager.edbs.initializeTable(addressOf.id, "addressOf", Seq(("x", DatabaseType.TEXT), ("y", DatabaseType.TEXT)))
-   duckDBStorageManager.edbs.initializeTable(assign.id, "assign", Seq(("x", DatabaseType.TEXT), ("y", DatabaseType.TEXT)))
-   duckDBStorageManager.edbs.initializeTable(loadT.id, "loadT", Seq(("x", DatabaseType.TEXT), ("y", DatabaseType.TEXT)))
-   duckDBStorageManager.edbs.initializeTable(store.id, "store", Seq(("x", DatabaseType.TEXT), ("y", DatabaseType.TEXT)))
+   val addressOfS =  Seq(("x", DatabaseType.TEXT), ("y", DatabaseType.TEXT))
+   val assignS =  Seq(("x", DatabaseType.TEXT), ("y", DatabaseType.TEXT))
+   val loadTS =  Seq(("x", DatabaseType.TEXT), ("y", DatabaseType.TEXT))
+   val storeS =  Seq(("x", DatabaseType.TEXT), ("y", DatabaseType.TEXT))
+   storageManager.registerRelationSchema(addressOf.id, addressOfS)
+   storageManager.registerRelationSchema(assign.id, assignS)
+   storageManager.registerRelationSchema(loadT.id, loadTS)
+   storageManager.registerRelationSchema(store.id, storeS)
 }

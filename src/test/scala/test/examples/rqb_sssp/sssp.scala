@@ -3,7 +3,7 @@ package test.examples.rqb_sssp
 import buildinfo.BuildInfo
 import carac.dsl.{Constant, Program, Relation}
 import test.{ExampleTestGenerator, RunTyQL, Tags, TyQLComparative, TyQLOnlyTest}
-import carac.storage.{DatabaseType, DuckDBStorageManager}
+import carac.storage.{DatabaseType, StorageManager}
 import tyql.Expr.{IntLit, min}
 import tyql.{Ord, Query, Table}
 
@@ -58,13 +58,11 @@ trait rqb_sssp extends RunTyQL {
           WHERE ref1.dst = edb_edge3.src)))
       SELECT * FROM recursive1
     """
-  override def loadSchema(program: Program, storage: DuckDBStorageManager): Unit =
+  override def loadSchema(program: Program, storage: StorageManager): Unit =
     val base = program.relation("base")
     val baseS = Seq(("dst", DatabaseType.INTEGER), ("cost", DatabaseType.INTEGER))
-    storage.declareTable(base.id, baseS)
-    storage.edbs.initializeTable(base.id, "base", baseS)
+    storage.registerRelationSchema(base.id, baseS)
     val edge = program.relation("edge")
     val edgeS = Seq(("src", DatabaseType.INTEGER), ("dst", DatabaseType.INTEGER), ("cost", DatabaseType.INTEGER))
-    storage.declareTable(edge.id, edgeS)
-    storage.edbs.initializeTable(edge.id, "edge", edgeS)
+    storage.registerRelationSchema(edge.id, edgeS)
 }

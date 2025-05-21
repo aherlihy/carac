@@ -41,7 +41,7 @@ trait javapointsto {
     val SpecialMethodInvocationSignature = program.namedRelation[Constant]("SpecialMethodInvocationSignature")
 
     val StaticMethodInvocationSignature = program.namedRelation[Constant]("StaticMethodInvocationSignature")
-    program.ee.storageManager.declareTable(StaticMethodInvocationSignature.id, Seq(("c0", DatabaseType.TEXT), ("c1", DatabaseType.TEXT), ("c2", DatabaseType.TEXT), ("c3", DatabaseType.TEXT)))
+    program.ee.storageManager.declareTable(StaticMethodInvocationSignature.id, Seq(("c0", DatabaseType.TEXT), ("c1", DatabaseType.TEXT)))
 
     val StoreInstanceFieldIndex = program.namedRelation[Constant]("StoreInstanceFieldIndex")
 
