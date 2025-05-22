@@ -19,6 +19,7 @@ import scala.sys.process.Process
 import scala.util.Using
 
 val SOUFFLE_BIN="/scratch/herlihy/souffle/build/src/souffle"
+val SIZE_HEURISTIC_MB=200
 
 object RQB_Bench {
   def cleanup(benchmark: String, linear: Boolean): Unit = {
@@ -137,6 +138,16 @@ class BenchRQB_andersen_caql_warm extends rqb_andersen {
     run_warm_tyql(blackhole, mode, engine)
   }
 
+  @Benchmark def tyql_divert(blackhole: Blackhole): Unit = {
+    val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
+    val storageManager = if skipDBIntegration(SIZE_HEURISTIC_MB) then
+      ??? else
+      new DuckDBStorageManager(indexed = false)
+    val engine = new TyQLExecutionEngine(storageManager, jo)
+    val mode = "lambda_divert_tyql"
+    run_warm_tyql(blackhole, mode, engine)
+  }
+
   @Benchmark def carac_ddbn(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
     val storageManager = new DuckDBStorageManager(indexed = false)
@@ -210,6 +221,12 @@ class BenchRQB_andersen_caql_embedded() extends rqb_andersen {
     blackhole.consume(
       caracQueryDDb.solve()
     )
+  }
+  @Benchmark def tyql_divert(blackhole: Blackhole): Unit = {
+    val query = generateTyQL(ddb_program_tyql2)
+    if skipDBIntegration(SIZE_HEURISTIC_MB) then
+      ??? else
+      ddb_engine_tyql2.solveTyQL(query)
   }
 }
 
@@ -329,6 +346,16 @@ class BenchRQB_cba_caql_warm extends rqb_cba {
     val mode = "lambda_collidx_tyql"
     run_warm_tyql(blackhole, mode, engine)
   }
+
+  @Benchmark def tyql_divert(blackhole: Blackhole): Unit = {
+    val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
+    val storageManager = if skipDBIntegration(SIZE_HEURISTIC_MB) then
+      new IndexedStorageManager() else
+      new DuckDBStorageManager(indexed = false)
+    val engine = new TyQLExecutionEngine(storageManager, jo)
+    val mode = "lambda_divert_tyql"
+    run_warm_tyql(blackhole, mode, engine)
+  }
 }
 
 @Fork(1) // # of jvms that it will use
@@ -400,6 +427,12 @@ class BenchRQB_cba_caql_embedded() extends rqb_cba {
     blackhole.consume(
       caracQueryDDb.solve()
     )
+  }
+  @Benchmark def tyql_divert(blackhole: Blackhole): Unit = {
+    val query = generateTyQL(ddb_program_tyql2)
+    if skipDBIntegration(SIZE_HEURISTIC_MB) then
+      coll_engine_tyql.solveTyQL(tyqlQueryColl)
+      ddb_engine_tyql2.solveTyQL(query)
   }
 }
 
@@ -530,6 +563,16 @@ class BenchRQB_ancestry_caql_warm extends rqb_ancestry {
     val mode = "lambda_ddbn_sqlstr"
     run_warm_sqlstr(blackhole, mode, storageManager, jo)
   }
+
+  @Benchmark def tyql_divert(blackhole: Blackhole): Unit = {
+    val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
+    val storageManager = if skipDBIntegration(SIZE_HEURISTIC_MB) then
+      ??? else
+      new DuckDBStorageManager(indexed = false)
+    val engine = new TyQLExecutionEngine(storageManager, jo)
+    val mode = "lambda_divert_tyql"
+    run_warm_tyql(blackhole, mode, engine, storageManager)
+  }
 }
 
 @Fork(1) // # of jvms that it will use
@@ -587,6 +630,12 @@ class BenchRQB_ancestry_caql_embedded() extends rqb_ancestry {
     blackhole.consume(
       ddb_storageManager_tyql3.resultSetToString(ddb_storageManager_tyql3.runQuery(sqlString))
     )
+  }
+  @Benchmark def tyql_divert(blackhole: Blackhole): Unit = {
+    val query = generateTyQL(ddb_program_tyql2)
+    if skipDBIntegration(SIZE_HEURISTIC_MB) then
+      ??? else
+      ddb_engine_tyql2.solveTyQL(query)
   }
 
 //  @Benchmark def carac_collidx(blackhole: Blackhole): Unit = {
@@ -730,6 +779,16 @@ class BenchRQB_sssp_caql_warm extends rqb_sssp {
     val mode = "lambda_ddbn_sqlstr"
     run_warm_sqlstr(blackhole, mode, storageManager, jo)
   }
+
+  @Benchmark def tyql_divert(blackhole: Blackhole): Unit = {
+    val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
+    val storageManager = if skipDBIntegration(SIZE_HEURISTIC_MB) then
+      ??? else
+      new DuckDBStorageManager(indexed = false)
+    val engine = new TyQLExecutionEngine(storageManager, jo)
+    val mode = "lambda_divert_tyql"
+    run_warm_tyql(blackhole, mode, engine, storageManager)
+  }
 }
 
 @Fork(1) // # of jvms that it will use
@@ -787,6 +846,12 @@ class BenchRQB_sssp_caql_embedded() extends rqb_sssp {
     blackhole.consume(
       ddb_storageManager_tyql3.resultSetToString(ddb_storageManager_tyql3.runQuery(sqlString))
     )
+  }
+  @Benchmark def tyql_divert(blackhole: Blackhole): Unit = {
+    val query = generateTyQL(ddb_program_tyql2)
+    if skipDBIntegration(SIZE_HEURISTIC_MB) then
+      ??? else
+      ddb_engine_tyql2.solveTyQL(query)
   }
 
 

@@ -101,6 +101,7 @@ trait TyQLComparativeTest extends munit.FunSuite with TyQLComparative {
 }
 
 trait RunTyQL {
+  val directory: String
   def loadSchema(program: Program, storage: StorageManager): Unit = ???
   def loadData(program: Program): Unit
   def generateTyQL(program: Program): DatabaseAST[?]
@@ -155,6 +156,20 @@ trait RunTyQL {
     loadData(program_tyql)
     val query_tyql = generateTyQL(program_tyql)
     engine_tyql.solveTyQL(query_tyql)
+
+  def skipDBIntegration(heuristicBytes: Int): Boolean =
+    val factDirectory = s"$directory/facts"
+    val path = Paths.get(factDirectory)
+
+    if (!Files.exists(path) || !Files.isDirectory(path)) throw new Exception(s"Missing fact directory '$path'")
+
+    val totalBytes = Files.walk(path)
+      .filter(Files.isRegularFile(_))
+      .mapToLong(p => Files.size(p))
+      .sum()
+    println(s"size of files=$totalBytes, heuristic=$heuristicBytes ($factDirectory)")
+
+    totalBytes < heuristicBytes
 }
 
 trait TyQLComparative extends RunTyQL {

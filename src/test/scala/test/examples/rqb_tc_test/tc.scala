@@ -12,6 +12,7 @@ import language.experimental.namedTuples
 class TestTC_NonLinear_TyQL extends TyQLComparativeTest with TC_Nonlinear
 
 trait TC_Nonlinear extends TyQLComparative {
+  val directory: String = ???
   override def loadData(program: Program): Unit =
     val edges = program.relation[Constant]("edges", Some(Seq(("x", DatabaseType.TEXT), ("y", DatabaseType.TEXT))))
     edges("a", "b") :- ()
@@ -59,6 +60,7 @@ class TestTC_Linear_TyQL extends TyQLComparativeTest with TC_Linear {
 }
 
 trait TC_Linear extends TyQLComparative {
+  val directory: String = ???
   override def loadData(program: Program): Unit =
     val edges = program.relation[Constant]("edges", Some(Seq(("x", DatabaseType.TEXT), ("y", DatabaseType.TEXT))))
     edges("a", "b") :- ()
