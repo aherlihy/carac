@@ -141,7 +141,7 @@ class BenchRQB_andersen_caql_warm extends rqb_andersen {
   @Benchmark def tyql_divert(blackhole: Blackhole): Unit = {
     val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
     val storageManager = if skipDBIntegration(SIZE_HEURISTIC_MB) then
-      ??? else
+      new IndexedStorageManager() else
       new DuckDBStorageManager(indexed = false)
     val engine = new TyQLExecutionEngine(storageManager, jo)
     val mode = "lambda_divert_tyql"
@@ -156,13 +156,13 @@ class BenchRQB_andersen_caql_warm extends rqb_andersen {
     run_warm_carac(blackhole, mode, engine)
   }
 
-//  @Benchmark def carac_collidx(blackhole: Blackhole): Unit = {
-//    val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
-//    val storageManager = new IndexedStorageManager()
-//    val engine = new StagedExecutionEngine(storageManager, jo)
-//    val mode = "lambda_collidx_carac"
-//    run_warm_carac(blackhole, mode, engine)
-//  }
+  @Benchmark def tyql_collidx(blackhole: Blackhole): Unit = {
+    val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
+    val storageManager = new IndexedStorageManager()
+    val engine = new TyQLExecutionEngine(storageManager, jo)
+    val mode = "lambda_collidx_tyql"
+    run_warm_tyql(blackhole, mode, engine)
+  }
 }
 
 @Fork(1) // # of jvms that it will use
@@ -186,16 +186,16 @@ class BenchRQB_andersen_caql_embedded() extends rqb_andersen {
   val ddb_program_carac = Program(ddb_engine_carac)
 
   val coll_storageManager = new IndexedStorageManager()
-  val coll_engine = new StagedExecutionEngine(coll_storageManager, jo)
-  val coll_program_carac = Program(coll_engine)
+  val coll_engine = new TyQLExecutionEngine(coll_storageManager, jo)
+  val coll_program_tyql = Program(coll_engine)
 
   loadDataFromFile(ddb_program_tyql, directory)
   loadDataFromFile(ddb_program_carac, directory)
-  loadDataFromFile(coll_program_carac, directory)
+  loadDataFromFile(coll_program_tyql, directory)
   loadDataFromFile(ddb_program_tyql2, directory)
 
   val tyqlQuery = generateTyQL(ddb_program_tyql)
-  val caracQueryColl = generateCarac(coll_program_carac)
+  val caracQueryColl = generateCarac(coll_program_tyql)
   val caracQueryDDb = generateCarac(ddb_program_carac)
 
   @Benchmark def tyql_ddbn(blackhole: Blackhole): Unit = {
@@ -205,17 +205,18 @@ class BenchRQB_andersen_caql_embedded() extends rqb_andersen {
     )
   }
 
-  @Benchmark def tyqlNQ_ddbn(blackhole: Blackhole): Unit = {
-    blackhole.consume(
-      ddb_engine_tyql.solveTyQL(tyqlQuery)
-    )
-  }
-
-//  @Benchmark def carac_collidx(blackhole: Blackhole): Unit = {
+//  @Benchmark def tyqlNQ_ddbn(blackhole: Blackhole): Unit = {
 //    blackhole.consume(
-//      caracQueryColl.solve()
+//      ddb_engine_tyql.solveTyQL(tyqlQuery)
 //    )
 //  }
+
+  @Benchmark def tyql_collidx(blackhole: Blackhole): Unit = {
+    val query = generateTyQL(coll_program_tyql)
+    blackhole.consume(
+      coll_engine.solveTyQL(query)
+    )
+  }
 
   @Benchmark def carac_ddbn(blackhole: Blackhole): Unit = {
     blackhole.consume(
@@ -225,7 +226,7 @@ class BenchRQB_andersen_caql_embedded() extends rqb_andersen {
   @Benchmark def tyql_divert(blackhole: Blackhole): Unit = {
     val query = generateTyQL(ddb_program_tyql2)
     if skipDBIntegration(SIZE_HEURISTIC_MB) then
-      ??? else
+      coll_engine.solveTyQL(query) else
       ddb_engine_tyql2.solveTyQL(query)
   }
 }
@@ -405,11 +406,11 @@ class BenchRQB_cba_caql_embedded() extends rqb_cba {
     )
   }
 
-  @Benchmark def tyqlNQ_ddbn(blackhole: Blackhole): Unit = {
-    blackhole.consume(
-      ddb_engine_tyql.solveTyQL(tyqlQueryDDB)
-    )
-  }
+//  @Benchmark def tyqlNQ_ddbn(blackhole: Blackhole): Unit = {
+//    blackhole.consume(
+//      ddb_engine_tyql.solveTyQL(tyqlQueryDDB)
+//    )
+//  }
 
   @Benchmark def tyql_collidx(blackhole: Blackhole): Unit = {
     blackhole.consume(
@@ -613,11 +614,11 @@ class BenchRQB_ancestry_caql_embedded() extends rqb_ancestry {
 //  val caracQueryColl = generateCarac(coll_program_carac)
 //  val caracQueryDDb = generateCarac(ddb_program_carac)
 
-  @Benchmark def tyqlNQ_ddbn(blackhole: Blackhole): Unit = {
-    blackhole.consume(
-      ddb_engine_tyql.solveTyQL(tyqlQuery)
-    )
-  }
+//  @Benchmark def tyqlNQ_ddbn(blackhole: Blackhole): Unit = {
+//    blackhole.consume(
+//      ddb_engine_tyql.solveTyQL(tyqlQuery)
+//    )
+//  }
 
   @Benchmark def tyql_ddbn(blackhole: Blackhole): Unit = {
     val query = generateTyQL(ddb_program_tyql2)
@@ -829,11 +830,11 @@ class BenchRQB_sssp_caql_embedded() extends rqb_sssp {
   //  val caracQueryColl = generateCarac(coll_program_carac)
   //  val caracQueryDDb = generateCarac(ddb_program_carac)
 
-  @Benchmark def tyqlNQ_ddbn(blackhole: Blackhole): Unit = {
-    blackhole.consume(
-      ddb_engine_tyql.solveTyQL(tyqlQuery)
-    )
-  }
+//  @Benchmark def tyqlNQ_ddbn(blackhole: Blackhole): Unit = {
+//    blackhole.consume(
+//      ddb_engine_tyql.solveTyQL(tyqlQuery)
+//    )
+//  }
 
   @Benchmark def tyql_ddbn(blackhole: Blackhole): Unit = {
     val query = generateTyQL(ddb_program_tyql2)

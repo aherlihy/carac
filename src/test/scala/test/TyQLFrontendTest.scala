@@ -167,7 +167,7 @@ trait RunTyQL {
       .filter(Files.isRegularFile(_))
       .mapToLong(p => Files.size(p))
       .sum()
-    println(s"size of files=$totalBytes, heuristic=$heuristicBytes ($factDirectory)")
+//    println(s"size of files=$totalBytes, heuristic=$heuristicBytes ($factDirectory)")
 
     totalBytes < heuristicBytes
 }
