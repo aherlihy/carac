@@ -59,8 +59,9 @@ trait rqb_andersen extends TyQLComparative {
     )
     val base = tables.addressOf.map(a => (x = a.x, y = a.y).toRow)
 
-    val query = base.unrestrictedFix(pointsTo =>
-      tables.assign.flatMap(a =>
+    val query = Query.dispatchedFix(Tuple1(base))(pointsToT =>
+      val pointsTo = pointsToT._1
+      val res = tables.assign.flatMap(a =>
           pointsTo.filter(p => a.y == p.x).map(p =>
             (x = a.x, y = p.y).toRow))
         .union(tables.loadT.flatMap(l =>
@@ -74,8 +75,10 @@ trait rqb_andersen extends TyQLComparative {
             pointsTo
               .filter(pt2 => s.x == pt1.x && s.y == pt2.x)
               .map(pt2 =>
-                (x = pt1.y, y = pt2.y).toRow)))))
-    query
+                (x = pt1.y, y = pt2.y).toRow))))
+      Tuple1(res)
+    )
+    query._1
 
  override def loadSchema(program: Program, storageManager: StorageManager): Unit =
    val addressOf = program.relation("addressOf")

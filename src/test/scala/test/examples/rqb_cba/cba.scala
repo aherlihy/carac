@@ -84,13 +84,13 @@ trait rqb_cba extends TyQLComparative {
 
     val ctrlVarBase = tyqlDB.baseCtrl
 
-    val (dataTerm, dataVar, ctrlTerm, ctrlVar) = Query.unrestrictedFix(dataTermBase, dataVarBase, ctrlTermBase, ctrlVarBase)(
+    val (dataTerm, dataVar, ctrlTerm, ctrlVar) = Query.dispatchedFix(dataTermBase, dataVarBase, ctrlTermBase, ctrlVarBase)(
       (dataTerm, dataVar, ctrlTerm, ctrlVar) => {
         val dt1 =
           for
             t <- tyqlDB.term
             dv <- dataVar
-            if t.y == "Var" && t.z == dv.x
+            if t.y == StringLit("Var") && t.z == dv.x
           yield (x = t.x, y = dv.y).toRow
 
         val dt2 =
@@ -100,7 +100,7 @@ trait rqb_cba extends TyQLComparative {
             ct <- ctrlTerm
             abs <- tyqlDB.abs
             app <- tyqlDB.app
-            if t.y == "App" && t.z == app.x && dt.x == abs.z && ct.x == app.y && ct.y == abs.x
+            if t.y == StringLit("App") && t.z == app.x && dt.x == abs.z && ct.x == app.y && ct.y == abs.x
           yield (x = t.x, y = dt.y).toRow
 
         val dv =
@@ -116,7 +116,7 @@ trait rqb_cba extends TyQLComparative {
           for
             t <- tyqlDB.term
             cv <- ctrlVar
-            if t.y == "Var" && t.z == cv.x
+            if t.y == StringLit("Var") && t.z == cv.x
           yield (x = t.x, y = cv.y).toRow
         val ct2 =
           for
@@ -125,7 +125,7 @@ trait rqb_cba extends TyQLComparative {
             ct2 <- ctrlTerm
             abs <- tyqlDB.abs
             app <- tyqlDB.app
-            if t.y == "App" && t.z == app.x && ct1.x == abs.z && ct2.x == app.y && ct2.y == abs.x
+            if t.y == StringLit("App") && t.z == app.x && ct1.x == abs.z && ct2.x == app.y && ct2.y == abs.x
           yield (x = t.x, y = ct1.y).toRow
 
         val cv =
@@ -140,7 +140,7 @@ trait rqb_cba extends TyQLComparative {
         val dt = dt1.union(dt2)
         val ct = ct1.union(ct2)
 
-        (dt, dv, ct, cv)
+        (dt.distinct, dv.distinct, ct.distinct, cv.distinct)
       })
       dataTerm
   
