@@ -78,8 +78,8 @@ class TyQLExecutionEngine(override val storageManager: StorageManager,
       case _ => throw new Exception(s"Unimplemented: Currently only recursive queries are supported: $tyqlIR")
 
   // Generate IROPs for a backend that supports pushing SQL directly to the storage later
-  def toCaracIR_sqlCompat(tyqlAST: DatabaseAST[?], naive: Boolean)(using ctx: InterpreterContext): (IROp[?], IROp[EDB]) =
-    val tyqlIR = tyqlAST.toQueryIR
+  def toCaracIR_sqlCompat(tyqlAST: DatabaseAST[?], naive: Boolean, tyqlIRTree: Option[QueryIRNode])(using ctx: InterpreterContext): (IROp[?], IROp[EDB]) =
+    val tyqlIR = tyqlIRTree.getOrElse(tyqlAST.toQueryIR)
     tyqlIR match
       case MultiRecursiveRelationOp(aliases, queries, finalQIR, _, linearIR, _, _) =>
         val linear = linearIR.getOrElse(false)
@@ -110,8 +110,8 @@ class TyQLExecutionEngine(override val storageManager: StorageManager,
               throw new Exception(s"Unimplemented: Currently only recursive queries are supported in groupBy: $tyqlIR")
       case _ =>
         throw new Exception(s"Unimplemented: Currently only recursive queries are supported: $tyqlIR")
-  def toCaracIR_sqlNonCompat(tyqlAST: DatabaseAST[?], naive: Boolean)(using ctx: InterpreterContext): (IROp[?], String) =
-    val tyqlIR = tyqlAST.toQueryIR
+  def toCaracIR_sqlNonCompat(tyqlAST: DatabaseAST[?], naive: Boolean, tyqlIRTree: Option[QueryIRNode])(using ctx: InterpreterContext): (IROp[?], String) =
+    val tyqlIR = tyqlIRTree.getOrElse(tyqlAST.toQueryIR)
     tyqlIR match
       case MultiRecursiveRelationOp(aliases, queries, finalQIR, _, linearIR, _, _) =>
         val linear = linearIR.getOrElse(false)
@@ -143,7 +143,7 @@ class TyQLExecutionEngine(override val storageManager: StorageManager,
         throw new Exception(s"Unimplemented: For non-SQL compat backends, only recursive queries are supported: $tyqlIR")
 
 
-  def solveTyQL(tyqlAST: DatabaseAST[?], naive: Boolean = false): Set[Seq[StorageTerm]] =
+  def solveTyQL(tyqlAST: DatabaseAST[?], naive: Boolean = false, tyqlIRTree: Option[QueryIRNode] = None): Set[Seq[StorageTerm]] =
     given JITOptions = defaultJITOptions
     //    println(s"jit opts==${defaultJITOptions.toBenchmark}")
 //    debug("", () => s"solve $rId with options $defaultJITOptions")
@@ -151,7 +151,7 @@ class TyQLExecutionEngine(override val storageManager: StorageManager,
       case ddb: DuckDBStorageManager => // SQL pushdown compatible
         // use temporary context to generate tree, then later set finalSolve based on TyQL AST
         val initCtx = InterpreterContext(storageManager, this, None, () => ???)
-        val (irTree, finalNode) = toCaracIR_sqlCompat(tyqlAST, naive)(using initCtx)
+        val (irTree, finalNode) = toCaracIR_sqlCompat(tyqlAST, naive, tyqlIRTree)(using initCtx)
         val finalQ = () => finalNode.run(storageManager).asInstanceOf[DuckDBEDB].execute_toSetOfSeq()
         val irCtx = InterpreterContext(storageManager, this, None, finalQ)
         (irTree, irCtx)
@@ -159,7 +159,7 @@ class TyQLExecutionEngine(override val storageManager: StorageManager,
       case _ =>
         // use temporary context to generate tree, then later set finalSolve based on TyQL AST
         val initCtx = InterpreterContext(storageManager, this, None, () => ???)
-        val (irTree, toSolveName) = toCaracIR_sqlNonCompat(tyqlAST, naive)(using initCtx)
+        val (irTree, toSolveName) = toCaracIR_sqlNonCompat(tyqlAST, naive, tyqlIRTree)(using initCtx)
         val finalQ = () => storageManager.getIDBResult(storageManager.ns(toSolveName))
         val irCtx = InterpreterContext(storageManager, this, None, finalQ)
         (irTree, irCtx)

@@ -21,7 +21,7 @@ trait rqb_ancestry extends RunTyQL {
 
   override val expectedFacts = loadExpectedFile(Paths.get(directory, "expected"))("result")
 
-  override def generateTyQL(program: Program) =
+  override def generateTyQL() =
     val parentName = "1"
     type Parent = (parent: String, child: String)
     val tyqlDB = (

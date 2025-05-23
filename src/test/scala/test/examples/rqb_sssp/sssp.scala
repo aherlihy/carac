@@ -24,7 +24,7 @@ trait rqb_sssp extends RunTyQL {
 
   override val expectedFacts = loadExpectedFile(Paths.get(directory, "expected"))("cost")
 
-  override def generateTyQL(program: Program) =
+  override def generateTyQL() =
     type WeightedEdge = (src: Int, dst: Int, cost: Int)
     type ResultEdge = (dst: Int, cost: Int)
     type WeightedGraphDB = (edge: WeightedEdge, base: ResultEdge)

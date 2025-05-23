@@ -48,7 +48,7 @@ trait rqb_andersen extends TyQLComparative {
       pointsTo(x, w))
     pointsTo
 
-  override def generateTyQL(program: Program) =
+  override def generateTyQL() =
     type Edge = (x: String, y: String)
 
     val tables = (

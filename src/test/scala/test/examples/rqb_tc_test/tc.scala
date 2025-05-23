@@ -28,7 +28,7 @@ trait TC_Nonlinear extends TyQLComparative {
     tc(X, Y) :- (tc(X, Z), tc(Z, Y))
     tc
 
-  override def generateTyQL(program: Program) =
+  override def generateTyQL() =
     type Edge = (x: String, y: String)
     type TCDB = (edges: Edge)
 
@@ -76,7 +76,7 @@ trait TC_Linear extends TyQLComparative {
     tc(X, Y) :- (tc(X, Z), edges(Z, Y))
     tc
 
-  override def generateTyQL(program: Program) =
+  override def generateTyQL() =
     type Edge = (x: String, y: String)
     type TCDB = (edges: Edge)
 
@@ -126,7 +126,7 @@ trait TC_Nonlinear_Load extends TyQLComparative {
     tc(X, Y) :- (tc(X, Z), tc(Z, Y))
     tc
 
-  override def generateTyQL(program: Program) =
+  override def generateTyQL() =
     type Edge = (x: String, y: String)
 
     val tables = (

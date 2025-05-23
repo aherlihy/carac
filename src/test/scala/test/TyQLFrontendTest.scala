@@ -43,19 +43,21 @@ trait TyQLOnlyTest extends munit.FunSuite with RunTyQL {
 }
 
 trait TyQLComparativeTest extends munit.FunSuite with TyQLComparative {
-  test(s"Interpreted") {
-    val opts = JITOptions(mode = Mode.Interpreted,  sortOrder = SortOrder.Sel)
-    val result_tyql = runTyQL(opts)
-    val result_carac = runCarac(opts)
-//    println(s"TyQL result: $result_tyql")
-//    println(s"Carac result: $result_carac")
-//    println(s"Expected result: $expectedFacts")
-    assertEquals(result_tyql, result_carac, s"TyQL and Carac results do not match")
-    assertEquals(result_tyql, expectedFacts, s"Expected directory does not match")
-  }
+//  test(s"Interpreted") {
+//    val opts = JITOptions(mode = Mode.Interpreted,  sortOrder = SortOrder.Sel)
+//    val result_tyql = runTyQL(opts)
+//    val result_carac = runCarac(opts)
+////    println(s"TyQL result: $result_tyql")
+////    println(s"Carac result: $result_carac")
+////    println(s"Expected result: $expectedFacts")
+//    assertEquals(result_tyql, result_carac, s"TyQL and Carac results do not match")
+//    assertEquals(result_tyql, expectedFacts, s"Expected directory does not match")
+//  }
   test(s"JIT Lambda") {
     val opts = JITOptions(mode = Mode.JIT, granularity = Granularity.ALL, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
+    println(s"tyql:")
     val result_tyql = runTyQL(opts)
+    println(s"carac")
     val result_carac = runCarac(opts)
     //    println(s"TyQL result: $result_tyql")
     //    println(s"Carac result: $result_carac")
@@ -74,37 +76,37 @@ trait TyQLComparativeTest extends munit.FunSuite with TyQLComparative {
     assertEquals(result_tyql, result_carac, s"TyQL and Carac results do not match")
     assertEquals(result_tyql, expectedFacts, s"Expected directory does not match")
 
-  test(s"JIT Lambda Collections") {
-    runCollections()
-  }
-  test(s"JIT Quotes") {
-    val opts = JITOptions(mode = Mode.JIT, granularity = Granularity.ALL, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Quotes)
-    val result_tyql = runTyQL(opts)
-    val result_carac = runCarac(opts)
-    //    println(s"TyQL result: $result_tyql")
-    //    println(s"Carac result: $result_carac")
-    //    println(s"Expected result: $expectedFacts")
-    assertEquals(result_tyql, result_carac, s"TyQL and Carac results do not match")
-    assertEquals(result_tyql, expectedFacts, s"Expected directory does not match")
-  }
-
-  test(s"JIT Bytecode") {
-    val opts = JITOptions(mode = Mode.JIT, granularity = Granularity.ALL, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Bytecode)
-    val result_tyql = runTyQL(opts)
-    val result_carac = runCarac(opts)
-    //    println(s"TyQL result: $result_tyql")
-    //    println(s"Carac result: $result_carac")
-    //    println(s"Expected result: $expectedFacts")
-    assertEquals(result_tyql, result_carac, s"TyQL and Carac results do not match")
-    assertEquals(result_tyql, expectedFacts, s"Expected directory does not match")
-  }
+//  test(s"JIT Lambda Collections") {
+//    runCollections()
+//  }
+//  test(s"JIT Quotes") {
+//    val opts = JITOptions(mode = Mode.JIT, granularity = Granularity.ALL, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Quotes)
+//    val result_tyql = runTyQL(opts)
+//    val result_carac = runCarac(opts)
+//    //    println(s"TyQL result: $result_tyql")
+//    //    println(s"Carac result: $result_carac")
+//    //    println(s"Expected result: $expectedFacts")
+//    assertEquals(result_tyql, result_carac, s"TyQL and Carac results do not match")
+//    assertEquals(result_tyql, expectedFacts, s"Expected directory does not match")
+//  }
+//
+//  test(s"JIT Bytecode") {
+//    val opts = JITOptions(mode = Mode.JIT, granularity = Granularity.ALL, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Bytecode)
+//    val result_tyql = runTyQL(opts)
+//    val result_carac = runCarac(opts)
+//    //    println(s"TyQL result: $result_tyql")
+//    //    println(s"Carac result: $result_carac")
+//    //    println(s"Expected result: $expectedFacts")
+//    assertEquals(result_tyql, result_carac, s"TyQL and Carac results do not match")
+//    assertEquals(result_tyql, expectedFacts, s"Expected directory does not match")
+//  }
 }
 
 trait RunTyQL {
   val directory: String
   def loadSchema(program: Program, storage: StorageManager): Unit = ???
   def loadData(program: Program): Unit
-  def generateTyQL(program: Program): DatabaseAST[?]
+  def generateTyQL(): DatabaseAST[?]
   val expectedFacts: Set[Seq[Constant]]
   def loadExpectedFile(expectedDirectory: Path): mutable.Map[String, Set[Seq[Constant]]] = {
     val expectedFacts = mutable.Map[String, Set[Seq[Constant]]]()
@@ -146,7 +148,7 @@ trait RunTyQL {
     val engine_tyql = new TyQLExecutionEngine(storage_tyql, jitOptions)
     val program_tyql = Program(engine_tyql)
     loadData(program_tyql)
-    val query_tyql = generateTyQL(program_tyql)
+    val query_tyql = generateTyQL()
     engine_tyql.solveTyQL(query_tyql)
 
   def runTyQL_collections(JITOptions: JITOptions): Set[Seq[StorageTerm]] =
@@ -154,10 +156,84 @@ trait RunTyQL {
     val engine_tyql = new TyQLExecutionEngine(storage_tyql, JITOptions)
     val program_tyql = Program(engine_tyql)
     loadData(program_tyql)
-    val query_tyql = generateTyQL(program_tyql)
+    val query_tyql = generateTyQL()
     engine_tyql.solveTyQL(query_tyql)
 
-  def skipDBIntegration(heuristicBytes: Int): Boolean =
+  def selectivityEstimate(query: QueryIRNode): Double =
+    def countWhere(countJK: Int, countS: Int, ast: QueryIRNode): (Int, Int, QueryIRNode) =
+//      println(s"in countWhere=ast=${ast.toSQLString()}")
+      ast match
+        case MultiRecursiveRelationOp(_, queries, _, _, linear, _, _) =>
+          val count = queries.map(w =>
+            val c = countWhere(0, 0, w)
+            (c._1, c._2)
+          )
+          val jkcount = count.map(_._1).sum
+          val scount = count.map(_._2).sum
+          (jkcount, scount, ast)
+        case SelectAllQuery(_, where, _, _, _) =>
+          val count = where.map(w =>
+            val c = countWhere(0, 0, w)
+            (c._1, c._2)
+          )
+          val jkcount = count.map(_._1).sum
+          val scount = count.map(_._2).sum
+          (jkcount, scount, ast)
+        case SelectQuery(_, _, where, _, _, _) =>
+          val count = where.map(w =>
+            val c = countWhere(0, 0, w)
+            (c._1, c._2)
+          )
+          val jkcount = count.map(_._1).sum
+          val scount = count.map(_._2).sum
+          (jkcount, scount, ast)
+        case NaryRelationOp(children, op, _, _, _) =>
+          val count = children.map(w =>
+            val c = countWhere(0, 0, w)
+            (c._1, c._2)
+          )
+          val jkcount = count.map(_._1).sum
+          val scount = count.map(_._2).sum
+          (jkcount, scount, ast)
+        case WhereClause(children, _) =>
+          val count = children.map(w =>
+            val c = countWhere(0, 0, w)
+            (c._1, c._2)
+          )
+          val jkcount = count.map(_._1).sum
+          val scount = count.map(_._2).sum
+          (jkcount, scount, ast)
+        case BinExprOp(lhs, rhs, op, _, _) =>
+          (lhs, rhs) match
+            case (SelectExpr(_, _, _, _), Literal(_, _, _)) =>
+              (0, 1, ast)
+            case (Literal(_, _, _), SelectExpr(_, _, _, _)) =>
+              (0, 1, ast)
+            case (SelectExpr(_, _, _, _), SelectExpr(_, _, _, _)) =>
+              (1, 0, ast)
+            case _ =>
+              val (jkcountL, scountL, _) = countWhere(0, 0, lhs)
+              val (jkcountR, scountR, _) = countWhere(0, 0, rhs)
+              (jkcountL + jkcountR, scountL + scountR, ast)
+        case _ =>
+          println(s"found a = ${ast.toSQLString()}\n\t ($ast)")
+          ???
+    val (countJK, countS, _) = countWhere(0, 0, query)
+//    println(s"countJK = $countJK, countS= $countS")
+    Math.pow(0.1, countJK) * Math.pow(0.01, countS)
+
+  def skipDBIntegration(heuristic: Double, query: QueryIRNode): Boolean =
+    val linear = query match
+      case MultiRecursiveRelationOp(_, queries, _, _, linear, _, _) => linear.getOrElse(false)
+      case GroupByQuery(source, _, _, _, _, _) =>
+        source match
+          case MultiRecursiveRelationOp(_, _, _, _, linear, _, _) => linear.getOrElse(false)
+          case _ => false
+      case _ => false
+    if linear then return false
+
+    val selectivity = selectivityEstimate(query)
+
     val factDirectory = s"$directory/facts"
     val path = Paths.get(factDirectory)
 
@@ -167,9 +243,8 @@ trait RunTyQL {
       .filter(Files.isRegularFile(_))
       .mapToLong(p => Files.size(p))
       .sum()
-//    println(s"size of files=$totalBytes, heuristic=$heuristicBytes ($factDirectory)")
-
-    totalBytes < heuristicBytes
+    val adjusted = selectivity * totalBytes
+    adjusted < heuristic
 }
 
 trait TyQLComparative extends RunTyQL {

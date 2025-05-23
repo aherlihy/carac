@@ -54,7 +54,7 @@ trait rqb_cba extends TyQLComparative {
 
     data_term
 
-  override def generateTyQL(program: Program) =
+  override def generateTyQL() =
     // TYQL data model
     type Term = (x: Int, y: String, z: Int)
     type Lits = (x: Int, y: String)
@@ -73,27 +73,28 @@ trait rqb_cba extends TyQLComparative {
       baseData = Table[BaseData]("baseDataVar"),
       baseCtrl = Table[BaseCtrl]("baseCtrlVar")
     )
-    val dataTermBase = tyqlDB.term.flatMap(t =>
+    val dataTermBase = tyqlDB.term.flatMap(t => // 1, 1
       tyqlDB.lits
         .filter(l => l.x == t.z && t.y == StringLit("Lit"))
         .map(l => (x = t.x, y = l.y).toRow))
 
     val dataVarBase = tyqlDB.baseData
 
-    val ctrlTermBase = tyqlDB.term.filter(t => t.y == StringLit("Abs")).map(t => (x = t.x, y = t.z).toRow)
+    val ctrlTermBase = // 0, 1
+      tyqlDB.term.filter(t => t.y == StringLit("Abs")).map(t => (x = t.x, y = t.z).toRow)
 
     val ctrlVarBase = tyqlDB.baseCtrl
 
     val (dataTerm, dataVar, ctrlTerm, ctrlVar) = Query.dispatchedFix(dataTermBase, dataVarBase, ctrlTermBase, ctrlVarBase)(
       (dataTerm, dataVar, ctrlTerm, ctrlVar) => {
-        val dt1 =
+        val dt1 = // 1, 1
           for
             t <- tyqlDB.term
             dv <- dataVar
             if t.y == StringLit("Var") && t.z == dv.x
           yield (x = t.x, y = dv.y).toRow
 
-        val dt2 =
+        val dt2 = // 4, 1
           for
             t <- tyqlDB.term
             dt <- dataTerm
@@ -103,7 +104,7 @@ trait rqb_cba extends TyQLComparative {
             if t.y == StringLit("App") && t.z == app.x && dt.x == abs.z && ct.x == app.y && ct.y == abs.x
           yield (x = t.x, y = dt.y).toRow
 
-        val dv =
+        val dv = // 3, 0
           for
             ct <- ctrlTerm
             dt <- dataTerm
@@ -112,13 +113,13 @@ trait rqb_cba extends TyQLComparative {
             if ct.x == app.y && ct.y == abs.x && dt.x == app.z
           yield (x = abs.y, y = dt.y).toRow
 
-        val ct1 =
+        val ct1 = // 1, 1
           for
             t <- tyqlDB.term
             cv <- ctrlVar
             if t.y == StringLit("Var") && t.z == cv.x
           yield (x = t.x, y = cv.y).toRow
-        val ct2 =
+        val ct2 = // 4, 1
           for
             t <- tyqlDB.term
             ct1 <- ctrlTerm
@@ -128,7 +129,7 @@ trait rqb_cba extends TyQLComparative {
             if t.y == StringLit("App") && t.z == app.x && ct1.x == abs.z && ct2.x == app.y && ct2.y == abs.x
           yield (x = t.x, y = ct1.y).toRow
 
-        val cv =
+        val cv = // 3, 0
           for
             ct1 <- ctrlTerm
             ct2 <- ctrlTerm
@@ -137,9 +138,10 @@ trait rqb_cba extends TyQLComparative {
             if ct1.x == app.y && ct1.y == abs.x && ct2.x == app.z
           yield (x = abs.y, y = ct2.y).toRow
 
-        val dt = dt1.union(dt2)
-        val ct = ct1.union(ct2)
+        val dt = dt1.union(dt2) // 5, 2
+        val ct = ct1.union(ct2) // 5, 2
 
+        // 16, 4 + 1, 2 = 17, 6
         (dt.distinct, dv.distinct, ct.distinct, cv.distinct)
       })
       dataTerm
