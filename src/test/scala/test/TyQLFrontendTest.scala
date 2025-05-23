@@ -43,16 +43,16 @@ trait TyQLOnlyTest extends munit.FunSuite with RunTyQL {
 }
 
 trait TyQLComparativeTest extends munit.FunSuite with TyQLComparative {
-//  test(s"Interpreted") {
-//    val opts = JITOptions(mode = Mode.Interpreted,  sortOrder = SortOrder.Sel)
-//    val result_tyql = runTyQL(opts)
-//    val result_carac = runCarac(opts)
-////    println(s"TyQL result: $result_tyql")
-////    println(s"Carac result: $result_carac")
-////    println(s"Expected result: $expectedFacts")
-//    assertEquals(result_tyql, result_carac, s"TyQL and Carac results do not match")
-//    assertEquals(result_tyql, expectedFacts, s"Expected directory does not match")
-//  }
+  test(s"Interpreted") {
+    val opts = JITOptions(mode = Mode.Interpreted,  sortOrder = SortOrder.Sel)
+    val result_tyql = runTyQL(opts)
+    val result_carac = runCarac(opts)
+//    println(s"TyQL result: $result_tyql")
+//    println(s"Carac result: $result_carac")
+//    println(s"Expected result: $expectedFacts")
+    assertEquals(result_tyql, result_carac, s"TyQL and Carac results do not match")
+    assertEquals(result_tyql, expectedFacts, s"Expected directory does not match")
+  }
   test(s"JIT Lambda") {
     val opts = JITOptions(mode = Mode.JIT, granularity = Granularity.ALL, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
     println(s"tyql:")
@@ -76,30 +76,30 @@ trait TyQLComparativeTest extends munit.FunSuite with TyQLComparative {
     assertEquals(result_tyql, result_carac, s"TyQL and Carac results do not match")
     assertEquals(result_tyql, expectedFacts, s"Expected directory does not match")
 
-//  test(s"JIT Lambda Collections") {
-//    runCollections()
-//  }
-//  test(s"JIT Quotes") {
-//    val opts = JITOptions(mode = Mode.JIT, granularity = Granularity.ALL, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Quotes)
-//    val result_tyql = runTyQL(opts)
-//    val result_carac = runCarac(opts)
-//    //    println(s"TyQL result: $result_tyql")
-//    //    println(s"Carac result: $result_carac")
-//    //    println(s"Expected result: $expectedFacts")
-//    assertEquals(result_tyql, result_carac, s"TyQL and Carac results do not match")
-//    assertEquals(result_tyql, expectedFacts, s"Expected directory does not match")
-//  }
-//
-//  test(s"JIT Bytecode") {
-//    val opts = JITOptions(mode = Mode.JIT, granularity = Granularity.ALL, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Bytecode)
-//    val result_tyql = runTyQL(opts)
-//    val result_carac = runCarac(opts)
-//    //    println(s"TyQL result: $result_tyql")
-//    //    println(s"Carac result: $result_carac")
-//    //    println(s"Expected result: $expectedFacts")
-//    assertEquals(result_tyql, result_carac, s"TyQL and Carac results do not match")
-//    assertEquals(result_tyql, expectedFacts, s"Expected directory does not match")
-//  }
+  test(s"JIT Lambda Collections") {
+    runCollections()
+  }
+  test(s"JIT Quotes") {
+    val opts = JITOptions(mode = Mode.JIT, granularity = Granularity.ALL, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Quotes)
+    val result_tyql = runTyQL(opts)
+    val result_carac = runCarac(opts)
+    //    println(s"TyQL result: $result_tyql")
+    //    println(s"Carac result: $result_carac")
+    //    println(s"Expected result: $expectedFacts")
+    assertEquals(result_tyql, result_carac, s"TyQL and Carac results do not match")
+    assertEquals(result_tyql, expectedFacts, s"Expected directory does not match")
+  }
+
+  test(s"JIT Bytecode") {
+    val opts = JITOptions(mode = Mode.JIT, granularity = Granularity.ALL, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Bytecode)
+    val result_tyql = runTyQL(opts)
+    val result_carac = runCarac(opts)
+    //    println(s"TyQL result: $result_tyql")
+    //    println(s"Carac result: $result_carac")
+    //    println(s"Expected result: $expectedFacts")
+    assertEquals(result_tyql, result_carac, s"TyQL and Carac results do not match")
+    assertEquals(result_tyql, expectedFacts, s"Expected directory does not match")
+  }
 }
 
 trait RunTyQL {
