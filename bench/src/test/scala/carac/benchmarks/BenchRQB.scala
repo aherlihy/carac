@@ -144,7 +144,7 @@ class BenchRQB_andersen_caql_warm extends rqb_andersen {
     val query = generateTyQL()
     val queryIR = query.toQueryIR
     val storageManager = if skipDBIntegration(COLL_HEURISTIC, queryIR) then
-      new IndexedStorageManager() else
+      ??? else
       new DuckDBStorageManager(indexed = false)
     val engine = new TyQLExecutionEngine(storageManager, jo)
     val mode = "lambda_divert_tyql"
@@ -159,13 +159,13 @@ class BenchRQB_andersen_caql_warm extends rqb_andersen {
     run_warm_carac(blackhole, mode, engine)
   }
 
-  @Benchmark def tyql_collidx(blackhole: Blackhole): Unit = {
-    val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
-    val storageManager = new IndexedStorageManager()
-    val engine = new TyQLExecutionEngine(storageManager, jo)
-    val mode = "lambda_collidx_tyql"
-    run_warm_tyql(blackhole, mode, engine)
-  }
+//  @Benchmark def tyql_collidx(blackhole: Blackhole): Unit = {
+//    val jo = JITOptions(mode = CaracMode.JIT, granularity = Granularity.DELTA, compileSync = CompileSync.Blocking, sortOrder = SortOrder.Sel, backend = Backend.Lambda)
+//    val storageManager = new IndexedStorageManager()
+//    val engine = new TyQLExecutionEngine(storageManager, jo)
+//    val mode = "lambda_collidx_tyql"
+//    run_warm_tyql(blackhole, mode, engine)
+//  }
 }
 
 @Fork(1) // # of jvms that it will use
@@ -214,12 +214,12 @@ class BenchRQB_andersen_caql_embedded() extends rqb_andersen {
 //    )
 //  }
 
-  @Benchmark def tyql_collidx(blackhole: Blackhole): Unit = {
-    val query = generateTyQL()
-    blackhole.consume(
-      coll_engine.solveTyQL(query)
-    )
-  }
+//  @Benchmark def tyql_collidx(blackhole: Blackhole): Unit = {
+//    val query = generateTyQL()
+//    blackhole.consume(
+//      coll_engine.solveTyQL(query)
+//    )
+//  }
 
   @Benchmark def carac_ddbn(blackhole: Blackhole): Unit = {
     blackhole.consume(
@@ -230,7 +230,7 @@ class BenchRQB_andersen_caql_embedded() extends rqb_andersen {
     val query = generateTyQL()
     val ir = query.toQueryIR
     if skipDBIntegration(COLL_HEURISTIC, ir) then
-      coll_engine.solveTyQL(query, tyqlIRTree = Some(ir)) else
+      ??? else //coll_engine.solveTyQL(query, tyqlIRTree = Some(ir)) else
       ddb_engine_tyql2.solveTyQL(query, tyqlIRTree = Some(ir))
   }
 }
